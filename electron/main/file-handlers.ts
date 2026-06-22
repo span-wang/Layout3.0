@@ -77,59 +77,147 @@ function sanitizeSegmentName(name: string, fallback: string): string {
   return sanitized || fallback;
 }
 
-async function pathExists(targetPath: string): Promise<boolean> {
+const fsErrorMessages: Record<string, string> = {
+  EACCES: '没有权限访问该路径',
+  EBUSY: '文件正在被占用',
+  EEXIST: '目标已存在',
+  EISDIR: '目标是文件夹，不能按文件处理',
+  ENOENT: '路径不存在或已被删除',
+  ENOTDIR: '目标不是文件夹',
+  ENOTEMPTY: '文件夹非空，无法删除',
+  EPERM: '没有权限执行该操作',
+  EXDEV: '无法跨磁盘移动文件',
+};
+
+function mapFsError(error: unknown): Error {
+  if (!(error instanceof Error)) {
+    return new Error('文件操作失败');
+  }
+
+  if (error.message.startsWith('已取消') || error.message === '不能将项目移动到自身或子级目录') {
+    return error;
+  }
+
+  const code = (error as NodeJS.ErrnoException).code;
+  if (typeof code === 'string' && fsErrorMessages[code]) {
+    return new Error(fsErrorMessages[code]);
+  }
+
+  return error;
+}
+
+async function withFsError<T>(operation: () => Promise<T>): Promise<T> {
   try {
-    await stat(targetPath);
-    return true;
-  } catch {
-    return false;
+    return await operation();
+  } catch (error) {
+    throw mapFsError(error);
   }
 }
 
-async function getUniqueEntryPath(parentPath: string, preferredName: string): Promise<string> {
+function buildUniqueEntryName(preferredName: string, index: number): string {
   const extension = path.extname(preferredName);
   const baseName = extension ? preferredName.slice(0, -extension.length) : preferredName;
-  let candidatePath = path.join(parentPath, preferredName);
-  let index = 1;
+  return index === 0
+    ? preferredName
+    : extension
+      ? `${baseName} ${index}${extension}`
+      : `${baseName} ${index}`;
+}
 
-  while (await pathExists(candidatePath)) {
-    const candidateName = extension ? `${baseName} ${index}${extension}` : `${baseName} ${index}`;
-    candidatePath = path.join(parentPath, candidateName);
-    index += 1;
+function isEntryCollision(error: unknown): boolean {
+  return error instanceof Error && (error as NodeJS.ErrnoException).code === 'EEXIST';
+}
+
+async function createUniqueDirectoryPath(parentPath: string, preferredName: string): Promise<string> {
+  let index = 0;
+
+  while (true) {
+    const candidatePath = path.join(parentPath, buildUniqueEntryName(preferredName, index));
+
+    try {
+      await mkdir(candidatePath, { recursive: false });
+      return candidatePath;
+    } catch (error) {
+      if (isEntryCollision(error)) {
+        index += 1;
+        continue;
+      }
+
+      throw error;
+    }
   }
+}
 
-  return candidatePath;
+async function createUniqueFilePath(
+  directoryPath: string,
+  preferredName: string,
+  content: string,
+): Promise<string> {
+  let index = 0;
+
+  while (true) {
+    const candidatePath = path.join(directoryPath, buildUniqueEntryName(preferredName, index));
+
+    try {
+      await writeFile(candidatePath, content, { encoding: 'utf8', flag: 'wx' });
+      return candidatePath;
+    } catch (error) {
+      if (isEntryCollision(error)) {
+        index += 1;
+        continue;
+      }
+
+      throw error;
+    }
+  }
 }
 
 function getDefaultWorkspacePath(): string {
   return path.join(app.getPath('documents'), 'LAYOUT3.0', '默认工作区');
 }
 
-async function listDirectoryEntries(directoryPath: string): Promise<DirectoryEntryResult[]> {
-  const names = await readdir(directoryPath);
+async function listDirectoryEntries(directoryPath: string, allowFailure = false): Promise<DirectoryEntryResult[]> {
+  let dirents;
+  try {
+    dirents = await readdir(directoryPath, { withFileTypes: true });
+  } catch (error) {
+    if (allowFailure) {
+      return [];
+    }
+
+    throw error;
+  }
+
   const entries = await Promise.all(
-    names.map(async (name) => {
-      const entryPath = path.join(directoryPath, name);
-      const entryStat = await stat(entryPath);
+    dirents.map(async (entry) => {
+      const entryPath = path.join(directoryPath, entry.name);
 
-      if (entryStat.isDirectory()) {
+      try {
+        if (entry.isSymbolicLink()) {
+          return null;
+        }
+
+        if (entry.isDirectory()) {
+          return {
+            name: entry.name,
+            path: entryPath,
+            kind: 'directory' as const,
+            children: await listDirectoryEntries(entryPath, true),
+          };
+        }
+
+        if (!entry.isFile() || !isVisibleWorkspaceFilePath(entryPath)) {
+          return null;
+        }
+
         return {
-          name,
+          name: entry.name,
           path: entryPath,
-          kind: 'directory' as const,
-          children: await listDirectoryEntries(entryPath),
+          kind: 'file' as const,
         };
-      }
-
-      if (!isVisibleWorkspaceFilePath(entryPath)) {
+      } catch {
         return null;
       }
-
-      return {
-        name,
-        path: entryPath,
-        kind: 'file' as const,
-      };
     }),
   );
 
@@ -149,74 +237,82 @@ async function listDirectoryEntries(directoryPath: string): Promise<DirectoryEnt
 }
 
 export async function openDocument(): Promise<OpenDocumentResult> {
-  const ownerWindow = getOwnerWindow();
-  const result = ownerWindow
-    ? await dialog.showOpenDialog(ownerWindow, {
-        title: '打开文档',
-        properties: ['openFile'],
-        filters: getFileFilters(),
-      })
-    : await dialog.showOpenDialog({
-        title: '打开文档',
-        properties: ['openFile'],
-        filters: getFileFilters(),
-      });
+  return withFsError(async () => {
+    const ownerWindow = getOwnerWindow();
+    const result = ownerWindow
+      ? await dialog.showOpenDialog(ownerWindow, {
+          title: '打开文档',
+          properties: ['openFile'],
+          filters: getFileFilters(),
+        })
+      : await dialog.showOpenDialog({
+          title: '打开文档',
+          properties: ['openFile'],
+          filters: getFileFilters(),
+        });
 
-  if (result.canceled || result.filePaths.length === 0) {
-    throw new Error('已取消打开文件');
-  }
+    if (result.canceled || result.filePaths.length === 0) {
+      throw new Error('已取消打开文件');
+    }
 
-  const [filePath] = result.filePaths;
-  const content = await readFile(filePath, 'utf8');
+    const [filePath] = result.filePaths;
+    const content = await readFile(filePath, 'utf8');
 
-  return {
-    filePath,
-    content,
-  };
+    return {
+      filePath,
+      content,
+    };
+  });
 }
 
 export async function openDocumentAtPath(filePath: string): Promise<OpenDocumentResult> {
-  const content = await readFile(filePath, 'utf8');
+  return withFsError(async () => {
+    const content = await readFile(filePath, 'utf8');
 
-  return {
-    filePath,
-    content,
-  };
+    return {
+      filePath,
+      content,
+    };
+  });
 }
 
 export async function openFolder(): Promise<OpenFolderResult> {
-  const ownerWindow = getOwnerWindow();
-  const result = ownerWindow
-    ? await dialog.showOpenDialog(ownerWindow, {
-        title: '打开文件夹',
-        properties: ['openDirectory'],
-      })
-    : await dialog.showOpenDialog({
-        title: '打开文件夹',
-        properties: ['openDirectory'],
-      });
+  return withFsError(async () => {
+    const ownerWindow = getOwnerWindow();
+    const result = ownerWindow
+      ? await dialog.showOpenDialog(ownerWindow, {
+          title: '打开文件夹',
+          properties: ['openDirectory'],
+        })
+      : await dialog.showOpenDialog({
+          title: '打开文件夹',
+          properties: ['openDirectory'],
+        });
 
-  if (result.canceled || result.filePaths.length === 0) {
-    throw new Error('已取消打开文件夹');
-  }
+    if (result.canceled || result.filePaths.length === 0) {
+      throw new Error('已取消打开文件夹');
+    }
 
-  const [directoryPath] = result.filePaths;
-  const entries = await listDirectoryEntries(directoryPath);
+    const [directoryPath] = result.filePaths;
+    const entries = await listDirectoryEntries(directoryPath);
 
-  return {
-    directoryPath,
-    entries,
-  };
+    return {
+      directoryPath,
+      entries,
+    };
+  });
 }
 
 export async function getDefaultWorkspace(): Promise<OpenFolderResult> {
-  const directoryPath = getDefaultWorkspacePath();
-  await mkdir(directoryPath, { recursive: true });
+  return withFsError(async () => {
+    const directoryPath = getDefaultWorkspacePath();
+    await mkdir(directoryPath, { recursive: true });
 
-  return {
-    directoryPath,
-    entries: await listDirectoryEntries(directoryPath),
-  };
+    return {
+      directoryPath,
+      entries: await listDirectoryEntries(directoryPath),
+    };
+  });
 }
 
 export async function saveDocument({
@@ -224,47 +320,50 @@ export async function saveDocument({
   content,
   defaultName,
 }: SaveDocumentPayload): Promise<{ filePath: string }> {
-  let targetPath = filePath;
+  return withFsError(async () => {
+    let targetPath = filePath;
 
-  if (!targetPath) {
-    const ownerWindow = getOwnerWindow();
-    const result = ownerWindow
-      ? await dialog.showSaveDialog(ownerWindow, {
-          title: '保存文档',
-          defaultPath: sanitizeDefaultName(defaultName),
-          filters: getFileFilters(),
-        })
-      : await dialog.showSaveDialog({
-          title: '保存文档',
-          defaultPath: sanitizeDefaultName(defaultName),
-          filters: getFileFilters(),
-        });
+    if (!targetPath) {
+      const ownerWindow = getOwnerWindow();
+      const result = ownerWindow
+        ? await dialog.showSaveDialog(ownerWindow, {
+            title: '保存文档',
+            defaultPath: sanitizeDefaultName(defaultName),
+            filters: getFileFilters(),
+          })
+        : await dialog.showSaveDialog({
+            title: '保存文档',
+            defaultPath: sanitizeDefaultName(defaultName),
+            filters: getFileFilters(),
+          });
 
-    if (result.canceled || !result.filePath) {
-      throw new Error('已取消保存文件');
+      if (result.canceled || !result.filePath) {
+        throw new Error('已取消保存文件');
+      }
+
+      targetPath = result.filePath;
     }
 
-    targetPath = result.filePath;
-  }
+    await writeFile(targetPath, content, 'utf8');
 
-  await writeFile(targetPath, content, 'utf8');
-
-  return { filePath: targetPath };
+    return { filePath: targetPath };
+  });
 }
 
 export async function createFolder({
   parentPath,
   folderName,
 }: CreateFolderPayload): Promise<CreateFolderResult> {
-  const targetFolderName = sanitizeSegmentName(folderName, '新建文件夹');
-  const targetPath = await getUniqueEntryPath(parentPath, targetFolderName);
-  await mkdir(targetPath, { recursive: false });
+  return withFsError(async () => {
+    const targetFolderName = sanitizeSegmentName(folderName, '新建文件夹');
+    const targetPath = await createUniqueDirectoryPath(parentPath, targetFolderName);
 
-  return {
-    directoryPath: parentPath,
-    entries: await listDirectoryEntries(parentPath),
-    targetPath,
-  };
+    return {
+      directoryPath: parentPath,
+      entries: await listDirectoryEntries(parentPath),
+      targetPath,
+    };
+  });
 }
 
 export async function createMarkdownFile({
@@ -272,54 +371,57 @@ export async function createMarkdownFile({
   fileName,
   content,
 }: CreateMarkdownFilePayload): Promise<{ filePath: string; content: string }> {
-  const normalizedName = sanitizeSegmentName(fileName, '未命名文档');
-  const finalName = normalizedName.toLowerCase().endsWith('.md') ? normalizedName : `${normalizedName}.md`;
-  const filePath = await getUniqueEntryPath(directoryPath, finalName);
-  await writeFile(filePath, content, 'utf8');
+  return withFsError(async () => {
+    const normalizedName = sanitizeSegmentName(fileName, '未命名文档');
+    const finalName = normalizedName.toLowerCase().endsWith('.md') ? normalizedName : `${normalizedName}.md`;
+    const filePath = await createUniqueFilePath(directoryPath, finalName, content);
 
-  return {
-    filePath,
-    content,
-  };
+    return {
+      filePath,
+      content,
+    };
+  });
 }
 
 export async function readDirectory(directoryPath: string): Promise<OpenFolderResult> {
-  return {
+  return withFsError(async () => ({
     directoryPath,
     entries: await listDirectoryEntries(directoryPath),
-  };
+  }));
 }
 
 export async function renameEntry({
   targetPath,
   nextName,
 }: RenameEntryPayload): Promise<{ directoryPath: string; entries: DirectoryEntryResult[]; targetPath: string }> {
-  const normalizedName = sanitizeSegmentName(nextName, path.basename(targetPath));
-  const targetDirectoryPath = path.dirname(targetPath);
-  const targetStat = await stat(targetPath);
-  const extension = path.extname(targetPath);
-  const finalName = targetStat.isDirectory()
-    ? normalizedName
-    : extension && !path.extname(normalizedName)
-      ? `${normalizedName}${extension}`
-      : normalizedName;
-  const nextPath = path.join(targetDirectoryPath, finalName);
+  return withFsError(async () => {
+    const normalizedName = sanitizeSegmentName(nextName, path.basename(targetPath));
+    const targetDirectoryPath = path.dirname(targetPath);
+    const targetStat = await stat(targetPath);
+    const extension = path.extname(targetPath);
+    const finalName = targetStat.isDirectory()
+      ? normalizedName
+      : extension && !path.extname(normalizedName)
+        ? `${normalizedName}${extension}`
+        : normalizedName;
+    const nextPath = path.join(targetDirectoryPath, finalName);
 
-  if (nextPath === targetPath) {
+    if (nextPath === targetPath) {
+      return {
+        directoryPath: targetDirectoryPath,
+        entries: await listDirectoryEntries(targetDirectoryPath),
+        targetPath,
+      };
+    }
+
+    await rename(targetPath, nextPath);
+
     return {
       directoryPath: targetDirectoryPath,
       entries: await listDirectoryEntries(targetDirectoryPath),
-      targetPath,
+      targetPath: nextPath,
     };
-  }
-
-  await rename(targetPath, nextPath);
-
-  return {
-    directoryPath: targetDirectoryPath,
-    entries: await listDirectoryEntries(targetDirectoryPath),
-    targetPath: nextPath,
-  };
+  });
 }
 
 export async function moveEntry({
@@ -330,34 +432,38 @@ export async function moveEntry({
   entries: DirectoryEntryResult[];
   movedPath: string;
 }> {
-  if (sourcePath === destinationDirectoryPath || isPathWithin(destinationDirectoryPath, sourcePath)) {
-    throw new Error('不能将项目移动到自身或子级目录');
-  }
+  return withFsError(async () => {
+    if (sourcePath === destinationDirectoryPath || isPathWithin(destinationDirectoryPath, sourcePath)) {
+      throw new Error('不能将项目移动到自身或子级目录');
+    }
 
-  const destinationPath = path.join(destinationDirectoryPath, path.basename(sourcePath));
-  await rename(sourcePath, destinationPath);
+    const destinationPath = path.join(destinationDirectoryPath, path.basename(sourcePath));
+    await rename(sourcePath, destinationPath);
 
-  return {
-    directoryPath: destinationDirectoryPath,
-    entries: await listDirectoryEntries(destinationDirectoryPath),
-    movedPath: destinationPath,
-  };
+    return {
+      directoryPath: destinationDirectoryPath,
+      entries: await listDirectoryEntries(destinationDirectoryPath),
+      movedPath: destinationPath,
+    };
+  });
 }
 
 export async function deleteEntry({
   targetPath,
 }: DeleteEntryPayload): Promise<{ directoryPath: string; entries: DirectoryEntryResult[] }> {
-  const targetDirectoryPath = path.dirname(targetPath);
-  const targetStat = await stat(targetPath);
+  return withFsError(async () => {
+    const targetDirectoryPath = path.dirname(targetPath);
+    const targetStat = await stat(targetPath);
 
-  if (targetStat.isDirectory()) {
-    await rm(targetPath, { recursive: true, force: false });
-  } else {
-    await rm(targetPath, { force: false });
-  }
+    if (targetStat.isDirectory()) {
+      await rm(targetPath, { recursive: true, force: false });
+    } else {
+      await rm(targetPath, { force: false });
+    }
 
-  return {
-    directoryPath: targetDirectoryPath,
-    entries: await listDirectoryEntries(targetDirectoryPath),
-  };
+    return {
+      directoryPath: targetDirectoryPath,
+      entries: await listDirectoryEntries(targetDirectoryPath),
+    };
+  });
 }

@@ -178,7 +178,7 @@ export async function createMarkdownFileInDirectory(
   });
 
   return {
-    title: getBaseName(result.filePath),
+    title: getBaseNameFromPath(result.filePath),
     filePath: result.filePath,
     source: result.content,
   };

@@ -157,7 +157,7 @@ button {
 
 .workspace {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 280px;
+  grid-template-columns: 372px minmax(0, 1fr) 280px;
   min-height: 0;
 }
 
@@ -166,7 +166,7 @@ button {
 }
 
 .workspace-right-closed {
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 372px minmax(0, 1fr);
 }
 
 .workspace-left-closed.workspace-right-closed {
@@ -248,17 +248,76 @@ button {
   grid-template-columns: minmax(280px, 0.9fr) minmax(380px, 1.1fr);
 }
 
-.tab-strip {
+.left-sidebar-shell {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  padding: 12px;
-  border-bottom: 1px solid #e6ecf1;
+  grid-template-columns: 72px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  background: #eef3f7;
+}
+
+.left-sidebar-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 8px;
+  background: linear-gradient(180deg, #eef5fb 0%, #e5edf4 100%);
+  border-right: 1px solid #d9e1e8;
+  overflow: auto;
+}
+
+.left-sidebar-rail-button {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 6px 8px;
+  color: #5a6778;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.left-sidebar-rail-button:hover {
+  color: #184e70;
+  background: rgba(219, 236, 248, 0.9);
+}
+
+.left-sidebar-rail-button.active {
+  color: #0f5f78;
+  background: linear-gradient(180deg, #d9ecfb 0%, #cfe5f8 100%);
+  border-color: #a8cae6;
+  box-shadow: inset -2px 0 0 #4b94d9;
+}
+
+.left-sidebar-rail-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.left-sidebar-rail-label {
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.left-sidebar-panel {
+  min-width: 0;
 }
 
 .obsidian-left-panel {
-  display: grid;
-  grid-template-rows: 50px minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   color: #2f343b;
   background: #f7f7f7;
 }
@@ -317,12 +376,14 @@ button {
 }
 
 .panel-body {
+  flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
   padding: 12px;
 }
 
 .explorer-body {
+  flex: 1 1 auto;
   padding: 6px 8px 12px;
   background: #f7f7f7;
 }
@@ -1181,6 +1242,7 @@ button {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .left-sidebar-shell,
   .left-panel,
   .right-panel {
     display: none;

@@ -63,6 +63,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
     }),
   updateDocumentLocation: ({ title, filePath }) =>
     set((state) => {
+      state.documentEpoch += 1;
       state.title = title;
       state.filePath = filePath;
     }),

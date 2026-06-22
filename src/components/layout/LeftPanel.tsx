@@ -10,17 +10,13 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
+  Images,
+  ListTree,
   Search,
   X,
 } from 'lucide-react';
 import { ContextMenu, type ContextMenuEntry } from '@/components/common/ContextMenu';
-import {
-  emptyFolderHints,
-  leftPanelTabs,
-  outlineTips,
-  resourceHints,
-  searchHints,
-} from '@/constants/workspace';
+import { emptyFolderHints, outlineTips, resourceHints, searchHints } from '@/constants/workspace';
 import type { TocItem } from '@/engine/parser/types';
 import type {
   LeftPanelTab,
@@ -29,6 +25,17 @@ import type {
 } from '@/types/workspace';
 
 type SortDirection = 'asc' | 'desc';
+
+const leftPanelRailItems: Array<{
+  tab: LeftPanelTab;
+  icon: typeof FolderOpen;
+  description: string;
+}> = [
+  { tab: '文件', icon: FolderOpen, description: '文件管理' },
+  { tab: '大纲', icon: ListTree, description: '文档大纲' },
+  { tab: '搜索', icon: Search, description: '内容搜索' },
+  { tab: '资源', icon: Images, description: '资源素材' },
+];
 
 interface LeftPanelProps {
   activeTab: LeftPanelTab;
@@ -359,6 +366,36 @@ function renderExplorerActions({
         <FolderOpen size={19} />
       </button>
     </div>
+  );
+}
+
+function renderLeftPanelRail(
+  activeTab: LeftPanelTab,
+  onTabChange: (tab: LeftPanelTab) => void,
+): JSX.Element {
+  return (
+    <nav className="left-sidebar-rail" aria-label="左侧板块切换">
+      {leftPanelRailItems.map(({ tab, icon: Icon, description }) => {
+        const isActive = tab === activeTab;
+
+        return (
+          <button
+            key={tab}
+            type="button"
+            className={isActive ? 'left-sidebar-rail-button active' : 'left-sidebar-rail-button'}
+            aria-pressed={isActive}
+            aria-label={`${tab}面板`}
+            title={description}
+            onClick={() => onTabChange(tab)}
+          >
+            <span className="left-sidebar-rail-icon">
+              <Icon size={20} />
+            </span>
+            <span className="left-sidebar-rail-label">{tab}</span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -771,77 +808,62 @@ export function LeftPanel({
   );
 
   return (
-    <aside className="left-panel obsidian-left-panel" aria-label="左侧文件管理">
-      {activeTab === '文件' ? (
-        renderExplorerActions({
-          currentDirectoryName,
-          sortDirection,
-          onOpenFolder,
-          onCreateFolder: () => onCreateFolder(expandedFolderPath),
-          onCreateMarkdownFile: () => onCreateMarkdownFile(expandedFolderPath),
-          onToggleSort: () => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc')),
-          onCollapseAll: () => setExpandedFolderPath(null),
-          onOpenSearch: () => onTabChange('搜索'),
-        })
-      ) : (
-        <div className="tab-strip">
-          {leftPanelTabs.map((tab) => (
-            <button
-              className={tab === activeTab ? 'tab-button active' : 'tab-button'}
-              type="button"
-              key={tab}
-              onClick={() => onTabChange(tab)}
-            >
-              {tab}
-            </button>
-          ))}
+    <div className="left-sidebar-shell">
+      {renderLeftPanelRail(activeTab, onTabChange)}
+
+      <aside className="left-panel obsidian-left-panel left-sidebar-panel" aria-label="左侧面板内容">
+        {activeTab === '文件' ? (
+          renderExplorerActions({
+            currentDirectoryName,
+            sortDirection,
+            onOpenFolder,
+            onCreateFolder: () => onCreateFolder(expandedFolderPath),
+            onCreateMarkdownFile: () => onCreateMarkdownFile(expandedFolderPath),
+            onToggleSort: () => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc')),
+            onCollapseAll: () => setExpandedFolderPath(null),
+            onOpenSearch: () => onTabChange('搜索'),
+          })
+        ) : null}
+
+        <div className={activeTab === '文件' ? 'panel-body explorer-body' : 'panel-body'}>
+          {renderPanelContent(
+            activeTab,
+            tocItems,
+            recentFiles,
+            currentFilePath,
+            currentDirectoryName,
+            sortedDirectoryEntries,
+            expandedFolderPath,
+            handleToggleFolder,
+            renamingPath,
+            () => setRenamingPath(null),
+            onOpenFolder,
+            onOpenEntry,
+            onOpenRecentFile,
+            onRemoveRecentFile,
+            onClearRecentFiles,
+            onRenameEntry,
+            handleContextMenu,
+            searchQuery,
+            onSearchQueryChange,
+            dragSource,
+            onDragStart,
+            onDragEnd,
+            onDragOver,
+            onDrop,
+          )}
         </div>
-      )}
 
-      <div className={activeTab === '文件' ? 'panel-body explorer-body' : 'panel-body'}>
-        {renderPanelContent(
-          activeTab,
-          tocItems,
-          recentFiles,
-          currentFilePath,
-          currentDirectoryName,
-          sortedDirectoryEntries,
-          expandedFolderPath,
-          handleToggleFolder,
-          renamingPath,
-          () => setRenamingPath(null),
-          onOpenFolder,
-          onOpenEntry,
-          onOpenRecentFile,
-          onRemoveRecentFile,
-          onClearRecentFiles,
-          onRenameEntry,
-          handleContextMenu,
-          searchQuery,
-          onSearchQueryChange,
-          dragSource,
-          onDragStart,
-          onDragEnd,
-          onDragOver,
-          onDrop,
-        )}
-      </div>
-
-      {activeTab !== '文件' ? (
-        <button type="button" className="panel-return-button" onClick={() => onTabChange('文件')}>
-          返回文件
-        </button>
-      ) : null}
-
-      {contextMenu ? (
-        <ContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          items={buildContextMenuItems(contextMenu.entry)}
-          onSelect={(id) => handleContextMenuSelect(id, contextMenu.entry)}
-          onClose={() => setContextMenu(null)}
-        />
-      ) : null}
-    </aside>
+        {contextMenu ? (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={buildContextMenuItems(contextMenu.entry)}
+            onSelect={(id) => handleContextMenuSelect(id, contextMenu.entry)}
+            onClose={() => setContextMenu(null)}
+          />
+        ) : null}
+      </aside>
+    </div>
   );
 }

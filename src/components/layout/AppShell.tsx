@@ -161,68 +161,65 @@ export function AppShell(): JSX.Element {
 
     if (draftTimerRef.current) {
       clearTimeout(draftTimerRef.current);
+      draftTimerRef.current = null;
+    }
+
+    if (!source.trim()) {
+      clearDraft();
+      return;
     }
 
     draftTimerRef.current = setTimeout(() => {
-      try {
-        localStorage.setItem(
-          'layout3.draft',
-          JSON.stringify({
-            title,
-            source,
-            filePath,
-            lastModified: Date.now(),
-          }),
-        );
-      } catch {
-        /* ignore quota errors */
-      }
+      saveDraft({
+        title,
+        source,
+        filePath,
+        lastModified: Date.now(),
+      });
     }, DRAFT_AUTO_SAVE_DELAY);
 
     return () => {
       if (draftTimerRef.current) {
         clearTimeout(draftTimerRef.current);
+        draftTimerRef.current = null;
       }
     };
   }, [isDirty, title, source, filePath]);
 
   // 检查草稿恢复
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('layout3.draft');
-      if (!raw) return;
+    const draft = loadDraft();
+    if (!draft) return;
 
-      const draft = JSON.parse(raw);
-      if (!draft || typeof draft.source !== 'string') return;
-
-      const draftSource = draft.source?.trim();
-      const currentSource = source?.trim() ?? '';
-
-      if (draftSource && draftSource !== currentSource && draftSource !== '# 未命名文档\n\n') {
-        const restored = window.confirm(
-          `检测到未保存的草稿（${new Date(draft.lastModified).toLocaleString('zh-CN')}）。是否恢复草稿内容？`,
-        );
-        if (restored) {
-          loadDocument({
-            title: draft.title || '草稿恢复',
-            filePath: null,
-            source: draft.source,
-          });
-          showMessage('已恢复上次未保存的草稿');
-        } else {
-          localStorage.removeItem('layout3.draft');
-        }
-      }
-    } catch {
-      /* ignore */
+    if (!draft.source.trim()) {
+      clearDraft();
+      return;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    if (draft.source === starterMarkdown || draft.source === source) {
+      return;
+    }
+
+    const restored = window.confirm(
+      `检测到未保存的草稿（${new Date(draft.lastModified).toLocaleString('zh-CN')}）。是否恢复草稿内容？`,
+    );
+    if (restored) {
+      restoreDraft({
+        title: draft.title || '草稿恢复',
+        source: draft.source,
+        filePath: draft.filePath,
+      });
+      showMessage('已恢复上次未保存的草稿');
+      return;
+    }
+
+    clearDraft();
   }, []);
 
   const handleCreateDocument = async (): Promise<void> => {
     if (!shouldProceedWithDirtyDocument()) return;
 
-    localStorage.removeItem('layout3.draft');
+    clearDraft();
     const blankDocument = createBlankDocument();
     loadDocument(blankDocument);
 
@@ -259,11 +256,11 @@ export function AppShell(): JSX.Element {
     try {
       const result = await saveLocalDocument({ title, filePath, source });
       markDocumentSaved(result);
-      localStorage.removeItem('layout3.draft');
+      clearDraft();
 
       if (result.filePath) {
         const nextRecent = addRecentFile(result.filePath, result.title);
-        setRecentFiles(nextRecent);
+        setRecentlyOpenedFiles(nextRecent);
         await syncWorkspaceRoot(result.filePath);
       }
 
@@ -290,10 +287,10 @@ export function AppShell(): JSX.Element {
       const result = await saveDocumentAs({ title, source });
       updateDocumentLocation({ title: result.title, filePath: result.filePath });
       markDocumentSaved(result);
-      localStorage.removeItem('layout3.draft');
+      clearDraft();
 
       const nextRecent = addRecentFile(result.filePath, result.title);
-      setRecentFiles(nextRecent);
+      setRecentlyOpenedFiles(nextRecent);
       await syncWorkspaceRoot(result.filePath);
 
       showMessage(`文档已另存为：${result.filePath}`);
@@ -401,21 +398,21 @@ export function AppShell(): JSX.Element {
       showMessage(`已打开：${nextDocument.title}`);
     } catch {
       const nextRecent = removeRecentFile(entry.filePath);
-      setRecentFiles(nextRecent);
+      setRecentlyOpenedFiles(nextRecent);
       showMessage('文件已不存在，已从历史中移除');
     }
   };
 
   const handleRemoveRecentFile = (filePath: string): void => {
     const nextRecent = removeRecentFile(filePath);
-    setRecentFiles(nextRecent);
+    setRecentlyOpenedFiles(nextRecent);
     showMessage('已从历史中移除');
   };
 
   const handleClearRecentFiles = (): void => {
     if (!window.confirm('确定要清除所有最近打开文件的历史记录吗？')) return;
     const nextRecent = clearRecentFiles();
-    setRecentFiles(nextRecent);
+    setRecentlyOpenedFiles(nextRecent);
     showMessage('已清除历史记录');
   };
 
@@ -441,11 +438,7 @@ export function AppShell(): JSX.Element {
         entry.kind === 'directory'
           ? updateRecentFilePathPrefix(entry.path, result.targetPath)
           : updateRecentFilePath(entry.path, result.targetPath);
-      setRecentFiles(nextRecent);
-
-      if (nextActiveFilePath && nextActiveFilePath !== filePath) {
-        setRecentFiles(addRecentFile(nextActiveFilePath, getBaseNameFromPath(nextActiveFilePath)));
-      }
+      setRecentlyOpenedFiles(nextRecent);
 
       await syncWorkspaceRoot(nextActiveFilePath);
       showMessage(`已重命名为：${trimmed}`);
@@ -466,13 +459,13 @@ export function AppShell(): JSX.Element {
       await deleteEntryFromDirectory(entry.path, deletesActiveDocument ? null : filePath);
 
       if (entry.kind === 'directory') {
-        setRecentFiles(removeRecentFilesUnderPath(entry.path));
+        setRecentlyOpenedFiles(removeRecentFilesUnderPath(entry.path));
       } else {
-        setRecentFiles(removeRecentFile(entry.path));
+        setRecentlyOpenedFiles(removeRecentFile(entry.path));
       }
 
       if (deletesActiveDocument) {
-        localStorage.removeItem('layout3.draft');
+        clearDraft();
         loadDocument(createBlankDocument());
       }
 
@@ -494,12 +487,11 @@ export function AppShell(): JSX.Element {
           ? replacePathPrefix(filePath, sourcePath, result.movedPath)
           : filePath;
 
-      setRecentFiles(updateRecentFilePathPrefix(sourcePath, result.movedPath));
+      setRecentlyOpenedFiles(updateRecentFilePathPrefix(sourcePath, result.movedPath));
 
       if (nextActiveFilePath && nextActiveFilePath !== filePath) {
         const nextTitle = getBaseNameFromPath(nextActiveFilePath);
         updateDocumentLocation({ title: nextTitle, filePath: nextActiveFilePath });
-        setRecentFiles(addRecentFile(nextActiveFilePath, nextTitle));
       }
 
       await syncWorkspaceRoot(nextActiveFilePath);
@@ -587,7 +579,7 @@ export function AppShell(): JSX.Element {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             tocItems={tocItems}
-            currentFilePath={filePath ?? currentDirectoryPath}
+            currentFilePath={filePath}
             currentDirectoryName={currentDirectoryName}
             directoryEntries={directoryEntries}
             recentFiles={recentFiles}
