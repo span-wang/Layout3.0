@@ -43,6 +43,23 @@ export interface InsertTableBlockResult {
   selectedNodeId: string;
 }
 
+export type ListStructureAction =
+  | 'insertItemAbove'
+  | 'insertItemBelow'
+  | 'deleteItem';
+
+export interface ListStructureEditResult {
+  block: LayoutBlock;
+  selectedNodeId: string | null;
+  didUpdate: boolean;
+}
+
+export interface ListPropertyEditResult {
+  block: LayoutBlock;
+  selectedNodeId: string | null;
+  didUpdate: boolean;
+}
+
 export type TableStructureAction =
   | 'insertRowAbove'
   | 'insertRowBelow'
@@ -273,6 +290,17 @@ function collectTableNodeIds(block: LayoutBlock): Set<string> {
   return ids;
 }
 
+function collectListItemIds(block: LayoutBlock): Set<string> {
+  const ids = new Set<string>();
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return ids;
+  }
+
+  ids.add(block.id);
+  block.metadata.items.forEach((item) => ids.add(item.id));
+  return ids;
+}
+
 function createUniqueTableNodeId(existingIds: Set<string>, baseId: string): string {
   let index = 1;
   let candidate = baseId;
@@ -284,6 +312,28 @@ function createUniqueTableNodeId(existingIds: Set<string>, baseId: string): stri
 
   existingIds.add(candidate);
   return candidate;
+}
+
+function createUniqueListItemId(existingIds: Set<string>, baseId: string): string {
+  let index = 1;
+  let candidate = baseId;
+
+  while (existingIds.has(candidate)) {
+    index += 1;
+    candidate = `${baseId}-${index}`;
+  }
+
+  existingIds.add(candidate);
+  return candidate;
+}
+
+function createEmptyListItemWithId(itemId: string): LayoutListItem {
+  return {
+    id: itemId,
+    sourceRange: null,
+    textRuns: [],
+    checked: null,
+  };
 }
 
 function createEmptyTableCellWithId(cellId: string, isHeader: boolean): LayoutTableCell {
@@ -313,6 +363,14 @@ function findTableCellPosition(
   return null;
 }
 
+function findListItemIndex(block: LayoutBlock, itemId: string): number {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return -1;
+  }
+
+  return block.metadata.items.findIndex((item) => item.id === itemId);
+}
+
 function createEmptyTableRowForStructureEdit(
   block: LayoutBlock,
   existingIds: Set<string>,
@@ -331,6 +389,15 @@ function createEmptyTableRowForStructureEdit(
       ),
     ),
   };
+}
+
+function createEmptyListItemForStructureEdit(
+  block: LayoutBlock,
+  existingIds: Set<string>,
+  insertIndex: number,
+): LayoutListItem {
+  const itemId = createUniqueListItemId(existingIds, `${block.id}-item-manual-${insertIndex + 1}`);
+  return createEmptyListItemWithId(itemId);
 }
 
 function createEmptyTableCellForStructureEdit(
@@ -542,6 +609,137 @@ export function updateTableStructureByCell(
   }
 
   return { block, selectedNodeId: null, didUpdate: false };
+}
+
+export function updateListStructureByItem(
+  block: LayoutBlock,
+  itemId: string,
+  action: ListStructureAction,
+): ListStructureEditResult {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const itemIndex = findListItemIndex(block, itemId);
+  if (itemIndex < 0) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const itemCount = block.metadata.items.length;
+
+  if (action === 'insertItemAbove' || action === 'insertItemBelow') {
+    const insertIndex = action === 'insertItemAbove' ? itemIndex : itemIndex + 1;
+    const existingIds = collectListItemIds(block);
+    const newItem = createEmptyListItemForStructureEdit(block, existingIds, insertIndex);
+    const nextItems = [
+      ...block.metadata.items.slice(0, insertIndex),
+      newItem,
+      ...block.metadata.items.slice(insertIndex),
+    ];
+
+    return {
+      block: {
+        ...block,
+        sourceRange: null,
+        metadata: {
+          ...block.metadata,
+          items: nextItems,
+        },
+      },
+      selectedNodeId: newItem.id,
+      didUpdate: true,
+    };
+  }
+
+  if (action === 'deleteItem') {
+    if (itemCount <= 1) {
+      return { block, selectedNodeId: itemId, didUpdate: false };
+    }
+
+    const nextItems = block.metadata.items.filter((_, index) => index !== itemIndex);
+    const nextItemIndex = Math.min(itemIndex, nextItems.length - 1);
+
+    return {
+      block: {
+        ...block,
+        sourceRange: null,
+        metadata: {
+          ...block.metadata,
+          items: nextItems,
+        },
+      },
+      selectedNodeId: nextItems[nextItemIndex]?.id ?? null,
+      didUpdate: true,
+    };
+  }
+
+  return { block, selectedNodeId: null, didUpdate: false };
+}
+
+export function updateListOrderedByItem(
+  block: LayoutBlock,
+  itemId: string,
+  ordered: boolean,
+): ListPropertyEditResult {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  if (findListItemIndex(block, itemId) < 0) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const nextStart = ordered && block.metadata.start === null ? 1 : block.metadata.start;
+  if (block.metadata.ordered === ordered && block.metadata.start === nextStart) {
+    return { block, selectedNodeId: itemId, didUpdate: false };
+  }
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        ordered,
+        start: nextStart,
+      },
+    },
+    selectedNodeId: itemId,
+    didUpdate: true,
+  };
+}
+
+export function updateListStartByItem(
+  block: LayoutBlock,
+  itemId: string,
+  start: number,
+): ListPropertyEditResult {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  if (findListItemIndex(block, itemId) < 0) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const normalizedStart = Math.max(1, Math.floor(start));
+  if (block.metadata.start === normalizedStart) {
+    return { block, selectedNodeId: itemId, didUpdate: false };
+  }
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        // 起始编号只在有序列表里真正显示；无序列表保留该值，便于用户切回有序列表。
+        start: normalizedStart,
+      },
+    },
+    selectedNodeId: itemId,
+    didUpdate: true,
+  };
 }
 
 export function updateTableHeaderRowByCell(
