@@ -9,7 +9,7 @@ import type {
 
 export const starterMarkdown = '';
 
-export const starterMarkdownPlaceholder = '在这里输入 Markdown 内容，支持标题、列表、表格和代码块。';
+export const starterMarkdownPlaceholder = '这里展示导入时保留的 Markdown 源码快照，后续编辑只写入 layout 工程数据。';
 export const starterTitle = '未命名文档';
 
 export const leftPanelTabs: LeftPanelTab[] = ['文件', '大纲', '搜索', '资源'];
@@ -19,16 +19,16 @@ export const workspaceViewModes: Array<{
   label: string;
   description: string;
 }> = [
-  { id: 'source', label: '源码视图', description: '聚焦 Markdown 输入与结构状态' },
-  { id: 'split', label: '分屏视图', description: '同时查看源码与分页结果' },
+  { id: 'source', label: '源码视图', description: '查看导入源码快照' },
+  { id: 'split', label: '分屏视图', description: '同时查看源码快照与分页结果' },
   { id: 'preview', label: '预览视图', description: '聚焦分页画布与排版效果' },
 ];
 
 export const sampleFiles: WorkspaceFileItem[] = [{ id: 'untitled', name: starterTitle }];
 
 export const emptyFolderHints = [
-  '当前文件夹为空，可以新建 Markdown 文件或文件夹。',
-  '双击文件列表中的 Markdown / layout 文件后，后续可继续扩展为多文档工作区。',
+  '当前文件夹为空，可以新建 layout 文档或文件夹。',
+  '双击文件列表中的 Markdown / layout 文件后，系统会导入为结构化工程文档继续编辑。',
 ];
 
 export const initialDirectoryEntries: WorkspaceDirectoryEntry[] = [];

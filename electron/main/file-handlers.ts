@@ -35,7 +35,7 @@ export interface CreateFolderPayload {
   folderName: string;
 }
 
-export interface CreateMarkdownFilePayload {
+export interface CreateLayoutFilePayload {
   directoryPath: string;
   fileName: string;
   content: string;
@@ -59,22 +59,49 @@ function getOwnerWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? undefined;
 }
 
-function getFileFilters() {
+function getOpenFileFilters() {
   return [
-    { name: 'Layout 工程与 Markdown', extensions: ['layout', 'md'] },
-    { name: 'Layout 工程文件', extensions: ['layout'] },
+    { name: 'Layout 工程与 Markdown', extensions: ['layout', 'json', 'md'] },
+    { name: 'Layout 工程文件', extensions: ['layout', 'json'] },
     { name: 'Markdown 文档', extensions: ['md'] },
+  ];
+}
+
+function getOpenImageFilters() {
+  return [
+    { name: '图片文件', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'] },
+    { name: '所有文件', extensions: ['*'] },
+  ];
+}
+
+function getSaveFileFilters() {
+  return [
+    { name: 'Layout 工程文件', extensions: ['layout', 'json'] },
   ];
 }
 
 function sanitizeDefaultName(fileName: string): string {
   const sanitized = fileName.replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ').trim();
-  return sanitized || '未命名文档.md';
+  return sanitized || '未命名文档.layout';
 }
 
 function sanitizeSegmentName(name: string, fallback: string): string {
   const sanitized = name.replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ').trim();
   return sanitized || fallback;
+}
+
+function ensureDocumentExtension(targetPath: string, defaultName: string): string {
+  const currentExtension = path.extname(targetPath).toLowerCase();
+  if (currentExtension === '.layout' || currentExtension === '.json') {
+    return targetPath;
+  }
+
+  const fallbackExtension = path.extname(defaultName);
+  if (currentExtension) {
+    return `${targetPath.slice(0, -currentExtension.length)}${fallbackExtension || '.layout'}`;
+  }
+
+  return fallbackExtension ? `${targetPath}${fallbackExtension}` : `${targetPath}.layout`;
 }
 
 const fsErrorMessages: Record<string, string> = {
@@ -243,12 +270,12 @@ export async function openDocument(): Promise<OpenDocumentResult> {
       ? await dialog.showOpenDialog(ownerWindow, {
           title: '打开文档',
           properties: ['openFile'],
-          filters: getFileFilters(),
+          filters: getOpenFileFilters(),
         })
       : await dialog.showOpenDialog({
           title: '打开文档',
           properties: ['openFile'],
-          filters: getFileFilters(),
+          filters: getOpenFileFilters(),
         });
 
     if (result.canceled || result.filePaths.length === 0) {
@@ -272,6 +299,31 @@ export async function openDocumentAtPath(filePath: string): Promise<OpenDocument
     return {
       filePath,
       content,
+    };
+  });
+}
+
+export async function selectImageFile(): Promise<{ filePath: string }> {
+  return withFsError(async () => {
+    const ownerWindow = getOwnerWindow();
+    const result = ownerWindow
+      ? await dialog.showOpenDialog(ownerWindow, {
+          title: '选择图片',
+          properties: ['openFile'],
+          filters: getOpenImageFilters(),
+        })
+      : await dialog.showOpenDialog({
+          title: '选择图片',
+          properties: ['openFile'],
+          filters: getOpenImageFilters(),
+        });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      throw new Error('已取消选择图片');
+    }
+
+    return {
+      filePath: result.filePaths[0],
     };
   });
 }
@@ -329,19 +381,19 @@ export async function saveDocument({
         ? await dialog.showSaveDialog(ownerWindow, {
             title: '保存文档',
             defaultPath: sanitizeDefaultName(defaultName),
-            filters: getFileFilters(),
+            filters: getSaveFileFilters(),
           })
         : await dialog.showSaveDialog({
             title: '保存文档',
             defaultPath: sanitizeDefaultName(defaultName),
-            filters: getFileFilters(),
+            filters: getSaveFileFilters(),
           });
 
       if (result.canceled || !result.filePath) {
         throw new Error('已取消保存文件');
       }
 
-      targetPath = result.filePath;
+      targetPath = ensureDocumentExtension(result.filePath, defaultName);
     }
 
     await writeFile(targetPath, content, 'utf8');
@@ -366,14 +418,17 @@ export async function createFolder({
   });
 }
 
-export async function createMarkdownFile({
+export async function createLayoutFile({
   directoryPath,
   fileName,
   content,
-}: CreateMarkdownFilePayload): Promise<{ filePath: string; content: string }> {
+}: CreateLayoutFilePayload): Promise<{ filePath: string; content: string }> {
   return withFsError(async () => {
     const normalizedName = sanitizeSegmentName(fileName, '未命名文档');
-    const finalName = normalizedName.toLowerCase().endsWith('.md') ? normalizedName : `${normalizedName}.md`;
+    const finalName =
+      normalizedName.toLowerCase().endsWith('.layout') || normalizedName.toLowerCase().endsWith('.json')
+        ? normalizedName
+        : `${normalizedName}.layout`;
     const filePath = await createUniqueFilePath(directoryPath, finalName, content);
 
     return {

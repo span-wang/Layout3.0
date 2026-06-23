@@ -1,14 +1,29 @@
 import { starterMarkdown, starterMarkdownPlaceholder, starterTitle } from '@/constants/workspace';
+import {
+  createEmptyLayoutDocument,
+  createLayoutDocumentFromMarkdown,
+  parseLayoutProjectFile,
+  serializeLayoutProjectFile,
+  type DocumentFormat,
+  type LayoutDocument,
+} from '@/engine/document-model';
+import { defaultStyleSettings } from '@/engine/style/presets';
+import { cloneStyleSettings } from '@/engine/style/styleSettings';
+import type { StyleSettings } from '@/engine/style/types';
 import type { WorkspaceDirectoryEntry } from '@/types/workspace';
 import {
   getBaseNameFromPath,
   getDirectoryNameFromPath,
+  getDocumentFormatFromPath,
 } from '@/utils/filePath';
 
 export interface LoadedDocument {
   title: string;
   filePath: string | null;
   source: string;
+  documentFormat: DocumentFormat;
+  layoutDocument: LayoutDocument;
+  styleSettings?: StyleSettings;
 }
 
 interface DirectoryResult {
@@ -27,10 +42,11 @@ type LayoutApiMethodName =
   | 'getDefaultWorkspace'
   | 'openFile'
   | 'openFileAtPath'
+  | 'selectImageFile'
   | 'openFolder'
   | 'readDirectory'
   | 'createFolder'
-  | 'createMarkdownFile'
+  | 'createLayoutFile'
   | 'saveFile'
   | 'renameEntry'
   | 'moveEntry'
@@ -57,15 +73,23 @@ function mapDirectoryEntries(entries: LayoutDirectoryEntry[], activeFilePath?: s
   }));
 }
 
-function getDefaultFileName(title: string): string {
-  return `${title || starterTitle}.md`;
+function getDefaultFileName(title: string, format: DocumentFormat): string {
+  return `${title || starterTitle}${format === 'layout' ? '.layout' : '.md'}`;
 }
 
 export function createBlankDocument(): LoadedDocument {
+  const layoutDocument = createEmptyLayoutDocument({
+    title: starterTitle,
+    source: starterMarkdown,
+  });
+
   return {
     title: starterTitle,
     filePath: null,
     source: starterMarkdown,
+    documentFormat: 'layout',
+    layoutDocument,
+    styleSettings: cloneStyleSettings(defaultStyleSettings),
   };
 }
 
@@ -73,38 +97,96 @@ export function getBlankDocumentPlaceholder(): string {
   return starterMarkdownPlaceholder;
 }
 
-export async function openLocalDocument(): Promise<LoadedDocument> {
-  const openFile = requireLayoutApiMethod('openFile');
-  const result = await openFile();
+async function mapOpenedDocument(result: { filePath: string; content: string }): Promise<LoadedDocument> {
+  const documentFormat = getDocumentFormatFromPath(result.filePath);
+
+  if (documentFormat === 'layout') {
+    const parsed = parseLayoutProjectFile(result.content);
+    return {
+      title: getBaseNameFromPath(result.filePath),
+      filePath: result.filePath,
+      source: parsed.document.source,
+      documentFormat,
+      layoutDocument: parsed.document,
+      styleSettings: parsed.styleSettings,
+    };
+  }
+
+  const layoutDocument = await createLayoutDocumentFromMarkdown(result.content);
 
   return {
     title: getBaseNameFromPath(result.filePath),
     filePath: result.filePath,
     source: result.content,
+    documentFormat,
+    layoutDocument,
   };
+}
+
+export async function openLocalDocument(): Promise<LoadedDocument> {
+  const openFile = requireLayoutApiMethod('openFile');
+  const result = await openFile();
+  return await mapOpenedDocument(result);
 }
 
 export async function openLocalDocumentAtPath(filePath: string): Promise<LoadedDocument> {
   const openFileAtPath = requireLayoutApiMethod('openFileAtPath');
   const result = await openFileAtPath(filePath);
+  return await mapOpenedDocument(result);
+}
 
+export async function selectLocalImageFile(): Promise<string> {
+  const selectImageFile = requireLayoutApiMethod('selectImageFile');
+  const result = await selectImageFile();
+  return result.filePath;
+}
+
+async function resolveLayoutDocumentForSave(payload: {
+  source: string;
+  layoutDocument: LayoutDocument;
+}): Promise<LayoutDocument> {
   return {
-    title: getBaseNameFromPath(result.filePath),
-    filePath: result.filePath,
-    source: result.content,
+    ...payload.layoutDocument,
+    source: payload.source,
+    meta: {
+      ...payload.layoutDocument.meta,
+      updatedAt: new Date().toISOString(),
+    },
   };
+}
+
+async function buildSaveContent(payload: {
+  source: string;
+  layoutDocument: LayoutDocument;
+  styleSettings: StyleSettings;
+}): Promise<string> {
+  const layoutDocument = await resolveLayoutDocumentForSave(payload);
+  return serializeLayoutProjectFile({
+    document: layoutDocument,
+    styleSettings: payload.styleSettings,
+  });
 }
 
 export async function saveLocalDocument(payload: {
   title: string;
   filePath: string | null;
   source: string;
+  layoutDocument: LayoutDocument;
+  styleSettings: StyleSettings;
 }): Promise<{ title: string; filePath: string }> {
   const saveFile = requireLayoutApiMethod('saveFile');
+  const content = await buildSaveContent({
+    source: payload.source,
+    layoutDocument: payload.layoutDocument,
+    styleSettings: payload.styleSettings,
+  });
+  const shouldOverwriteCurrentFile =
+    payload.filePath !== null && getDocumentFormatFromPath(payload.filePath) === 'layout';
+  const targetFilePath = shouldOverwriteCurrentFile ? payload.filePath : null;
   const result = await saveFile({
-    filePath: payload.filePath,
-    content: payload.source,
-    defaultName: payload.filePath ? getBaseNameFromPath(payload.filePath) : getDefaultFileName(payload.title),
+    filePath: targetFilePath,
+    content,
+    defaultName: getDefaultFileName(payload.title, 'layout'),
   });
 
   return {
@@ -165,23 +247,24 @@ export async function createFolderInDirectory(
   };
 }
 
-export async function createMarkdownFileInDirectory(
+export async function createLayoutFileInDirectory(
   directoryPath: string,
   fileName?: string,
 ): Promise<LoadedDocument> {
-  const baseName = fileName?.trim() ? fileName.trim() : `新建文档-${Date.now()}.md`;
-  const createMarkdownFile = requireLayoutApiMethod('createMarkdownFile');
-  const result = await createMarkdownFile({
+  const baseName = fileName?.trim() ? fileName.trim() : `新建文档-${Date.now()}.layout`;
+  const createLayoutFile = requireLayoutApiMethod('createLayoutFile');
+  const blankDocument = createBlankDocument();
+  const content = serializeLayoutProjectFile({
+    document: blankDocument.layoutDocument,
+    styleSettings: blankDocument.styleSettings ?? cloneStyleSettings(defaultStyleSettings),
+  });
+  const result = await createLayoutFile({
     directoryPath,
     fileName: baseName,
-    content: starterMarkdown,
+    content,
   });
 
-  return {
-    title: getBaseNameFromPath(result.filePath),
-    filePath: result.filePath,
-    source: result.content,
-  };
+  return await mapOpenedDocument(result);
 }
 
 export function getDirectoryDisplayName(directoryPath: string | null): string {
@@ -191,12 +274,20 @@ export function getDirectoryDisplayName(directoryPath: string | null): string {
 export async function saveDocumentAs(payload: {
   title: string;
   source: string;
+  filePath?: string | null;
+  layoutDocument: LayoutDocument;
+  styleSettings: StyleSettings;
 }): Promise<{ title: string; filePath: string }> {
   const saveFile = requireLayoutApiMethod('saveFile');
+  const content = await buildSaveContent({
+    source: payload.source,
+    layoutDocument: payload.layoutDocument,
+    styleSettings: payload.styleSettings,
+  });
   const result = await saveFile({
     filePath: null,
-    content: payload.source,
-    defaultName: getDefaultFileName(payload.title),
+    content,
+    defaultName: getDefaultFileName(payload.title, 'layout'),
   });
 
   return {

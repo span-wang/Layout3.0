@@ -1,0 +1,76 @@
+import type { BlockStyleOverrides } from './types';
+
+// 统一使用稳定哈希，确保同一输入在重复导入时生成一致的模型 ID。
+export function createStableHash(value: string): string {
+  let hash = 2166136261;
+
+  for (const char of value) {
+    hash ^= char.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return (hash >>> 0).toString(36);
+}
+
+export function createTextFragment(text: string, fallback: string): string {
+  const normalized = text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 24);
+
+  if (normalized) {
+    return normalized;
+  }
+
+  return `${fallback}-${createStableHash(text).slice(0, 6)}`;
+}
+
+export interface ResolvedHangingIndentStyle {
+  indentLeft: number;
+  indentRight: number;
+  firstLineIndent: number;
+  hangingIndent: number;
+  paddingLeft: number;
+  paddingRight: number;
+  textIndent: number;
+}
+
+// 统一把“左右缩进 + 首行缩进 + 悬挂缩进”收口成同一套计算规则，避免预览、导出和分页各算各的。
+export function resolveHangingIndentStyle(
+  blockStyleOverrides: Pick<BlockStyleOverrides, 'indentLeft' | 'indentRight' | 'firstLineIndent' | 'hangingIndent'>,
+): ResolvedHangingIndentStyle {
+  const indentLeft = Math.max(0, blockStyleOverrides.indentLeft ?? 0);
+  const indentRight = Math.max(0, blockStyleOverrides.indentRight ?? 0);
+  const firstLineIndent = Math.max(0, blockStyleOverrides.firstLineIndent ?? 0);
+  const hangingIndent = Math.max(0, blockStyleOverrides.hangingIndent ?? 0);
+
+  return {
+    indentLeft,
+    indentRight,
+    firstLineIndent,
+    hangingIndent,
+    paddingLeft: indentLeft + hangingIndent,
+    paddingRight: indentRight,
+    textIndent: firstLineIndent - hangingIndent,
+  };
+}
+
+export interface ResolvedHangingIndentLineWidths {
+  firstLineWidthPx: number;
+  followingLineWidthPx: number;
+}
+
+export function resolveHangingIndentLineWidths(
+  contentWidthPx: number,
+  blockStyleOverrides: Pick<BlockStyleOverrides, 'indentLeft' | 'indentRight' | 'firstLineIndent' | 'hangingIndent'>,
+): ResolvedHangingIndentLineWidths {
+  const indentStyle = resolveHangingIndentStyle(blockStyleOverrides);
+
+  return {
+    firstLineWidthPx: Math.max(1, contentWidthPx - indentStyle.indentLeft - indentStyle.firstLineIndent),
+    followingLineWidthPx: Math.max(1, contentWidthPx - indentStyle.indentLeft - indentStyle.indentRight),
+  };
+}

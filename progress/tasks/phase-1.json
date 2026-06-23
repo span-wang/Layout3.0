@@ -1,0 +1,219 @@
+{
+  "phaseId": "phase-1",
+  "tasks": [
+    {
+      "id": "PH1-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "建立 Electron + Vite + React + TypeScript 脚手架",
+      "priority": "P0",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "项目可安装、可启动、可构建。"
+    },
+    {
+      "id": "PH1-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "初始化目录结构与 TypeScript 基础配置",
+      "priority": "P0",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "目录职责清晰，基础配置可用。"
+    },
+    {
+      "id": "PH1-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "建立 Zustand Store 基础架构",
+      "priority": "P0",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "存在可扩展的状态切片与基础动作。"
+    },
+    {
+      "id": "PH1-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "集成 CodeMirror Markdown 编辑器",
+      "priority": "P0",
+      "moduleIds": [
+        "editor-module"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "可进行 Markdown 输入与基础编辑。"
+    },
+    {
+      "id": "PH1-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "集成 remark + rehype 解析管线",
+      "priority": "P0",
+      "moduleIds": [
+        "parser-module"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "Markdown 可解析为结构化中间结果。"
+    },
+    {
+      "id": "PH1-06",
+      "sequence": "6",
+      "order": 60,
+      "title": "实现基础 DOM 分页引擎",
+      "priority": "P0",
+      "moduleIds": [
+        "typesetting-engine"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "内容可按页面基本切分。"
+    },
+    {
+      "id": "PH1-07",
+      "sequence": "7",
+      "order": 70,
+      "title": "搭建三栏 UI 骨架",
+      "priority": "P0",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "工具栏、左面板、画布、右面板基础布局完成，并完成桌面三栏样式回归修复。"
+    },
+    {
+      "id": "PH1-08",
+      "sequence": "8",
+      "order": 80,
+      "title": "打通 PDF 导出",
+      "priority": "P0",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "可从当前文档导出 PDF。"
+    },
+    {
+      "id": "PH1-09",
+      "sequence": "9",
+      "order": 90,
+      "title": "实现文件管理基础能力",
+      "priority": "P0",
+      "moduleIds": [
+        "file-management"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "支持新建、打开、保存。"
+    },
+    {
+      "id": "PH1-09B",
+      "sequence": "9b",
+      "order": 92,
+      "title": "完善文件管理面板（删除、重命名、拖拽、搜索、另存为、最近文件、自动草稿）",
+      "priority": "P0",
+      "moduleIds": [
+        "file-management"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "所有文件管理功能完整实现，并已按 Obsidian 风格重做左侧递归目录树。"
+    },
+    {
+      "id": "PH1-09C",
+      "sequence": "9c",
+      "order": 93,
+      "title": "按审查报告修复文件管理契约与状态同步",
+      "priority": "P0",
+      "moduleIds": [
+        "file-management"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "草稿恢复、最近文件状态、默认保存名与重命名/移动后的解析刷新已统一，并完成回归验证。"
+    },
+    {
+      "id": "PH1-09D",
+      "sequence": "9d",
+      "order": 94,
+      "title": "按审查报告补齐主进程文件操作容错",
+      "priority": "P1",
+      "moduleIds": [
+        "file-management"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "目录树递归容错、错误信息翻译与新建文件/文件夹原子创建已完成并验证通过。"
+    },
+    {
+      "id": "PH1-09E",
+      "sequence": "9e",
+      "order": 95,
+      "title": "恢复左侧四板块竖向按钮入口",
+      "priority": "P1",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "文件/大纲/搜索/资源改为竖向按钮切换，文件管理面板内部逻辑保持不变，桌面宽屏布局与窄屏折叠规则已同步更新。"
+    },
+    {
+      "id": "PH1-10",
+      "sequence": "10",
+      "order": 100,
+      "title": "验证 M1 链路",
+      "priority": "P0",
+      "moduleIds": [
+        "editor-module",
+        "parser-module",
+        "typesetting-engine",
+        "export-pipeline",
+        "file-management"
+      ],
+      "milestoneIds": [
+        "M1"
+      ],
+      "status": "已完成",
+      "acceptance": "编辑、分页、导出链路完整跑通。"
+    }
+  ]
+}

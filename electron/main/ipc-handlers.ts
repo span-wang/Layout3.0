@@ -2,7 +2,7 @@ import { app, ipcMain } from 'electron';
 import {
   deleteEntry,
   createFolder,
-  createMarkdownFile,
+  createLayoutFile,
   getDefaultWorkspace,
   moveEntry,
   openDocument,
@@ -11,6 +11,7 @@ import {
   readDirectory,
   renameEntry,
   saveDocument,
+  selectImageFile,
 } from './file-handlers';
 import { exportPdf } from './pdf-handlers';
 
@@ -19,6 +20,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('file:getDefaultWorkspace', () => getDefaultWorkspace());
   ipcMain.handle('file:open', () => openDocument());
   ipcMain.handle('file:openAtPath', (_event, filePath: string) => openDocumentAtPath(filePath));
+  ipcMain.handle('file:selectImage', () => selectImageFile());
   ipcMain.handle('file:openFolder', () => openFolder());
   ipcMain.handle('file:readDirectory', (_event, directoryPath: string) => readDirectory(directoryPath));
   ipcMain.handle(
@@ -26,9 +28,9 @@ export function registerIpcHandlers(): void {
     (_event, payload: { parentPath: string; folderName: string }) => createFolder(payload),
   );
   ipcMain.handle(
-    'file:createMarkdownFile',
+    'file:createLayoutFile',
     (_event, payload: { directoryPath: string; fileName: string; content: string }) =>
-      createMarkdownFile(payload),
+      createLayoutFile(payload),
   );
   ipcMain.handle(
     'file:renameEntry',

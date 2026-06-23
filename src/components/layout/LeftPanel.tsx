@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { ContextMenu, type ContextMenuEntry } from '@/components/common/ContextMenu';
 import { emptyFolderHints, outlineTips, resourceHints, searchHints } from '@/constants/workspace';
-import type { TocItem } from '@/engine/parser/types';
+import type { TocItem } from '@/engine/document-model';
 import type {
   LeftPanelTab,
   RecentFileEntry,
@@ -47,7 +47,7 @@ interface LeftPanelProps {
   recentFiles: RecentFileEntry[];
   onOpenFolder: () => void;
   onCreateFolder: (parentPath?: string | null) => void;
-  onCreateMarkdownFile: (parentPath?: string | null) => void;
+  onCreateLayoutFile: (parentPath?: string | null) => void;
   onOpenEntry: (entry: WorkspaceDirectoryEntry) => void;
   onOpenRecentFile: (entry: RecentFileEntry) => void;
   onRemoveRecentFile: (filePath: string) => void;
@@ -290,7 +290,7 @@ function renderExplorerActions({
   sortDirection,
   onOpenFolder,
   onCreateFolder,
-  onCreateMarkdownFile,
+  onCreateLayoutFile,
   onToggleSort,
   onCollapseAll,
   onOpenSearch,
@@ -299,7 +299,7 @@ function renderExplorerActions({
   sortDirection: SortDirection;
   onOpenFolder: () => void;
   onCreateFolder: () => void;
-  onCreateMarkdownFile: () => void;
+  onCreateLayoutFile: () => void;
   onToggleSort: () => void;
   onCollapseAll: () => void;
   onOpenSearch: () => void;
@@ -312,9 +312,9 @@ function renderExplorerActions({
       <button
         type="button"
         className="explorer-icon-button"
-        title="新建 Markdown"
-        aria-label="新建 Markdown"
-        onClick={onCreateMarkdownFile}
+        title="新建 layout 文档"
+        aria-label="新建 layout 文档"
+        onClick={onCreateLayoutFile}
       >
         <FilePlus2 size={19} />
       </button>
@@ -742,7 +742,7 @@ export function LeftPanel({
   recentFiles,
   onOpenFolder,
   onCreateFolder,
-  onCreateMarkdownFile,
+  onCreateLayoutFile,
   onOpenEntry,
   onOpenRecentFile,
   onRemoveRecentFile,
@@ -818,7 +818,7 @@ export function LeftPanel({
             sortDirection,
             onOpenFolder,
             onCreateFolder: () => onCreateFolder(expandedFolderPath),
-            onCreateMarkdownFile: () => onCreateMarkdownFile(expandedFolderPath),
+            onCreateLayoutFile: () => onCreateLayoutFile(expandedFolderPath),
             onToggleSort: () => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc')),
             onCollapseAll: () => setExpandedFolderPath(null),
             onOpenSearch: () => onTabChange('搜索'),

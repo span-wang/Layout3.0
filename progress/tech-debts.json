@@ -1,0 +1,46 @@
+{
+  "items": [
+    {
+      "id": "DEBT-001",
+      "debt": "Markdown 解析结果被当作单一真相源",
+      "sourcePhase": "第一阶段后",
+      "status": "已完成",
+      "repaymentPlan": "已按 `结构化文档模型V1方案.md` 建立并接入 `LayoutDocument` 主链路，并进一步收口为“Markdown 只导入一次，后续只维护 `.layout` 工程数据”的工作流。"
+    },
+    {
+      "id": "DEBT-002",
+      "debt": "MVP 使用 DOM + CSS 分页，排版精度有限",
+      "sourcePhase": "第一阶段",
+      "status": "未开始",
+      "repaymentPlan": "结构化文档模型稳定后，再重构为逐元素测量分页。"
+    },
+    {
+      "id": "DEBT-003",
+      "debt": "排版引擎未使用 Web Worker",
+      "sourcePhase": "第一阶段后",
+      "status": "未开始",
+      "repaymentPlan": "第一阶段完成后迁移到 Worker。"
+    },
+    {
+      "id": "DEBT-004",
+      "debt": "表格仅支持基础编辑",
+      "sourcePhase": "第二阶段",
+      "status": "未开始",
+      "repaymentPlan": "第二阶段逐步补齐复杂表格能力。"
+    },
+    {
+      "id": "DEBT-005",
+      "debt": "AI 服务未接入流式输出",
+      "sourcePhase": "第三阶段",
+      "status": "未开始",
+      "repaymentPlan": "AI 面板完成时接入流式输出。"
+    },
+    {
+      "id": "DEBT-006",
+      "debt": "无插件系统",
+      "sourcePhase": "第三阶段后",
+      "status": "未开始",
+      "repaymentPlan": "P3 阶段规划。"
+    }
+  ]
+}

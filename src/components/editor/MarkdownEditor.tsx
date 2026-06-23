@@ -5,14 +5,16 @@ import { useEffect, useRef } from 'react';
 
 interface MarkdownEditorProps {
   value: string;
-  onChange: (nextValue: string) => void;
+  onChange?: (nextValue: string) => void;
   placeholderText?: string;
+  readOnly?: boolean;
 }
 
 export function MarkdownEditor({
   value,
   onChange,
   placeholderText,
+  readOnly = false,
 }: MarkdownEditorProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const editorViewRef = useRef<EditorView | null>(null);
@@ -37,6 +39,7 @@ export function MarkdownEditor({
       extensions: [
         lineNumbers(),
         markdown(),
+        EditorState.readOnly.of(readOnly),
         EditorView.lineWrapping,
         placeholder(placeholderText ?? ''),
         EditorView.theme({
@@ -83,7 +86,7 @@ export function MarkdownEditor({
           },
         }),
         EditorView.updateListener.of((update) => {
-          if (!update.docChanged) {
+          if (!update.docChanged || readOnly || !latestChangeHandlerRef.current) {
             return;
           }
 
@@ -105,7 +108,7 @@ export function MarkdownEditor({
       editorView.destroy();
       editorViewRef.current = null;
     };
-  }, [placeholderText]);
+  }, [placeholderText, readOnly]);
 
   useEffect(() => {
     const editorView = editorViewRef.current;

@@ -1,10 +1,38 @@
-import type { ParsedBlock } from '@/engine/parser/types';
+import type { LayoutBlock } from '@/engine/document-model';
+import type { PaginationAlgorithmId, ResolvedStyleContract } from '@/engine/style/types';
+
+export type LayoutWarningType = 'oversizedBlock' | 'forcedOverflow';
+
+export interface LayoutWarning {
+  pageNumber: number;
+  type: LayoutWarningType;
+  blockType: LayoutBlock['type'];
+  blockLabel: string;
+  message: string;
+  suggestion: string;
+}
 
 export interface PageLayout {
   pageNumber: number;
-  blocks: ParsedBlock[];
+  blocks: LayoutBlock[];
+  contract: ResolvedStyleContract;
+  warnings: LayoutWarning[];
 }
 
-export interface PaginationConfig {
-  pageCapacity: number;
+export interface PaginationAlgorithmContext {
+  blocks: LayoutBlock[];
+  contract: ResolvedStyleContract;
+}
+
+export type RebalanceTrailingBlockStrategy = 'v1' | 'v2';
+
+export interface PaginationAlgorithmDefinition {
+  id: PaginationAlgorithmId;
+  label: string;
+  description: string;
+  paginate: (context: PaginationAlgorithmContext) => PageLayout[];
+}
+
+export interface PaginateBlocksOptions {
+  algorithmId?: PaginationAlgorithmId;
 }

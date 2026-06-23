@@ -1,0 +1,710 @@
+import type {
+  BlockContent,
+  Blockquote,
+  Code,
+  Content,
+  Heading,
+  Image,
+  List,
+  ListItem,
+  Paragraph,
+  PhrasingContent,
+  Root,
+  RootContent,
+  Table,
+  TableCell,
+  TableRow,
+  ThematicBreak,
+} from 'mdast';
+import type { Position } from 'unist';
+import { createRemarkProcessor } from '@/engine/parser/remark';
+import { PAGE_BREAK_COMMAND } from '@/engine/parser/pageBreak';
+import { mergeAdjacentTextRuns } from './operations';
+import type {
+  BlockPagination,
+  BlockStyleOverrides,
+  LayoutBlock,
+  LayoutDocument,
+  LayoutListItem,
+  LayoutResource,
+  LayoutTableCell,
+  LayoutTableRow,
+  SourceRange,
+  TextMark,
+  TextRun,
+} from './types';
+import { createStableHash, createTextFragment } from './utils';
+
+interface BuilderState {
+  blockCounter: number;
+  resourceCounter: number;
+}
+
+interface MathBlockNode {
+  type: 'math';
+  value: string;
+  position?: Position;
+}
+
+type LayoutBlockContentNode = BlockContent | MathBlockNode;
+
+function createSourceRange(position?: Position | null): SourceRange | null {
+  if (!position) {
+    return null;
+  }
+
+  return {
+    start: {
+      line: position.start.line,
+      column: position.start.column,
+      offset: position.start.offset ?? null,
+    },
+    end: {
+      line: position.end.line,
+      column: position.end.column,
+      offset: position.end.offset ?? null,
+    },
+  };
+}
+
+function isLayoutBlockContentType(type: string): boolean {
+  return [
+    'paragraph',
+    'heading',
+    'list',
+    'table',
+    'blockquote',
+    'code',
+    'thematicBreak',
+    'math',
+  ].includes(type);
+}
+
+function createBlockId(state: BuilderState, type: LayoutBlock['type'], text: string): string {
+  state.blockCounter += 1;
+  return `${type}-${state.blockCounter}-${createTextFragment(text, type)}`;
+}
+
+function createRunId(blockId: string, index: number, text: string): string {
+  return `${blockId}-run-${index + 1}-${createTextFragment(text, 'text')}`;
+}
+
+function createBlockStyleOverrides(): BlockStyleOverrides {
+  return {};
+}
+
+function createBlockPagination(overrides: BlockPagination = {}): BlockPagination {
+  return overrides;
+}
+
+function createTextRun(
+  blockId: string,
+  index: number,
+  text: string,
+  sourceRange: SourceRange | null,
+  marks: TextMark[],
+): TextRun {
+  return {
+    id: createRunId(blockId, index, text),
+    text,
+    sourceRange,
+    marks,
+    charStyleRef: null,
+    styleOverrides: {},
+    annotations: [],
+  };
+}
+
+function dedupeMarks(marks: TextMark[]): TextMark[] {
+  const seen = new Set<string>();
+
+  return marks.filter((mark) => {
+    const key = JSON.stringify(mark);
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function appendMark(marks: TextMark[], mark: TextMark): TextMark[] {
+  return dedupeMarks([...marks, mark]);
+}
+
+function extractPlainTextFromPhrasing(nodes: PhrasingContent[]): string {
+  return nodes
+    .map((node) => {
+      switch (node.type) {
+        case 'text':
+          return node.value;
+        case 'inlineCode':
+          return node.value;
+        case 'break':
+          return '\n';
+        case 'inlineMath':
+          return `$${(node as PhrasingContent & { value: string }).value}$`;
+        case 'image':
+          return node.alt ? `[图片：${node.alt}]` : '[图片]';
+        case 'link':
+        case 'strong':
+        case 'emphasis':
+        case 'delete':
+          return extractPlainTextFromPhrasing(node.children);
+        default:
+          return '';
+      }
+    })
+    .join('');
+}
+
+function buildTextRunsFromPhrasing(
+  blockId: string,
+  nodes: PhrasingContent[],
+  inheritedMarks: TextMark[] = [],
+): TextRun[] {
+  const runs: TextRun[] = [];
+
+  for (const node of nodes) {
+    switch (node.type) {
+      case 'text':
+        runs.push(
+          createTextRun(blockId, runs.length, node.value, createSourceRange(node.position), inheritedMarks),
+        );
+        break;
+      case 'inlineCode':
+        runs.push(
+          createTextRun(
+            blockId,
+            runs.length,
+            node.value,
+            createSourceRange(node.position),
+            appendMark(inheritedMarks, { type: 'code' }),
+          ),
+        );
+        break;
+      case 'break':
+        runs.push(createTextRun(blockId, runs.length, '\n', createSourceRange(node.position), inheritedMarks));
+        break;
+      case 'inlineMath':
+        runs.push(
+          createTextRun(
+            blockId,
+            runs.length,
+            `$${(node as PhrasingContent & { value: string }).value}$`,
+            createSourceRange(node.position),
+            inheritedMarks,
+          ),
+        );
+        break;
+      case 'strong':
+        runs.push(
+          ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'bold' })),
+        );
+        break;
+      case 'emphasis':
+        runs.push(
+          ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'italic' })),
+        );
+        break;
+      case 'delete':
+        runs.push(
+          ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'strike' })),
+        );
+        break;
+      case 'link':
+        runs.push(
+          ...buildTextRunsFromPhrasing(
+            blockId,
+            node.children,
+            appendMark(inheritedMarks, { type: 'link', href: node.url, title: node.title ?? null }),
+          ),
+        );
+        break;
+      case 'image':
+        runs.push(
+          createTextRun(
+            blockId,
+            runs.length,
+            node.alt ? `[图片：${node.alt}]` : '[图片]',
+            createSourceRange(node.position),
+            inheritedMarks,
+          ),
+        );
+        break;
+      default:
+        break;
+    }
+  }
+
+  const mergedRuns = mergeAdjacentTextRuns(runs);
+  return mergedRuns.map((run, index) => ({
+    ...run,
+    id: createRunId(blockId, index, run.text),
+  }));
+}
+
+function buildBlockTextRuns(blockId: string, text: string, sourceRange: SourceRange | null): TextRun[] {
+  if (!text) {
+    return [];
+  }
+
+  return [createTextRun(blockId, 0, text, sourceRange, [])];
+}
+
+function buildListItemTextRuns(itemId: string, node: ListItem): TextRun[] {
+  const segments: TextRun[] = [];
+  let hasInsertedContent = false;
+
+  const appendSeparator = () => {
+    if (!hasInsertedContent) {
+      return;
+    }
+
+    segments.push(createTextRun(itemId, segments.length, '\n', null, []));
+  };
+
+  const appendTextRuns = (nextRuns: TextRun[]) => {
+    if (nextRuns.length === 0) {
+      return;
+    }
+
+    appendSeparator();
+    segments.push(...nextRuns);
+    hasInsertedContent = true;
+  };
+
+  for (const child of node.children) {
+    if (child.type === 'paragraph') {
+      appendTextRuns(buildTextRunsFromPhrasing(itemId, child.children));
+      continue;
+    }
+
+    if (child.type === 'code') {
+      appendTextRuns([
+        createTextRun(itemId, segments.length, child.value, createSourceRange(child.position), [{ type: 'code' }]),
+      ]);
+      continue;
+    }
+
+    if (child.type === 'list') {
+      const nestedText = child.children
+        .map((listItem) => extractPlainTextFromListItem(listItem))
+        .filter(Boolean)
+        .join('\n');
+      if (nestedText) {
+        appendTextRuns([
+          createTextRun(itemId, segments.length, nestedText, createSourceRange(child.position), []),
+        ]);
+      }
+    }
+  }
+
+  const normalizedRuns = mergeAdjacentTextRuns(segments);
+  return normalizedRuns.map((run, index) => ({
+    ...run,
+    id: createRunId(itemId, index, run.text),
+  }));
+}
+
+function extractPlainTextFromListItem(node: ListItem): string {
+  return node.children
+    .map((child) => {
+      if (child.type === 'paragraph') {
+        return extractPlainTextFromPhrasing(child.children);
+      }
+
+      if (child.type === 'code') {
+        return child.value;
+      }
+
+      if (child.type === 'list') {
+        return child.children.map((listItem) => extractPlainTextFromListItem(listItem)).join('\n');
+      }
+
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
+function buildListItem(blockId: string, index: number, node: ListItem): LayoutListItem {
+  const itemId = `${blockId}-item-${index + 1}-${createTextFragment(extractPlainTextFromListItem(node), 'item')}`;
+
+  return {
+    id: itemId,
+    sourceRange: createSourceRange(node.position),
+    textRuns: buildListItemTextRuns(itemId, node),
+    checked: typeof node.checked === 'boolean' ? node.checked : null,
+  };
+}
+
+function buildTableCell(blockId: string, rowIndex: number, cellIndex: number, node: TableCell, isHeader: boolean): LayoutTableCell {
+  const cellId = `${blockId}-cell-${rowIndex + 1}-${cellIndex + 1}`;
+  const textRuns = buildTextRunsFromPhrasing(
+    cellId,
+    node.children.filter((child): child is PhrasingContent => child.type !== 'html'),
+  );
+
+  return {
+    id: cellId,
+    sourceRange: createSourceRange(node.position),
+    textRuns,
+    isHeader,
+  };
+}
+
+function buildTableRow(blockId: string, rowIndex: number, node: TableRow): LayoutTableRow {
+  return {
+    id: `${blockId}-row-${rowIndex + 1}`,
+    sourceRange: createSourceRange(node.position),
+    cells: node.children.map((cell, cellIndex) =>
+      buildTableCell(blockId, rowIndex, cellIndex, cell, rowIndex === 0),
+    ),
+  };
+}
+
+function createBaseBlock(
+  id: string,
+  type: LayoutBlock['type'],
+  sourceRange: SourceRange | null,
+  blockStyleRef: string | null,
+): Omit<LayoutBlock, 'metadata' | 'textRuns' | 'pagination'> {
+  return {
+    id,
+    type,
+    sourceRange,
+    blockStyleRef,
+    blockStyleOverrides: createBlockStyleOverrides(),
+  };
+}
+
+function buildParagraphBlock(state: BuilderState, node: Paragraph): LayoutBlock {
+  const plainText = extractPlainTextFromPhrasing(node.children);
+  const sourceRange = createSourceRange(node.position);
+
+  if (plainText.trim() === PAGE_BREAK_COMMAND) {
+    const blockId = createBlockId(state, 'pageBreak', PAGE_BREAK_COMMAND);
+    return {
+      ...createBaseBlock(blockId, 'pageBreak', sourceRange, null),
+      textRuns: [],
+      pagination: createBlockPagination({ pageBreakAfter: true }),
+      metadata: {
+        kind: 'pageBreak',
+        command: PAGE_BREAK_COMMAND,
+      },
+    };
+  }
+
+  if (node.children.length === 1 && node.children[0].type === 'image') {
+    return buildImageBlock(state, node.children[0], sourceRange);
+  }
+
+  const blockId = createBlockId(state, 'paragraph', plainText);
+  return {
+    ...createBaseBlock(blockId, 'paragraph', sourceRange, 'paragraph'),
+    textRuns: buildTextRunsFromPhrasing(blockId, node.children),
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'paragraph',
+      text: plainText,
+    },
+  };
+}
+
+function buildHeadingBlock(state: BuilderState, node: Heading): LayoutBlock {
+  const plainText = extractPlainTextFromPhrasing(node.children);
+  const blockId = createBlockId(state, 'heading', plainText);
+
+  return {
+    ...createBaseBlock(blockId, 'heading', createSourceRange(node.position), `heading-${node.depth}`),
+    textRuns: buildTextRunsFromPhrasing(blockId, node.children),
+    pagination: createBlockPagination({ keepWithNext: true }),
+    metadata: {
+      kind: 'heading',
+      depth: node.depth,
+      text: plainText,
+    },
+  };
+}
+
+function buildListBlock(state: BuilderState, node: List): LayoutBlock {
+  const plainText = node.children.map((item) => extractPlainTextFromListItem(item)).join('\n');
+  const blockId = createBlockId(state, 'list', plainText);
+
+  return {
+    ...createBaseBlock(blockId, 'list', createSourceRange(node.position), 'list'),
+    textRuns: [],
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'list',
+      ordered: node.ordered ?? false,
+      start: node.start ?? null,
+      spread: node.spread ?? false,
+      items: node.children.map((item, index) => buildListItem(blockId, index, item)),
+    },
+  };
+}
+
+function buildBlockquoteBlock(state: BuilderState, node: Blockquote): LayoutBlock {
+  const nestedBlocks = buildBlocks(
+    state,
+    node.children.filter((child) => isLayoutBlockContentType(child.type)) as LayoutBlockContentNode[],
+  );
+  const blockId = createBlockId(
+    state,
+    'blockquote',
+    nestedBlocks
+      .flatMap((block) => block.textRuns.map((run) => run.text))
+      .join(' '),
+  );
+
+  return {
+    ...createBaseBlock(blockId, 'blockquote', createSourceRange(node.position), 'blockquote'),
+    textRuns: [],
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'blockquote',
+      blocks: nestedBlocks,
+    },
+  };
+}
+
+function buildCodeBlock(state: BuilderState, node: Code): LayoutBlock {
+  const blockId = createBlockId(state, 'code', node.value);
+
+  return {
+    ...createBaseBlock(blockId, 'code', createSourceRange(node.position), 'code'),
+    textRuns: buildBlockTextRuns(blockId, node.value, createSourceRange(node.position)),
+    pagination: createBlockPagination({ keepLinesTogether: true }),
+    metadata: {
+      kind: 'code',
+      language: node.lang ?? null,
+      value: node.value,
+    },
+  };
+}
+
+function buildTableBlock(state: BuilderState, node: Table): LayoutBlock {
+  const plainText = node.children
+    .flatMap((row) => row.children.map((cell) => extractPlainTextFromPhrasing(cell.children)))
+    .join(' ');
+  const blockId = createBlockId(state, 'table', plainText);
+
+  return {
+    ...createBaseBlock(blockId, 'table', createSourceRange(node.position), 'table'),
+    textRuns: [],
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'table',
+      align: (node.align ?? []).map((align) => align ?? null),
+      rows: node.children.map((row, rowIndex) => buildTableRow(blockId, rowIndex, row)),
+    },
+  };
+}
+
+function buildImageBlock(state: BuilderState, node: Image, sourceRange = createSourceRange(node.position)): LayoutBlock {
+  const blockId = createBlockId(state, 'image', `${node.url} ${node.alt ?? ''}`.trim());
+
+  return {
+    ...createBaseBlock(blockId, 'image', sourceRange, 'image'),
+    textRuns: [],
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'image',
+      src: node.url,
+      alt: node.alt ?? '',
+      title: node.title ?? null,
+    },
+  };
+}
+
+function buildHorizontalRuleBlock(state: BuilderState, node: ThematicBreak): LayoutBlock {
+  const blockId = createBlockId(state, 'horizontalRule', 'horizontal-rule');
+
+  return {
+    ...createBaseBlock(blockId, 'horizontalRule', createSourceRange(node.position), 'horizontal-rule'),
+    textRuns: [],
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'horizontalRule',
+    },
+  };
+}
+
+function buildEquationBlock(state: BuilderState, node: MathBlockNode): LayoutBlock {
+  const blockId = createBlockId(state, 'equation', node.value);
+  const sourceRange = createSourceRange(node.position);
+
+  return {
+    ...createBaseBlock(blockId, 'equation', sourceRange, 'equation'),
+    textRuns: buildBlockTextRuns(blockId, node.value, sourceRange),
+    pagination: createBlockPagination({ keepLinesTogether: true }),
+    metadata: {
+      kind: 'equation',
+      value: node.value,
+    },
+  };
+}
+
+function buildBlocks(state: BuilderState, nodes: LayoutBlockContentNode[]): LayoutBlock[] {
+  return nodes.flatMap((node) => {
+    switch (node.type) {
+      case 'paragraph':
+        return [buildParagraphBlock(state, node)];
+      case 'heading':
+        return [buildHeadingBlock(state, node)];
+      case 'list':
+        return [buildListBlock(state, node)];
+      case 'blockquote':
+        return [buildBlockquoteBlock(state, node)];
+      case 'code':
+        return [buildCodeBlock(state, node)];
+      case 'table':
+        return [buildTableBlock(state, node)];
+      case 'thematicBreak':
+        return [buildHorizontalRuleBlock(state, node)];
+      case 'math':
+        return [buildEquationBlock(state, node)];
+      default:
+        return [];
+    }
+  });
+}
+
+function collectImageResources(state: BuilderState, blocks: LayoutBlock[]): LayoutResource[] {
+  const resources: LayoutResource[] = [];
+
+  for (const block of blocks) {
+    if (block.type === 'image' && block.metadata.kind === 'image') {
+      state.resourceCounter += 1;
+      resources.push({
+        id: `resource-${state.resourceCounter}-${createTextFragment(block.metadata.src, 'image')}`,
+        type: 'image',
+        src: block.metadata.src,
+        alt: block.metadata.alt,
+        title: block.metadata.title,
+        blockId: block.id,
+      });
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      resources.push(...collectImageResources(state, block.metadata.blocks));
+    }
+  }
+
+  return resources;
+}
+
+function countWords(text: string): number {
+  const matches = text.trim().match(/[\p{L}\p{N}]+/gu);
+  return matches ? matches.length : 0;
+}
+
+function countCharacters(text: string): number {
+  return text.replace(/\s+/gu, '').length;
+}
+
+function getDocumentTitle(blocks: LayoutBlock[]): string {
+  const headingBlock = blocks.find(
+    (block): block is LayoutBlock & { metadata: { kind: 'heading'; text: string } } =>
+      block.type === 'heading' && block.metadata.kind === 'heading',
+  );
+
+  if (headingBlock) {
+    return headingBlock.metadata.text || '未命名文档';
+  }
+
+  const paragraphBlock = blocks.find(
+    (block): block is LayoutBlock & { metadata: { kind: 'paragraph'; text: string } } =>
+      block.type === 'paragraph' && block.metadata.kind === 'paragraph' && block.metadata.text.trim().length > 0,
+  );
+
+  if (paragraphBlock) {
+    return paragraphBlock.metadata.text.slice(0, 24);
+  }
+
+  return '未命名文档';
+}
+
+export function createEmptyLayoutDocument(payload: {
+  title?: string;
+  source?: string;
+} = {}): LayoutDocument {
+  const source = payload.source ?? '';
+  const blocks: LayoutBlock[] = [];
+
+  return {
+    version: '1.0.0',
+    id: `layout-document-${createStableHash(source)}`,
+    title: payload.title ?? '未命名文档',
+    source,
+    blocks,
+    resources: [],
+    styles: {
+      blockStyles: {},
+      textStyles: {},
+    },
+    template: {
+      templateId: null,
+      templateOverrides: {},
+    },
+    viewState: {
+      answerDisplayMode: 'show',
+      zoom: 1,
+      selectedNodeId: null,
+    },
+    meta: {
+      sourceFormat: 'markdown',
+      wordCount: countWords(source),
+      characterCount: countCharacters(source),
+      blockCount: 0,
+      updatedAt: new Date().toISOString(),
+    },
+  };
+}
+
+export async function createLayoutDocumentFromMarkdown(source: string): Promise<LayoutDocument> {
+  const processor = createRemarkProcessor();
+  const tree = processor.parse(source) as Root;
+  const state: BuilderState = {
+    blockCounter: 0,
+    resourceCounter: 0,
+  };
+  const blocks = buildBlocks(
+    state,
+    tree.children.filter((node) => isLayoutBlockContentType(node.type)) as LayoutBlockContentNode[],
+  );
+  const resources = collectImageResources(state, blocks);
+  const title = getDocumentTitle(blocks);
+
+  return {
+    version: '1.0.0',
+    id: `layout-document-${createStableHash(source)}`,
+    title,
+    source,
+    blocks,
+    resources,
+    styles: {
+      blockStyles: {},
+      textStyles: {},
+    },
+    template: {
+      templateId: null,
+      templateOverrides: {},
+    },
+    viewState: {
+      answerDisplayMode: 'show',
+      zoom: 1,
+      selectedNodeId: null,
+    },
+    meta: {
+      sourceFormat: 'markdown',
+      wordCount: countWords(source),
+      characterCount: countCharacters(source),
+      blockCount: blocks.length,
+      updatedAt: new Date().toISOString(),
+    },
+  };
+}

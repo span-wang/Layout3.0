@@ -1,0 +1,416 @@
+{
+  "phaseId": "phase-2",
+  "tasks": [
+    {
+      "id": "PH2-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "主链路纠偏：确认 Markdown 不是唯一真相源",
+      "priority": "P0",
+      "moduleIds": [
+        "document-model",
+        "parser-module"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "第二阶段计划已调整为结构化文档模型优先，风险区记录当前纯 Markdown 解析链路对富文本编辑的影响，并沉淀到 `结构化文档模型V1方案.md`。"
+    },
+    {
+      "id": "PH2-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "建立结构化文档模型 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "document-model",
+        "parser-module"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "按 `结构化文档模型V1方案.md` 落地模型类型、转换函数、TextRun、样式覆盖、答案标记与基础验证。"
+    },
+    {
+      "id": "PH2-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "接入 `.layout` 工程文件读写模型",
+      "priority": "P0",
+      "moduleIds": [
+        "document-model",
+        "file-management"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "`.layout` 保存源码快照、结构化模型、资源、样式覆盖、模板配置与元信息，并作为唯一工作文件；Markdown 仅在打开时导入一次，后续画布编辑、页面设置、自动草稿与保存都围绕 `.layout` 工程数据进行。"
+    },
+    {
+      "id": "PH2-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "Markdown 导入到文档模型",
+      "priority": "P0",
+      "moduleIds": [
+        "parser-module",
+        "document-model"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "Markdown 作为输入层一次性生成初始文档模型，保留源码范围、基础行内格式、块级公式与分页控制；导入完成后不再持续监听源码变化，源码区仅保留只读快照展示。"
+    },
+    {
+      "id": "PH2-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "画布元素选择与模型定位",
+      "priority": "P0",
+      "moduleIds": [
+        "ui-components",
+        "document-model"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "预览区可选中文本块、图片、表格、公式，并能定位到模型节点与右侧属性面板。"
+    },
+    {
+      "id": "PH2-05A",
+      "sequence": "5a",
+      "order": 51,
+      "title": "画布块内文字编辑 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "editor-module",
+        "ui-components",
+        "document-model"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "双击画布标题、段落、代码块、列表项、表格单元格、图片说明与公式文本可原位编辑，失焦或 `Ctrl + Enter` 写回 `LayoutDocument`，`Esc` 可取消，编辑后标记未保存并保持分页预览更新。"
+    },
+    {
+      "id": "PH2-05B",
+      "sequence": "5b",
+      "order": 52,
+      "title": "复杂块结构编辑兼容补齐",
+      "priority": "P1",
+      "moduleIds": [
+        "editor-module",
+        "ui-components",
+        "document-model"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "进行中",
+      "acceptance": "补齐列表整体编辑、表格增删行列/表头/对齐、图片路径编辑、引用容器属性、公式可视化渲染编辑、右侧对象属性对子节点展示；明确分隔线与分页符无文字编辑需求。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成：表格表头、列对齐与续表头 V1",
+        "confirmedOn": "2026-06-23",
+        "summary": "本小步已在 `PH2-05B` 内补齐表格表头行开关与当前列对齐编辑，并与 `PH2-09` 联动完成估算分页下的表格跨页自动续表头 V1；表格属性写回只修改现有 `isHeader` 与 `metadata.align` 字段，续表头只在分页结果中生成渲染用表格片段，不反写 Markdown 源码或改变原始 `LayoutDocument` 结构。",
+        "inScope": [
+          "选中表格单元格时，在右侧“对象属性”中新增“表格属性”操作区。",
+          "支持“首行作为表头”开关，开启时把第一行所有单元格 `isHeader` 写为 `true`，关闭时写为 `false`。",
+          "支持当前列对齐设置：默认、左对齐、居中、右对齐，并写入 `LayoutDocument.blocks[].metadata.align[columnIndex]`。",
+          "画布预览消费表头与列对齐：表头单元格使用表头视觉样式，列对齐影响该列所有单元格展示。",
+          "HTML/PDF 导出消费表头与列对齐：表头单元格导出为 `<th>`，列对齐导出为对应 `text-align`。",
+          "联动 `PH2-09`：当表格按估算行高跨页拆分时，后续页自动复制首行表头。"
+        ],
+        "interactionRules": [
+          "只有选中具体表格单元格时才展示并启用表格属性编辑。",
+          "选中表格块但未选中具体单元格时，提示用户先选中单元格，不猜测目标列。",
+          "表头开关只作用于第一行，不自动改动其他行的 `isHeader` 状态。",
+          "列对齐只作用于当前选中单元格所在列，不新增整表对齐或单元格级对齐入口。",
+          "每次表格属性写回后给出中文反馈，并保持当前合理选中态。"
+        ],
+        "writebackRules": [
+          "表头开关只写入 `LayoutDocument.blocks[].metadata.rows[0].cells[].isHeader`。",
+          "列对齐只写入 `LayoutDocument.blocks[].metadata.align[columnIndex]`。",
+          "表格属性变化不回写 Markdown 源码快照，也不改 `LayoutDocument.resources`。",
+          "续表头分页片段只存在于 `PageLayout.blocks` 中，不写回原始 `LayoutDocument.blocks`。",
+          "表格属性写回后必须标记 `isDirty`，确保 `.layout` 保存和自动草稿可以持久化。"
+        ],
+        "consistencyRules": [
+          "表格属性写回后要继续兼容现有画布渲染、右侧对象识别、单元格编辑、表格增删行列、HTML/PDF 导出和冒烟脚本。",
+          "表格跨页续表头必须复用当前表头行内容、TextRun 格式和列对齐设置。",
+          "实现过程中继续保持中文文案与中文注释。",
+          "分页拆分只做估算行级拆分，不重构算法注册表或引入真实 DOM 测量。"
+        ],
+        "outOfScope": [
+          "不做拖拽调整列宽。",
+          "不做合并或拆分单元格。",
+          "不做单元格背景色、边框、对齐等样式。",
+          "不做真实测量分页、孤寡行精修或分页代价函数。",
+          "不做跨页单元格内容拆分；若单行超过单页，本步保留整行并沿用溢出风险处理。",
+          "不做列宽拖拽、合并单元格、右键菜单或快捷键。",
+          "不新增 `.layout` 文件结构字段，不反写 Markdown 源码。"
+        ],
+        "deferredTo": [
+          "列宽与合并单元格：后续继续归属 `PH2-05B` 或 `PH2-10` 拆分小步。",
+          "真实测量分页、跨页单元格内容拆分与更复杂的表格分页质量：后续归属 `PH2-09`。",
+          "表格样式和模板优先级：后续归属 `PH2-07`。",
+          "表格右键菜单与快捷键：后续归属交互增强小步。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-06",
+      "sequence": "6",
+      "order": 60,
+      "title": "文本与段落局部样式编辑",
+      "priority": "P0",
+      "moduleIds": [
+        "editor-module",
+        "style-module",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "进行中",
+      "acceptance": "支持字体、字号、颜色、高亮、加粗、斜体、下划线、对齐、缩进、行距、段前后距，并写入模型样式覆盖。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中：左右缩进已完成",
+        "confirmedOn": "2026-06-23",
+        "summary": "本小步已补齐标题与段落的左右缩进能力：在现有首行缩进与悬挂缩进基础上新增可单独控制的 `indentLeft`、`indentRight` 字段和右侧面板入口，并让画布预览、分页估算、`.layout` 保存与 HTML/PDF 导出共同消费；范围仍未扩大到列表、表格或更完整的段落盒模型重构。",
+        "inScope": [
+          "在 `BlockStyleOverrides` 中继续使用独立的 `indentLeft`、`indentRight` 字段，分别表示左右缩进。",
+          "右侧对象属性面板为标题和段落补充“左缩进”“右缩进”数值输入，并继续保留现有首行缩进与悬挂缩进入口。",
+          "画布预览支持左右缩进：块内容整体按左缩进和右缩进收窄可用宽度。",
+          "HTML/PDF 导出与分页估算同步消费左右缩进，尽量保持预览、分页和导出结果一致。",
+          "`.layout` 工程文件保存后再次打开，左右缩进值能够保留。"
+        ],
+        "interactionRules": [
+          "当前小步只允许在右侧对象属性面板中修改左右缩进，不新增顶部快捷栏或浮动工具条入口。",
+          "当左缩进或右缩进为正值时，应稳定收窄块的可用排版宽度，不能互相覆盖或失效。",
+          "当首行缩进、悬挂缩进与左右缩进同时存在时，组合结果必须稳定，不能出现跳变。",
+          "用户修改左右缩进后，画布预览应立即更新并保持现有未保存标记行为不变。"
+        ],
+        "writebackRules": [
+          "左右缩进继续写入 `LayoutDocument.blocks[].blockStyleOverrides`，作为块级局部样式覆盖保存。",
+          "本步不新增字段，只补齐 `indentLeft` 与 `indentRight` 的真实消费。",
+          "不改变 `.layout` 保存、自动草稿、未保存标记和导出主流程。"
+        ],
+        "consistencyRules": [
+          "右侧对象属性面板、画布预览、分页估算与 HTML/PDF 导出的左右缩进行为要使用同一套计算规则。",
+          "现有首行缩进、悬挂缩进、段前段后距、行高与对齐能力不能因左右缩进接入而回退。",
+          "实现过程中继续保持中文文案与中文注释。"
+        ],
+        "outOfScope": [
+          "不覆盖列表、表格、代码块、引用、图片或公式的左右缩进编辑。",
+          "不改顶部快捷格式工具栏、浮动工具条、快捷键系统或模板优先级。",
+          "不做真实测量分页、复杂块结构编辑或导出样式大重构。"
+        ],
+        "deferredTo": [
+          "更完整的段落盒模型与其他块类型缩进：后续继续归属 `PH2-06` 后续拆分小步。",
+          "默认样式、模板样式、局部覆盖和清除格式之间的优先级：后续归属 `PH2-07`。",
+          "列表整体编辑、表格增删行列、图片与公式编辑：后续归属 `PH2-05B` / `PH2-10`。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-07",
+      "sequence": "7",
+      "order": 70,
+      "title": "样式覆盖与模板优先级",
+      "priority": "P1",
+      "moduleIds": [
+        "style-module",
+        "document-model"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "未开始",
+      "acceptance": "明确默认样式、模板样式、局部覆盖、清除格式之间的优先级，并能被预览和导出共同消费。"
+    },
+    {
+      "id": "PH2-08",
+      "sequence": "8",
+      "order": 80,
+      "title": "已完成排版预备能力归档",
+      "priority": "P1",
+      "moduleIds": [
+        "style-module",
+        "typesetting-engine"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "页面配置契约、页眉页脚预留、`/pagebreak` 手动分页、基础溢出告警已完成并通过 `typecheck`、`build`、`smoke:m1` 验证。"
+    },
+    {
+      "id": "PH2-09",
+      "sequence": "9",
+      "order": 90,
+      "title": "精细分页算法（二次推进）",
+      "priority": "P1",
+      "moduleIds": [
+        "typesetting-engine"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "进行中",
+      "acceptance": "基于结构化文档模型建立可切换的分页算法注册框架，并在此基础上继续推进孤寡行、表格跨页、表头重复与真实测量分页。",
+      "planReferences": [
+        "progress/roadmaps/PH2-09-分页算法开发线路.md"
+      ],
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成：表格跨页自动续表头 V1",
+        "confirmedOn": "2026-06-23",
+        "summary": "本小步已与 `PH2-05B` 表格属性编辑联动，基于现有估算分页主链路完成表格跨页自动续表头 V1：表格按估算行高拆成多个分页片段，后续页自动复制首行表头；该拆分只发生在分页结果中，不改变原始 `LayoutDocument`，也不引入真实测量分页或新的算法 ID。",
+        "inScope": [
+          "在现有估算分页公共逻辑中支持表格按行拆分到多个 `PageLayout`。",
+          "当表格存在首行表头时，后续分页片段自动复制首行表头。",
+          "保留现有算法 ID、注册表、右侧分页策略入口和 `.layout` 持久化链路。",
+          "让续表头结果同时服务画布预览和 HTML/PDF 导出。",
+          "补充冒烟验证，覆盖跨页表格片段和续表头结果。"
+        ],
+        "interactionRules": [
+          "本步不新增分页策略 UI 开关，续表头随表格表头状态自动生效。",
+          "只有表格首行被设置为表头时，后续页才复制续表头。",
+          "如果单个表格行估算高度超过单页正文高度，本步不拆分单元格内容，只保留整行放置并沿用溢出风险处理。"
+        ],
+        "writebackRules": [
+          "续表头分页片段只写入运行时分页结果，不写回 `LayoutDocument.blocks`。",
+          "分页片段需要保留原表格块 ID 的可追溯关系，并为片段行生成稳定的运行时 ID。",
+          "不新增 `.layout` 持久化字段，不反写 Markdown 源码。"
+        ],
+        "consistencyRules": [
+          "实现过程中继续保持中文文案与中文注释。",
+          "续表头拆分需要兼容现有分页算法插件、分页预览、导出和冒烟链路。",
+          "表格片段必须保留列对齐、表头单元格状态与单元格 TextRun 格式。"
+        ],
+        "outOfScope": [
+          "不新增 `estimated-cost-v1` 或其他算法。",
+          "不做真实测量分页、孤寡行精修、分页代价函数或脏区重排。",
+          "不做跨页单元格内容拆分、合并单元格分页或列宽测量。",
+          "不改 `.layout` 文件结构。"
+        ],
+        "deferredTo": [
+          "分页代价函数：继续归属 `PH2-09` 后续子步。",
+          "真实测量分页、孤寡行和复杂表格跨页质量：继续归属 `PH2-09` 后续子步。",
+          "列宽拖拽、合并单元格与表格样式：继续归属 `PH2-05B` / `PH2-10` 后续拆分小步。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-10",
+      "sequence": "10",
+      "order": 100,
+      "title": "表格、图片、公式可视化编辑",
+      "priority": "P1",
+      "moduleIds": [
+        "editor-module",
+        "typesetting-engine"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "未开始",
+      "acceptance": "支持表格调整、图片环绕、公式渲染与对应模型属性保存。"
+    },
+    {
+      "id": "PH2-11",
+      "sequence": "11",
+      "order": 110,
+      "title": "目录、大纲与页码回填",
+      "priority": "P1",
+      "moduleIds": [
+        "parser-module",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "未开始",
+      "acceptance": "基于文档模型生成目录和大纲，分页完成后可回填页码并支持跳转。"
+    },
+    {
+      "id": "PH2-12",
+      "sequence": "12",
+      "order": 120,
+      "title": "验证 M2 链路",
+      "priority": "P1",
+      "moduleIds": [
+        "document-model",
+        "style-module",
+        "typesetting-engine",
+        "ui-components",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "未开始",
+      "acceptance": "Markdown 输入、模型保存、画布样式编辑、分页预览、模板应用、导出保存可稳定串联。"
+    },
+    {
+      "id": "GOV-007",
+      "sequence": "G7",
+      "order": 125,
+      "title": "建立独立进度看板并支持写回真相源",
+      "priority": "P1",
+      "moduleIds": [
+        "progress-tooling",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "在独立目录中提供可运行的本地进度看板，能读取并编辑 `progress/` 真相源，保存后自动触发 `progress:build`，使 JSON 真相源与展示文档保持同步。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已确认边界，开始实现独立看板",
+        "confirmedOn": "2026-06-22",
+        "summary": "本步只做与主项目代码隔离的独立进度看板，目标是把 `progress/` 真相源变成可视化、可编辑、可写回的桌面日常工具，不把功能混入现有编辑器主工程界面。",
+        "inScope": [
+          "新功能全部放进独立目录 `progress-board/`，包含自己的启动脚本、前端页面与本地读写服务。",
+          "看板可读取并编辑 `progress/config.json`、`progress/tasks/*.json`、`progress/risks.json`、`progress/tech-debts.json`、`progress/logs.json`。",
+          "保存后自动写回真相源，并自动执行上一级 `scripts/generate-progress.mjs` 重新生成 `项目开发进度.md` 与 `当前执行看板.md`。"
+        ],
+        "interactionRules": [
+          "界面以任务看板为主，同时提供阶段/里程碑/模块、风险、技术债和日志的编辑入口。",
+          "写回采用显式保存动作，不做静默覆盖；保存结果要给出成功或失败反馈。",
+          "独立看板默认从仓库根目录的 `progress/` 读取数据，不要求用户手工复制文件。"
+        ],
+        "writebackRules": [
+          "所有修改先回写 `progress/` JSON 真相源，再触发展示文档生成。",
+          "任务卡、风险、技术债、日志的 JSON 结构必须保持兼容现有 `progress:build` 校验逻辑。",
+          "保存失败时不得假装成功，必须保留错误信息，避免误以为已写回。"
+        ],
+        "consistencyRules": [
+          "独立看板目录不得侵入现有 `src/`、`electron/` 主应用实现。",
+          "保存成功后，`项目开发进度.md` 与 `当前执行看板.md` 要与最新真相源一致。",
+          "看板中的中文文案、按钮与提示统一使用中文。"
+        ],
+        "outOfScope": [
+          "不把进度看板嵌入现有 Electron 编辑器主界面。",
+          "不做安装包、自动开机启动、多用户协同或远程同步。",
+          "不顺手重构现有主项目业务代码，只处理独立看板与必要的进度脚本复用。"
+        ],
+        "deferredTo": [
+          "如需做安装包或桌面常驻：后续归属独立发布步骤或新增治理任务。",
+          "如需做多人协作、远程同步或权限控制：后续归属项目治理扩展任务。",
+          "如需把看板能力再嵌回主应用：后续需单独确认方案并另立任务。"
+        ]
+      }
+    }
+  ]
+}

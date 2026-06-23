@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { buildTocItems, type TextRun } from '@/engine/document-model';
 import { exportCurrentDocumentAsPdf } from '@/services/ExportService';
 import { clearDraft, loadDraft, saveDraft } from '@/services/DraftService';
 import {
   createBlankDocument,
   createFolderInDirectory,
-  createMarkdownFileInDirectory,
+  createLayoutFileInDirectory,
   deleteEntryFromDirectory,
   getDirectoryDisplayName,
   moveEntryToDirectory,
@@ -16,6 +17,7 @@ import {
   renameEntryInDirectory,
   saveDocumentAs,
   saveLocalDocument,
+  selectLocalImageFile,
 } from '@/services/FileService';
 import {
   addRecentFile,
@@ -25,11 +27,10 @@ import {
   updateRecentFilePath,
   updateRecentFilePathPrefix,
 } from '@/services/RecentFilesService';
-import { useMarkdownParser } from '@/hooks/useMarkdownParser';
 import { usePagination } from '@/hooks/usePagination';
-import { starterMarkdown } from '@/constants/workspace';
+import { useResolvedStyleContract } from '@/hooks/useResolvedStyleContract';
 import { useAppStore } from '@/store';
-import type { WorkspaceDirectoryEntry } from '@/types/workspace';
+import type { CanvasTextSelectionState, WorkspaceDirectoryEntry } from '@/types/workspace';
 import { getBaseNameFromPath, isPathWithin, replacePathPrefix } from '@/utils/filePath';
 import { CanvasPane } from './CanvasPane';
 import { EditorPane } from './EditorPane';
@@ -41,14 +42,21 @@ import { Toolbar } from './Toolbar';
 const DRAFT_AUTO_SAVE_DELAY = 3000;
 
 export function AppShell(): JSX.Element {
-  useMarkdownParser();
-  usePagination();
+  const resolvedStyleContract = useResolvedStyleContract();
+  usePagination(resolvedStyleContract);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [workspaceMessage, setWorkspaceMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [dragSource, setDragSource] = useState<string | null>(null);
+  const [canvasTextSelection, setCanvasTextSelection] = useState<CanvasTextSelectionState>({
+    nodeId: null,
+    text: '',
+    selection: null,
+    isEditing: false,
+    draftTextRuns: null,
+  });
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const title = useAppStore((state) => state.title);
@@ -65,7 +73,6 @@ export function AppShell(): JSX.Element {
   const updateDocumentLocation = useAppStore((state) => state.updateDocumentLocation);
   const setCurrentDirectory = useAppStore((state) => state.setCurrentDirectory);
   const setRecentlyOpenedFiles = useAppStore((state) => state.setRecentlyOpenedFiles);
-  const setSource = useAppStore((state) => state.setSource);
   const activeTab = useAppStore((state) => state.activeLeftPanelTab);
   const setActiveTab = useAppStore((state) => state.setActiveLeftPanelTab);
   const isLeftPanelOpen = useAppStore((state) => state.isLeftPanelOpen);
@@ -74,11 +81,21 @@ export function AppShell(): JSX.Element {
   const toggleLeftPanel = useAppStore((state) => state.toggleLeftPanel);
   const toggleRightPanel = useAppStore((state) => state.toggleRightPanel);
   const setWorkspaceViewMode = useAppStore((state) => state.setWorkspaceViewMode);
+  const setActiveRightPanelTab = useAppStore((state) => state.setActiveRightPanelTab);
   const parseState = useAppStore((state) => state.parseState);
-  const parseResult = useAppStore((state) => state.parseResult);
+  const layoutDocument = useAppStore((state) => state.layoutDocument);
   const parseError = useAppStore((state) => state.parseError);
   const pageLayouts = useAppStore((state) => state.pageLayouts);
-  const tocItems = parseResult?.toc ?? [];
+  const styleSettings = useAppStore((state) => state.styleSettings);
+  const resetStyleSettings = useAppStore((state) => state.resetStyleSettings);
+  const replaceStyleSettings = useAppStore((state) => state.replaceStyleSettings);
+  const selectLayoutNode = useAppStore((state) => state.selectLayoutNode);
+  const clearLayoutSelection = useAppStore((state) => state.clearLayoutSelection);
+  const updateLayoutNodeText = useAppStore((state) => state.updateLayoutNodeText);
+  const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
+  const insertLayoutImageBlock = useAppStore((state) => state.insertLayoutImageBlock);
+  const insertLayoutTableBlock = useAppStore((state) => state.insertLayoutTableBlock);
+  const tocItems = buildTocItems(layoutDocument);
 
   const shouldShowEditor = workspaceViewMode !== 'preview';
   const shouldShowCanvas = workspaceViewMode !== 'source';
@@ -87,9 +104,12 @@ export function AppShell(): JSX.Element {
       ? pageLayouts
       : pageLayouts.length > 0
         ? pageLayouts
-        : [{ pageNumber: 1, blocks: [] }];
+        : [{ pageNumber: 1, blocks: [], contract: resolvedStyleContract, warnings: [] }];
   const displayedPageCount = parseState === 'error' ? 0 : displayedPageLayouts.length;
+  const layoutWarnings = displayedPageLayouts.flatMap((page) => page.warnings);
   const currentDirectoryName = getDirectoryDisplayName(currentDirectoryPath);
+  const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
+  const characterCount = layoutDocument?.meta.characterCount ?? 0;
 
   const workspaceClassName = [
     'workspace',
@@ -103,6 +123,48 @@ export function AppShell(): JSX.Element {
   const showMessage = (msg: string) => {
     setWorkspaceMessage(msg);
   };
+
+  const handleSelectLayoutNode = useCallback(
+    (nodeId: string) => {
+      selectLayoutNode(nodeId);
+      setActiveRightPanelTab('对象属性');
+      setCanvasTextSelection({
+        nodeId,
+        text: '',
+        selection: null,
+        isEditing: false,
+        draftTextRuns: null,
+      });
+    },
+    [selectLayoutNode, setActiveRightPanelTab],
+  );
+
+  const handleClearLayoutSelection = useCallback(() => {
+    clearLayoutSelection();
+    setCanvasTextSelection({
+      nodeId: null,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+  }, [clearLayoutSelection]);
+
+  const handleCommitLayoutNodeText = useCallback(
+    (nodeId: string, text: string) => {
+      updateLayoutNodeText({ nodeId, text });
+      showMessage('已更新画布文字');
+    },
+    [updateLayoutNodeText],
+  );
+
+  const handleCommitLayoutNodeRichText = useCallback(
+    (nodeId: string, textRuns: TextRun[]) => {
+      replaceLayoutNodeRichText({ nodeId, textRuns });
+      showMessage('已更新画布富文本');
+    },
+    [replaceLayoutNodeRichText],
+  );
 
   const syncWorkspaceRoot = useCallback(
     async (activeFilePath: string | null) => {
@@ -122,8 +184,13 @@ export function AppShell(): JSX.Element {
   }, [isDirty]);
 
   const openDocumentFromService = useCallback(
-    async (document: { title: string; filePath: string | null; source: string }) => {
+    async (document: Awaited<ReturnType<typeof openLocalDocument>>) => {
       clearDraft();
+      if (document.styleSettings) {
+        replaceStyleSettings(document.styleSettings);
+      } else {
+        resetStyleSettings();
+      }
       loadDocument(document);
       if (document.filePath) {
         const nextRecent = addRecentFile(document.filePath, document.title);
@@ -131,7 +198,7 @@ export function AppShell(): JSX.Element {
         await syncWorkspaceRoot(document.filePath);
       }
     },
-    [loadDocument, setRecentlyOpenedFiles, syncWorkspaceRoot],
+    [loadDocument, replaceStyleSettings, resetStyleSettings, setRecentlyOpenedFiles, syncWorkspaceRoot],
   );
 
   useEffect(() => {
@@ -157,22 +224,19 @@ export function AppShell(): JSX.Element {
 
   // 自动保存草稿
   useEffect(() => {
-    if (!isDirty) return;
+    if (!isDirty || !layoutDocument) return;
 
     if (draftTimerRef.current) {
       clearTimeout(draftTimerRef.current);
       draftTimerRef.current = null;
     }
 
-    if (!source.trim()) {
-      clearDraft();
-      return;
-    }
-
     draftTimerRef.current = setTimeout(() => {
       saveDraft({
         title,
         source,
+        layoutDocument,
+        styleSettings,
         filePath,
         lastModified: Date.now(),
       });
@@ -184,43 +248,38 @@ export function AppShell(): JSX.Element {
         draftTimerRef.current = null;
       }
     };
-  }, [isDirty, title, source, filePath]);
+  }, [filePath, isDirty, layoutDocument, source, styleSettings, title]);
 
   // 检查草稿恢复
   useEffect(() => {
     const draft = loadDraft();
     if (!draft) return;
 
-    if (!draft.source.trim()) {
-      clearDraft();
-      return;
-    }
-
-    if (draft.source === starterMarkdown || draft.source === source) {
-      return;
-    }
-
     const restored = window.confirm(
       `检测到未保存的草稿（${new Date(draft.lastModified).toLocaleString('zh-CN')}）。是否恢复草稿内容？`,
     );
     if (restored) {
+      // 恢复草稿时同时恢复结构化模型与页面设置，避免只恢复旧源码快照。
+      replaceStyleSettings(draft.styleSettings);
       restoreDraft({
         title: draft.title || '草稿恢复',
         source: draft.source,
         filePath: draft.filePath,
+        layoutDocument: draft.layoutDocument,
       });
       showMessage('已恢复上次未保存的草稿');
       return;
     }
 
     clearDraft();
-  }, []);
+  }, [filePath, replaceStyleSettings, restoreDraft, source]);
 
   const handleCreateDocument = async (): Promise<void> => {
     if (!shouldProceedWithDirtyDocument()) return;
 
     clearDraft();
     const blankDocument = createBlankDocument();
+    resetStyleSettings();
     loadDocument(blankDocument);
 
     if (workspaceRootPath ?? currentDirectoryPath) {
@@ -254,7 +313,13 @@ export function AppShell(): JSX.Element {
     showMessage('正在保存文档…');
 
     try {
-      const result = await saveLocalDocument({ title, filePath, source });
+      const result = await saveLocalDocument({
+        title,
+        filePath,
+        source,
+        layoutDocument: layoutDocument ?? createBlankDocument().layoutDocument,
+        styleSettings,
+      });
       markDocumentSaved(result);
       clearDraft();
 
@@ -284,7 +349,13 @@ export function AppShell(): JSX.Element {
     showMessage('正在另存为…');
 
     try {
-      const result = await saveDocumentAs({ title, source });
+      const result = await saveDocumentAs({
+        title,
+        source,
+        filePath,
+        layoutDocument: layoutDocument ?? createBlankDocument().layoutDocument,
+        styleSettings,
+      });
       updateDocumentLocation({ title: result.title, filePath: result.filePath });
       markDocumentSaved(result);
       clearDraft();
@@ -356,19 +427,19 @@ export function AppShell(): JSX.Element {
     }
   };
 
-  const handleCreateMarkdownFile = async (parentPath?: string | null): Promise<void> => {
+  const handleCreateLayoutFile = async (parentPath?: string | null): Promise<void> => {
     const targetDirectoryPath = parentPath || (await ensureWritableDirectory());
     if (!targetDirectoryPath) {
       return;
     }
 
     try {
-      const nextDocument = await createMarkdownFileInDirectory(targetDirectoryPath, '新建文档.md');
+      const nextDocument = await createLayoutFileInDirectory(targetDirectoryPath, '新建文档.layout');
       await openDocumentFromService(nextDocument);
       showMessage(`已创建并打开：${nextDocument.title}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : '新建 Markdown 文件失败';
-      showMessage(`新建 Markdown 文件失败：${message}`);
+      const message = error instanceof Error ? error.message : '新建 layout 文档失败';
+      showMessage(`新建 layout 文档失败：${message}`);
     }
   };
 
@@ -466,6 +537,7 @@ export function AppShell(): JSX.Element {
 
       if (deletesActiveDocument) {
         clearDraft();
+        resetStyleSettings();
         loadDocument(createBlankDocument());
       }
 
@@ -507,9 +579,9 @@ export function AppShell(): JSX.Element {
   };
 
   const handleExportPdf = async (): Promise<void> => {
-    if (!parseResult || isExporting || displayedPageLayouts.length === 0) return;
+    if (!layoutDocument || isExporting || displayedPageLayouts.length === 0) return;
 
-    const documentTitle = tocItems[0]?.text || '未命名文档';
+    const documentTitle = layoutDocument.title || tocItems[0]?.text || '未命名文档';
     setIsExporting(true);
     showMessage('正在导出 PDF…');
 
@@ -529,6 +601,75 @@ export function AppShell(): JSX.Element {
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleInsertImage = async (): Promise<void> => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入图片的文档');
+      return;
+    }
+
+    try {
+      const imagePath = await selectLocalImageFile();
+      const imageName = getBaseNameFromPath(imagePath);
+      const insertedBlockId = insertLayoutImageBlock({
+        src: imagePath,
+        alt: imageName,
+        title: null,
+        insertAfterNodeId: selectedNodeId,
+      });
+
+      if (!insertedBlockId) {
+        showMessage('图片插入失败：当前文档不可写');
+        return;
+      }
+
+      setActiveRightPanelTab('对象属性');
+      setCanvasTextSelection({
+        nodeId: insertedBlockId,
+        text: '',
+        selection: null,
+        isEditing: false,
+        draftTextRuns: null,
+      });
+      showMessage(`已插入图片：${imageName}`);
+    } catch (error) {
+      if (error instanceof Error && error.message === '已取消选择图片') {
+        showMessage('已取消选择图片');
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : '插入图片失败';
+      showMessage(`插入图片失败：${message}`);
+    }
+  };
+
+  const handleInsertTable = (): void => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入表格的文档');
+      return;
+    }
+
+    const selectedTableNodeId = insertLayoutTableBlock({
+      rowCount: 3,
+      columnCount: 3,
+      insertAfterNodeId: selectedNodeId,
+    });
+
+    if (!selectedTableNodeId) {
+      showMessage('表格插入失败：当前文档不可写');
+      return;
+    }
+
+    setActiveRightPanelTab('对象属性');
+    setCanvasTextSelection({
+      nodeId: selectedTableNodeId,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+    showMessage('已插入 3 x 3 表格');
   };
 
   const handleDragStart = (e: React.DragEvent, entry: WorkspaceDirectoryEntry) => {
@@ -562,12 +703,15 @@ export function AppShell(): JSX.Element {
         workspaceViewMode={workspaceViewMode}
         isSaving={isSaving}
         isExporting={isExporting}
+        canvasTextSelection={canvasTextSelection}
         onCreateDocument={handleCreateDocument}
         onOpenDocument={handleOpenDocument}
         onOpenFolder={handleOpenFolder}
         onSaveDocument={handleSaveDocument}
         onSaveDocumentAs={handleSaveDocumentAs}
         onExportPdf={handleExportPdf}
+        onInsertImage={handleInsertImage}
+        onInsertTable={handleInsertTable}
         onToggleLeftPanel={toggleLeftPanel}
         onToggleRightPanel={toggleRightPanel}
         onChangeViewMode={setWorkspaceViewMode}
@@ -585,7 +729,7 @@ export function AppShell(): JSX.Element {
             recentFiles={recentFiles}
             onOpenFolder={handleOpenFolder}
             onCreateFolder={handleCreateFolder}
-            onCreateMarkdownFile={handleCreateMarkdownFile}
+            onCreateLayoutFile={handleCreateLayoutFile}
             onOpenEntry={handleOpenEntry}
             onOpenRecentFile={handleOpenRecentFile}
             onRemoveRecentFile={handleRemoveRecentFile}
@@ -608,10 +752,10 @@ export function AppShell(): JSX.Element {
               <strong>当前工作台</strong>
               <span>
                 {workspaceViewMode === 'source'
-                  ? '聚焦源码输入'
+                  ? '聚焦导入源码快照'
                   : workspaceViewMode === 'preview'
                     ? '聚焦分页预览'
-                    : '同时查看源码与分页'}
+                    : '同时查看源码快照与分页'}
               </span>
             </div>
             {workspaceMessage ? <span className="workspace-message">{workspaceMessage}</span> : null}
@@ -626,17 +770,25 @@ export function AppShell(): JSX.Element {
               <EditorPane
                 parseState={parseState}
                 source={source}
-                onSourceChange={setSource}
                 isCondensed={shouldShowCanvas}
               />
             ) : null}
 
             {shouldShowCanvas ? (
               <CanvasPane
-                blocks={parseResult?.blocks ?? []}
+                documentTitle={layoutDocument?.title ?? '未命名文档'}
+                documentBlockCount={layoutDocument?.blocks.length ?? 0}
+                documentBlocks={layoutDocument?.blocks ?? []}
                 pageLayouts={displayedPageLayouts}
                 parseError={parseError}
                 parseState={parseState}
+                resolvedStyleContract={resolvedStyleContract}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={handleSelectLayoutNode}
+                onClearSelection={handleClearLayoutSelection}
+                onCommitNodeText={handleCommitLayoutNodeText}
+                onCommitNodeRichText={handleCommitLayoutNodeRichText}
+                onTextSelectionChange={setCanvasTextSelection}
                 isCondensed={shouldShowEditor}
               />
             ) : null}
@@ -647,18 +799,23 @@ export function AppShell(): JSX.Element {
           <RightPanel
             currentPageCount={displayedPageCount}
             headingCount={tocItems.length}
-            sourceLength={source.length}
+            characterCount={characterCount}
             workspaceViewMode={workspaceViewMode}
+            layoutWarnings={layoutWarnings}
+            canvasTextSelection={canvasTextSelection}
           />
         ) : null}
       </main>
 
       <StatusBar
         parseState={parseState}
-        sourceLength={source.length}
+        characterCount={characterCount}
         pageCount={displayedPageCount}
         workspaceViewMode={workspaceViewMode}
         saveStatusLabel={saveStatusLabel}
+        pageLabel={resolvedStyleContract.pageLabel}
+        templateLabel={resolvedStyleContract.templateLabel}
+        layoutWarningCount={layoutWarnings.length}
       />
     </div>
   );

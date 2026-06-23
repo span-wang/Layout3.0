@@ -1,27 +1,36 @@
 import { useDeferredValue, useEffect } from 'react';
-import { parseMarkdown } from '@/engine/parser';
+import { createLayoutDocumentFromMarkdown } from '@/engine/document-model';
 import { useAppStore } from '@/store';
 
 export function useMarkdownParser(): void {
   const source = useAppStore((state) => state.source);
   const documentEpoch = useAppStore((state) => state.documentEpoch);
   const deferredSource = useDeferredValue(source);
+  const documentFormat = useAppStore((state) => state.documentFormat);
+  const layoutDocumentSource = useAppStore((state) => state.layoutDocument?.source ?? null);
   const setParseState = useAppStore((state) => state.setParseState);
-  const setParseResult = useAppStore((state) => state.setParseResult);
+  const setLayoutDocument = useAppStore((state) => state.setLayoutDocument);
   const setParseError = useAppStore((state) => state.setParseError);
 
   useEffect(() => {
+    if (
+      documentFormat === 'layout' &&
+      layoutDocumentSource === deferredSource
+    ) {
+      return;
+    }
+
     let cancelled = false;
 
     setParseState('parsing');
 
-    parseMarkdown(deferredSource)
-      .then((result) => {
+    createLayoutDocumentFromMarkdown(deferredSource)
+      .then((document) => {
         if (cancelled) {
           return;
         }
 
-        setParseResult(result);
+        setLayoutDocument(document);
       })
       .catch((error: unknown) => {
         if (cancelled) {
@@ -35,5 +44,13 @@ export function useMarkdownParser(): void {
     return () => {
       cancelled = true;
     };
-  }, [deferredSource, documentEpoch, setParseError, setParseResult, setParseState]);
+  }, [
+    deferredSource,
+    documentEpoch,
+    documentFormat,
+    layoutDocumentSource,
+    setLayoutDocument,
+    setParseError,
+    setParseState,
+  ]);
 }

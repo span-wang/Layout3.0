@@ -16,6 +16,7 @@ const layoutAPI = {
   openFile: (): Promise<{ filePath: string; content: string }> => ipcRenderer.invoke('file:open'),
   openFileAtPath: (filePath: string): Promise<{ filePath: string; content: string }> =>
     ipcRenderer.invoke('file:openAtPath', filePath),
+  selectImageFile: (): Promise<{ filePath: string }> => ipcRenderer.invoke('file:selectImage'),
   openFolder: (): Promise<{
     directoryPath: string;
     entries: LayoutDirectoryEntry[];
@@ -34,11 +35,11 @@ const layoutAPI = {
     entries: LayoutDirectoryEntry[];
     targetPath: string;
   }> => ipcRenderer.invoke('file:createFolder', payload),
-  createMarkdownFile: (payload: {
+  createLayoutFile: (payload: {
     directoryPath: string;
     fileName: string;
     content: string;
-  }): Promise<{ filePath: string; content: string }> => ipcRenderer.invoke('file:createMarkdownFile', payload),
+  }): Promise<{ filePath: string; content: string }> => ipcRenderer.invoke('file:createLayoutFile', payload),
   renameEntry: (payload: {
     targetPath: string;
     nextName: string;

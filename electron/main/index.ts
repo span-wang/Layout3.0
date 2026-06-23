@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from 'electron';
+import { registerAssetProtocol } from './asset-protocol';
 import { registerIpcHandlers } from './ipc-handlers';
 import { createMainWindow } from './window';
 
@@ -12,6 +13,7 @@ function openMainWindow(): void {
 }
 
 app.whenReady().then(() => {
+  registerAssetProtocol();
   registerIpcHandlers();
   openMainWindow();
 

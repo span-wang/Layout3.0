@@ -1,0 +1,159 @@
+export type PageSizeId = 'A3' | 'A4' | 'B5';
+
+export type PageOrientation = 'portrait' | 'landscape';
+
+export type MarginMode = 'preset' | 'custom';
+
+export type MarginPresetId = 'normal' | 'narrow' | 'wide';
+
+export type HeaderFooterPresetId = 'none' | 'compact' | 'standard';
+
+export type TemplateId = 'default' | 'lecture' | 'notes';
+
+export type ImageAlign = 'left' | 'center' | 'right';
+
+export interface BoxInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+export type MarginSide = keyof BoxInsets;
+
+export interface PaginationBehavior {
+  keepHeadingWithNext: boolean;
+  avoidBreakInsideCodeBlocks: boolean;
+  avoidBreakInsideTables: boolean;
+  avoidBreakInsideImages: boolean;
+}
+
+export type PaginationBehaviorOption = keyof PaginationBehavior;
+export type PaginationAlgorithmId = string;
+
+export interface BaseBlockStyleRule {
+  marginTop: number;
+  marginBottom: number;
+  keepWithNext: boolean;
+  avoidBreakInside: boolean;
+}
+
+export interface TextBlockStyleRule extends BaseBlockStyleRule {
+  fontSize: number;
+  lineHeight: number;
+}
+
+export interface ListBlockStyleRule extends TextBlockStyleRule {
+  indent: number;
+  itemGap: number;
+}
+
+export interface CodeBlockStyleRule extends BaseBlockStyleRule {
+  fontSize: number;
+  lineHeight: number;
+  paddingX: number;
+  paddingY: number;
+  charWidth: number;
+}
+
+export interface TableBlockStyleRule extends BaseBlockStyleRule {
+  rowHeight: number;
+  headerRowHeight: number;
+  cellPaddingX: number;
+  cellPaddingY: number;
+}
+
+export interface HorizontalRuleStyleRule extends BaseBlockStyleRule {
+  strokeWidth: number;
+}
+
+export interface ImageBlockStyleRule extends BaseBlockStyleRule {
+  placeholderHeight: number;
+  maxWidthPercent: number;
+  align: ImageAlign;
+  captionGap: number;
+}
+
+export interface BlockStyleContract {
+  heading1: TextBlockStyleRule;
+  heading2: TextBlockStyleRule;
+  heading3: TextBlockStyleRule;
+  paragraph: TextBlockStyleRule;
+  list: ListBlockStyleRule;
+  blockquote: TextBlockStyleRule;
+  code: CodeBlockStyleRule;
+  table: TableBlockStyleRule;
+  horizontalRule: HorizontalRuleStyleRule;
+  image: ImageBlockStyleRule;
+}
+
+export interface StyleSettings {
+  pageSize: PageSizeId;
+  orientation: PageOrientation;
+  marginMode: MarginMode;
+  marginPreset: MarginPresetId;
+  customMarginsMm: BoxInsets;
+  isMarginLinked: boolean;
+  headerFooterMode: MarginMode;
+  templateId: TemplateId;
+  headerPreset: HeaderFooterPresetId;
+  footerPreset: HeaderFooterPresetId;
+  customHeaderReservedMm: number;
+  customFooterReservedMm: number;
+  isHeaderFooterLinked: boolean;
+  paginationAlgorithmId: PaginationAlgorithmId;
+  paginationBehavior: PaginationBehavior;
+}
+
+export interface PageSizeDefinition {
+  id: PageSizeId;
+  label: string;
+  description: string;
+  widthMm: number;
+  heightMm: number;
+}
+
+export interface MarginPresetDefinition {
+  id: MarginPresetId;
+  label: string;
+  description: string;
+  valueMm: BoxInsets;
+}
+
+export interface HeaderFooterPresetDefinition {
+  id: HeaderFooterPresetId;
+  label: string;
+  description: string;
+  reservedHeightMm: number;
+}
+
+export interface TemplateDefinition {
+  id: TemplateId;
+  name: string;
+  description: string;
+}
+
+export interface ResolvedStyleContract {
+  pageSize: PageSizeId;
+  orientation: PageOrientation;
+  templateId: TemplateId;
+  pageLabel: string;
+  templateLabel: string;
+  marginLabel: string;
+  pageWidthMm: number;
+  pageHeightMm: number;
+  pageWidthPx: number;
+  pageHeightPx: number;
+  marginsMm: BoxInsets;
+  marginsPx: BoxInsets;
+  headerReservedMm: number;
+  footerReservedMm: number;
+  headerReservedPx: number;
+  footerReservedPx: number;
+  contentWidthMm: number;
+  contentHeightMm: number;
+  contentWidthPx: number;
+  contentHeightPx: number;
+  blockStyles: BlockStyleContract;
+  paginationBehavior: PaginationBehavior;
+}

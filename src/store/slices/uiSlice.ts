@@ -5,6 +5,8 @@ export const createUiSlice: StoreSlice<UISlice> = (set) => ({
   isLeftPanelOpen: true,
   isRightPanelOpen: true,
   workspaceViewMode: 'split',
+  activeRightPanelTab: '页面设置',
+  activePageSettingsTab: '页面规格',
   setActiveLeftPanelTab: (tab) =>
     set((state) => {
       state.activeLeftPanelTab = tab;
@@ -20,5 +22,13 @@ export const createUiSlice: StoreSlice<UISlice> = (set) => ({
   setWorkspaceViewMode: (mode) =>
     set((state) => {
       state.workspaceViewMode = mode;
+    }),
+  setActiveRightPanelTab: (tab) =>
+    set((state) => {
+      state.activeRightPanelTab = tab;
+    }),
+  setActivePageSettingsTab: (tab) =>
+    set((state) => {
+      state.activePageSettingsTab = tab;
     }),
 });

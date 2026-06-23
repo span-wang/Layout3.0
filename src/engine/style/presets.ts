@@ -1,0 +1,175 @@
+import type {
+  BlockStyleContract,
+  BoxInsets,
+  HeaderFooterPresetDefinition,
+  MarginPresetDefinition,
+  PageSizeDefinition,
+  PaginationBehavior,
+  StyleSettings,
+  TemplateDefinition,
+} from './types';
+import { DEFAULT_PAGINATION_ALGORITHM_ID } from '@/engine/typesetting/algorithmIds';
+import { DEFAULT_CODE_CHAR_WIDTH_FACTOR } from '@/engine/typesetting/textMetrics';
+
+export const pageSizeDefinitions: PageSizeDefinition[] = [
+  { id: 'A3', label: 'A3', description: '大幅页面，适合讲义总览和海报草稿', widthMm: 297, heightMm: 420 },
+  { id: 'A4', label: 'A4', description: '标准文档尺寸，适合大多数 PDF 讲义', widthMm: 210, heightMm: 297 },
+  { id: 'B5', label: 'B5', description: '更紧凑的阅读尺寸，适合笔记与小册子', widthMm: 176, heightMm: 250 },
+];
+
+export const marginPresetDefinitions: MarginPresetDefinition[] = [
+  {
+    id: 'normal',
+    label: '普通',
+    description: '留白均衡，适合大部分文档',
+    valueMm: { top: 22, right: 18, bottom: 22, left: 18 },
+  },
+  {
+    id: 'narrow',
+    label: '窄边距',
+    description: '尽量扩大正文区域',
+    valueMm: { top: 14, right: 12, bottom: 14, left: 12 },
+  },
+  {
+    id: 'wide',
+    label: '宽边距',
+    description: '增强留白与打印批注空间',
+    valueMm: { top: 30, right: 24, bottom: 30, left: 24 },
+  },
+];
+
+export const headerFooterPresetDefinitions: HeaderFooterPresetDefinition[] = [
+  { id: 'none', label: '无', description: '不预留页眉页脚区域', reservedHeightMm: 0 },
+  { id: 'compact', label: '紧凑', description: '预留简洁页眉或页脚空间', reservedHeightMm: 10 },
+  { id: 'standard', label: '标准', description: '预留常规页眉或页脚空间', reservedHeightMm: 18 },
+];
+
+export const templateDefinitions: TemplateDefinition[] = [
+  { id: 'default', name: '默认（无模板）', description: '只使用基础解析与页面配置，不叠加额外模板风格' },
+  { id: 'lecture', name: '讲义模板', description: '标题层级更强，段落留白更明显，适合课程讲义' },
+  { id: 'notes', name: '笔记模板', description: '正文更紧凑，连续阅读效率更高，适合学习笔记' },
+];
+
+export const defaultPaginationBehavior: PaginationBehavior = {
+  keepHeadingWithNext: true,
+  avoidBreakInsideCodeBlocks: true,
+  avoidBreakInsideTables: true,
+  avoidBreakInsideImages: true,
+};
+
+export const defaultCustomMarginsMm: BoxInsets = {
+  top: 20,
+  right: 20,
+  bottom: 20,
+  left: 20,
+};
+
+export const defaultBlockStyles: BlockStyleContract = {
+  heading1: {
+    fontSize: 30,
+    lineHeight: 38,
+    marginTop: 0,
+    marginBottom: 24,
+    keepWithNext: true,
+    avoidBreakInside: true,
+  },
+  heading2: {
+    fontSize: 24,
+    lineHeight: 32,
+    marginTop: 22,
+    marginBottom: 14,
+    keepWithNext: true,
+    avoidBreakInside: true,
+  },
+  heading3: {
+    fontSize: 20,
+    lineHeight: 28,
+    marginTop: 18,
+    marginBottom: 12,
+    keepWithNext: true,
+    avoidBreakInside: true,
+  },
+  paragraph: {
+    fontSize: 16,
+    lineHeight: 28,
+    marginTop: 0,
+    marginBottom: 16,
+    keepWithNext: false,
+    avoidBreakInside: false,
+  },
+  list: {
+    fontSize: 16,
+    lineHeight: 28,
+    marginTop: 0,
+    marginBottom: 16,
+    keepWithNext: false,
+    avoidBreakInside: false,
+    indent: 24,
+    itemGap: 8,
+  },
+  blockquote: {
+    fontSize: 15,
+    lineHeight: 28,
+    marginTop: 8,
+    marginBottom: 18,
+    keepWithNext: false,
+    avoidBreakInside: false,
+  },
+  code: {
+    fontSize: 14,
+    lineHeight: 24,
+    marginTop: 8,
+    marginBottom: 18,
+    keepWithNext: false,
+    avoidBreakInside: true,
+    paddingX: 16,
+    paddingY: 14,
+    // 代码块字符宽度统一从命名常量取值，避免在样式默认值里散落魔法数。
+    charWidth: DEFAULT_CODE_CHAR_WIDTH_FACTOR,
+  },
+  table: {
+    marginTop: 8,
+    marginBottom: 18,
+    keepWithNext: false,
+    avoidBreakInside: true,
+    rowHeight: 42,
+    headerRowHeight: 46,
+    cellPaddingX: 12,
+    cellPaddingY: 10,
+  },
+  horizontalRule: {
+    marginTop: 18,
+    marginBottom: 18,
+    keepWithNext: false,
+    avoidBreakInside: true,
+    strokeWidth: 1,
+  },
+  image: {
+    marginTop: 8,
+    marginBottom: 18,
+    keepWithNext: false,
+    avoidBreakInside: true,
+    placeholderHeight: 220,
+    maxWidthPercent: 100,
+    align: 'center',
+    captionGap: 8,
+  },
+};
+
+export const defaultStyleSettings: StyleSettings = {
+  pageSize: 'A4',
+  orientation: 'portrait',
+  marginMode: 'preset',
+  marginPreset: 'normal',
+  customMarginsMm: defaultCustomMarginsMm,
+  isMarginLinked: true,
+  headerFooterMode: 'preset',
+  templateId: 'default',
+  headerPreset: 'none',
+  footerPreset: 'none',
+  customHeaderReservedMm: 10,
+  customFooterReservedMm: 10,
+  isHeaderFooterLinked: true,
+  paginationAlgorithmId: DEFAULT_PAGINATION_ALGORITHM_ID,
+  paginationBehavior: defaultPaginationBehavior,
+};

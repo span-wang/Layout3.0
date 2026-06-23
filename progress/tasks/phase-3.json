@@ -1,0 +1,112 @@
+{
+  "phaseId": "phase-3",
+  "tasks": [
+    {
+      "id": "PH3-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "AI 面板三 Tab 基础结构",
+      "priority": "P2",
+      "moduleIds": [
+        "ai-service"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "未开始",
+      "acceptance": "生成、优化、检查入口完整。"
+    },
+    {
+      "id": "PH3-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "命令面板",
+      "priority": "P2",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "未开始",
+      "acceptance": "常用命令可检索、可触发。"
+    },
+    {
+      "id": "PH3-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "多视图切换",
+      "priority": "P2",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "未开始",
+      "acceptance": "源码、分屏、预览切换可用。"
+    },
+    {
+      "id": "PH3-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "搜索与替换",
+      "priority": "P2",
+      "moduleIds": [
+        "editor-module"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "未开始",
+      "acceptance": "支持全文搜索与替换。"
+    },
+    {
+      "id": "PH3-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "首次使用引导",
+      "priority": "P2",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "未开始",
+      "acceptance": "首次进入时有可关闭引导流程。"
+    },
+    {
+      "id": "PH3-06",
+      "sequence": "6",
+      "order": 60,
+      "title": "撤销重做完善",
+      "priority": "P0/P2",
+      "moduleIds": [
+        "document-model",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "未开始",
+      "acceptance": "关键操作进入统一历史栈。"
+    },
+    {
+      "id": "PH3-07",
+      "sequence": "7",
+      "order": 70,
+      "title": "验证 M4 链路",
+      "priority": "P2",
+      "moduleIds": [
+        "ai-service",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M4"
+      ],
+      "status": "未开始",
+      "acceptance": "AI 三类能力可完整演示。"
+    }
+  ]
+}

@@ -1,0 +1,2523 @@
+{
+  "entries": [
+    {
+      "id": "LOG-001",
+      "date": "2026-06-21",
+      "taskIds": [
+        "GOV-001"
+      ],
+      "phaseMilestone": "项目治理 / 基线建立",
+      "step": "建立进度跟踪方案",
+      "action": "新增文档",
+      "result": "已创建统一的项目开发进度跟踪方案，明确阶段、模块、里程碑、日志模板与更新规则。",
+      "verification": [
+        "人工检查文档结构与内容完整性。"
+      ],
+      "affectedFiles": [
+        "项目开发进度.md",
+        "AGENT.md"
+      ],
+      "next": "后续按第一阶段步骤逐项推进并逐条登记。"
+    },
+    {
+      "id": "LOG-002",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-01"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 1：建立 Electron + Vite + React + TypeScript 脚手架",
+      "action": "新增/集成/验证",
+      "result": "已建立可运行桌面应用脚手架，包含 Electron 主进程、预加载桥、React 渲染入口、三栏占位工作区与基础构建配置。",
+      "verification": [
+        "`npm install` 成功。",
+        "`npm run build` 成功。",
+        "`npm run dev` 可启动 Electron 应用并拉起 `http://localhost:5173/` 渲染服务。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json",
+        "electron.vite.config.ts",
+        "tsconfig.json",
+        ".gitignore",
+        "electron/main/index.ts",
+        "electron/preload/index.ts",
+        "src/index.html",
+        "src/main.tsx",
+        "src/env.d.ts",
+        "src/App.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "完成步骤 2：按开发文档补齐项目目录结构与 TypeScript 基础配置边界。"
+    },
+    {
+      "id": "LOG-003",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-02"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 2：初始化目录结构与 TypeScript 基础配置",
+      "action": "新增/重构/验证",
+      "result": "已补齐 `src` 与 `electron` 的分层目录骨架，拆分主进程窗口与 IPC 注册文件，新增前端布局组件目录、基础常量与类型文件，并完成 `@/` 路径别名与中文界面文案整理。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查目录结构与运行入口引用关系。"
+      ],
+      "affectedFiles": [
+        "electron/main/index.ts",
+        "electron/main/window.ts",
+        "electron/main/ipc-handlers.ts",
+        "electron.vite.config.ts",
+        "tsconfig.json",
+        "src/app/App.tsx",
+        "src/components/layout/*",
+        "src/components/common/ToolButton.tsx",
+        "src/constants/workspace.ts",
+        "src/types/workspace.ts",
+        "src/utils/markdown.ts",
+        "src/main.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "完成步骤 3：建立 Zustand Store 基础架构，并将当前文档源码与左侧面板状态接入全局状态。"
+    },
+    {
+      "id": "LOG-004",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-03"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 3：建立 Zustand Store 基础架构",
+      "action": "新增/集成/验证",
+      "result": "已安装 `zustand` 与 `immer`，建立可扩展的 store 入口以及文档、UI 两个基础切片，并将 Markdown 源码和左侧面板标签状态切换到全局状态管理。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查编辑区输入与左侧标签切换仍可工作。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json",
+        "src/store/index.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/store/slices/uiSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "项目开发进度.md"
+      ],
+      "next": "完成步骤 4：集成 CodeMirror Markdown 编辑器，替换当前 `textarea` 输入区域。"
+    },
+    {
+      "id": "LOG-005",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-04"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 4：集成 CodeMirror Markdown 编辑器",
+      "action": "新增/集成/验证",
+      "result": "已将编辑区替换为 CodeMirror 6 Markdown 编辑器，支持行号、基础语法高亮、自动换行，并与 Zustand 文档源码状态保持双向同步。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查编辑器替换后构建产物正常输出。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json",
+        "src/components/editor/MarkdownEditor.tsx",
+        "src/components/layout/EditorPane.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "完成步骤 5：集成 remark + rehype 解析管线，并产出可消费的结构化中间结果。"
+    },
+    {
+      "id": "LOG-006",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-05"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 5：集成 remark + rehype 解析管线",
+      "action": "新增/集成/验证",
+      "result": "已接入 `unified`、`remark-parse`、`remark-gfm`、`remark-rehype` 与 `rehype-stringify`，建立 parser 模块、解析结果类型和文档解析状态，并让预览区由结构化解析结果驱动渲染。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查解析状态、结构化块渲染和错误状态展示逻辑。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json",
+        "src/engine/parser/index.ts",
+        "src/engine/parser/types.ts",
+        "src/engine/parser/remark.ts",
+        "src/engine/parser/rehype.ts",
+        "src/hooks/useMarkdownParser.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/EditorPane.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/StatusBar.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "完成步骤 6：实现基础 DOM 分页引擎，让解析结果按页输出到预览区。"
+    },
+    {
+      "id": "LOG-007",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-06"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 6：实现基础 DOM 分页引擎",
+      "action": "新增/集成/验证",
+      "result": "已建立最小可用的分页模块，基于结构化块的估算高度将解析结果切分为多页布局，并让预览区从单页渲染升级为按页输出的分页预览。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查分页预览已改为多页结果驱动。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/index.ts",
+        "src/engine/typesetting/types.ts",
+        "src/hooks/usePagination.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "完成步骤 7：补齐三栏 UI 骨架的可验收状态，并让工具栏、左面板、画布、右面板形成明确工作区结构。"
+    },
+    {
+      "id": "LOG-008",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-07"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 7：搭建三栏 UI 骨架",
+      "action": "新增/集成/验证",
+      "result": "已补齐可验收的三栏工作区骨架，支持左侧 `文件/大纲/搜索/资源` 面板切换，中间 `源码/分屏/预览` 三种视图模式与分页工作台，右侧工作区摘要、页面设置与模板入口，以及左右面板显隐切换。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查工具栏切换、三栏布局和分页工作区呈现是否符合预期。"
+      ],
+      "affectedFiles": [
+        "src/components/common/ToolButton.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/EditorPane.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/StatusBar.tsx",
+        "src/store/types.ts",
+        "src/store/slices/uiSlice.ts",
+        "src/constants/workspace.ts",
+        "src/types/workspace.ts",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "完成步骤 8：打通 PDF 导出链路，并让当前分页结果可导出为 PDF。"
+    },
+    {
+      "id": "LOG-009",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-08"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 8：打通 PDF 导出",
+      "action": "新增/集成/验证",
+      "result": "已建立主进程 `printToPDF` 导出处理、预加载桥和前端导出服务，当前可从工具栏导出当前分页结果为 PDF，弹出系统保存对话框并按当前分页结构生成文件。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查导出按钮状态反馈与导出消息展示逻辑。",
+        "真实 PDF 文件写出仍需在桌面环境中手动确认系统保存对话框。"
+      ],
+      "affectedFiles": [
+        "electron/main/ipc-handlers.ts",
+        "electron/main/pdf-handlers.ts",
+        "electron/preload/index.ts",
+        "src/components/common/ToolButton.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/services/ExportService.ts",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "完成步骤 9：实现文件管理基础能力，补齐新建、打开、保存的最小可用链路。"
+    },
+    {
+      "id": "LOG-010",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-09"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 9：实现文件管理基础能力",
+      "action": "新增/集成/修复/验证",
+      "result": "已补齐文件管理最小链路与运行态修复，当前支持新建空白文档、打开本地 `md/layout`、保存当前文档、打开文件夹、新建文件夹、新建 Markdown 文件与文件树点击打开，并修复空白文档页数回退和旧预加载桥导致的接口缺失问题。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "已重新拉起 `electron-vite dev` 并确认 `layout3.0` 的 Electron 主进程、预加载与渲染进程已启动。"
+      ],
+      "affectedFiles": [
+        "electron/main/file-handlers.ts",
+        "electron/main/ipc-handlers.ts",
+        "electron/preload/index.ts",
+        "src/constants/workspace.ts",
+        "src/hooks/useMarkdownParser.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/services/FileService.ts",
+        "src/components/editor/MarkdownEditor.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/EditorPane.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "完成步骤 10：验证 M1 链路，重点回归编辑、分页、文件保存与 PDF 导出在桌面窗口中的完整操作路径。"
+    },
+    {
+      "id": "LOG-011",
+      "date": "2026-06-21",
+      "taskIds": [
+        "PH1-09B"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 9b：完善文件管理面板",
+      "action": "新增/集成/验证",
+      "result": "已补齐文件管理面板全部 8 项功能：(1) FileService 新增 renameEntry/moveEntry/deleteEntry/saveDocumentAs；(2) 新建 DraftService 实现自动保存草稿（3 秒防抖）与崩溃恢复提示；(3) 最近打开文件列表 UI，支持点击打开和单条/全部清除；(4) 右键菜单删除（带确认对话框）；(5) 双击 inline 重命名；(6) HTML5 Drag & Drop 拖拽文件到文件夹；(7) 搜索面板文件名搜索（关键词高亮）；(8) Toolbar 新增“另存为”按钮；同步完成 UI 优化：目录树嵌套层级展示、文件夹/文件图标区分、展开折叠箭头、返回上级按钮。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/services/FileService.ts",
+        "src/services/DraftService.ts",
+        "src/services/RecentFilesService.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/store/types.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/common/ContextMenu.tsx",
+        "src/components/common/ToolButton.tsx",
+        "src/styles.css",
+        "src/utils/debounce.ts",
+        "src/utils/filePath.ts",
+        "electron/main/file-handlers.ts",
+        "项目开发进度.md"
+      ],
+      "next": "用户手动验收，验收通过后进入下一阶段。"
+    },
+    {
+      "id": "LOG-012",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH1-07"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 7：三栏 UI 骨架回归修复",
+      "action": "修复/验证/文档",
+      "result": "已修复 `src/styles.css` 末尾窄屏响应式规则缺少 `@media` 包裹的问题，避免 `.workspace` 在桌面窗口被全局强制为单列，同时恢复左侧导航、中间工作区、右侧属性面板的三栏显示。",
+      "verification": [
+        "`npm run build` 成功。",
+        "人工检查样式尾部响应式规则已限定在 `max-width: 1100px` 内。"
+      ],
+      "affectedFiles": [
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "继续进行 M1 链路桌面验收，重点回归编辑、分页、文件保存与 PDF 导出。"
+    },
+    {
+      "id": "LOG-013",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH1-09B"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 9b：文件管理面板 Obsidian 风格改造",
+      "action": "重构/集成/验证",
+      "result": "已将左侧文件管理从卡片式信息面板改为 Obsidian 风格目录浏览器：顶部图标操作栏、递归文件夹树、当前项高亮、行内重命名、右键删除、排序/折叠入口；同步修复目录数据映射与 preload 类型，使前端保留后端返回的 `children` 递归结构。",
+      "verification": [
+        "`npm run build` 成功。",
+        "人工检查创建、排序、折叠、递归目录相关代码路径。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/services/FileService.ts",
+        "electron/preload/index.ts",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "修复并回归新建 Markdown 与新建文件夹入口的可用性。"
+    },
+    {
+      "id": "LOG-014",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH1-09B"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 9b：新建文件入口回归修复",
+      "action": "修复/验证/文档",
+      "result": "已修复 Obsidian 风格工具栏中新建 Markdown 与新建文件夹按钮点击无反馈的问题：应用启动后自动加载默认文件空间，创建按钮一键生成默认命名的 Markdown 文件或文件夹，并由主进程自动追加序号避免重名覆盖。",
+      "verification": [
+        "`npm run build` 成功。",
+        "人工检查已移除 `window.prompt` 创建流程，创建路径使用默认工作区并通过 `getUniqueEntryPath` 兜底重名。"
+      ],
+      "affectedFiles": [
+        "electron/main/file-handlers.ts",
+        "electron/preload/index.ts",
+        "src/services/FileService.ts",
+        "src/components/layout/AppShell.tsx",
+        "项目开发进度.md"
+      ],
+      "next": "继续桌面手动验收文件创建、树刷新、打开文件与拖拽移动。"
+    },
+    {
+      "id": "LOG-015",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH1-09B"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 9b：文件树根目录固定与单分支展开修复",
+      "action": "修复/验证/文档",
+      "result": "已按常见文件管理器/Obsidian 行为修复左侧文件树：左栏始终展示工作区总目录，点击某个文件夹仅展开该文件夹所在分支并收起其他分支；新建 Markdown 与新建文件夹会落到当前展开文件夹，没有展开文件夹时落到工作区根目录；重命名、删除、拖拽移动、打开文件与另存为后的刷新均保持工作区根目录不被替换为子目录。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "静态检查确认已移除会将左栏切到操作目录的 `setCurrentDirectory(result)` 路径。",
+        "当前 `layout3.0` Electron dev 进程仍在运行。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "继续桌面手动验收文件树点击展开、新建文件/文件夹、文件打开、重命名、删除与拖拽移动。"
+    },
+    {
+      "id": "LOG-016",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH1-09C"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 9c：按审查报告修复文件管理契约与状态同步",
+      "action": "修复/验证/文档",
+      "result": "已统一草稿链路为 `DraftService`，收敛最近文件状态到 store，修复重命名/移动后的活动文档与解析刷新，统一默认保存文件后缀为 `.md`，并清理了空白文档/草稿恢复的魔法字符串判断。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查相关状态流与服务层调用，确认编译与构建产物正常。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/AppShell.tsx",
+        "src/constants/workspace.ts",
+        "src/services/DraftService.ts",
+        "src/services/FileService.ts",
+        "src/services/RecentFilesService.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/store/types.ts",
+        "electron/main/file-handlers.ts",
+        "项目开发进度.md"
+      ],
+      "next": "继续桌面手动回归文件管理与 M1 链路，重点检查草稿恢复、最近文件与重命名/移动后的预览刷新。"
+    },
+    {
+      "id": "LOG-017",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH1-09D"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 9d：按审查报告补齐主进程文件操作容错",
+      "action": "修复/验证/文档",
+      "result": "已为主进程文件操作补齐统一错误映射与目录递归容错，读取目录时会跳过坏节点/符号链接，创建文件夹与 Markdown 改为原子式逐步尝试，避免并发新建时的 TOCTOU 问题。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查主进程文件处理函数与错误映射路径。"
+      ],
+      "affectedFiles": [
+        "electron/main/file-handlers.ts",
+        "项目开发进度.md"
+      ],
+      "next": "继续回归文件树加载、文件创建与删除错误提示，必要时再补安全边界检查。"
+    },
+    {
+      "id": "LOG-018",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH1-09E"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 9e：恢复左侧四板块竖向按钮入口",
+      "action": "重构/验证/文档",
+      "result": "已将左侧 `文件/大纲/搜索/资源` 改为竖向按钮栏切换，保留文件管理面板内部实现不动，并同步将工作区左侧宽度与窄屏折叠规则适配新布局。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "人工检查代码结构与构建产物。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/LeftPanel.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "继续按用户反馈回归竖向按钮样式、切换体验与左侧面板可用性。"
+    },
+    {
+      "id": "LOG-019",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-002"
+      ],
+      "phaseMilestone": "项目治理 / 仓库初始化",
+      "step": "创建 Git 仓库并完成首次提交",
+      "action": "初始化/提交",
+      "result": "已在工作区根目录创建本地 Git 仓库，并完成首个基线提交，项目源码、文档与配置文件已纳入版本控制，构建产物仍由忽略规则排除。",
+      "verification": [
+        "`git init -b main`。",
+        "`git status --short`。",
+        "`git log --oneline --decorate -1`。"
+      ],
+      "affectedFiles": [
+        "项目开发进度.md",
+        ".gitignore",
+        "仓库元数据"
+      ],
+      "next": "继续按第一阶段未完成的最小步骤推进。"
+    },
+    {
+      "id": "LOG-020",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH1-10"
+      ],
+      "phaseMilestone": "第一阶段 / M1",
+      "step": "步骤 10：验证 M1 链路",
+      "action": "验证/回归/文档",
+      "result": "已完成编辑、解析、分页与导出主链路验证，`smoke:m1` 成功生成 PDF 冒烟文件，桌面端可继续进入后续阶段开发。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。",
+        "人工检查烟雾测试输出文件存在。"
+      ],
+      "affectedFiles": [
+        "项目开发进度.md",
+        "scripts/m1-smoke.ts",
+        "src/services/exportHtml.ts",
+        "electron/main/pdf-handlers.ts"
+      ],
+      "next": "进入第二阶段前的功能深化准备，优先排期精细分页与样式模板基础。"
+    },
+    {
+      "id": "LOG-021",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2 规划调整",
+      "step": "重排排版深化执行顺序",
+      "action": "文档/规划调整",
+      "result": "已确认第二阶段不能直接进入真实分页测量，先补“分页样式契约与页面配置基线”，再推进契约驱动的精细分页、表格跨页与模板联动，降低后续页眉页脚、块间距和模板收敛后的返工风险。",
+      "verification": [
+        "人工检查第二阶段拆解、模块说明、风险区与技术债务条目是否一致。"
+      ],
+      "affectedFiles": [
+        "项目开发进度.md"
+      ],
+      "next": "下一步输出“建立分页样式契约与页面配置基线”的具体开发细节方案，确认后再开始代码实现。"
+    },
+    {
+      "id": "LOG-022",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "步骤 1：建立分页样式契约与页面配置基线",
+      "action": "新增/集成/验证",
+      "result": "已建立页面尺寸、页边距模式、页眉页脚预留、默认模板、分页策略与块样式契约，并接入右侧面板、分页引擎、画布预览与导出 HTML，使 `A3/A4/B5`、纵横向切换、自定义页边距、模板起点与页面预留区能够共同驱动分页结果。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/*",
+        "src/store/slices/styleSlice.ts",
+        "src/store/types.ts",
+        "src/store/index.ts",
+        "src/hooks/useResolvedStyleContract.ts",
+        "src/hooks/usePagination.ts",
+        "src/engine/typesetting/*",
+        "src/engine/parser/index.ts",
+        "src/engine/parser/types.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/StatusBar.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "项目开发进度.md"
+      ],
+      "next": "完成后进入步骤 2：基于契约驱动分页算法推进标题同页、手动分页与基础溢出处理。"
+    },
+    {
+      "id": "LOG-023",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "右侧面板三级菜单化重构",
+      "action": "重构/验证/文档",
+      "result": "已将右侧面板由长表单改造为“一级菜单 + 二级菜单 + 详情区”的三级结构，当前仅保留 `页面设置` 一级菜单，其下承载 `页面规格`、`页边距`、`页眉页脚预留`、`模板起点`、`分页策略` 二级入口，后续可继续扩展新的一级菜单。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/RightPanel.tsx",
+        "src/store/types.ts",
+        "src/store/slices/uiSlice.ts",
+        "src/types/workspace.ts",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "下一步可继续补右侧其他一级菜单，或根据需要把二级菜单拆成更细的独立面板。"
+    },
+    {
+      "id": "LOG-024",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "右侧面板压缩与摘要独立优化",
+      "action": "重构/验证/文档",
+      "result": "已将右侧工作区摘要独立为整行区域，并将一级菜单压缩为更窄的竖向栏、二级菜单改为顶部图标入口，降低右侧横向占用，避免摘要与菜单混排。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "下一步继续观察右侧菜单密度，如有需要再把二级菜单进一步折叠为图标悬浮提示样式。"
+    },
+    {
+      "id": "LOG-025",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "页面设置文案与栏宽压缩优化",
+      "action": "重构/验证/文档",
+      "result": "已进一步收窄右侧一级菜单与二级图标栏宽度，并压缩工作区摘要、卡片与菜单文案字号，给页面设置详情区释放更多横向空间。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "继续观察右侧详情区阅读体验，如有必要再降低摘要卡片数量或把说明文字进一步折叠。"
+    },
+    {
+      "id": "LOG-026",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "右侧面板宽度扩容",
+      "action": "重构/验证/文档",
+      "result": "已将右侧工作区总宽度提升为原先的约 4/3，并同步到主布局与折叠态，使页面设置详情区获得更多横向空间。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "继续观察右侧内容是否仍需再横向扩容，或转而压缩摘要区内容密度。"
+    },
+    {
+      "id": "LOG-027",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "右侧一级菜单纯文字化",
+      "action": "重构/验证/文档",
+      "result": "已移除右侧一级菜单的图标，仅保留纯文字入口，进一步减轻一级菜单的视觉占用，保持二级图标栏与详情区不变。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "继续观察一级菜单文字长度，如有需要再微调文案或按钮宽度。"
+    },
+    {
+      "id": "LOG-028",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "页眉页脚手动参数控制",
+      "action": "新增/集成/验证",
+      "result": "已将页眉页脚预留从纯预设扩展为可手动输入高度的双模式，支持联动与独立调整，并通过样式契约驱动正文可用高度重算。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/resolveContract.ts",
+        "src/store/types.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "后续如需继续细化，可把页眉页脚内容编辑与预留高度拆成独立面板。"
+    },
+    {
+      "id": "LOG-029",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-003"
+      ],
+      "phaseMilestone": "项目治理 / Git 提交",
+      "step": "提交第一阶段 M1 成果基线",
+      "action": "提交/归档",
+      "result": "已整理并提交“第一阶段 M1 已完成，重点完成文件管理版块”的本地 Git 版本节点，便于后续进入第二阶段前进行回溯与协作。",
+      "verification": [
+        "`git status --short --branch` 确认暂存内容。",
+        "`git commit` 生成本地提交。",
+        "`git log --oneline --decorate -1` 确认最新提交信息。"
+      ],
+      "affectedFiles": [
+        "AGENTS.md",
+        "electron/main/file-handlers.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/services/FileService.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "配置远程仓库地址并推送当前 `main` 分支。"
+    },
+    {
+      "id": "LOG-030",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-004"
+      ],
+      "phaseMilestone": "项目治理 / Git 推送",
+      "step": "绑定 GitHub 远程仓库并推送 `main`",
+      "action": "配置/推送",
+      "result": "已为本地仓库绑定 GitHub 远程地址 `origin`，并成功将当前 `main` 分支推送到 `https://github.com/span-wang/Layout3.0.git`，远程仓库现已包含第一阶段 M1 基线代码与进度文档。",
+      "verification": [
+        "`git remote -v` 确认远程地址。",
+        "`git push -u origin main` 成功。",
+        "`git status --short --branch` 确认已建立 `origin/main` 跟踪关系。"
+      ],
+      "affectedFiles": [
+        "项目开发进度.md",
+        "Git 远程配置"
+      ],
+      "next": "下一步先整理第二阶段已开始的样式契约相关改动，再输出方案细节供确认。"
+    },
+    {
+      "id": "LOG-031",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "步骤 2：精细分页算法（手动分页符链路）",
+      "action": "新增/集成/验证",
+      "result": "已补齐 `/pagebreak` 手动分页符完整链路：解析层可识别单独一行的分页命令并产出结构化控制块，分页引擎会在该位置强制断页，预览与导出链路不会渲染分页符本身，且已覆盖带分页符的冒烟验证。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成 2 页分页符冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/engine/parser/types.ts",
+        "src/engine/parser/index.ts",
+        "src/engine/typesetting/index.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "scripts/m1-smoke.ts",
+        "项目开发进度.md"
+      ],
+      "next": "已被 2026-06-22 主链路纠偏覆盖，后续精细分页暂缓到结构化文档模型接入后继续。"
+    },
+    {
+      "id": "LOG-032",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "手动分页语法简化为 `/pagebreak`",
+      "action": "调整/验证/文档",
+      "result": "已按交互简化要求废弃旧的 `<!-- pagebreak -->` 注释语法，统一改为单独一行 `/pagebreak` 触发强制断页；同时补充代码块内同名文本不误触发、旧语法失效的验证。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。",
+        "冒烟脚本额外验证旧语法不再触发分页。"
+      ],
+      "affectedFiles": [
+        "src/engine/parser/index.ts",
+        "scripts/m1-smoke.ts",
+        "项目开发进度.md"
+      ],
+      "next": "已被 2026-06-22 主链路纠偏覆盖，后续分页命令应迁移为文档模型中的分页控制字段。"
+    },
+    {
+      "id": "LOG-033",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-08"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "步骤 2：基础溢出提示与超高块预警",
+      "action": "新增/集成/验证",
+      "result": "已为分页结果补齐基础排版告警：当单个块估算高度超过单页正文可用高度时，会生成“超高块”和“强制溢出”两类告警；状态栏会显示排版异常数量，右侧面板会展示中文原因与处理建议。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。",
+        "冒烟脚本额外验证超高代码块可产出溢出告警。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/index.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/StatusBar.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "项目开发进度.md"
+      ],
+      "next": "已被 2026-06-22 主链路纠偏覆盖，下一步改为先设计结构化文档模型 V1。"
+    },
+    {
+      "id": "LOG-034",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-01"
+      ],
+      "phaseMilestone": "第二阶段 / M2 规划纠偏",
+      "step": "主链路从纯 Markdown 解析纠偏为结构化文档模型优先",
+      "action": "文档/规划调整",
+      "result": "已替换第二阶段默认开发计划：M2 完成标准新增结构化文档模型与样式覆盖；新增 Document Model 模块；将文本/段落/高亮等富文本编辑标为未开始；将页面配置、页眉页脚预留、`/pagebreak` 与溢出告警归档为已完成的排版预备能力；精细分页二次推进改为暂缓。",
+      "verification": [
+        "人工检查阶段表、里程碑、模块表、第二阶段拆解、风险区、技术债务与最新日志的口径一致。"
+      ],
+      "affectedFiles": [
+        "项目开发进度.md"
+      ],
+      "next": "下一步先输出“结构化文档模型 V1”方案，确认字段、保存格式、Markdown 导入关系与画布编辑写回规则后再开始代码实现。"
+    },
+    {
+      "id": "LOG-035",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-02"
+      ],
+      "phaseMilestone": "第二阶段 / M2 方案沉淀",
+      "step": "建立结构化文档模型 V1 独立方案文档",
+      "action": "文档/规划调整",
+      "result": "已将 Markdown 非唯一真相源、Word 式段落与 TextRun 模型、局部字体/高亮、样式优先级、答案语义标记、答案隐藏/下划线挖空、`.layout` 保存关系、V1 实施范围与验收标准沉淀为独立方案，并在开发计划中引用该方案作为后续持续开发依据。",
+      "verification": [
+        "人工检查方案文档内容完整。",
+        "进度文档已在基线文档、阶段目标、M2 里程碑、Document Model 模块、第二阶段步骤、风险与技术债务中引用该方案。"
+      ],
+      "affectedFiles": [
+        "结构化文档模型V1方案.md",
+        "项目开发进度.md"
+      ],
+      "next": "下一步按 `结构化文档模型V1方案.md` 输出步骤 2 的代码实施细节，确认后开始建立 Document Model 类型与 Markdown 转换函数。"
+    },
+    {
+      "id": "LOG-036",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-02",
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "步骤 2 + 步骤 4：建立结构化文档模型 V1，并将 Markdown 主链路切到文档模型",
+      "action": "新增/替换/清理/验证",
+      "result": "已建立 `LayoutDocument / LayoutBlock / TextRun`、样式覆盖、答案标记、资源与视图状态等 V1 结构，并将 `Markdown -> LayoutDocument -> 分页 / 大纲 / 预览 / 导出` 切为唯一主链路；旧 `ParsedBlock / parseResult / rehype` 相关实现已删除，冒烟脚本已覆盖块 ID 稳定性、`TextRun` 拆分、答案标记与 `/pagebreak` 语义。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/*",
+        "src/hooks/useMarkdownParser.ts",
+        "src/hooks/usePagination.ts",
+        "src/engine/typesetting/*",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/EditorPane.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/StatusBar.tsx",
+        "src/services/exportHtml.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "scripts/m1-smoke.ts",
+        "src/engine/parser/pageBreak.ts",
+        "src/engine/parser/remark.ts",
+        "项目开发进度.md"
+      ],
+      "next": "下一步进入步骤 3：接入 `.layout` 工程文件读写模型，打通结构化文档的保存与恢复。"
+    },
+    {
+      "id": "LOG-037",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-03"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "步骤 3：接入 `.layout` 工程文件读写模型",
+      "action": "新增/集成/验证",
+      "result": "已新增 `.layout` 工程文件序列化与反序列化模块，支持保存 `LayoutDocument + styleSettings`，并将新文档默认保存格式切换为 `.layout`；打开 `.layout` 时会直接恢复结构化文档、页面设置与分页链路，保存时无扩展名文件会自动补齐默认后缀。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。",
+        "已验证 `.layout` 工程文件标题、块 ID、页面设置恢复。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/projectFile.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/services/FileService.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/hooks/useMarkdownParser.ts",
+        "src/components/layout/AppShell.tsx",
+        "electron/main/file-handlers.ts",
+        "scripts/m1-smoke.ts",
+        "src/utils/filePath.ts",
+        "项目开发进度.md"
+      ],
+      "next": "下一步进入步骤 5：画布元素选择与模型定位，开始让预览区和结构化模型建立对象级映射。"
+    },
+    {
+      "id": "LOG-038",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-05"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "步骤 5：画布元素选择与模型定位",
+      "action": "新增/集成/验证",
+      "result": "已为分页预览接入结构块点击选中、选中高亮、空白处取消选择和右侧“对象属性”只读面板；选中状态写入 `LayoutDocument.viewState.selectedNodeId`，并补齐块 ID 查询能力，公式模型块已预留只读选择渲染；同时收窄解析与分页 hook 订阅范围，避免仅切换选中态时重复解析或分页。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。"
+      ],
+      "affectedFiles": [
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/engine/document-model/selectors.ts",
+        "src/hooks/useMarkdownParser.ts",
+        "src/hooks/usePagination.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "项目开发进度.md"
+      ],
+      "next": "下一步进入步骤 6：文本与段落局部样式编辑，基于已选中模型节点写入样式覆盖。"
+    },
+    {
+      "id": "LOG-039",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-05A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "步骤 5a：画布块内文字编辑 V1",
+      "action": "新增/集成/验证",
+      "result": "已接入画布标题、段落、代码块双击原位编辑：失焦或 `Ctrl + Enter` 提交，`Esc` 取消；提交后写回 `LayoutDocument` 的块 `textRuns` 与对应 metadata，清空过期源码范围，标记文档未保存，并避免 `useMarkdownParser` 因画布编辑触发 Markdown 重建覆盖模型；冒烟脚本新增画布文字写回验证。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/hooks/useMarkdownParser.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "项目开发进度.md"
+      ],
+      "next": "下一步进入步骤 6：文本与段落局部样式编辑，基于画布选中/编辑节点继续写入样式覆盖。"
+    },
+    {
+      "id": "LOG-040",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-05A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "步骤 5a：画布块内文字编辑 V1 补齐修复",
+      "action": "修复/集成/验证",
+      "result": "已修复画布编辑框高度按实际内容自适应的问题，避免长标题进入编辑后被裁剪或出现内部小滚动条；同时将原位编辑范围从标题、段落、代码块扩展到列表项、表格单元格、图片说明与公式文本，统一通过节点 ID 写回结构化模型，并同步补充冒烟验证。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "scripts/m1-smoke.ts",
+        "项目开发进度.md"
+      ],
+      "next": "继续围绕画布文字编辑做人工验收；通过后再进入步骤 6：文本与段落局部样式编辑。"
+    },
+    {
+      "id": "LOG-041",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "步骤 5b：复杂块结构编辑兼容补齐",
+      "action": "文档/规划补充",
+      "result": "已将当前尚未兼容的复杂块编辑能力写回计划，避免后续遗漏：列表整体编辑、表格结构编辑、图片路径编辑、引用容器属性、公式可视化渲染编辑、右侧对象属性对子节点展示；分隔线与分页符记录为无文字编辑需求。",
+      "verification": [
+        "人工检查第二阶段拆解表、模块说明与本日志一致。"
+      ],
+      "affectedFiles": [
+        "项目开发进度.md"
+      ],
+      "next": "后续在画布文字编辑人工验收通过后，按优先级选择进入步骤 6 样式编辑或步骤 5b 复杂块结构补齐。"
+    },
+    {
+      "id": "LOG-042",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-005"
+      ],
+      "phaseMilestone": "项目治理 / 进度跟踪升级",
+      "step": "建立结构化进度源与自动生成流程",
+      "action": "重构/自动化/验证",
+      "result": "已将原先主要依赖手工维护的进度体系升级为 `progress/` 结构化真相源，新增进度生成与一致性校验脚本，并在 `AGENTS.md` 中明确“先更新真相源、再生成展示文档”的执行准则。",
+      "verification": [
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "AGENTS.md",
+        "package.json",
+        "scripts/generate-progress.mjs",
+        "progress/config.json",
+        "progress/tasks/phase-1.json",
+        "progress/tasks/phase-2.json",
+        "progress/tasks/phase-3.json",
+        "progress/tasks/phase-4.json",
+        "progress/risks.json",
+        "progress/tech-debts.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "后续每次开始新开发步骤前，先在任务卡中定位任务 ID，并先确认方案与细节，再开始改代码。"
+    },
+    {
+      "id": "LOG-043",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-03",
+        "PH2-04",
+        "PH2-05A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "Markdown 改为一次性导入，`.layout` 成为唯一工作文件",
+      "action": "修复/集成/验证",
+      "result": "已将主链路进一步收口为“Markdown 只在打开时导入一次，后续只操作 `.layout` 工程数据”：源码区改为只读导入快照，运行期不再持续监听 Markdown；新建文件改为直接创建 `.layout`；自动草稿、页面设置、画布文字编辑与保存统一围绕 `LayoutDocument` 持久化；同时补齐 `remark-math` 块级公式导入、图片资源 alt 仅在图片块场景下同步，以及共享稳定哈希与列表项换行保留修复。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json",
+        "electron/main/file-handlers.ts",
+        "electron/main/ipc-handlers.ts",
+        "electron/preload/index.ts",
+        "src/services/FileService.ts",
+        "src/services/DraftService.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/EditorPane.tsx",
+        "src/components/editor/MarkdownEditor.tsx",
+        "src/components/layout/StatusBar.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/constants/workspace.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/selectors.ts",
+        "src/engine/document-model/utils.ts",
+        "src/engine/parser/remark.ts",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/tech-debts.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "按优先级先确认 `PH2-06` 文本与段落局部样式编辑的方案细节，再开始下一步代码实现。"
+    },
+    {
+      "id": "LOG-044",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-006",
+        "PH2-06"
+      ],
+      "phaseMilestone": "项目治理 / 第二阶段边界归档",
+      "step": "确认方案后先写回本步边界，并补齐 PH2-06 的纳入/不纳入范围",
+      "action": "流程约束/边界归档/文档生成",
+      "result": "已在 `AGENTS.md` 与结构化真相源中新增“用户确认方案后，开始改代码前必须先写回本步边界”的协作规则；同时已为 `PH2-06` 写回已确认边界，明确记录本步纳入内容、交互与写回规则、本步明确不纳入内容，以及这些未纳入事项后续归属到 `PH2-05B`、`PH2-07`、`PH2-10` 或 `PH2-06` 后续拆分小步，避免后续实现时遗忘‘这一小步没做什么’。",
+      "verification": [
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。",
+        "人工检查 `PH2-06` 的边界信息已出现在生成文档中。"
+      ],
+      "affectedFiles": [
+        "AGENTS.md",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "scripts/generate-progress.mjs",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "如继续推进 `PH2-06`，下一步先按已确认边界开始功能代码开发，不再临时扩张到边界外事项。"
+    },
+    {
+      "id": "LOG-045",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-007"
+      ],
+      "phaseMilestone": "项目治理 / 独立进度看板",
+      "step": "确认独立看板方案后，先回写本步边界并启动独立目录实施",
+      "action": "边界归档/开始实施",
+      "result": "已确认进度看板不并入现有 Electron 主应用，而是独立放入 `progress-board/` 目录；本步已提前写回纳入范围、不纳入范围与后续归属，后续开发将围绕“读取真相源、可视化编辑、保存回 JSON、自动生成展示文档”四个目标展开。",
+      "verification": [
+        "人工检查 `GOV-007` 任务卡已写入边界字段。",
+        "执行 `npm run progress:build` 后应能在生成文档中看到该任务边界。"
+      ],
+      "affectedFiles": [
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "开始在 `progress-board/` 独立目录下搭建本地进度看板，并打通保存后自动生成进度文档的链路。"
+    },
+    {
+      "id": "LOG-046",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-007"
+      ],
+      "phaseMilestone": "项目治理 / 独立进度看板",
+      "step": "完成独立目录进度看板并验证真相源写回链路",
+      "action": "新增/联通/验证",
+      "result": "已在 `progress-board/` 独立目录下交付本地进度看板，包含启动脚本、只依赖 Node 内置能力的本地读写服务，以及中文任务看板界面；当前可直接读取并编辑 `progress/` 真相源，保存时会先做版本冲突校验，再写回 JSON，并自动执行 `scripts/generate-progress.mjs` 与 `--check` 保证展示文档同步。",
+      "verification": [
+        "`node --check progress-board/server.mjs` 成功。",
+        "`node --check progress-board/public/app.js` 成功。",
+        "`Invoke-WebRequest http://127.0.0.1:5070/health` 返回 200。",
+        "原样调用 `/api/save` 后返回“真相源与展示文档已同步保存”。",
+        "`npm run progress:check` 成功。",
+        "浏览器 DOM 快照确认默认聚焦第二阶段，并优先选中当前进行中的 `GOV-007`。"
+      ],
+      "affectedFiles": [
+        "progress-board/package.json",
+        "progress-board/README.md",
+        "progress-board/open-board.ps1",
+        "progress-board/server.mjs",
+        "progress-board/public/index.html",
+        "progress-board/public/styles.css",
+        "progress-board/public/app.js",
+        "scripts/generate-progress.mjs",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "后续如需继续扩展，可再拆分“新增任务模板向导”“高级配置编辑”“多人协作/远程同步”等独立治理任务。"
+    },
+    {
+      "id": "LOG-047",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-006",
+        "PH2-06"
+      ],
+      "phaseMilestone": "项目治理 / 第二阶段边界调整",
+      "step": "按确认方案把 PH2-06 调整为原位富文本编辑，并补充边界外事项归属",
+      "action": "边界归档/方案调整/文档生成",
+      "result": "已按最新确认方案，将 `PH2-06` 的交互边界从“进入纯文本编辑块”调整为“原位富文本编辑”，明确标题、段落、代码块、列表项、表格单元格进入编辑时保留现有格式展示；同时补充记录图片说明与公式文本暂不纳入本步原位富文本编辑，避免后续误把边界外事项混入当前小步。",
+      "verification": [
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。",
+        "人工检查 `PH2-06` 边界摘要、交互规则与边界外事项归属已更新。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续按已更新边界推进 `PH2-06` 代码实现，优先把标题、段落、代码块、列表项、表格单元格切到原位富文本编辑。"
+    },
+    {
+      "id": "LOG-048",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "文本与段落局部样式编辑 V1：切到原位富文本编辑并打通样式链路",
+      "action": "新增/集成/验证",
+      "result": "已将标题、段落、代码块、列表项、表格单元格从进入纯文本编辑块的方案切到原位富文本编辑雏形：编辑态继续保留现有 `TextRun` 格式展示；右侧对象属性面板可直接驱动加粗、斜体、下划线、字号、文字颜色、高亮、对齐、行高、首行缩进、段前距、段后距写入模型；画布预览、分页估算、`.layout` 持久化与 HTML/PDF 导出链路已同步消费这些样式覆盖。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "已在桌面窗口中确认应用可正常加载到最新页面，后续仍建议继续围绕选区操作做人工交互验收。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/store/slices/documentSlice.ts",
+        "src/store/types.ts",
+        "src/types/workspace.ts",
+        "src/engine/typesetting/index.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做人工交互验收与收尾，重点验证选中文字后右侧样式按钮、列表项/表格单元格原位编辑，以及图片说明/公式文本后续是否需要纳入同一富文本链路。"
+    },
+    {
+      "id": "LOG-049",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "结合代码审查结果修复选区样式虚拟块问题，并加固样式比较逻辑",
+      "action": "修复/验证/文档同步",
+      "result": "已按审查结果修复 `documentSlice.ts` 中选区样式操作依赖“虚拟 paragraph 块”的高风险实现，改为直接对真实节点文本 runs 操作，不再伪造块类型；同时将 `TextMark` 比较由 `JSON.stringify` 改为结构化字段比较，并为 `indentLeft / indentRight` 加入“当前未消费”的注释说明。当前代码审查中 P0 项已处理，`CanvasPane` 中基于 `pageLayouts` 的编辑草稿同步竞态仍需后续继续收敛。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。"
+      ],
+      "affectedFiles": [
+        "src/store/slices/documentSlice.ts",
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/types.ts",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 的真实交互做人工验收，并优先处理 `CanvasPane` 中富文本草稿与分页结果同步的竞态窗口。"
+    },
+    {
+      "id": "LOG-050",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-006",
+        "PH2-06"
+      ],
+      "phaseMilestone": "项目治理 / 第二阶段边界调整",
+      "step": "确认下一小步只处理 CanvasPane 编辑草稿竞态，不扩到其他功能",
+      "action": "边界归档/继续实施",
+      "result": "已将 `PH2-06` 当前收尾小步的边界写回真相源：本轮仅修复 `CanvasPane` 中富文本草稿被分页结果刷新静默覆盖的问题，目标是让用户正在输入时不会被预览/分页重算回滚，同时保留文字样式按钮对当前草稿的即时作用；图片说明、公式文本、浮动工具条、模板优先级等仍明确留在边界外。",
+      "verification": [
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。",
+        "人工检查 `PH2-06` 的状态说明、纳入范围与边界外事项已更新。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "开始修改 `CanvasPane` 的草稿同步逻辑，禁止编辑中因分页刷新而静默覆盖本地 draft。"
+    },
+    {
+      "id": "LOG-051",
+      "date": "2026-06-22",
+      "taskIds": [
+        "GOV-006",
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "收口 CanvasPane 富文本草稿同步竞态，避免分页刷新回滚正在输入内容",
+      "action": "修复/验证/文档同步",
+      "result": "已将 `CanvasPane` 编辑态草稿的外部同步来源从分页结果收口为 `LayoutDocument.blocks`，并新增“只有文本内容一致时才同步外部样式变化”的保护逻辑：这样既能保留右侧对象属性对当前草稿的即时作用，也能避免分页刷新、预览重算或其他晚到状态把用户正在输入的文本静默回滚成旧内容。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做人工交互验收；如继续进入下一小步，需先确认方案并回写边界，可再选择顶端快捷格式工具栏或测试补强。"
+    },
+    {
+      "id": "LOG-052",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "新增顶端快捷格式工具栏，并接入文字与段落常用样式动作",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已将顶栏升级为主操作行 + 快捷格式行，新增参考截图的“字体 / 段落”快捷工具栏；当前可从顶部直接触发加粗、斜体、下划线、文字颜色、高亮颜色与段落对齐，并复用现有选中节点、文字选区和 `documentSlice` 样式写入动作。字体家族、删除线和清除格式已作为占位入口展示，真实写入仍留到后续小步。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "人工检查 `PH2-06` 任务卡已更新为顶端快捷格式工具栏边界。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做人工交互验收；后续可拆分字体家族真实切换、删除线/清除格式写入、复杂下拉菜单或快捷键系统。"
+    },
+    {
+      "id": "LOG-053",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认斜体渲染修复与标准色一致性小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已将 `PH2-06` 当前小步边界写回真相源：本轮只修复斜体在画布预览、原位富文本编辑态与导出链路中的视觉生效问题，并把顶端快捷栏和右侧对象属性的文字颜色、高亮颜色快捷色板统一为红色、黑色、白色、蓝色、绿色；字体家族、删除线、清除格式、快捷键系统、浮动工具条、图片/公式/表格结构编辑仍明确留到后续任务。",
+      "verification": [
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。",
+        "人工确认 `PH2-06` 的本步纳入、本步明确不纳入、后续归属任务已写入任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改斜体渲染消费逻辑，并抽出标准色供顶端快捷栏和右侧对象属性面板共用。"
+    },
+    {
+      "id": "LOG-054",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "修复斜体渲染并统一文字与高亮标准色",
+      "action": "修复/集成/验证/文档同步",
+      "result": "已补强 `TextRun.marks` 中 `italic` 的渲染消费：画布预览、原位富文本编辑态和 HTML/PDF 导出都会显式输出 `font-style: italic`；同时修复全局 `font-synthesis: none` 禁止中文字体合成斜体的问题，改为允许 weight/style 合成。已新增共享标准色配置，顶端快捷格式工具栏与右侧对象属性面板统一使用红色、黑色、白色、蓝色、绿色；右侧文字颜色和高亮颜色均保留自定义颜色选择器，并新增标准色一键应用色块。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/styleColors.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做人工交互验收；后续可拆分字体家族真实切换、删除线/清除格式写入、快捷键系统或富文本浮动工具条。"
+    },
+    {
+      "id": "LOG-055",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认双击进入编辑防跳页小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已将 `PH2-06` 当前小步边界写回真相源：本轮只修复双击画布块进入编辑时分页预览滚动位置异常跳转的问题；代码方案限定为进入编辑前记录 `.canvas-pane` 滚动位置、编辑器聚焦时阻止浏览器自动滚动并恢复原位置，不改变模型写回、样式能力、复杂块编辑或分页算法。",
+      "verification": [
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。",
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "开始修改 `CanvasPane` 的进入编辑聚焦逻辑，避免双击块时分页预览自动滚到其他页。"
+    },
+    {
+      "id": "LOG-056",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "修复双击块进入编辑后分页预览跳页问题",
+      "action": "修复/验证/文档同步",
+      "result": "已在 `CanvasPane` 中为画布编辑入口补齐滚动保护：双击进入编辑前记录 `.canvas-pane` 的 `scrollTop` / `scrollLeft`，textarea 与富文本编辑器聚焦时使用防滚动聚焦，并在选区恢复后把画布滚动位置恢复到用户双击前的位置。该修复覆盖富文本节点与图片说明、公式文本等纯文本编辑器，不改变模型写回、分页结果或导出链路。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做真实交互验收；后续可拆分字体家族真实切换、删除线/清除格式写入、快捷键系统或富文本浮动工具条。"
+    },
+    {
+      "id": "LOG-057",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认点击/编辑跳页底层收口小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按运行态排查结果将 `PH2-06` 当前小步边界写回真相源：本轮不再只补单点 `focus`，而是同时收口三类底层原因：分页预览真实 DOM 尺度与分页估算不一致、富文本输入时 DOM 同步和选区恢复触发浏览器自动滚动、编辑态点击其他块时旧编辑器失焦提交和重渲染吞掉点击目标。实现边界限定在 `CanvasPane` 与必要 CSS，不新增模型字段、不扩张到真实测量分页或新样式功能。",
+      "verification": [
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。",
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "开始修改分页预览真实渲染尺度、富文本输入 DOM 同步和编辑态点击切换的滚动保护逻辑。"
+    },
+    {
+      "id": "LOG-058",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成点击/编辑跳页底层收口",
+      "action": "修复/验证/文档同步",
+      "result": "已完成点击/编辑跳页底层收口：预览页新增 `page-frame` 外层缩放，`.page` 按 `ResolvedStyleContract` 真实页面尺寸、页眉页脚与正文边距渲染，避免页面缩小时内部内容仍按未缩放尺寸溢出；富文本编辑器在用户输入时不再反复重写当前 `contentEditable` DOM，并在聚焦、选区恢复、输入、失焦提交、取消编辑和编辑态点击其他块时保护 `.canvas-pane` 滚动位置；点击其他块时先记录待选目标，旧编辑器提交重渲染后再恢复目标选择，避免点击被失焦提交吞掉。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功。",
+        "运行态 Playwright 复现验证成功：滚动到后续页面后，单击、双击、输入以及编辑态点击其他块时 `.canvas-pane.scrollTop` 保持稳定，首批页面正文溢出值为 0。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做真实交互验收；后续可拆分字体家族真实切换、删除线/清除格式写入、快捷键系统、富文本浮动工具条或真实测量分页。"
+    },
+    {
+      "id": "LOG-059",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认高亮浅色板小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户截图与确认将 `PH2-06` 当前小步边界写回真相源：本轮只调整高亮颜色设计，固定使用 `#FEF08A`、`#FECACA`、`#FED7AA`、`#BBF7D0`、`#BFDBFE`、`#E9D5FF` 这 6 个浅色；顶部快捷格式工具栏和右侧对象属性面板都改用独立高亮浅色板，右侧高亮自定义取色器入口移除，避免继续提供正色入口；文字颜色、模型字段、保存格式和导出逻辑不在本步范围内。",
+      "verification": [
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。",
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "开始拆分文字标准色与高亮浅色板，并同步更新顶部快捷格式工具栏和右侧对象属性面板的高亮颜色入口。"
+    },
+    {
+      "id": "LOG-060",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成高亮浅色板调整",
+      "action": "修复/验证/文档同步",
+      "result": "已完成高亮颜色入口调整：新增独立 `highlightColorOptions`，固定使用 `#FEF08A`、`#FECACA`、`#FED7AA`、`#BBF7D0`、`#BFDBFE`、`#E9D5FF` 这 6 个浅色；顶部快捷格式工具栏和右侧对象属性面板的高亮色都改为消费该浅色板，默认高亮色改为 `#FEF08A`；右侧高亮原生取色器已移除，避免继续提供正色入口。文字颜色入口、模型字段、保存格式与导出消费链路保持不变。",
+      "verification": [
+        "`rg` 检查确认 `src/` 中旧默认高亮色 `#fff3a3` 不再残留。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/styleColors.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做真实交互验收；后续可拆分字体家族真实切换、删除线/清除格式写入、快捷键系统或富文本浮动工具条。"
+    },
+    {
+      "id": "LOG-061",
+      "date": "2026-06-22",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认删除线真实接入小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-06` 当前小步边界写回真相源：本轮只把已预留的 `strike` 删除线标记接入真实 UI 操作，范围限定为顶部快捷格式工具栏和右侧对象属性面板；模型字段、`.layout` 保存、导出链路、字体家族、清除格式、快捷键系统和浮动工具条均不在本步范围内。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改顶部快捷格式工具栏和右侧对象属性面板，让删除线按钮复用现有 `toggleLayoutNodeTextMark` 写回链路。"
+    },
+    {
+      "id": "LOG-062",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成删除线真实接入",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已将预留的 `strike` 删除线标记接入真实样式操作：顶部快捷格式工具栏的删除线按钮已从占位禁用改为可点击，右侧对象属性面板的文字样式按钮也新增删除线；两处均复用现有文字选区、`toggleLayoutNodeTextMark` 写回、画布预览、原位富文本编辑态和 HTML/PDF 导出消费链路，不新增模型字段。",
+      "verification": [
+        "`rg` 静态检查确认 `strike` 已在顶部工具栏、右侧对象属性、画布渲染、编辑态解析和导出 HTML 中存在消费点。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做真实交互验收；后续可拆分字体家族真实切换、清除格式写入、快捷键系统或富文本浮动工具条。"
+    },
+    {
+      "id": "LOG-063",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认清除文字格式小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-06` 当前小步边界写回真相源：本轮只补齐“清除文字格式”能力，范围限定为顶部快捷格式工具栏和右侧对象属性面板的文字级视觉格式清除；段落级样式、模板优先级、语义 marks、答案标记、字体家族真实切换、快捷键系统和浮动工具条均不在本步范围内。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始在 `document-model` 与 store 中补齐清除文字格式 action，并接通顶部快捷格式工具栏和右侧对象属性面板入口。"
+    },
+    {
+      "id": "LOG-064",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成清除文字格式接入",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已补齐“清除文字格式”能力：在 `document-model` 中新增按选区清除文字级视觉格式的基础函数，并通过 store 暴露统一 action；顶部快捷格式工具栏的“清除”按钮和右侧对象属性面板的“清除文字格式”入口都已接通这条链路。当前清除范围限定为加粗、斜体、下划线、删除线、文字颜色、高亮、字号与字体家族，不影响段落级样式、语义 marks 和答案标记。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做真实交互验收；后续可拆分字体家族真实切换、快捷键系统或富文本浮动工具条。"
+    },
+    {
+      "id": "LOG-065",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认字体家族真实切换小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-06` 当前小步边界写回真相源：本轮只补齐字体家族真实切换能力，范围限定为顶部快捷格式工具栏与右侧对象属性面板的字体选择入口；字体名单固定为宋体、黑体、微软雅黑、楷体、Arial、Times New Roman、Georgia、Verdana、Tahoma，继续写入现有 `TextRun.styleOverrides.fontFamily`，不做字体上传、模板优先级重构、跨机器字体打包或中西文自动混排。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始建立共享字体列表，并接通顶部快捷格式工具栏和右侧对象属性面板的字体选择入口。"
+    },
+    {
+      "id": "LOG-066",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成字体家族真实切换接入",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已补齐字体家族真实切换能力：新增共享中西文字体列表，提供中文字体宋体、黑体、微软雅黑、楷体，以及西文字体 Arial、Times New Roman、Georgia、Verdana、Tahoma；顶部快捷格式工具栏与右侧对象属性面板都已接入同一份字体选择入口，并继续复用现有 `TextRun.styleOverrides.fontFamily` 写回、清除文字格式、画布预览、原位富文本编辑态与 HTML/PDF 导出链路。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/fontFamilies.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做真实交互验收；后续可拆分快捷键系统、富文本浮动工具条或样式来源/模板优先级整理。"
+    },
+    {
+      "id": "LOG-067",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认浮动工具条小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-06` 当前小步边界写回真相源：本轮只补齐画布原位富文本编辑中的浮动工具条 V1，范围限定为非空文字选区时出现的加粗、斜体、下划线、删除线、字体颜色、高亮和清除文字格式动作；字体颜色继续使用标准色板，高亮继续使用浅色板，不接入字体家族、字号、段落对齐、自定义取色器、快捷键系统或图片/公式等轻量 textarea 节点。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始在 `CanvasPane` 中建立浮动工具条定位与显示逻辑，并接入字体颜色、高亮和常用文字格式动作。"
+    },
+    {
+      "id": "LOG-068",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成浮动工具条 V1 接入",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已在 `CanvasPane` 中补齐画布原位富文本编辑的浮动工具条 V1：当标题、段落、代码块、列表项、表格单元格出现非空文字选区时，会在选区附近显示轻量工具条；当前工具条支持加粗、斜体、下划线、删除线、字体颜色、高亮和清除文字格式，并继续复用现有文字级样式写回链路。工具条会跟随选区定位，优先显示在上方，空间不足时翻到下方，同时通过 `mousedown` 保护当前编辑焦点与选区，避免点击工具条时失焦、选区丢失或重新引入预览跳页问题。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做真实交互验收；后续可拆分快捷键系统、更完整的浮动工具条或样式来源/模板优先级整理。"
+    },
+    {
+      "id": "LOG-069",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认浮动工具条可见性优化小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-06` 当前小步边界写回真相源：本轮只针对“浮动条没看到”的体验反馈做收口，范围限定为画布原位富文本编辑态中的选区同步稳定性、浮动工具条可见层级和编辑态视觉提示；不扩大到预览态直接框选普通文字弹条，不接入字体家族、字号、段落对齐、自定义取色器、快捷键系统、图片说明或公式文本。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始在 `CanvasPane` 和样式中补强原位富文本编辑态选区监听、浮动工具条显示层级和编辑态提示。"
+    },
+    {
+      "id": "LOG-070",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成浮动工具条可见性优化",
+      "action": "修复/体验优化/验证/文档同步",
+      "result": "已完成浮动工具条可见性体验收口：在画布原位富文本编辑入口增加双击兜底，第二次鼠标按下即可进入编辑态；富文本编辑器新增 `selectionchange` 选区同步兜底，并避免相同选区重复写状态；编辑器内部鼠标事件不再冒泡到外层选块逻辑，减少拖选时被重新解释为选块；样式上提高浮动工具条层级、边框和阴影，并增强原位富文本编辑态描边、背景和选区高亮。功能边界仍保持为原位富文本编辑态内选中非空文字才显示浮动工具条，不支持预览态直接框选普通文字弹条。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`git diff --check` 成功，仅提示既有换行符转换警告。",
+        "`rg` 静态检查确认双击兜底、选区同步、浮动工具条高层级和编辑态选区样式均已接入。",
+        "桌面窗口刷新验证时触发未保存草稿恢复确认，为避免替用户处理草稿，未点击该确认框。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做真实交互验收；后续可拆分预览态直接选字浮动条、更完整浮动工具条或样式来源/模板优先级整理。"
+    },
+    {
+      "id": "LOG-071",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认悬挂缩进小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-06` 当前小步边界写回真相源：本轮只补齐标题与段落的悬挂缩进能力，新增独立 `hangingIndent` 字段和右侧对象属性面板入口，并同步接入画布预览、分页估算、`.layout` 保存与 HTML/PDF 导出；不扩大到列表、表格、代码块、左/右缩进、快捷栏、浮动工具条、模板优先级或真实测量分页。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改文档模型、右侧对象属性面板、画布预览、分页估算和导出链路，接通悬挂缩进能力。"
+    },
+    {
+      "id": "LOG-072",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成悬挂缩进接入",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已补齐标题与段落的悬挂缩进能力：新增独立 `BlockStyleOverrides.hangingIndent` 字段，不再复用负首行缩进；右侧对象属性面板新增“悬挂缩进”输入，画布预览、分页估算与 HTML/PDF 导出统一复用同一套悬挂缩进计算规则，并继续保留 `.layout` 读写兼容。当前范围仍限定为标题与段落，不覆盖列表、表格、代码块和完整左右缩进体系。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`rg -n \"hangingIndent|resolveHangingIndent\" src` 静态检查确认模型、右侧面板、画布预览、分页估算与导出链路均已接入。",
+        "`git diff --check` 成功，仅有仓库既有 LF/CRLF 转换警告。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/utils.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/index.ts",
+        "src/services/exportHtml.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做缩进体系与真实交互验收；后续可继续拆分左缩进/右缩进真实接入，或转向 `PH2-07` 样式优先级整理。"
+    },
+      {
+        "id": "LOG-074",
+        "date": "2026-06-23",
+        "taskIds": [
+          "PH2-06"
+        ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认左右缩进小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-06` 当前小步边界写回真相源：本轮只补齐标题与段落的左右缩进能力，在现有首行缩进与悬挂缩进基础上新增 `indentLeft`、`indentRight` 的真实消费和右侧面板入口，并同步接入画布预览、分页估算、`.layout` 保存与 HTML/PDF 导出；不扩大到列表、表格、代码块、引用、图片、公式或更完整的段落盒模型重构。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改文档模型、右侧对象属性面板、画布预览、分页估算和导出链路，接通左右缩进能力。"
+    },
+    {
+      "id": "LOG-073",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成左右缩进接入",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已补齐标题与段落的左右缩进能力：右侧对象属性面板新增“左缩进”“右缩进”输入，画布预览、分页估算与 HTML/PDF 导出统一复用同一套左右缩进和悬挂缩进计算规则，并继续保留 `.layout` 读写兼容。当前范围仍限定为标题与段落，不覆盖列表、表格、代码块和更完整的段落盒模型。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`rg` 静态检查确认左右缩进已接入模型、右侧面板、画布预览、分页估算与导出链路。",
+        "`git diff --check` 成功，仅有仓库既有 LF/CRLF 转换警告。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/utils.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/index.ts",
+        "src/services/exportHtml.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做缩进体系验收；后续可继续拆分更完整的段落盒模型与其他块类型缩进，或转向 `PH2-07` 样式优先级整理。"
+    },
+    {
+      "id": "LOG-075",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片属性编辑 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前小步边界写回真相源：本轮只补齐图片块的基础属性编辑，选中图片块后可在右侧对象属性面板编辑图片路径、替代文本和标题，并同步写回 `LayoutDocument.blocks[].metadata` 与对应图片资源；不做图片上传、资源目录、环绕裁剪、表格复杂编辑、公式可视化、样式优先级或语义块设计实现。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改文档模型写回能力和右侧对象属性面板，接通图片路径、替代文本与标题编辑。"
+    },
+    {
+      "id": "LOG-076",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片属性编辑 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成图片属性编辑 V1：新增图片属性写回函数和 store action，选中图片块后可在右侧对象属性面板编辑图片路径、替代文本和标题；写回会同步更新图片块 metadata 与 `LayoutDocument.resources` 中对应资源，画布预览和 HTML/PDF 导出会消费最新图片路径、替代文本和标题属性。当前 `PH2-05B` 仍保持进行中，后续继续拆分表格、列表、引用和公式等复杂块结构编辑。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF，已覆盖图片属性 metadata 写回与 store 资源同步。",
+        "`git diff --check` 成功，仅有仓库既有 LF/CRLF 转换警告。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-05B` 拆分复杂块结构编辑；下一步可优先做表格增删行列 V1、列表整体编辑 V1，或在语义块方案确认后回到 `PH2-07`。"
+    },
+    {
+      "id": "LOG-077",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片插入入口 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前小步边界写回真相源：本轮在顶端快捷格式工具栏的“段落”旁边新增“插入”组，并只把图片插入接成真实逻辑；表格、便利贴、空文本块、公式、目录暂时只做占位入口。图片插入选择本地图片后写入 `LayoutDocument.blocks` 和 `LayoutDocument.resources`，默认插到当前选中块之后，无选中块时插到文档末尾；不做图片复制、上传、粘贴/拖拽、裁剪缩放、环绕对齐或 Markdown 反向写回。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改预加载桥、文档模型写回能力、store action、顶端工具栏和应用消息反馈，接通图片插入入口 V1。"
+    },
+    {
+      "id": "LOG-078",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片插入入口 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成顶端工具栏插入入口 V1：在“段落”组旁新增“插入”组，包含图片、表格、便利贴、空文本块、公式、目录六个入口；图片入口已接入系统图片选择框，选择本地图片后会在当前选中块之后插入新的图片块，无选中块时插入文档末尾，并同步写入 `LayoutDocument.blocks`、`LayoutDocument.resources`、未保存状态和选中态。画布与 HTML/PDF 导出已统一把本地图片路径转换为 `file:///` 可渲染地址，模型中仍保留原始路径。表格、便利贴、空文本块、公式、目录当前仅做中文占位提示，不写入模型。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF，已覆盖图片插入后的块位置、资源同步和选中态。",
+        "`git diff --check` 成功，仅有仓库既有 LF/CRLF 转换警告。"
+      ],
+      "affectedFiles": [
+        "electron/main/file-handlers.ts",
+        "electron/main/ipc-handlers.ts",
+        "electron/preload/index.ts",
+        "src/services/FileService.ts",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/utils/filePath.ts",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-05B` 拆分复杂块结构编辑；后续可优先接入表格真实插入 V1、空文本块插入 V1，或继续推进 `PH2-10` 图片资源管理能力。"
+    },
+    {
+      "id": "LOG-079",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片渲染协议修复小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前小步边界写回真相源：本轮只修复本地图片插入后的渲染协议问题，把当前依赖 `file:///` 的画布预览与 HTML/PDF 导出链路收口到 Electron 自定义资源协议，确保本地图片在开发态、预览态和导出中都能稳定显示；不扩大到图片上传、资源复制、裁剪缩放、环绕对齐或其他插入项真实实现。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改 Electron 主进程资源协议、图片路径消费工具、预览渲染与导出链路，收口本地图片显示失败问题。"
+    },
+    {
+      "id": "LOG-080",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片渲染协议修复",
+      "action": "修复/集成/验证/文档同步",
+      "result": "已完成本地图片渲染协议修复：新增 Electron 主进程自定义资源协议 `layout-asset://`，让画布预览与 HTML/PDF 导出统一通过该协议读取本地图片，不再直接依赖开发态下容易失效的 `file:///` 路径。结构化模型与右侧对象属性面板仍保留原始图片路径，用户输入口径不变。当前修复范围只覆盖本地图片显示与导出稳定性，不涉及图片上传、资源复制、裁剪缩放或其他插入项真实实现。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "冒烟脚本已补充本地图片路径转换为 `layout-asset://` 的静态校验。"
+      ],
+      "affectedFiles": [
+        "electron/main/asset-protocol.ts",
+        "electron/main/index.ts",
+        "src/utils/filePath.ts",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "重启 Electron 开发窗口并回归验证同一张本地图片在画布与导出中的显示结果；后续继续围绕 `PH2-05B` / `PH2-10` 推进图片资源管理与其他插入项真实实现。"
+    },
+    {
+      "id": "LOG-081",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "收口图片渲染协议实现细节",
+      "action": "修复/验证/文档同步",
+      "result": "已对图片渲染协议修复做实现收口：将 `layout-asset://` URL 结构固定为 `layout-asset://local/<编码后的完整路径>`，并把主进程资源读取从 `protocol.handle + net.fetch(file://...)` 调整为更直接的 `registerFileProtocol` 文件回调，避免 Windows 本地路径被塞进 URL host 后解析不稳，进一步降低开发态图片仍然显示失败的风险。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "冒烟脚本已加强为校验 `layout-asset://local/` URL 结构。"
+      ],
+      "affectedFiles": [
+        "electron/main/asset-protocol.ts",
+        "src/utils/filePath.ts",
+        "scripts/m1-smoke.ts",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "重启 Electron 开发窗口并回归验证同一张本地图片在画布与导出中的显示结果；如仍异常，再进一步加主进程协议命中日志或图片加载失败回调定位。"
+    },
+    {
+      "id": "LOG-082",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格真实插入 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前小步边界写回真相源：本轮只把顶部“插入”组里的表格入口从占位接成真实插入逻辑，默认插入 3 行 x 3 列表格，沿用当前选中块之后插入、无选中块时追加到文档末尾的规则，并写入结构化文档模型；不扩大到增删行列、表头开关、列宽拖拽、单元格合并、表格样式或复杂分页。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改文档模型插入操作、store action、顶端工具栏表格按钮和应用消息反馈，接通表格真实插入 V1。"
+    },
+    {
+      "id": "LOG-083",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格真实插入 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成表格真实插入 V1：顶部“插入”组里的表格入口不再弹占位提示，点击后会插入默认 3 x 3 表格；新表格沿用当前选中块之后插入、无选中块时追加到文档末尾的规则，写入 `LayoutDocument.blocks`，并生成表格块、行、单元格稳定 ID。插入后会标记未保存、刷新文档统计、选中新表格首个单元格并展示中文成功提示；默认表格不写入 `resources`，仍复用现有表格单元格原位编辑链路。当前 `PH2-05B` 继续保持进行中，后续再拆分表格增删行列、表头、对齐、样式与跨页能力。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "冒烟脚本已补充表格插入模型层和 store 层校验，覆盖默认 3 x 3 结构、插入位置、首个单元格选中态以及不写入 resources。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-05B` 拆分复杂块结构编辑；下一步可优先做空文本块真实插入 V1、表格增删行列 V1，或继续推进公式/目录等插入入口。"
+    },
+    {
+      "id": "LOG-084",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格增删行列 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前小步边界写回真相源：本轮只补齐表格增删行列 V1，选中表格单元格后在右侧“对象属性”中提供上方插入行、下方插入行、左侧插入列、右侧插入列、删除当前行、删除当前列六个结构操作；不扩大到列宽拖拽、合并单元格、表头开关、表格样式、跨页或右键菜单。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改表格结构模型操作、store action、右侧对象属性面板和冒烟脚本，接通表格增删行列 V1。"
+    },
+    {
+      "id": "LOG-085",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格增删行列 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成表格增删行列 V1：新增表格结构模型操作和 store 写回 action，选中表格单元格后可在右侧“对象属性”中执行上方插入行、下方插入行、左侧插入列、右侧插入列、删除当前行、删除当前列六个操作；新增行列保持空单元格并生成稳定 ID，删除行列会保留剩余单元格原有文字和 TextRun 格式，结构变化后会标记未保存、刷新统计与分页并选中合理单元格。删除最后一行或最后一列会被保护，至少保留 1 行 x 1 列。当前仍不涉及列宽拖拽、合并单元格、表头开关、表格样式、跨页或右键菜单。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "冒烟脚本已补充表格结构编辑模型层和 store 层校验，覆盖插入空行、插入空列、删除行、删除列、选中态移动、保留原单元格文字以及最后一行/列保护。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-05B` 拆分复杂块结构编辑；下一步可优先做表头开关 V1、表格对齐 V1、空文本块真实插入 V1，或继续推进公式/目录等插入入口。"
+    },
+    {
+      "id": "LOG-086",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页算法插件化骨架小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-09` 当前小步边界写回真相源：本轮先建立分页算法注册插件框架，把现有估算分页实现收口为首个内置算法，并在右侧“分页策略”中提供算法切换入口，同时把算法选择写入 `StyleSettings` 并接入 `.layout` 持久化；不扩大到真实测量分页、孤寡行精修、表格跨页、表头重复或算法对比面板。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-09` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始改造排版引擎分页入口、算法注册骨架、右侧分页策略面板与 `.layout` 持久化链路，先让默认算法在新框架下稳定运行。"
+    },
+    {
+      "id": "LOG-087",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页算法插件化骨架与切换入口",
+      "action": "新增/重构/验证/文档同步",
+      "result": "已完成分页算法插件化骨架与切换入口：新增分页算法注册接口、算法上下文、算法注册表和统一分页入口，把当前估算分页实现拆成默认“估算紧凑 V1”插件，并新增一套可切换的“估算平衡 V1”实验算法；`usePagination` 和冒烟脚本已统一按算法 ID 调用分页入口，右侧“分页策略”面板新增算法切换下拉框，当前算法选择写入 `StyleSettings` 并随 `.layout` 文件与自动草稿一起持久化。当前 `PH2-09` 继续保持进行中，后续再继续拆分真实测量分页、孤寡行、表格跨页与表头重复能力。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "冒烟脚本已补充分页算法注册列表、算法切换调用和 `.layout` 持久化恢复校验。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/index.ts",
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/registry.ts",
+        "src/engine/typesetting/algorithmIds.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedGreedy.ts",
+        "src/engine/typesetting/algorithms/estimatedGreedyBalanced.ts",
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/store/types.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/hooks/usePagination.ts",
+        "src/components/layout/RightPanel.tsx",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-09` 拆分第二批分页试验：可优先做更明确的页尾平衡规则、孤寡行控制或表格跨页前置设计，再视效果继续增加新算法插件。"
+    },
+    {
+      "id": "LOG-088",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页算法开发线路文档边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户要求将 `PH2-09` 当前小步边界写回真相源：本轮只新增一份只服务分页算法主线的开发线路文档，沉淀候选算法、阶段路线、验证指标与实施顺序，并在计划文件中显式引用；不在本步顺手推进新的分页功能代码，也不把该文档提升为所有任务共用的新增项目基线。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-09` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始创建分页算法开发线路文档，并在 `PH2-09` 计划链路中补充对该文档的显式引用。"
+    },
+    {
+      "id": "LOG-089",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页算法开发线路文档",
+      "action": "新增/归档/文档同步",
+      "result": "已新增只服务 `PH2-09` 的分页算法开发线路文档，系统梳理了多算法插件化的总体策略、候选算法池、分批实施顺序、插件分层、验证指标、性能控制原则和近期推荐路线；该文档放在 `progress/roadmaps/` 专用目录下，并且只在 `progress/tasks/phase-2.json` 的 `PH2-09` 任务卡中通过 `planReferences` 显式引用，不作为其他任务默认读取的新增项目级基线。",
+      "verification": [
+        "已创建 `progress/roadmaps/PH2-09-分页算法开发线路.md`。",
+        "已在 `progress/tasks/phase-2.json` 的 `PH2-09` 任务中添加 `planReferences` 引用。"
+      ],
+      "affectedFiles": [
+        "progress/roadmaps/PH2-09-分页算法开发线路.md",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "后续围绕 `PH2-09` 拆分具体分页试验时，按该开发线路先确认小步边界，再逐步实现页尾平衡、代价函数、脏区重排、真实测量和表格跨页能力。"
+    },
+    {
+      "id": "LOG-090",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认文本行数估算基础校准 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-09` 当前小步边界写回真相源：本轮只做文本行数估算基础校准，重点是区分纯 CJK 与中英混排文本的字符宽度折算，并把普通文本块的 charWidth 来源收口到样式契约或统一配置；本步不顺手推进新的分页算法插件、真实测量分页、孤寡行或表格跨页。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-09` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始改造文本估算公共逻辑和样式契约，先把纯 CJK、中英混排与代码块的字符宽度来源收口。"
+    },
+    {
+      "id": "LOG-091",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成文本行数估算基础校准 V1",
+      "action": "新增/重构/验证/文档同步",
+      "result": "已完成文本行数估算基础校准 V1：新增统一文本度量工具，纯 CJK 文本按 1.0 系数估算，中英混排按字符类型比例折算，普通文本块和代码块的字符宽度来源已收口到命名常量或样式契约；分页估算、冒烟脚本和导出链路均保持可用。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/textMetrics.ts",
+        "src/engine/typesetting/index.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-09` 做下一步分页基础能力推进；优先可选页尾平衡规则、分页代价函数或真实测量分页前置设计。"
+    },
+    {
+      "id": "LOG-092",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认页尾平衡 V2 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-09` 当前小步边界写回真相源：本轮改为实现页尾平衡 V2，新增更稳的尾块回收分页插件，并把算法切换入口中的实验算法同步更新；本步不替换默认算法，也不推进真实测量分页、孤寡行精修或表格跨页。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-09` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始实现新的页尾平衡分页插件，并补充注册与冒烟验证。"
+    },
+    {
+      "id": "LOG-093",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成页尾平衡 V2",
+      "action": "新增/重构/验证/文档同步",
+      "result": "已完成页尾平衡 V2：新增 `estimated-greedy-balance-v2` 分页算法插件，采用更保守的尾块回收判断并保留现有估算分页主链路；算法已注册进分页列表，`smoke:m1` 已用更窄页面与重复中文段落场景验证 V2 能正常输出分页结果并参与对比。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 待重新执行。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithmIds.ts",
+        "src/engine/typesetting/registry.ts",
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedGreedyBalancedV2.ts",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-09` 推进下一步分页基础能力，优先可选分页代价函数、脏区重排或真实测量分页前置设计。"
+    },
+    {
+      "id": "LOG-094",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认优化页尾平衡 V2 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-09` 当前小步边界写回真相源：本轮仅优化 `estimated-greedy-balance-v2` 的尾块回收判定，收紧现有阈值与保护条件，让 V2 在保留估算分页速度的前提下更稳定地减少“当前页过满、下一页偏空”或误回收关键块的情况；本步不新增算法 ID，不替换默认算法，也不推进真实测量分页、孤寡行精修或表格跨页。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-09` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始收紧 `estimated-greedy-balance-v2` 的尾块回收判定，并补充更有针对性的冒烟校验。"
+    },
+    {
+      "id": "LOG-095",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成优化页尾平衡 V2",
+      "action": "重构/验证/文档同步",
+      "result": "已完成 `estimated-greedy-balance-v2` 优化：V2 不再按当前块类型一刀切拒绝页尾回收，而是优先保护真正依赖后继块的页尾锚点，并对代码块、表格等整块内容采用更明确的收益阈值判断；同时补充了“多张图片 + 表格”复杂尾块场景的专项冒烟验证，确保 V2 不会因为下一块是表格就过度保守地退回 greedy 结果。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功并生成冒烟 PDF。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-09` 推进下一步分页基础能力，可优先考虑分页代价函数、脏区重排或真实测量分页前置设计。"
+    },
+    {
+      "id": "LOG-096",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B",
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格表头、列对齐与续表头 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将本轮联动小步边界写回真相源：`PH2-05B` 负责表格表头行开关与当前列对齐编辑，写入现有 `isHeader` 与 `metadata.align` 字段；`PH2-09` 负责基于估算分页结果实现表格跨页自动续表头 V1，只在 `PageLayout` 运行时片段中复制首行表头，不反写 Markdown 或改变原始 `LayoutDocument`。本轮不做真实测量分页、跨页单元格内容拆分、合并单元格、列宽拖拽、表格样式主题或右键菜单。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 与 `PH2-09` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始实现表格属性模型操作、store 写回、右侧对象属性面板、画布/导出渲染，以及估算分页下的表格行级拆分与续表头冒烟验证。"
+    },
+    {
+      "id": "LOG-097",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B",
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格表头、列对齐与续表头 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成本轮联动小步：表格模型层新增首行表头开关与当前列对齐写回，store 可标记未保存并保持选中态；右侧对象属性面板在选中表格单元格时提供“首行作为表头”和“当前列对齐”入口；画布预览与 HTML/PDF 导出消费 `<th>` 表头和列 `text-align`。分页侧在现有估算分页公共逻辑中加入表格行级运行时分片，超页表格会生成 `PageLayout.blocks` 表格片段，后续片段自动复制首行表头，并保持原始 `LayoutDocument.blocks` 不变。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并覆盖模型层表头/列对齐、store 写回、HTML 导出 `<th>` 与 `text-align`、表格跨页续表头和原始表格不被改写。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-05B` 和 `PH2-09` 拆分后续能力；优先可选表格列宽/合并单元格、列表整体编辑、或分页代价函数与真实测量分页前置设计。"
+    }
+  ]
+}

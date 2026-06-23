@@ -1,0 +1,102 @@
+{
+  "phaseId": "phase-4",
+  "tasks": [
+    {
+      "id": "PH4-01",
+      "sequence": "1",
+      "order": 10,
+      "title": "模板库系统",
+      "priority": "P2",
+      "moduleIds": [
+        "style-module"
+      ],
+      "milestoneIds": [
+        "M3",
+        "GA"
+      ],
+      "status": "未开始",
+      "acceptance": "内置模板与用户模板管理可用。"
+    },
+    {
+      "id": "PH4-02",
+      "sequence": "2",
+      "order": 20,
+      "title": "导出检查面板",
+      "priority": "P2",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M3",
+        "GA"
+      ],
+      "status": "未开始",
+      "acceptance": "导出前检查项可提示风险。"
+    },
+    {
+      "id": "PH4-03",
+      "sequence": "3",
+      "order": 30,
+      "title": "性能优化",
+      "priority": "P2",
+      "moduleIds": [
+        "typesetting-engine",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M3"
+      ],
+      "status": "未开始",
+      "acceptance": "大文档操作性能达到目标。"
+    },
+    {
+      "id": "PH4-04",
+      "sequence": "4",
+      "order": 40,
+      "title": "打包与发布",
+      "priority": "P2",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M3",
+        "GA"
+      ],
+      "status": "未开始",
+      "acceptance": "安装包可产出并完成验收。"
+    },
+    {
+      "id": "PH4-05",
+      "sequence": "5",
+      "order": 50,
+      "title": "文档与帮助",
+      "priority": "P2",
+      "moduleIds": [
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "GA"
+      ],
+      "status": "未开始",
+      "acceptance": "用户文档、开发文档、帮助入口齐备。"
+    },
+    {
+      "id": "PH4-06",
+      "sequence": "6",
+      "order": 60,
+      "title": "验证 M3 与 GA",
+      "priority": "P2",
+      "moduleIds": [
+        "typesetting-engine",
+        "export-pipeline",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M3",
+        "GA"
+      ],
+      "status": "未开始",
+      "acceptance": "发布条件全部满足。"
+    }
+  ]
+}

@@ -1,8 +1,13 @@
+import type { LayoutDocument } from '@/engine/document-model';
+import type { StyleSettings } from '@/engine/style/types';
+
 const DRAFT_STORAGE_KEY = 'layout3.draft';
 
 export interface DraftEntry {
   title: string;
   source: string;
+  layoutDocument: LayoutDocument;
+  styleSettings: StyleSettings;
   filePath: string | null;
   lastModified: number;
 }
@@ -26,6 +31,10 @@ export function loadDraft(): DraftEntry | null {
     if (
       typeof parsed?.title !== 'string' ||
       typeof parsed?.source !== 'string' ||
+      typeof parsed?.layoutDocument !== 'object' ||
+      parsed?.layoutDocument === null ||
+      typeof parsed?.styleSettings !== 'object' ||
+      parsed?.styleSettings === null ||
       typeof parsed?.lastModified !== 'number' ||
       (typeof parsed?.filePath !== 'string' && parsed?.filePath !== null)
     ) {

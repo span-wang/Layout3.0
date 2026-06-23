@@ -1,4 +1,7 @@
+import type { DocumentFormat } from '@/engine/document-model';
+
 const supportedDocumentExtensions = new Set(['.md', '.layout', '.json']);
+const layoutAssetProtocolScheme = 'layout-asset';
 const visibleWorkspaceExtensions = new Set([
   '.md',
   '.layout',
@@ -49,6 +52,36 @@ export function getFileExtension(filePath: string): string {
   return extensionIndex >= 0 ? baseName.slice(extensionIndex).toLowerCase() : '';
 }
 
+export function toLayoutAssetUrl(filePath: string): string {
+  return `${layoutAssetProtocolScheme}://local/${encodeURIComponent(filePath)}`;
+}
+
+export function resolveAssetSrc(src: string): string {
+  const trimmed = src.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (/^(https?:|data:|file:|blob:|layout-asset:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^[a-zA-Z]:[\\/]/.test(trimmed) || trimmed.startsWith('\\\\') || trimmed.startsWith('/')) {
+    return toLayoutAssetUrl(trimmed);
+  }
+
+  return trimmed;
+}
+
+export function getDocumentFormatFromPath(filePath: string | null): DocumentFormat {
+  if (!filePath) {
+    return 'layout';
+  }
+
+  const extension = getFileExtension(filePath);
+  return extension === '.layout' || extension === '.json' ? 'layout' : 'markdown';
+}
+
 export function isOpenableDocumentPath(filePath: string): boolean {
   return supportedDocumentExtensions.has(getFileExtension(filePath));
 }
@@ -90,4 +123,3 @@ export function replacePathPrefix(
 
   return targetPath;
 }
-

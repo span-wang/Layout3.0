@@ -1,6 +1,15 @@
+import type { TextRangeSelection, TextRun } from '@/engine/document-model';
+
 export type LeftPanelTab = '文件' | '大纲' | '搜索' | '资源';
 
 export type WorkspaceViewMode = 'source' | 'split' | 'preview';
+
+export type PageSettingsTab =
+  | '页面规格'
+  | '页边距'
+  | '页眉页脚预留'
+  | '模板起点'
+  | '分页策略';
 
 export type PreviewBlock =
   | {
@@ -48,4 +57,12 @@ export interface SelectOption {
 export interface TemplateOption {
   id: string;
   name: string;
+}
+
+export interface CanvasTextSelectionState {
+  nodeId: string | null;
+  text: string;
+  selection: TextRangeSelection | null;
+  isEditing: boolean;
+  draftTextRuns: TextRun[] | null;
 }
