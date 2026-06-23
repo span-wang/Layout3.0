@@ -1,6 +1,7 @@
 import type {
   BlockStyleOverrides,
   DocumentFormat,
+  ListStructureAction,
   LayoutDocument,
   ParseState,
   TableColumnAlign,
@@ -116,6 +117,18 @@ export interface DocumentSlice {
   updateLayoutTableColumnAlign: (payload: {
     cellId: string;
     align: TableColumnAlign;
+  }) => string | null;
+  updateLayoutListStructure: (payload: {
+    itemId: string;
+    action: ListStructureAction;
+  }) => string | null;
+  updateLayoutListOrdered: (payload: {
+    itemId: string;
+    ordered: boolean;
+  }) => string | null;
+  updateLayoutListStart: (payload: {
+    itemId: string;
+    start: number;
   }) => string | null;
   updateLayoutImageAttributes: (payload: {
     nodeId: string;
