@@ -433,6 +433,98 @@ function replaceOwnerBlock(
   return { blocks: nextBlocks, didUpdate };
 }
 
+function replaceListStructureByItem(
+  blocks: LayoutBlock[],
+  itemId: string,
+  action: ListStructureAction,
+): { blocks: LayoutBlock[]; didUpdate: boolean; selectedNodeId: string | null } {
+  let didUpdate = false;
+  let selectedNodeId: string | null = null;
+
+  const nextBlocks = blocks.map((block) => {
+    if (
+      block.type === 'list' &&
+      block.metadata.kind === 'list' &&
+      block.metadata.items.some((item) => item.id === itemId)
+    ) {
+      const result = updateListStructureByItem(block, itemId, action);
+      if (!result.didUpdate) {
+        return block;
+      }
+
+      didUpdate = true;
+      selectedNodeId = result.selectedNodeId;
+      return result.block;
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedResult = replaceListStructureByItem(block.metadata.blocks, itemId, action);
+      if (nestedResult.didUpdate) {
+        didUpdate = true;
+        selectedNodeId = nestedResult.selectedNodeId;
+        return {
+          ...block,
+          sourceRange: null,
+          metadata: {
+            ...block.metadata,
+            blocks: nestedResult.blocks,
+          },
+        };
+      }
+    }
+
+    return block;
+  });
+
+  return { blocks: nextBlocks, didUpdate, selectedNodeId };
+}
+
+function replaceListPropertyByItem(
+  blocks: LayoutBlock[],
+  itemId: string,
+  updater: (block: LayoutBlock, itemId: string) => ListPropertyEditResult,
+): { blocks: LayoutBlock[]; didUpdate: boolean; selectedNodeId: string | null } {
+  let didUpdate = false;
+  let selectedNodeId: string | null = null;
+
+  const nextBlocks = blocks.map((block) => {
+    if (
+      block.type === 'list' &&
+      block.metadata.kind === 'list' &&
+      block.metadata.items.some((item) => item.id === itemId)
+    ) {
+      const result = updater(block, itemId);
+      if (!result.didUpdate) {
+        return block;
+      }
+
+      didUpdate = true;
+      selectedNodeId = result.selectedNodeId;
+      return result.block;
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedResult = replaceListPropertyByItem(block.metadata.blocks, itemId, updater);
+      if (nestedResult.didUpdate) {
+        didUpdate = true;
+        selectedNodeId = nestedResult.selectedNodeId;
+        return {
+          ...block,
+          sourceRange: null,
+          metadata: {
+            ...block.metadata,
+            blocks: nestedResult.blocks,
+          },
+        };
+      }
+    }
+
+    return block;
+  });
+
+  return { blocks: nextBlocks, didUpdate, selectedNodeId };
+}
+
 function replaceTableStructureByCell(
   blocks: LayoutBlock[],
   cellId: string,
@@ -972,6 +1064,85 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
 
       const result = replaceTablePropertyByCell(state.layoutDocument.blocks, cellId, (block, targetCellId) =>
         updateTableColumnAlignByCell(block, targetCellId, align),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  updateLayoutListStructure: ({ itemId, action }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceListStructureByItem(state.layoutDocument.blocks, itemId, action);
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  updateLayoutListOrdered: ({ itemId, ordered }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceListPropertyByItem(state.layoutDocument.blocks, itemId, (block, targetItemId) =>
+        updateListOrderedByItem(block, targetItemId, ordered),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  updateLayoutListStart: ({ itemId, start }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceListPropertyByItem(state.layoutDocument.blocks, itemId, (block, targetItemId) =>
+        updateListStartByItem(block, targetItemId, start),
       );
       if (!result.didUpdate || !result.selectedNodeId) {
         return;
