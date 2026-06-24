@@ -6,11 +6,13 @@ export interface TocItem {
   id: string;
   depth: 1 | 2 | 3 | 4 | 5 | 6;
   text: string;
+  pageNumber?: number;
 }
 
 export type LayoutBlockType =
   | 'paragraph'
   | 'heading'
+  | 'toc'
   | 'list'
   | 'table'
   | 'image'
@@ -92,6 +94,8 @@ export interface LayoutListItem {
   id: string;
   sourceRange: SourceRange | null;
   textRuns: TextRun[];
+  // 多级列表先固定支持 1-3 级；旧文档缺字段时按 1 级兼容。
+  level?: number;
   checked: boolean | null;
 }
 
@@ -121,6 +125,12 @@ export interface HeadingBlockMetadata {
   text: string;
 }
 
+export interface TocBlockMetadata {
+  kind: 'toc';
+  title: string;
+  maxDepth: 1 | 2 | 3;
+}
+
 export interface ListBlockMetadata {
   kind: 'list';
   ordered: boolean;
@@ -140,6 +150,15 @@ export interface ImageBlockMetadata {
   src: string;
   alt: string;
   title: string | null;
+  widthPx?: number | null;
+  heightPx?: number | null;
+  lockAspectRatio?: boolean;
+  objectFit?: 'contain' | 'cover';
+  cropTopPx?: number | null;
+  cropRightPx?: number | null;
+  cropBottomPx?: number | null;
+  cropLeftPx?: number | null;
+  wrapMode?: 'block' | 'center' | 'left' | 'right';
 }
 
 export interface EquationBlockMetadata {
@@ -170,6 +189,7 @@ export interface PageBreakBlockMetadata {
 export type LayoutBlockMetadata =
   | ParagraphBlockMetadata
   | HeadingBlockMetadata
+  | TocBlockMetadata
   | ListBlockMetadata
   | TableBlockMetadata
   | ImageBlockMetadata

@@ -2,12 +2,24 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import {
+  applyPageNumbersToTocItems,
   applyAnswerAnnotationToBlock,
   applyBlockStyleOverridesToBlock,
   applyTextStyleToBlock,
+  buildHeadingPageNumberMap,
   buildTocItems,
   createLayoutDocumentFromMarkdown,
+  estimateImageVisibleHeightPx,
+  getLayoutBlockPlainText,
+  insertEquationBlockAfterNode,
+  insertListBlockAfterNode,
   insertTableBlockAfterNode,
+  insertTocBlockAfterNode,
+  updateBlockquoteStructureByNode,
+  updateListItemCheckedByItem,
+  updateListOrderedByItem,
+  updateListStartByItem,
+  updateListStructureByItem,
   updateTableColumnAlignByCell,
   updateTableHeaderRowByCell,
   updateTableStructureByCell,
@@ -21,9 +33,11 @@ import {
   updateLayoutTableCellText,
 } from '../src/engine/document-model/index.ts';
 import { defaultStyleSettings } from '../src/engine/style/presets.ts';
+import { formulaTemplateGroups } from '../src/constants/formulaTemplates.ts';
 import { resolveStyleContract } from '../src/engine/style/resolveContract.ts';
 import { cloneStyleSettings } from '../src/engine/style/styleSettings.ts';
 import { buildExportHtml } from '../src/services/exportHtml.ts';
+import { getBlockStyleControlSupportByBlockType } from '../src/components/layout/objectStyleSupport.ts';
 import {
   ESTIMATED_GREEDY_BALANCED_PAGINATION_ALGORITHM_ID,
   ESTIMATED_GREEDY_BALANCED_V2_PAGINATION_ALGORITHM_ID,
@@ -148,6 +162,109 @@ async function main(): Promise<void> {
 
   if (tocItems.length !== 2) {
     throw new Error(`文档大纲验证失败：期望识别 2 个标题，实际得到 ${tocItems.length} 个`);
+  }
+
+  const headingPageNumberMap = buildHeadingPageNumberMap(pages);
+  const tocItemsWithPageNumbers = applyPageNumbersToTocItems(tocItems, headingPageNumberMap);
+
+  if (headingPageNumberMap[tocItems[0]?.id ?? ''] !== 1 || headingPageNumberMap[tocItems[1]?.id ?? ''] !== 2) {
+    throw new Error('文档大纲验证失败：标题页码映射没有按分页结果正确回填');
+  }
+
+  if (tocItemsWithPageNumbers[0]?.pageNumber !== 1 || tocItemsWithPageNumbers[1]?.pageNumber !== 2) {
+    throw new Error('文档大纲验证失败：大纲项页码没有被正确写回运行时数据');
+  }
+
+  const tocBlockResult = insertTocBlockAfterNode(layoutDocument.blocks, {
+    insertAfterNodeId: null,
+  });
+  const tocBlock = tocBlockResult.blocks.find((block) => block.type === 'toc');
+  const tocInsertedPageBreak = tocBlockResult.blocks[1];
+
+  if (!tocBlock || tocBlock.metadata.kind !== 'toc') {
+    throw new Error('目录块验证失败：未能插入目录块');
+  }
+
+  if (tocBlock.metadata.title !== '目录') {
+    throw new Error('目录块验证失败：目录块默认标题不正确');
+  }
+
+  if (tocBlockResult.blocks[0]?.type !== 'toc') {
+    throw new Error('目录块验证失败：目录块没有被插入到文档最前面');
+  }
+
+  if (
+    !tocInsertedPageBreak ||
+    tocInsertedPageBreak.type !== 'pageBreak' ||
+    tocInsertedPageBreak.metadata.kind !== 'pageBreak'
+  ) {
+    throw new Error('目录块验证失败：目录块后没有自动追加手动分页符');
+  }
+
+  const replacedTocBlockResult = insertTocBlockAfterNode(tocBlockResult.blocks, {
+    insertAfterNodeId: null,
+  });
+  const replacedTocBlocks = replacedTocBlockResult.blocks.filter((block) => block.type === 'toc');
+  const replacedPageBreakBlocks = replacedTocBlockResult.blocks.filter((block) => block.type === 'pageBreak');
+
+  if (replacedTocBlocks.length !== 1) {
+    throw new Error('目录块验证失败：重复插入目录时不应堆叠出第二个目录块');
+  }
+
+  if (replacedPageBreakBlocks.length !== 2) {
+    throw new Error('目录块验证失败：重复插入目录后分页符数量不符合预期');
+  }
+
+  if (replacedTocBlockResult.blocks[0]?.type !== 'toc' || replacedTocBlockResult.blocks[1]?.type !== 'pageBreak') {
+    throw new Error('目录块验证失败：重复插入目录后最前面的自动目录组没有被正确替换');
+  }
+
+  if (tocBlock.metadata.maxDepth !== 3) {
+    throw new Error('目录块验证失败：目录块默认层级应为 H1-H3');
+  }
+
+  const filteredTocDepth2 = tocItemsWithPageNumbers.filter((item) => item.depth <= 2);
+  const filteredTocDepth1 = tocItemsWithPageNumbers.filter((item) => item.depth <= 1);
+
+  if (filteredTocDepth2.length !== 2) {
+    throw new Error('目录层级验证失败：H1-H2 过滤结果不符合预期');
+  }
+
+  if (filteredTocDepth1.length !== 1 || filteredTocDepth1[0]?.depth !== 1) {
+    throw new Error('目录层级验证失败：仅 H1 过滤结果不符合预期');
+  }
+
+  const refreshableTocDocument = {
+    ...layoutDocument,
+    blocks: replacedTocBlockResult.blocks,
+    meta: {
+      ...layoutDocument.meta,
+      blockCount: replacedTocBlockResult.blocks.length,
+    },
+  };
+  useAppStore.getState().loadDocument({
+    title: refreshableTocDocument.title,
+    filePath: null,
+    source: refreshableTocDocument.source,
+    documentFormat: 'layout',
+    layoutDocument: refreshableTocDocument,
+  });
+  const tocRefreshEpochBefore = useAppStore.getState().documentEpoch;
+  const refreshedToc = useAppStore.getState().refreshLayoutTocBlock({
+    nodeId: replacedTocBlockResult.blocks[0]?.id ?? '',
+  });
+  const tocRefreshState = useAppStore.getState();
+
+  if (!refreshedToc) {
+    throw new Error('目录刷新验证失败：当前目录块没有成功触发刷新动作');
+  }
+
+  if (tocRefreshState.documentEpoch !== tocRefreshEpochBefore + 1) {
+    throw new Error('目录刷新验证失败：刷新目录后没有触发新的文档轮次');
+  }
+
+  if (tocRefreshState.isDirty) {
+    throw new Error('目录刷新验证失败：手动刷新目录不应把文档标记为未保存');
   }
 
   const currentBlockIds = layoutDocument.blocks.map((block) => block.id).join('|');
@@ -343,6 +460,137 @@ async function main(): Promise<void> {
     throw new Error('样式编辑验证失败：`.layout` 工程文件没有恢复段后距样式');
   }
 
+  const paragraphStyleSupport = getBlockStyleControlSupportByBlockType('paragraph');
+  const codeStyleSupport = getBlockStyleControlSupportByBlockType('code');
+  const listStyleSupport = getBlockStyleControlSupportByBlockType('list');
+  const tableStyleSupport = getBlockStyleControlSupportByBlockType('table');
+  const equationStyleSupport = getBlockStyleControlSupportByBlockType('equation');
+
+  if (
+    !paragraphStyleSupport ||
+    !paragraphStyleSupport.supportsIndentLeft ||
+    !paragraphStyleSupport.supportsIndentRight ||
+    !paragraphStyleSupport.supportsFirstLineIndent ||
+    !paragraphStyleSupport.supportsHangingIndent
+  ) {
+    throw new Error('样式入口收口验证失败：标题/段落应继续保留完整缩进体系入口');
+  }
+
+  if (
+    !codeStyleSupport ||
+    !codeStyleSupport.supportsTextAlign ||
+    !codeStyleSupport.supportsLineHeight ||
+    !codeStyleSupport.supportsSpaceBefore ||
+    !codeStyleSupport.supportsSpaceAfter ||
+    codeStyleSupport.supportsIndentLeft ||
+    codeStyleSupport.supportsIndentRight ||
+    codeStyleSupport.supportsFirstLineIndent ||
+    codeStyleSupport.supportsHangingIndent
+  ) {
+    throw new Error('样式入口收口验证失败：代码块应只保留当前稳定支持的块级样式入口');
+  }
+
+  if (
+    !listStyleSupport ||
+    !listStyleSupport.supportsTextAlign ||
+    !listStyleSupport.supportsLineHeight ||
+    !listStyleSupport.supportsSpaceBefore ||
+    !listStyleSupport.supportsSpaceAfter ||
+    listStyleSupport.supportsIndentLeft ||
+    listStyleSupport.supportsIndentRight ||
+    listStyleSupport.supportsFirstLineIndent ||
+    listStyleSupport.supportsHangingIndent
+  ) {
+    throw new Error('样式入口收口验证失败：列表应只保留当前稳定支持的块级样式入口');
+  }
+
+  if (
+    !tableStyleSupport ||
+    tableStyleSupport.supportsTextAlign ||
+    !tableStyleSupport.supportsLineHeight ||
+    !tableStyleSupport.supportsSpaceBefore ||
+    !tableStyleSupport.supportsSpaceAfter ||
+    tableStyleSupport.supportsIndentLeft ||
+    tableStyleSupport.supportsIndentRight ||
+    tableStyleSupport.supportsFirstLineIndent ||
+    tableStyleSupport.supportsHangingIndent
+  ) {
+    throw new Error('样式入口收口验证失败：表格应只保留行高和段前段后距入口');
+  }
+
+  if (equationStyleSupport !== null) {
+    throw new Error('样式入口收口验证失败：公式块当前不应暴露块级样式入口');
+  }
+
+  const scopedBlockStyleDocument = await createLayoutDocumentFromMarkdown([
+    '```txt',
+    '代码块样式验证',
+    '```',
+    '',
+    '- 列表样式验证',
+    '',
+    '| 列 1 |',
+    '| --- |',
+    '| 单元格 |',
+  ].join('\n'));
+  const scopedCodeBlock = scopedBlockStyleDocument.blocks.find((block) => block.type === 'code');
+  const scopedListBlock = scopedBlockStyleDocument.blocks.find(
+    (block) => block.type === 'list' && block.metadata.kind === 'list',
+  );
+  const scopedTableBlock = scopedBlockStyleDocument.blocks.find(
+    (block) => block.type === 'table' && block.metadata.kind === 'table',
+  );
+
+  if (!scopedCodeBlock || !scopedListBlock || !scopedTableBlock) {
+    throw new Error('样式入口收口验证失败：未找到代码块、列表或表格测试块');
+  }
+
+  const exportableCodeBlock = applyBlockStyleOverridesToBlock(scopedCodeBlock, {
+    textAlign: 'right',
+    lineHeight: 34,
+    spaceBefore: 12,
+    spaceAfter: 18,
+  });
+  const exportableListBlock = applyBlockStyleOverridesToBlock(scopedListBlock, {
+    textAlign: 'center',
+    lineHeight: 30,
+    spaceBefore: 10,
+    spaceAfter: 16,
+  });
+  const exportableTableBlock = applyBlockStyleOverridesToBlock(scopedTableBlock, {
+    lineHeight: 32,
+    spaceBefore: 14,
+    spaceAfter: 20,
+  });
+  const scopedBlockStyleHtml = buildExportHtml({
+    pages: paginateBlocks([exportableCodeBlock, exportableListBlock, exportableTableBlock], contract),
+    title: '块级样式收口验证',
+  });
+
+  if (
+    !scopedBlockStyleHtml.includes('text-align:right') ||
+    !scopedBlockStyleHtml.includes('line-height:34px') ||
+    !scopedBlockStyleHtml.includes('margin-top:12px') ||
+    !scopedBlockStyleHtml.includes('margin-bottom:18px')
+  ) {
+    throw new Error('样式入口收口验证失败：代码块的稳定样式项没有正确导出');
+  }
+
+  if (
+    !scopedBlockStyleHtml.includes('text-align:center') ||
+    !scopedBlockStyleHtml.includes('line-height:30px') ||
+    !scopedBlockStyleHtml.includes('margin-top:10px') ||
+    !scopedBlockStyleHtml.includes('margin-bottom:16px')
+  ) {
+    throw new Error('样式入口收口验证失败：列表的稳定样式项没有正确导出');
+  }
+
+  if (
+    !scopedBlockStyleHtml.includes('<table style="line-height:32px;margin-top:14px;margin-bottom:20px">')
+  ) {
+    throw new Error('样式入口收口验证失败：表格的稳定样式项没有正确导出');
+  }
+
   const canvasEditDocument = await createLayoutDocumentFromMarkdown([
     '# 原标题',
     '',
@@ -449,6 +697,414 @@ async function main(): Promise<void> {
   ) {
     throw new Error('图片属性编辑验证失败：store 写回后 resources 没有同步更新');
   }
+
+  const croppedImageBlock = updateLayoutImageAttributes(editableImage, {
+    src: editableImage.metadata.src,
+    alt: editableImage.metadata.alt,
+    title: editableImage.metadata.title,
+    widthPx: 240,
+    heightPx: 160,
+    cropTopPx: 10,
+    cropRightPx: 20,
+    cropBottomPx: 30,
+    cropLeftPx: 40,
+  });
+  const croppedImageHtml = buildExportHtml({
+    pages: paginateBlocks([croppedImageBlock], contract),
+    title: '图片裁剪导出验证',
+  });
+
+  if (croppedImageHtml.includes('image-frame')) {
+    throw new Error('图片裁剪导出验证失败：导出结果仍然残留旧的图片框类名');
+  }
+
+  if (!croppedImageHtml.includes('class="image-viewport"')) {
+    throw new Error('图片裁剪导出验证失败：导出结果没有输出新的图片可见区容器');
+  }
+
+  if (!croppedImageHtml.includes('style="width:180px;height:120px"')) {
+    throw new Error('图片裁剪导出验证失败：裁剪后的图片可见尺寸没有正确输出到导出 HTML');
+  }
+
+  if (!croppedImageHtml.includes('transform:translate(-40px, -10px)')) {
+    throw new Error('图片裁剪导出验证失败：裁剪后的图片内容偏移没有正确输出到导出 HTML');
+  }
+
+  if (estimateImageVisibleHeightPx(croppedImageBlock.metadata, 220) !== 120) {
+    throw new Error('图片裁剪分页验证失败：裁剪后的图片可见高度没有按新口径参与估算');
+  }
+
+  const directOrderedListResult = updateListOrderedByItem(editableList, editableList.metadata.items[0].id, true);
+  if (
+    !directOrderedListResult.didUpdate ||
+    directOrderedListResult.block.metadata.kind !== 'list' ||
+    !directOrderedListResult.block.metadata.ordered ||
+    directOrderedListResult.block.metadata.start !== 1 ||
+    directOrderedListResult.selectedNodeId !== editableList.metadata.items[0].id
+  ) {
+    throw new Error('列表属性编辑验证失败：模型层没有正确切换为有序列表并设置默认起始编号');
+  }
+
+  const directListStartResult = updateListStartByItem(
+    directOrderedListResult.block,
+    editableList.metadata.items[0].id,
+    5,
+  );
+  if (
+    !directListStartResult.didUpdate ||
+    directListStartResult.block.metadata.kind !== 'list' ||
+    directListStartResult.block.metadata.start !== 5
+  ) {
+    throw new Error('列表属性编辑验证失败：模型层没有正确设置有序列表起始编号');
+  }
+
+  const directListInsertResult = updateListStructureByItem(
+    directListStartResult.block,
+    editableList.metadata.items[0].id,
+    'insertItemBelow',
+  );
+  if (
+    !directListInsertResult.didUpdate ||
+    directListInsertResult.block.metadata.kind !== 'list' ||
+    directListInsertResult.block.metadata.items.length !== 2 ||
+    directListInsertResult.block.metadata.items[1].textRuns.length !== 0 ||
+    directListInsertResult.selectedNodeId !== directListInsertResult.block.metadata.items[1].id
+  ) {
+    throw new Error('列表结构编辑验证失败：模型层没有正确插入空列表项并选中新项');
+  }
+
+  const directListDeleteResult = updateListStructureByItem(
+    directListInsertResult.block,
+    directListInsertResult.selectedNodeId ?? '',
+    'deleteItem',
+  );
+  if (
+    !directListDeleteResult.didUpdate ||
+    directListDeleteResult.block.metadata.kind !== 'list' ||
+    directListDeleteResult.block.metadata.items.length !== 1 ||
+    directListDeleteResult.selectedNodeId !== editableList.metadata.items[0].id
+  ) {
+    throw new Error('列表结构编辑验证失败：模型层没有正确删除当前列表项并选中剩余项');
+  }
+
+  const protectedListDelete = updateListStructureByItem(
+    directListDeleteResult.block,
+    editableList.metadata.items[0].id,
+    'deleteItem',
+  );
+  if (protectedListDelete.didUpdate) {
+    throw new Error('列表结构编辑验证失败：不应允许删除最后一个列表项');
+  }
+
+  const selectedAfterListOrdered = useAppStore.getState().updateLayoutListOrdered({
+    itemId: editableList.metadata.items[0].id,
+    ordered: true,
+  });
+  const orderedListBlock = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === editableList.id);
+  if (
+    selectedAfterListOrdered !== editableList.metadata.items[0].id ||
+    !orderedListBlock ||
+    orderedListBlock.metadata.kind !== 'list' ||
+    !orderedListBlock.metadata.ordered ||
+    orderedListBlock.metadata.start !== 1
+  ) {
+    throw new Error('列表属性编辑验证失败：store 没有正确切换列表类型');
+  }
+
+  const selectedAfterListStart = useAppStore.getState().updateLayoutListStart({
+    itemId: editableList.metadata.items[0].id,
+    start: 7,
+  });
+  const startedListBlock = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === editableList.id);
+  if (
+    selectedAfterListStart !== editableList.metadata.items[0].id ||
+    !startedListBlock ||
+    startedListBlock.metadata.kind !== 'list' ||
+    startedListBlock.metadata.start !== 7
+  ) {
+    throw new Error('列表属性编辑验证失败：store 没有正确设置起始编号');
+  }
+
+  const listPropertyHtml = buildExportHtml({
+    pages: paginateBlocks(startedListBlock ? [startedListBlock] : [], contract),
+    title: '列表属性导出验证',
+  });
+  if (!listPropertyHtml.includes('<ol start="7"')) {
+    throw new Error('列表属性导出验证失败：HTML 没有输出有序列表起始编号');
+  }
+
+  const selectedAfterInsertListItem = useAppStore.getState().updateLayoutListStructure({
+    itemId: editableList.metadata.items[0].id,
+    action: 'insertItemBelow',
+  });
+  const insertedListItemBlock = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === editableList.id);
+  if (
+    !selectedAfterInsertListItem ||
+    !insertedListItemBlock ||
+    insertedListItemBlock.metadata.kind !== 'list' ||
+    insertedListItemBlock.metadata.items.length !== 2 ||
+    insertedListItemBlock.metadata.items[1].id !== selectedAfterInsertListItem ||
+    insertedListItemBlock.metadata.items[1].textRuns.length !== 0
+  ) {
+    throw new Error('列表结构编辑验证失败：store 没有正确插入空列表项');
+  }
+
+  useAppStore.getState().updateLayoutNodeText({
+    nodeId: editableList.metadata.items[0].id,
+    text: '保留列表项',
+  });
+  const selectedAfterDeleteListItem = useAppStore.getState().updateLayoutListStructure({
+    itemId: selectedAfterInsertListItem,
+    action: 'deleteItem',
+  });
+  const deletedListItemBlock = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === editableList.id);
+  if (
+    selectedAfterDeleteListItem !== editableList.metadata.items[0].id ||
+    !deletedListItemBlock ||
+    deletedListItemBlock.metadata.kind !== 'list' ||
+    deletedListItemBlock.metadata.items.length !== 1 ||
+    deletedListItemBlock.metadata.items[0].textRuns[0]?.text !== '保留列表项'
+  ) {
+    throw new Error('列表结构编辑验证失败：store 删除列表项后没有保留剩余项文字或选中态');
+  }
+
+  const protectedStoreListDelete = useAppStore.getState().updateLayoutListStructure({
+    itemId: editableList.metadata.items[0].id,
+    action: 'deleteItem',
+  });
+  if (protectedStoreListDelete !== null) {
+    throw new Error('列表结构编辑验证失败：store 不应允许删除最后一个列表项');
+  }
+
+  const taskListDocument = await createLayoutDocumentFromMarkdown([
+    '- [ ] 待办任务',
+    '- [x] 完成任务',
+    '- 普通列表项',
+  ].join('\n'));
+  const taskListBlock = taskListDocument.blocks.find(
+    (block) => block.type === 'list' && block.metadata.kind === 'list',
+  );
+
+  if (!taskListBlock || taskListBlock.metadata.kind !== 'list' || taskListBlock.metadata.items.length < 3) {
+    throw new Error('任务列表勾选验证失败：未找到包含任务项与普通项的列表');
+  }
+
+  const uncheckedTaskItem = taskListBlock.metadata.items[0];
+  const checkedTaskItem = taskListBlock.metadata.items[1];
+  const plainListItem = taskListBlock.metadata.items[2];
+
+  if (uncheckedTaskItem.checked !== false || checkedTaskItem.checked !== true || plainListItem.checked !== null) {
+    throw new Error('任务列表勾选验证失败：Markdown 导入没有正确保留 checked 状态');
+  }
+
+  const directTaskCheckedResult = updateListItemCheckedByItem(taskListBlock, uncheckedTaskItem.id, true);
+  if (
+    !directTaskCheckedResult.didUpdate ||
+    directTaskCheckedResult.block.metadata.kind !== 'list' ||
+    directTaskCheckedResult.block.metadata.items[0].checked !== true ||
+    directTaskCheckedResult.selectedNodeId !== uncheckedTaskItem.id
+  ) {
+    throw new Error('任务列表勾选验证失败：模型层没有正确勾选任务项');
+  }
+
+  const directPlainListCheckResult = updateListItemCheckedByItem(taskListBlock, plainListItem.id, true);
+  if (
+    directPlainListCheckResult.didUpdate ||
+    directPlainListCheckResult.block.metadata.kind !== 'list' ||
+    directPlainListCheckResult.block.metadata.items[2].checked !== null
+  ) {
+    throw new Error('任务列表勾选验证失败：普通列表项不应被自动转换成任务项');
+  }
+
+  useAppStore.getState().loadDocument({
+    title: taskListDocument.title,
+    filePath: null,
+    source: taskListDocument.source,
+    documentFormat: 'layout',
+    layoutDocument: taskListDocument,
+  });
+  const selectedAfterTaskChecked = useAppStore.getState().updateLayoutListItemChecked({
+    itemId: uncheckedTaskItem.id,
+    checked: true,
+  });
+  const selectedAfterTaskUnchecked = useAppStore.getState().updateLayoutListItemChecked({
+    itemId: checkedTaskItem.id,
+    checked: false,
+  });
+  const selectedAfterPlainListCheck = useAppStore.getState().updateLayoutListItemChecked({
+    itemId: plainListItem.id,
+    checked: true,
+  });
+  const checkedTaskListBlock = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === taskListBlock.id);
+  if (
+    selectedAfterTaskChecked !== uncheckedTaskItem.id ||
+    selectedAfterTaskUnchecked !== checkedTaskItem.id ||
+    selectedAfterPlainListCheck !== null ||
+    !checkedTaskListBlock ||
+    checkedTaskListBlock.metadata.kind !== 'list' ||
+    checkedTaskListBlock.metadata.items[0].checked !== true ||
+    checkedTaskListBlock.metadata.items[1].checked !== false ||
+    checkedTaskListBlock.metadata.items[2].checked !== null
+  ) {
+    throw new Error('任务列表勾选验证失败：store 没有正确写回任务项 checked 状态');
+  }
+
+  const taskListHtml = buildExportHtml({
+    pages: paginateBlocks([checkedTaskListBlock], contract),
+    title: '任务列表勾选导出验证',
+  });
+  if (
+    !taskListHtml.includes('class="task-list-item"') ||
+    !taskListHtml.includes('☑') ||
+    !taskListHtml.includes('☐')
+  ) {
+    throw new Error('任务列表勾选导出验证失败：HTML 没有输出任务项勾选状态');
+  }
+
+  const blockquoteDocument = await createLayoutDocumentFromMarkdown([
+    '> 第一段引用',
+    '>',
+    '> - 引用列表项',
+  ].join('\n'));
+  const editableBlockquote = blockquoteDocument.blocks.find(
+    (block): block is LayoutBlock & { metadata: { kind: 'blockquote'; blocks: LayoutBlock[] } } =>
+      block.type === 'blockquote' && block.metadata.kind === 'blockquote',
+  );
+
+  if (!editableBlockquote || editableBlockquote.metadata.blocks.length < 2) {
+    throw new Error('引用结构编辑验证失败：未找到可用于结构编辑的引用块');
+  }
+
+  const directBlockquoteInsertResult = updateBlockquoteStructureByNode(
+    editableBlockquote,
+    editableBlockquote.metadata.blocks[1].id,
+    'insertParagraphAbove',
+  );
+  if (
+    !directBlockquoteInsertResult.didUpdate ||
+    directBlockquoteInsertResult.block.metadata.kind !== 'blockquote' ||
+    directBlockquoteInsertResult.block.metadata.blocks.length !== 3
+  ) {
+    throw new Error('引用结构编辑验证失败：模型层没有正确插入空段落');
+  }
+
+  const insertedQuoteParagraph = directBlockquoteInsertResult.block.metadata.blocks[1];
+  if (
+    directBlockquoteInsertResult.selectedNodeId !== insertedQuoteParagraph.id ||
+    insertedQuoteParagraph.type !== 'paragraph' ||
+    insertedQuoteParagraph.metadata.kind !== 'paragraph' ||
+    insertedQuoteParagraph.metadata.text !== '' ||
+    insertedQuoteParagraph.textRuns.length !== 0
+  ) {
+    throw new Error('引用结构编辑验证失败：插入的引用段落结构不正确或没有自动选中新段落');
+  }
+
+  const directBlockquoteDeleteResult = updateBlockquoteStructureByNode(
+    directBlockquoteInsertResult.block,
+    insertedQuoteParagraph.id,
+    'deleteBlock',
+  );
+  if (
+    !directBlockquoteDeleteResult.didUpdate ||
+    directBlockquoteDeleteResult.block.metadata.kind !== 'blockquote' ||
+    directBlockquoteDeleteResult.block.metadata.blocks.length !== 2 ||
+    directBlockquoteDeleteResult.selectedNodeId !== editableBlockquote.metadata.blocks[1].id
+  ) {
+    throw new Error('引用结构编辑验证失败：模型层删除当前子块后没有正确保留剩余子块或选中态');
+  }
+
+  const protectedBlockquoteDelete = updateBlockquoteStructureByNode(
+    {
+      ...editableBlockquote,
+      metadata: {
+        ...editableBlockquote.metadata,
+        blocks: [editableBlockquote.metadata.blocks[0]],
+      },
+    },
+    editableBlockquote.metadata.blocks[0].id,
+    'deleteBlock',
+  );
+  if (protectedBlockquoteDelete.didUpdate) {
+    throw new Error('引用结构编辑验证失败：不应允许删除最后一个引用子块');
+  }
+
+  useAppStore.getState().loadDocument({
+    title: blockquoteDocument.title,
+    filePath: null,
+    source: blockquoteDocument.source,
+    documentFormat: 'layout',
+    layoutDocument: blockquoteDocument,
+  });
+  const selectedAfterInsertQuoteParagraph = useAppStore.getState().updateLayoutBlockquoteStructure({
+    blockquoteId: editableBlockquote.id,
+    targetNodeId: editableBlockquote.metadata.blocks[0].id,
+    action: 'insertParagraphBelow',
+  });
+  const insertedBlockquoteStore = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === editableBlockquote.id);
+  if (
+    !selectedAfterInsertQuoteParagraph ||
+    !insertedBlockquoteStore ||
+    insertedBlockquoteStore.metadata.kind !== 'blockquote' ||
+    insertedBlockquoteStore.metadata.blocks.length !== 3 ||
+    insertedBlockquoteStore.metadata.blocks[1]?.id !== selectedAfterInsertQuoteParagraph
+  ) {
+    throw new Error('引用结构编辑验证失败：store 没有正确插入空段落并选中新段落');
+  }
+
+  const selectedAfterDeleteQuoteBlock = useAppStore.getState().updateLayoutBlockquoteStructure({
+    blockquoteId: editableBlockquote.id,
+    targetNodeId: selectedAfterInsertQuoteParagraph,
+    action: 'deleteBlock',
+  });
+  const deletedBlockquoteStore = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === editableBlockquote.id);
+  if (
+    selectedAfterDeleteQuoteBlock !== insertedBlockquoteStore.metadata.blocks[2].id ||
+    !deletedBlockquoteStore ||
+    deletedBlockquoteStore.metadata.kind !== 'blockquote' ||
+    deletedBlockquoteStore.metadata.blocks.length !== 2 ||
+    getLayoutBlockPlainText(deletedBlockquoteStore.metadata.blocks[1]) !== '引用列表项'
+  ) {
+    throw new Error('引用结构编辑验证失败：store 删除子块后没有保留剩余内容或选中态');
+  }
+
+  const protectedStoreBlockquoteDelete = useAppStore.getState().updateLayoutBlockquoteStructure({
+    blockquoteId: editableBlockquote.id,
+    targetNodeId: deletedBlockquoteStore?.metadata.kind === 'blockquote' ? deletedBlockquoteStore.metadata.blocks[0].id : '',
+    action: 'deleteBlock',
+  });
+  if (protectedStoreBlockquoteDelete !== null && deletedBlockquoteStore?.metadata.kind === 'blockquote' && deletedBlockquoteStore.metadata.blocks.length <= 1) {
+    throw new Error('引用结构编辑验证失败：store 不应允许删除最后一个引用子块');
+  }
+
+  const blockquoteHtml = buildExportHtml({
+    pages: paginateBlocks(deletedBlockquoteStore ? [deletedBlockquoteStore] : [], contract),
+    title: '引用结构导出验证',
+  });
+  if (!blockquoteHtml.includes('<blockquote>') || !blockquoteHtml.includes('引用列表项')) {
+    throw new Error('引用结构导出验证失败：HTML 没有正确保留引用容器和剩余子块内容');
+  }
+
+  useAppStore.getState().loadDocument({
+    title: canvasNodeEditDocument.title,
+    filePath: null,
+    source: canvasNodeEditDocument.source,
+    documentFormat: 'layout',
+    layoutDocument: canvasNodeEditDocument,
+  });
 
   const insertedImageBlockId = useAppStore.getState().insertLayoutImageBlock({
     src: 'C:\\测试图片\\插入图片.png',
@@ -568,6 +1224,100 @@ async function main(): Promise<void> {
     insertedTableBlock.metadata.kind === 'table' ? insertedTableBlock.metadata.rows[0]?.cells[0] : null;
   if (!firstInsertedTableCell || firstInsertedTableCell.id !== selectedTableNodeId) {
     throw new Error('表格插入验证失败：插入后应选中新表格的第一个单元格');
+  }
+
+  const directUnorderedListResult = insertListBlockAfterNode(insertedTableDocument?.blocks ?? [], {
+    kind: 'unordered',
+    insertAfterNodeId: selectedTableNodeId,
+  });
+  const directUnorderedListBlock = directUnorderedListResult.blocks.find(
+    (block) => block.id === directUnorderedListResult.insertedBlockId,
+  );
+  if (
+    !directUnorderedListBlock ||
+    directUnorderedListBlock.type !== 'list' ||
+    directUnorderedListBlock.metadata.kind !== 'list' ||
+    directUnorderedListBlock.metadata.ordered ||
+    directUnorderedListBlock.metadata.start !== null ||
+    directUnorderedListBlock.metadata.items.length !== 1 ||
+    directUnorderedListBlock.metadata.items[0].checked !== null ||
+    directUnorderedListResult.selectedNodeId !== directUnorderedListBlock.metadata.items[0].id
+  ) {
+    throw new Error('列表插入验证失败：模型层没有正确生成默认无序列表');
+  }
+
+  const directOrderedListInsertResult = insertListBlockAfterNode(directUnorderedListResult.blocks, {
+    kind: 'ordered',
+    insertAfterNodeId: directUnorderedListResult.selectedNodeId,
+  });
+  const directOrderedListBlock = directOrderedListInsertResult.blocks.find(
+    (block) => block.id === directOrderedListInsertResult.insertedBlockId,
+  );
+  if (
+    !directOrderedListBlock ||
+    directOrderedListBlock.type !== 'list' ||
+    directOrderedListBlock.metadata.kind !== 'list' ||
+    !directOrderedListBlock.metadata.ordered ||
+    directOrderedListBlock.metadata.start !== 1 ||
+    directOrderedListBlock.metadata.items.length !== 1 ||
+    directOrderedListBlock.metadata.items[0].checked !== null ||
+    directOrderedListInsertResult.selectedNodeId !== directOrderedListBlock.metadata.items[0].id
+  ) {
+    throw new Error('列表插入验证失败：模型层没有正确生成默认有序列表');
+  }
+
+  const selectedTaskListItemId = useAppStore.getState().insertLayoutListBlock({
+    kind: 'task',
+    insertAfterNodeId: selectedTableNodeId,
+  });
+  const insertedTaskListDocument = useAppStore.getState().layoutDocument;
+  const insertedTaskListBlock = insertedTaskListDocument?.blocks.find(
+    (block) =>
+      block.type === 'list' &&
+      block.metadata.kind === 'list' &&
+      block.metadata.items.some((item) => item.id === selectedTaskListItemId),
+  );
+  const taskListIndex =
+    insertedTaskListDocument?.blocks.findIndex((block) => block.id === insertedTaskListBlock?.id) ?? -1;
+  const taskListPreviousTableIndex =
+    insertedTaskListDocument?.blocks.findIndex((block) => block.id === insertedTableBlock.id) ?? -1;
+
+  if (!selectedTaskListItemId || !insertedTaskListBlock || taskListIndex !== taskListPreviousTableIndex + 1) {
+    throw new Error('列表插入验证失败：任务列表没有插入到当前选中块之后');
+  }
+
+  if (
+    insertedTaskListBlock.metadata.kind !== 'list' ||
+    insertedTaskListBlock.metadata.ordered ||
+    insertedTaskListBlock.metadata.start !== null ||
+    insertedTaskListBlock.metadata.items.length !== 1 ||
+    insertedTaskListBlock.metadata.items[0].checked !== false ||
+    insertedTaskListDocument?.viewState.selectedNodeId !== selectedTaskListItemId
+  ) {
+    throw new Error('列表插入验证失败：store 写回的任务列表结构或选中态不正确');
+  }
+
+  const selectedOrderedListItemId = useAppStore.getState().insertLayoutListBlock({
+    kind: 'ordered',
+    insertAfterNodeId: selectedTaskListItemId,
+  });
+  const insertedOrderedListBlock = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find(
+      (block) =>
+        block.type === 'list' &&
+        block.metadata.kind === 'list' &&
+        block.metadata.items.some((item) => item.id === selectedOrderedListItemId),
+    );
+  if (
+    !selectedOrderedListItemId ||
+    !insertedOrderedListBlock ||
+    insertedOrderedListBlock.metadata.kind !== 'list' ||
+    !insertedOrderedListBlock.metadata.ordered ||
+    insertedOrderedListBlock.metadata.start !== 1 ||
+    insertedOrderedListBlock.metadata.items[0]?.id !== selectedOrderedListItemId
+  ) {
+    throw new Error('列表插入验证失败：store 没有正确插入有序列表并选中首项');
   }
 
   const directHeaderRowResult = updateTableHeaderRowByCell(
@@ -838,6 +1588,84 @@ async function main(): Promise<void> {
 
   if (updatedEquation.metadata.kind !== 'equation' || updatedEquation.metadata.value !== 'E=mc^2') {
     throw new Error('画布文字编辑验证失败：公式文本没有写回 metadata');
+  }
+
+  const insertedEquationResult = insertEquationBlockAfterNode([], {
+    value: 'E=mc^2',
+  });
+  const insertedEquationBlock = insertedEquationResult.blocks[0];
+  const renderedEquationHtml = buildExportHtml({
+    pages: [
+      {
+        pageNumber: 1,
+        blocks: [insertedEquationBlock],
+        contract,
+        warnings: [],
+      },
+    ],
+    title: '公式冒烟',
+  });
+
+  if (insertedEquationResult.insertedBlockId !== insertedEquationBlock?.id) {
+    throw new Error('公式插入验证失败：插入结果 ID 与实际块 ID 不一致');
+  }
+
+  if (insertedEquationBlock?.type !== 'equation' || insertedEquationBlock.metadata.kind !== 'equation') {
+    throw new Error('公式插入验证失败：未生成公式块');
+  }
+
+  if (!renderedEquationHtml.includes('katex') || !renderedEquationHtml.includes('E=mc^2')) {
+    throw new Error('公式导出验证失败：HTML 未包含公式渲染结果');
+  }
+
+  const brokenEquationHtml = buildExportHtml({
+    pages: [
+      {
+        pageNumber: 1,
+        blocks: [
+          {
+            ...insertedEquationBlock,
+            metadata: {
+              ...insertedEquationBlock.metadata,
+              value: '\\frac{1}{',
+            },
+          },
+        ],
+        contract,
+        warnings: [],
+      },
+    ],
+    title: '公式错误态',
+  });
+
+  if (!brokenEquationHtml.includes('公式解析失败')) {
+    throw new Error('公式错误态验证失败：导出 HTML 未暴露解析失败提示');
+  }
+
+  const matrixTemplate = formulaTemplateGroups
+    .flatMap((group) => group.templates)
+    .find((template) => template.id === 'matrix-2x2');
+  const braceTemplate = formulaTemplateGroups
+    .flatMap((group) => group.templates)
+    .find((template) => template.id === 'braces');
+  const subSupTemplate = formulaTemplateGroups
+    .flatMap((group) => group.templates)
+    .find((template) => template.id === 'subsuperscript');
+
+  if (!matrixTemplate || !braceTemplate || !subSupTemplate) {
+    throw new Error('公式模板验证失败：关键模板配置缺失');
+  }
+
+  if (!matrixTemplate.value.includes('\\begin{bmatrix}') || !matrixTemplate.value.includes('a & b')) {
+    throw new Error('公式模板验证失败：矩阵模板骨架不完整');
+  }
+
+  if (!braceTemplate.value.includes('\\left\\{') || !braceTemplate.value.includes('\\right\\}')) {
+    throw new Error('公式模板验证失败：大括号模板骨架不完整');
+  }
+
+  if (!subSupTemplate.value.includes('x_{i}^{2}')) {
+    throw new Error('公式模板验证失败：上下标模板骨架不完整');
   }
 
   const legacySyntaxDocument = await createLayoutDocumentFromMarkdown('第一页\n\n<!-- pagebreak -->\n\n第二页');

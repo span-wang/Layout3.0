@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { buildTocItems, type TextRun } from '@/engine/document-model';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  applyPageNumbersToTocItems,
+  buildHeadingPageNumberMap,
+  buildTocItems,
+  type InsertListBlockKind,
+  type TextRun,
+} from '@/engine/document-model';
 import { exportCurrentDocumentAsPdf } from '@/services/ExportService';
 import { clearDraft, loadDraft, saveDraft } from '@/services/DraftService';
 import {
@@ -50,6 +56,8 @@ export function AppShell(): JSX.Element {
   const [workspaceMessage, setWorkspaceMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [dragSource, setDragSource] = useState<string | null>(null);
+  const [requestedEditNodeId, setRequestedEditNodeId] = useState<string | null>(null);
+  const [requestedScrollToNodeId, setRequestedScrollToNodeId] = useState<string | null>(null);
   const [canvasTextSelection, setCanvasTextSelection] = useState<CanvasTextSelectionState>({
     nodeId: null,
     text: '',
@@ -94,9 +102,10 @@ export function AppShell(): JSX.Element {
   const updateLayoutNodeText = useAppStore((state) => state.updateLayoutNodeText);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
   const insertLayoutImageBlock = useAppStore((state) => state.insertLayoutImageBlock);
+  const insertLayoutEquationBlock = useAppStore((state) => state.insertLayoutEquationBlock);
   const insertLayoutTableBlock = useAppStore((state) => state.insertLayoutTableBlock);
-  const tocItems = buildTocItems(layoutDocument);
-
+  const insertLayoutListBlock = useAppStore((state) => state.insertLayoutListBlock);
+  const insertLayoutTocBlock = useAppStore((state) => state.insertLayoutTocBlock);
   const shouldShowEditor = workspaceViewMode !== 'preview';
   const shouldShowCanvas = workspaceViewMode !== 'source';
   const displayedPageLayouts =
@@ -105,6 +114,12 @@ export function AppShell(): JSX.Element {
       : pageLayouts.length > 0
         ? pageLayouts
         : [{ pageNumber: 1, blocks: [], contract: resolvedStyleContract, warnings: [] }];
+  const rawTocItems = useMemo(() => buildTocItems(layoutDocument), [layoutDocument]);
+  const headingPageNumberMap = useMemo(() => buildHeadingPageNumberMap(displayedPageLayouts), [displayedPageLayouts]);
+  const tocItems = useMemo(
+    () => applyPageNumbersToTocItems(rawTocItems, headingPageNumberMap),
+    [headingPageNumberMap, rawTocItems],
+  );
   const displayedPageCount = parseState === 'error' ? 0 : displayedPageLayouts.length;
   const layoutWarnings = displayedPageLayouts.flatMap((page) => page.warnings);
   const currentDirectoryName = getDirectoryDisplayName(currentDirectoryPath);
@@ -141,6 +156,7 @@ export function AppShell(): JSX.Element {
 
   const handleClearLayoutSelection = useCallback(() => {
     clearLayoutSelection();
+    setRequestedScrollToNodeId(null);
     setCanvasTextSelection({
       nodeId: null,
       text: '',
@@ -149,6 +165,39 @@ export function AppShell(): JSX.Element {
       draftTextRuns: null,
     });
   }, [clearLayoutSelection]);
+
+  const handleSelectOutlineItem = useCallback(
+    (nodeId: string) => {
+      selectLayoutNode(nodeId);
+      setActiveRightPanelTab('对象属性');
+      setActiveTab('大纲');
+      setRequestedScrollToNodeId(nodeId);
+      setCanvasTextSelection({
+        nodeId,
+        text: '',
+        selection: null,
+        isEditing: false,
+        draftTextRuns: null,
+      });
+    },
+    [selectLayoutNode, setActiveRightPanelTab, setActiveTab],
+  );
+
+  const handleNavigateToNode = useCallback(
+    (nodeId: string) => {
+      selectLayoutNode(nodeId);
+      setActiveRightPanelTab('对象属性');
+      setRequestedScrollToNodeId(nodeId);
+      setCanvasTextSelection({
+        nodeId,
+        text: '',
+        selection: null,
+        isEditing: false,
+        draftTextRuns: null,
+      });
+    },
+    [selectLayoutNode, setActiveRightPanelTab],
+  );
 
   const handleCommitLayoutNodeText = useCallback(
     (nodeId: string, text: string) => {
@@ -644,6 +693,34 @@ export function AppShell(): JSX.Element {
     }
   };
 
+  const handleInsertEquation = (): void => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入公式的文档');
+      return;
+    }
+
+    const insertedBlockId = insertLayoutEquationBlock({
+      value: '',
+      insertAfterNodeId: selectedNodeId,
+    });
+
+    if (!insertedBlockId) {
+      showMessage('公式插入失败：当前文档不可写');
+      return;
+    }
+
+    setActiveRightPanelTab('对象属性');
+    setCanvasTextSelection({
+      nodeId: insertedBlockId,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+    setRequestedEditNodeId(insertedBlockId);
+    showMessage('已插入公式');
+  };
+
   const handleInsertTable = (): void => {
     if (!layoutDocument) {
       showMessage('当前没有可插入表格的文档');
@@ -672,6 +749,65 @@ export function AppShell(): JSX.Element {
     showMessage('已插入 3 x 3 表格');
   };
 
+  const handleInsertList = (kind: InsertListBlockKind): void => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入列表的文档');
+      return;
+    }
+
+    const selectedListItemId = insertLayoutListBlock({
+      kind,
+      insertAfterNodeId: selectedNodeId,
+    });
+
+    if (!selectedListItemId) {
+      showMessage('列表插入失败：当前文档不可写');
+      return;
+    }
+
+    const listKindLabel: Record<InsertListBlockKind, string> = {
+      unordered: '无序列表',
+      ordered: '有序列表',
+      task: '任务列表',
+    };
+
+    setActiveRightPanelTab('对象属性');
+    setCanvasTextSelection({
+      nodeId: selectedListItemId,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+    showMessage(`已插入${listKindLabel[kind]}`);
+  };
+
+  const handleInsertToc = (): void => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入目录的文档');
+      return;
+    }
+
+    const insertedBlockId = insertLayoutTocBlock({
+      insertAfterNodeId: selectedNodeId,
+    });
+
+    if (!insertedBlockId) {
+      showMessage('目录插入失败：当前文档不可写');
+      return;
+    }
+
+    setActiveRightPanelTab('对象属性');
+    setCanvasTextSelection({
+      nodeId: insertedBlockId,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+    showMessage('已插入目录');
+  };
+
   const handleDragStart = (e: React.DragEvent, entry: WorkspaceDirectoryEntry) => {
     setDragSource(entry.path);
     e.dataTransfer.effectAllowed = 'move';
@@ -695,6 +831,14 @@ export function AppShell(): JSX.Element {
     setDragSource(null);
   };
 
+  const handleConsumeRequestedEditNode = (nodeId: string) => {
+    setRequestedEditNodeId((current) => (current === nodeId ? null : current));
+  };
+
+  const handleConsumeRequestedScrollNode = (nodeId: string) => {
+    setRequestedScrollToNodeId((current) => (current === nodeId ? null : current));
+  };
+
   return (
     <div className="app-shell">
       <Toolbar
@@ -711,7 +855,10 @@ export function AppShell(): JSX.Element {
         onSaveDocumentAs={handleSaveDocumentAs}
         onExportPdf={handleExportPdf}
         onInsertImage={handleInsertImage}
+        onInsertEquation={handleInsertEquation}
         onInsertTable={handleInsertTable}
+        onInsertList={handleInsertList}
+        onInsertToc={handleInsertToc}
         onToggleLeftPanel={toggleLeftPanel}
         onToggleRightPanel={toggleRightPanel}
         onChangeViewMode={setWorkspaceViewMode}
@@ -723,6 +870,7 @@ export function AppShell(): JSX.Element {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             tocItems={tocItems}
+            selectedOutlineNodeId={selectedNodeId}
             currentFilePath={filePath}
             currentDirectoryName={currentDirectoryName}
             directoryEntries={directoryEntries}
@@ -731,6 +879,7 @@ export function AppShell(): JSX.Element {
             onCreateFolder={handleCreateFolder}
             onCreateLayoutFile={handleCreateLayoutFile}
             onOpenEntry={handleOpenEntry}
+            onSelectOutlineItem={handleSelectOutlineItem}
             onOpenRecentFile={handleOpenRecentFile}
             onRemoveRecentFile={handleRemoveRecentFile}
             onClearRecentFiles={handleClearRecentFiles}
@@ -789,6 +938,12 @@ export function AppShell(): JSX.Element {
                 onCommitNodeText={handleCommitLayoutNodeText}
                 onCommitNodeRichText={handleCommitLayoutNodeRichText}
                 onTextSelectionChange={setCanvasTextSelection}
+                tocItems={tocItems}
+                onNavigateToNode={handleNavigateToNode}
+                requestedStartEditingNodeId={requestedEditNodeId}
+                onConsumeRequestedStartEditingNode={handleConsumeRequestedEditNode}
+                requestedScrollToNodeId={requestedScrollToNodeId}
+                onConsumeRequestedScrollToNode={handleConsumeRequestedScrollNode}
                 isCondensed={shouldShowEditor}
               />
             ) : null}

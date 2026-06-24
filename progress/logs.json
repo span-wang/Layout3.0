@@ -2537,6 +2537,994 @@
         "progress/logs.json"
       ],
       "next": "开始修改列表模型操作、store action、右侧对象属性面板和冒烟脚本，接通列表整体编辑 V1。"
+    },
+    {
+      "id": "LOG-099",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成列表整体编辑 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成列表整体编辑 V1：选中列表项后，右侧对象属性面板可切换无序/有序列表、设置有序列表起始编号，并执行上方插入项、下方插入项、删除当前项；画布预览会消费有序列表起始编号，HTML/PDF 导出会输出 `<ol start=\"N\">`；冒烟脚本已覆盖模型层、store 层、最后一项保护和导出 `start` 属性。当前 `PH2-05B` 仍保持进行中，后续继续拆分多级列表、任务列表勾选、引用容器和公式等复杂块能力。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-05B` 拆分复杂块结构编辑；下一步可优先做多级列表/任务列表勾选、引用容器属性编辑，或公式可视化渲染编辑。"
+    },
+    {
+      "id": "LOG-100",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认引用容器属性与子节点展示 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前小步边界写回真相源：本轮只补齐引用容器属性与子节点展示 V1，选中引用块或引用内部子块后，右侧“对象属性”面板展示当前引用容器和子块列表，并围绕当前子块提供上方插入段落、下方插入段落、删除当前子块三类结构操作；删除时至少保留 1 个子块。本步不扩大到公式可视化渲染、多级列表、任务列表勾选、引用样式主题或分页算法。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改引用结构模型操作、store action、右侧对象属性面板和冒烟脚本，接通引用容器属性与子节点展示 V1。"
+    },
+    {
+      "id": "LOG-101",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认任务列表勾选 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 并行小步边界写回真相源：本轮只补齐任务列表勾选 V1，当选中的列表项本身是任务项（`checked !== null`）时，在右侧“列表属性”中展示任务项勾选开关，勾选变化只写回对应 `LayoutListItem.checked`；画布预览与 HTML/PDF 导出消费该勾选状态。本步不覆盖当前引用容器边界，不改引用块属性 UI，也不扩大到多级列表、普通列表转任务列表或 Markdown 源码反写。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 并行边界记录。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改列表勾选模型操作、store action、右侧对象属性面板、画布预览、HTML/PDF 导出和冒烟脚本；实现时避开引用容器并行小步的引用块逻辑。"
+    },
+    {
+      "id": "LOG-102",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成引用容器属性与子节点展示 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成引用容器属性与子节点展示 V1：新增引用容器上下文识别、引用内部子块插入/删除模型写回与选中态迁移；右侧“对象属性”面板在选中引用块或引用内部子块时可展示子块列表、当前子块提示，并提供上方插入段落、下方插入段落、删除当前子块三类结构操作；删除时会保护最后一个引用子块不被误删。所有变更只写回 `.layout` 文档模型，不反写 Markdown 源码，HTML/PDF 导出继续复用现有引用导出链路。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/selectors.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-05B` 拆分复杂块结构编辑；下一步可优先做公式可视化渲染编辑，或继续补齐多级列表与更完整的任务列表交互。"
+    },
+    {
+      "id": "LOG-103",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成任务列表勾选 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成任务列表勾选 V1：新增任务列表项勾选写回能力，选中 `checked !== null` 的列表项时，右侧“列表属性”会展示“任务项勾选”开关；切换后只更新对应 `LayoutListItem.checked`，不会把普通列表项自动转换成任务项。画布预览会显示任务项勾选/未勾选标记，HTML/PDF 导出会输出任务项 class 与复选框状态。本小步与引用容器小步并行完成，未覆盖引用容器边界和引用块属性 UI。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-05B` 拆分复杂块结构编辑；下一步可优先做公式可视化渲染编辑、多级列表缩进，或普通列表转换任务列表。"
+    },
+    {
+      "id": "LOG-104",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认顶端列表新增入口 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前小步边界写回真相源：本轮只在顶端快捷格式工具栏新增“列表”分组，并接通新增无序列表、新增有序列表、新增任务列表三个真实插入入口；插入位置沿用现有选中块之后或文档末尾规则，默认生成 1 个空列表项并自动选中该项。本步不扩大到多级列表、缩进快捷键、拖拽排序、列表样式模板或 Markdown 源码反写。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 并行边界记录。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改列表模型插入操作、store action、AppShell 顶栏接线、Toolbar 列表分组和冒烟脚本，接通三类列表新增入口。"
+    },
+    {
+      "id": "LOG-105",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成顶端列表新增入口 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成顶端列表新增入口 V1：顶端快捷格式工具栏已在“段落”和“插入”之间新增“列表”分组，提供新增无序列表、新增有序列表、新增任务列表三个真实入口；底层新增列表块插入模型操作与 store action，插入位置沿用选中块之后或文档末尾规则，默认生成 1 个空列表项并自动选中该项；有序列表默认 `start=1`，任务列表首项默认 `checked=false`。本步未扩大到多级列表、缩进快捷键、拖拽排序、列表样式模板或 Markdown 源码反写。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-05B` 拆分复杂块结构编辑；后续可继续推进多级列表缩进、普通列表批量转任务列表、列表拖拽排序或列表样式模板。"
+    },
+    {
+      "id": "LOG-106",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认按块类型收窄样式入口与冒烟补强小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-06` 当前小步边界写回真相源：本轮不新增样式能力，而是按块类型收窄右侧“段落样式”入口，让标题/段落保留完整缩进体系，代码块/列表只保留当前稳定支持的对齐、行高、段前距、段后距，表格只保留行高、段前距、段后距并继续复用现有“当前列对齐”入口；同时补齐对应冒烟验证，确保 UI 暴露范围与真实样式消费链路一致。本步不扩大到公式可视化渲染、多级列表、模板优先级整理、真实测量分页或 `.layout` 文件结构调整。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改 `RightPanel.tsx` 和 `scripts/m1-smoke.ts`，按块类型收窄样式入口并补齐对应回归验证。"
+    },
+    {
+      "id": "LOG-107",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成按块类型收窄样式入口与冒烟补强",
+      "action": "收口/验证/文档同步",
+      "result": "已完成 `PH2-06` 当前收口小步：新增共享块级样式支持规则，右侧“对象属性”面板会按块类型展示当前真实稳定支持的样式控件。标题/段落继续保留对齐、行高、左缩进、右缩进、首行缩进、悬挂缩进、段前距、段后距；代码块和列表仅保留对齐、行高、段前距、段后距；表格仅保留行高、段前距、段后距，并继续复用现有“当前列对齐”入口。同步补齐 `smoke:m1` 回归验证，覆盖标题/段落缩进组合、代码块/列表/表格稳定样式项导出，以及公式块当前不暴露块级样式入口，确保 UI 暴露范围与真实消费链路一致。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/objectStyleSupport.ts",
+        "src/components/layout/RightPanel.tsx",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续围绕 `PH2-06` 做真实交互验收；后续可优先转向 `PH2-05B` 的公式可视化编辑，或继续拆分 `PH2-06` 的更完整块级样式支持。"
+    },
+    {
+      "id": "LOG-108",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认公式可视化渲染编辑 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前并行小步边界写回真相源：本轮只补齐公式可视化渲染编辑 V1，把顶端“公式”入口改成真实插入动作，打通块级公式的源码输入、实时预览、右侧对象属性、错误提示和 HTML/PDF 导出；本步只覆盖块级公式，不扩大到行内公式、公式编号、公式样式模板或分页算法。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 并行边界记录。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改公式插入模型操作、store action、Toolbar/AppShell 顶栏接线、CanvasPane 画布渲染、RightPanel 对象属性、HTML/PDF 导出和冒烟脚本，接通公式可视化渲染编辑 V1。"
+    },
+    {
+      "id": "LOG-109",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成公式可视化渲染编辑 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成公式可视化渲染编辑 V1：顶端“公式”入口已接成真实插入动作，块级公式可在画布中以 KaTeX 可视化结果预览，双击后可继续编辑公式源码，右侧“对象属性”提供公式源码、解析状态和错误提示，HTML/PDF 导出与冒烟校验也已消费同一套公式渲染结果。本步只覆盖块级公式，不扩大到行内公式、公式编号、多级列表或分页算法。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/equation.ts",
+        "src/engine/document-model/index.ts",
+        "src/engine/document-model/operations.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "scripts/m1-smoke.ts",
+        "package.json",
+        "package-lock.json",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "继续围绕 `PH2-05B` 拆分复杂块结构编辑；后续可优先做多级列表缩进、普通列表转任务列表或列表拖拽排序。"
+    },
+    {
+      "id": "LOG-110",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认公式模板快捷插入 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步边界写回真相源：本轮只补齐公式模板快捷插入 V1，把顶栏公式入口升级为模板面板，预置矩阵、大括号、上下标、分式、根号、求和、积分、极限、分段函数等常见骨架，让用户点击后即可插入主要公式格式，再改内容即可；本步不扩大到行内公式、自定义模板库、公式编号或图片/表格模板。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改公式模板配置、Toolbar 顶栏模板面板、AppShell 插入接线、CanvasPane 自动进入公式编辑、冒烟脚本和相关样式，接通公式模板快捷插入 V1。"
+    },
+    {
+      "id": "LOG-111",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成公式模板快捷插入 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成公式模板快捷插入 V1：顶栏公式入口已升级为模板面板，当前按类别预置空白公式、分式、上标、下标、上下标、根号、n 次根、小括号、中括号、大括号、绝对值、2 x 2 矩阵、3 x 3 矩阵、行列式、分段函数、求和、积分、极限等常见骨架；用户点击后可直接插入主要公式格式，再改内容即可。插入后会优先复用当前空公式块，否则按现有规则创建新公式块，并自动进入后续公式编辑链路。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/formulaTemplates.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "继续围绕 `PH2-10` 拆分公式工作流；后续可优先做行内公式模板、占位符跳转或用户自定义模板库。"
+    },
+    {
+      "id": "LOG-112",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认预览内公式弹框编辑 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步边界切换为预览内公式弹框编辑 V1：本轮不再把公式模板放在顶栏，而是改成点击预览中的公式块后弹出三段式公式编辑框，上方编辑 LaTeX，中间实时预览，下方提供矩阵、大括号、上下标、分式、根号、求和、积分、极限、分段函数等骨架按钮，用户点击后即可把骨架插入当前公式源码继续修改；本步不扩大到行内公式、自定义模板库、公式编号或图片/表格弹框。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始移除顶栏公式模板面板，改为预览内公式弹框编辑，并补齐公式弹框的源码、实时预览、骨架点击插入和冒烟验证。"
+    },
+    {
+      "id": "LOG-113",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成预览内公式弹框编辑 V1",
+      "action": "重构/集成/验证/文档同步",
+      "result": "已完成预览内公式弹框编辑 V1：顶栏不再承担公式模板主入口，点击预览中的公式块后，会在预览区顶部弹出三段式公式编辑框。编辑框上方可直接编辑 LaTeX，中间实时预览当前结果，下方提供矩阵、大括号、上下标、分式、根号、求和、积分、极限、分段函数等骨架按钮，点击后会直接插入当前公式源码继续修改。整体仍复用现有块级公式渲染、右侧对象属性和 HTML/PDF 导出链路。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "继续围绕 `PH2-10` 拆分公式工作流；后续可优先做占位符跳转、行内公式模板或用户自定义模板库。"
+    },
+    {
+      "id": "LOG-114",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认公式编辑弹窗界面 V2 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步边界切换为公式编辑弹窗界面 V2：本轮不继续沿用挂在预览顶部的半成品编辑框，而是把公式编辑交互升级为真正的居中模态弹窗，保留 LaTeX 源码、实时预览和骨架模板三段能力，同时补齐遮罩、关闭按钮、Esc 关闭、背景滚动锁定和更稳定的分栏布局；本步不扩大到行内公式、自定义模板库、公式编号或图片/表格弹窗。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始把公式编辑从页面内浮层改成真正的模态弹窗，并补齐弹窗布局、关闭行为、滚动锁定和对应回归验证。"
+    },
+    {
+      "id": "LOG-115",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成公式编辑弹窗界面 V2",
+      "action": "重构/验证/文档同步",
+      "result": "已完成公式编辑弹窗界面 V2：当前公式编辑已从挂在预览区顶部的页面内浮层收口为真正的居中模态弹窗。弹窗包含标题栏、状态说明、关闭按钮，正文采用 LaTeX 源码与实时预览左右分栏，底部保留骨架模板区；同时已补齐遮罩点击关闭、Esc 关闭、背景滚动锁定和更稳定的弹窗层级。整体仍复用现有公式渲染、保存、右侧对象属性和 HTML/PDF 导出链路。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "继续围绕 `PH2-10` 拆分公式工作流；后续可优先做占位符跳转、行内公式模板或用户自定义模板库。"
+    },
+    {
+      "id": "LOG-116",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认预览区内公式编辑弹窗 V3 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步边界切换为“预览区内公式编辑弹窗 V3”：本轮只收口 3 个问题，包括把公式编辑弹窗和遮罩收回到 `CanvasPane` 预览区内部、不再覆盖整个应用；把编辑过程切到本地草稿，只在弹窗内部实时预览、关闭时再一次性写回模型，避免底层分页页面频繁刷新；以及把弹出/关闭动画收敛为 `opacity + transform` 的顺滑过渡。本步不扩大到模板内容调整、占位符跳转、行内公式、自定义模板库或右侧对象属性改造。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改 `CanvasPane.tsx` 的公式弹窗层级、本地草稿写回链路和动画样式，并补齐 `smoke:m1` 回归，收口预览区内公式编辑弹窗 V3。"
+    },
+    {
+      "id": "LOG-117",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成预览区内公式编辑弹窗 V3",
+      "action": "重构/收口/验证/文档同步",
+      "result": "已完成预览区内公式编辑弹窗 V3：公式编辑弹窗和遮罩已从全局 `fixed` 模态收回到 `CanvasPane` 预览区内部，只覆盖分页预览内容区域，不再遮住左栏、右栏和顶栏；公式输入过程已切到弹窗本地草稿，实时预览只刷新弹窗内部预览区，关闭弹窗时才一次性写回文档模型，明显减少了底层分页页面的频繁刷新和视觉抖动；源码输入区已固定高度并改为内部滚动，弹窗开关动画也已收敛为 `opacity + transform` 的顺滑过渡。现有公式模板插入、最终保存、HTML/PDF 导出和错误态保留链路继续可用。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 待本次日志写回后执行。",
+        "`npm run progress:check` 待本次展示文档重新生成后执行。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `progress:build` 与 `progress:check` 同步展示层产物；后续继续围绕 `PH2-10` 拆分公式工作流，可优先评估占位符跳转、行内公式模板或用户自定义模板库。"
+    },
+    {
+      "id": "LOG-118",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认大纲点击跳转与页码回填 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-11` 当前小步边界写回真相源：本轮只补齐左侧“大纲”的点击跳转与页码回填 V1，基于现有标题节点和运行时分页结果生成标题页码映射，并在点击大纲项时滚动定位到对应标题；本步不把页码写回 `.layout`，不启动正文目录块渲染，也不扩展到页眉页脚页码、目录模板或页码格式系统。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-11` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改 `AppShell.tsx`、`LeftPanel.tsx`、`CanvasPane.tsx` 和相关选择器，接通大纲点击跳转与页码回填 V1。"
+    },
+    {
+      "id": "LOG-119",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成大纲点击跳转与页码回填 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-11` 当前小步：左侧“大纲”已支持点击跳转到对应标题，并基于运行时分页结果回填标题页码；当前选中的标题会在大纲中高亮，预览区只在显式点击大纲项时才滚动定位，避免普通选中或自动刷新时莫名跳页。本步只做运行时页码映射，不把页码写回 `.layout`，也未扩大到正文目录块、页眉页脚页码或页码格式系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/selectors.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-11` 拆分正文目录块渲染、目录刷新机制或页眉页脚页码系统。"
+    },
+    {
+      "id": "LOG-120",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认正文目录块渲染 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-11` 当前小步边界切换为正文目录块渲染 V1：本轮只把顶栏“目录”入口从占位接成真实正文目录块，目录块按当前标题和运行时分页结果显示目录项与页码，并支持点击目录项跳转到对应标题；本步不把目录项或页码写回 `.layout`，不做目录层级筛选、目录样式模板、手动刷新目录或页眉页脚页码系统。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-11` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改目录块模型、Toolbar/AppShell 插入接线、CanvasPane 目录块渲染、导出链路和冒烟脚本，接通正文目录块渲染 V1。"
+    },
+    {
+      "id": "LOG-121",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成正文目录块渲染 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-11` 当前小步：顶栏“目录”入口已接成真实正文目录块插入动作，目录块会按当前标题和运行时分页结果显示目录项与页码，并支持点击目录项跳转到对应标题；HTML/PDF 导出也已同步渲染目录块内容，保持预览和导出口径一致。本步只做运行时目录内容与页码映射，不把目录项写回 `.layout`，也未扩大到目录层级筛选、目录样式模板、手动刷新目录或页眉页脚页码系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/selectors.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-11` 拆分目录层级筛选、目录刷新机制或页眉页脚页码系统。"
+    },
+    {
+      "id": "LOG-122",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认目录固定置顶并在后方自动分页 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-11` 当前小步边界切换为“目录固定置顶并在后方自动分页 V1”：本轮只把目录插入位置改为固定置顶，并在目录块后自动追加 1 个手动分页符，让正文从下一页开始；本步不做目录去重、目录替换、目录层级筛选、目录模板或页眉页脚页码系统。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-11` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改目录插入位置、自动分页符写回和冒烟验证，接通目录固定置顶并在后方自动分页 V1。"
+    },
+    {
+      "id": "LOG-123",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成目录固定置顶并在后方自动分页 V1",
+      "action": "调整/验证/文档同步",
+      "result": "已完成 `PH2-11` 当前小步：目录插入规则已从“按当前选中位置插入”调整为“固定插到文档最前面”，并在目录块后自动追加 1 个手动分页符，让正文从下一页开始。目录块的标题列表、页码回填、点击跳转和 HTML/PDF 导出链路继续可用。本步未扩大到目录去重、目录替换、目录层级筛选、目录模板或页眉页脚页码系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-11` 拆分目录去重、目录层级筛选或页眉页脚页码系统。"
+    },
+    {
+      "id": "LOG-124",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认目录去重 / 替换 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-11` 当前小步边界切换为“目录去重 / 替换 V1”：本轮只识别文档最前面的“目录块 + 紧随其后的分页符”为自动目录组；若再次点击目录入口且该结构存在，则替换这一组而不是继续新增第二套目录。本步不扫描全文做目录识别，不处理多个目录块并存的高级规则，也不扩大到目录层级筛选、目录模板或页眉页脚页码系统。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-11` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改目录插入前的前置自动目录组检测、替换写回和冒烟验证，接通目录去重 / 替换 V1。"
+    },
+    {
+      "id": "LOG-125",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成目录去重 / 替换 V1",
+      "action": "调整/验证/文档同步",
+      "result": "已完成 `PH2-11` 当前小步：再次点击目录入口时，不会继续堆叠第二套目录，而是只替换文档最前面的自动目录组（目录块 + 紧随其后的分页符）。首次插入目录时仍保持“置顶 + 后跟分页符”的现有规则；目录项跳转、页码回填、导出链路继续可用。本步未扩大到扫描全文的目录检测、多个目录块并存的高级规则、目录层级筛选、目录模板或页眉页脚页码系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-11` 拆分目录层级筛选、手动刷新目录或页眉页脚页码系统。"
+    },
+    {
+      "id": "LOG-126",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认目录层级筛选 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-11` 当前小步边界切换为“目录层级筛选 V1”：本轮只给目录块增加 3 个固定层级选项 `显示 H1-H3`、`显示 H1-H2`、`仅 H1`，并让目录块预览与 HTML/PDF 导出都按同一规则过滤目录项。本步不做自由输入的层级范围、手动刷新目录、目录模板，也不把层级筛选扩展到左侧大纲。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-11` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改目录块 metadata、右侧对象属性层级切换、目录渲染过滤和冒烟验证，接通目录层级筛选 V1。"
+    },
+    {
+      "id": "LOG-127",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成目录层级筛选 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-11` 当前小步：目录块已支持 3 个固定层级选项 `显示 H1-H3`、`显示 H1-H2`、`仅 H1`；右侧“对象属性”可切换该配置，目录块预览与 HTML/PDF 导出会按相同规则过滤目录项。目录置顶、自动分页、目录替换、页码回填与点击跳转链路继续可用。本步未扩大到自由输入层级范围、手动刷新目录、目录模板或页眉页脚页码系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/services/exportHtml.ts",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-11` 拆分手动刷新目录、目录样式模板或页眉页脚页码系统。"
+    },
+    {
+      "id": "LOG-128",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认手动刷新目录 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-11` 当前小步边界切换为“手动刷新目录 V1”：本轮只在选中目录块时新增一个显式 `刷新目录` 动作与中文反馈，让用户在修改标题后可以主动确认目录已刷新；目录层级筛选继续生效，刷新动作只服务当前目录块，不引入全局自动刷新、目录模板或页眉页脚页码系统。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-11` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改目录块刷新动作、右侧对象属性按钮与反馈、以及冒烟验证，接通手动刷新目录 V1。"
+    },
+    {
+      "id": "LOG-129",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成手动刷新目录 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-11` 当前小步：选中目录块后，右侧“对象属性”会显示 `刷新目录` 按钮；点击后会重新触发当前目录块的目录项与页码重算，并给出中文反馈。目录层级筛选继续生效，手动刷新不会把文档误标成未保存，目录置顶、自动分页、目录替换、页码回填与点击跳转链路也都继续可用。本步未扩大到全局自动刷新、目录模板或页眉页脚页码系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-11` 拆分目录样式模板、页眉页脚页码或更完整目录工作流。"
+    },
+    {
+      "id": "LOG-130",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片大小调整、裁剪、环绕方式 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步边界切换为“图片大小调整、裁剪、环绕方式 V1”：本轮只补齐图片块的最小可用版式字段、右侧对象属性编辑入口、画布预览消费、HTML/PDF 导出消费与分页估算口径，让图片尺寸、裁剪和环绕设置都能写回 `.layout` 并贯穿预览与导出；本步不扩大到鼠标拖拽缩放、画布内可视化裁剪框、复杂正文绕排、图片旋转滤镜或资源入库。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改图片块 metadata、右侧图片属性面板、画布预览、HTML/PDF 导出和分页估算，接通图片大小调整、裁剪、环绕方式 V1。"
+    },
+    {
+      "id": "LOG-131",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片大小调整、裁剪、环绕方式 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-10` 当前小步：图片块已支持宽高、锁定比例、四边裁剪和 4 个固定环绕选项 `独占一行 / 居中显示 / 左侧排布 / 右侧排布`；右侧“图片属性”面板可直接编辑这些值，画布预览会即时反馈，HTML/PDF 导出与分页估算也已消费同一套图片版式字段。所有设置都会写回 `.layout` 图片块 metadata，并沿用现有资源记录同步与未保存标记链路。本步未扩大到鼠标拖拽缩放、画布内可视化裁剪框、复杂正文绕排、图片旋转滤镜或资源入库。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/index.ts",
+        "src/engine/document-model/imageLayout.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-10` 拆分鼠标拖拽缩放、可视化裁剪框或更复杂图片绕排。"
+    },
+    {
+      "id": "LOG-132",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片鼠标拖拽缩放 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步边界切换为“图片鼠标拖拽缩放 V1”：本轮只补齐画布预览中的图片右下角单手柄拖拽缩放交互，让用户可直接拖拽改变图片尺寸，并在鼠标释放时把最终宽高写回现有图片块 metadata；本步不扩大到多手柄自由变形、可视化裁剪框、触摸手势、旋转或复杂正文绕排。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改 `CanvasPane.tsx` 的图片缩放手柄、预览本地拖拽状态和尺寸写回链路，接通图片鼠标拖拽缩放 V1。"
+    },
+    {
+      "id": "LOG-133",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片鼠标拖拽缩放 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-10` 当前小步：选中图片后，画布预览会在图片右下角显示单个缩放手柄；拖拽时图片尺寸在当前预览中实时变化，释放鼠标后再一次性写回图片块 `widthPx / heightPx`。拖拽位移已按当前分页预览缩放比例换算，锁定比例开启时会按当前宽高比联动另一边尺寸，写回结果会继续同步到右侧“图片属性”面板、HTML/PDF 导出和分页估算。本步未扩大到多手柄自由变形、可视化裁剪框、旋转或复杂正文绕排。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-10` 拆分多手柄缩放、可视化裁剪框或更复杂图片绕排。"
+    },
+    {
+      "id": "LOG-134",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片可视化裁剪框 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步边界切换为“图片可视化裁剪框 V1”：本轮只补齐画布预览中的图片可视化裁剪框交互，让用户可直接通过裁剪遮罩与边界拖拽调整图片可视区域，并在鼠标释放时把最终裁剪值写回现有图片块 `cropTopPx / cropRightPx / cropBottomPx / cropLeftPx`；本步不扩大到旋转、滤镜、多点自由变形或复杂正文绕排。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改 `CanvasPane.tsx` 的图片裁剪框、本地裁剪拖拽状态和裁剪值写回链路，接通图片可视化裁剪框 V1。"
+    },
+    {
+      "id": "LOG-135",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "复核并继续图片可视化裁剪框 V1 小步边界",
+      "action": "边界复核/继续实施",
+      "result": "已按本轮用户确认复核 `PH2-10` 当前小步边界，并继续按既定范围实施“图片可视化裁剪框 V1”：本轮继续只补齐画布预览中的图片可视化裁剪框交互，让用户选中图片后可通过裁剪遮罩与边界拖拽调整可视区域，并在鼠标释放时把最终裁剪值写回现有图片块 `cropTopPx / cropRightPx / cropBottomPx / cropLeftPx`。本步继续明确不纳入旋转、滤镜、多点自由变形和复杂正文绕排；更完整图片编辑器与更复杂绕排仍后续归属 `PH2-10`。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务继续与 `PH2-10` 任务卡边界保持一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物后，开始修改 `CanvasPane.tsx` 的图片裁剪框、本地裁剪拖拽状态和裁剪值写回链路，接通图片可视化裁剪框 V1。"
+    },
+    {
+      "id": "LOG-136",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "补充图片本体直出约束并继续图片可视化裁剪框 V1",
+      "action": "边界补充/继续实施",
+      "result": "已按本轮用户补充要求，把 `PH2-10` 当前小步的图片呈现约束补回真相源：画布预览、导出和分页占位都应以图片本身为唯一可见主体，不额外显示图片框、卡片边框或背景底板；若实现裁剪交互需要内部技术容器，也不能表现成额外相框。图片块所占用的尺寸应跟随图片当前尺寸与裁剪后的可见区域，不保留独立外框占位。本步其余边界保持不变，继续不纳入旋转、滤镜、多点自由变形和复杂正文绕排。",
+      "verification": [
+        "人工确认新增约束已写入 `PH2-10` 任务卡，并继续与本步纳入 / 不纳入范围保持一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物后，开始按“图片本体直出”的新口径调整 `CanvasPane.tsx`、`exportHtml.ts`、样式与冒烟验证，接通图片可视化裁剪框 V1。"
+    },
+    {
+      "id": "LOG-137",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "补充导入后图片初始尺寸与比例修复约束",
+      "action": "边界补充/继续实施",
+      "result": "已按本轮用户确认，把 `PH2-10` 当前小步补充为“在不扩大本步范围的前提下，修复图片导入后未显式设置宽高时错误塌缩成 `1 x 1 px`、以及初始长宽比例被破坏的问题”。本轮仍只围绕图片预览渲染、加载后测量时机、裁剪/缩放链路的一致性做修复，不扩大到旋转、滤镜、多点自由变形、资源入库或复杂正文绕排。",
+      "verification": [
+        "人工确认新增约束已写入 `PH2-10` 任务卡，并继续与当前小步其余边界保持一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物后，开始修复图片初始尺寸测量、加载完成后的尺寸回填时机和长宽比保持链路，再回归 `typecheck`、`smoke:m1` 与 `build`。"
+    },
+    {
+      "id": "LOG-138",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片可视化裁剪框 V1 并修复导入后初始尺寸与比例异常",
+      "action": "新增/修复/验证/文档同步",
+      "result": "已完成 `PH2-10` 当前小步：画布中的图片已改为图片本体直出，选中后可通过裁剪遮罩与四边拖拽手柄直接调整可视区域，并在鼠标释放时把最终裁剪值写回现有图片块 `cropTopPx / cropRightPx / cropBottomPx / cropLeftPx`；右下角单手柄拖拽缩放、右侧“图片属性”面板、HTML/PDF 导出和分页估算继续兼容同一套图片口径。同时已修复图片导入后未显式设置宽高时错误塌缩成 `1 x 1 px` 和初始长宽比例被破坏的问题：未完成加载的临时测量值不再被提前收口成正式尺寸，图片加载完成后会重新触发测量并保持真实初始显示比例。本步未扩大到旋转、滤镜、多点自由变形、资源入库或复杂正文绕排。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/document-model/imageLayout.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-10` 拆分更强裁剪框、更多图片编辑能力，或转向其他复杂块可视化编辑小步。"
+    },
+    {
+      "id": "LOG-139",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认多级列表、拖拽排序、右键菜单与整列表批量勾选联动小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前并行小步边界切换为“多级列表与整列表任务交互 V1”：本轮合并推进多级列表 V1、`Tab / Shift + Tab` 缩进、同一列表内拖拽排序 V1、列表右键菜单 V1，以及任务列表的整列表批量勾选 V1；多级列表先固定最多 3 级，批量勾选先按整列表和当前层级两类范围提供入口。实现会先补齐列表项层级字段和写回规则，再让画布预览、右侧对象属性、HTML/PDF 导出、自动草稿和 `.layout` 保存共同消费同一套列表模型。本步明确不纳入跨列表拖拽、无限层级、离散多选框选系统、Markdown 反写或列表样式模板。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 并行边界记录。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始补齐列表层级字段、store 写回、画布缩进快捷键、拖拽排序、右键菜单、整列表批量勾选和对应回归验证。"
+    },
+    {
+      "id": "LOG-140",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成多级列表与整列表任务交互 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-05B` 当前并行小步：列表项新增 1-3 级层级字段，Markdown 嵌套列表导入、`.layout` 保存、画布预览、纯文本摘要、HTML/PDF 导出和分页估算已共同消费同一套多级列表口径；右侧“列表属性”面板已支持无序/有序/任务列表切换、层级调整、上移下移、任务项转换，以及整列表/当前层级批量勾选和取消；画布列表项右键菜单已提供上移、下移、提升一级、降低一级、转任务项、取消任务项入口，并已补齐同一列表内子树级别的重排与删除口径。本步未扩大到跨列表拖拽、无限层级、Markdown 反写或列表样式模板。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/utils.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/selectors.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/services/exportHtml.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-05B` 拆分跨列表拖拽、更完整快捷键、离散多选批量操作或更复杂多级列表规则。"
     }
   ]
 }

@@ -41,6 +41,7 @@ interface LeftPanelProps {
   activeTab: LeftPanelTab;
   onTabChange: (tab: LeftPanelTab) => void;
   tocItems: TocItem[];
+  selectedOutlineNodeId: string | null;
   currentFilePath: string | null;
   currentDirectoryName: string;
   directoryEntries: WorkspaceDirectoryEntry[];
@@ -49,6 +50,7 @@ interface LeftPanelProps {
   onCreateFolder: (parentPath?: string | null) => void;
   onCreateLayoutFile: (parentPath?: string | null) => void;
   onOpenEntry: (entry: WorkspaceDirectoryEntry) => void;
+  onSelectOutlineItem: (nodeId: string) => void;
   onOpenRecentFile: (entry: RecentFileEntry) => void;
   onRemoveRecentFile: (filePath: string) => void;
   onClearRecentFiles: () => void;
@@ -495,6 +497,7 @@ function renderFileExplorer({
 function renderPanelContent(
   activeTab: LeftPanelTab,
   tocItems: TocItem[],
+  selectedOutlineNodeId: string | null,
   recentFiles: RecentFileEntry[],
   currentFilePath: string | null,
   currentDirectoryName: string,
@@ -505,6 +508,7 @@ function renderPanelContent(
   onRenameHandled: () => void,
   onOpenFolder: () => void,
   onOpenEntry: (entry: WorkspaceDirectoryEntry) => void,
+  onSelectOutlineItem: (nodeId: string) => void,
   onOpenRecentFile: (entry: RecentFileEntry) => void,
   onRemoveRecentFile: (filePath: string) => void,
   onClearRecentFiles: () => void,
@@ -551,13 +555,15 @@ function renderPanelContent(
               <div className="outline-list">
                 {tocItems.map((item) => (
                   <button
-                    className="outline-row"
+                    className={item.id === selectedOutlineNodeId ? 'outline-row active' : 'outline-row'}
                     type="button"
                     key={item.id}
                     style={{ paddingLeft: `${12 + (item.depth - 1) * 14}px` }}
+                    onClick={() => onSelectOutlineItem(item.id)}
                   >
                     <span className="outline-badge">H{item.depth}</span>
-                    <span>{item.text}</span>
+                    <span className="outline-text">{item.text}</span>
+                    {item.pageNumber ? <span className="outline-page-number">第 {item.pageNumber} 页</span> : null}
                   </button>
                 ))}
               </div>
@@ -736,6 +742,7 @@ export function LeftPanel({
   activeTab,
   onTabChange,
   tocItems,
+  selectedOutlineNodeId,
   currentFilePath,
   currentDirectoryName,
   directoryEntries,
@@ -744,6 +751,7 @@ export function LeftPanel({
   onCreateFolder,
   onCreateLayoutFile,
   onOpenEntry,
+  onSelectOutlineItem,
   onOpenRecentFile,
   onRemoveRecentFile,
   onClearRecentFiles,
@@ -829,6 +837,7 @@ export function LeftPanel({
           {renderPanelContent(
             activeTab,
             tocItems,
+            selectedOutlineNodeId,
             recentFiles,
             currentFilePath,
             currentDirectoryName,
@@ -839,6 +848,7 @@ export function LeftPanel({
             () => setRenamingPath(null),
             onOpenFolder,
             onOpenEntry,
+            onSelectOutlineItem,
             onOpenRecentFile,
             onRemoveRecentFile,
             onClearRecentFiles,

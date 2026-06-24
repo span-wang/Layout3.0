@@ -1,4 +1,4 @@
-import type { BlockStyleOverrides } from './types';
+import type { BlockStyleOverrides, LayoutListItem } from './types';
 
 // 统一使用稳定哈希，确保同一输入在重复导入时生成一致的模型 ID。
 export function createStableHash(value: string): string {
@@ -73,4 +73,54 @@ export function resolveHangingIndentLineWidths(
     firstLineWidthPx: Math.max(1, contentWidthPx - indentStyle.indentLeft - indentStyle.firstLineIndent),
     followingLineWidthPx: Math.max(1, contentWidthPx - indentStyle.indentLeft - indentStyle.indentRight),
   };
+}
+
+export type LayoutListLevel = 1 | 2 | 3;
+
+export interface LayoutListTreeNode {
+  item: LayoutListItem;
+  children: LayoutListTreeNode[];
+}
+
+// 多级列表 V1 先固定在 1-3 级，旧文档缺字段时一律按 1 级兼容。
+export function normalizeLayoutListLevel(level: number | null | undefined): LayoutListLevel {
+  if (typeof level !== 'number' || !Number.isFinite(level)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.min(3, Math.floor(level))) as LayoutListLevel;
+}
+
+export function getLayoutListItemLevel(item: LayoutListItem): LayoutListLevel {
+  return normalizeLayoutListLevel(item.level);
+}
+
+export function buildLayoutListTree(items: LayoutListItem[]): LayoutListTreeNode[] {
+  const roots: LayoutListTreeNode[] = [];
+  const stack: Array<{ level: LayoutListLevel; node: LayoutListTreeNode }> = [];
+
+  for (const item of items) {
+    const nextNode: LayoutListTreeNode = {
+      item: {
+        ...item,
+        level: getLayoutListItemLevel(item),
+      },
+      children: [],
+    };
+    const itemLevel = getLayoutListItemLevel(item);
+
+    while (stack.length > 0 && stack[stack.length - 1].level >= itemLevel) {
+      stack.pop();
+    }
+
+    if (stack.length === 0) {
+      roots.push(nextNode);
+    } else {
+      stack[stack.length - 1].node.children.push(nextNode);
+    }
+
+    stack.push({ level: itemLevel, node: nextNode });
+  }
+
+  return roots;
 }

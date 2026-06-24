@@ -11,17 +11,21 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { Bold, Eraser, Highlighter, Italic, Strikethrough, Underline } from 'lucide-react';
+import { formulaTemplateGroups } from '@/constants/formulaTemplates';
+import { Bold, Eraser, Highlighter, Italic, Strikethrough, Underline, X } from 'lucide-react';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import {
   applyTextRunPatchToTextRuns,
+  buildLayoutListTree,
   clearTextFormattingInTextRuns,
   getHeadingText,
   getLayoutBlockPlainText,
+  getLayoutListItemLevel,
   getTextContentFromRuns,
   isEditableLayoutTextBlock,
   toggleTextMarkInTextRuns,
   type LayoutBlock,
+  type LayoutListTreeNode,
   type LayoutListItem,
   type LayoutTableCell,
   type ParseState,
@@ -31,12 +35,21 @@ import {
   type TextRun,
   type TextStyleOverrides,
 } from '@/engine/document-model';
+import { renderEquationToHtml } from '@/engine/document-model/equation';
+import {
+  resolveImageLayout,
+  resolveImageRenderMetrics,
+  type ImageMeasuredVisibleSize,
+  type ResolvedImageLayout,
+} from '@/engine/document-model/imageLayout';
 import type { ResolvedStyleContract } from '@/engine/style/types';
 import type { PageLayout } from '@/engine/typesetting/types';
+import { useAppStore } from '@/store';
 import type { CanvasTextSelectionState } from '@/types/workspace';
 import { createTextFragment, resolveHangingIndentStyle } from '@/engine/document-model/utils';
 import { mergeAdjacentTextRuns } from '@/engine/document-model';
 import { resolveAssetSrc } from '@/utils/filePath';
+import { ContextMenu, type ContextMenuEntry } from '@/components/common/ContextMenu';
 
 interface CanvasPaneProps {
   documentTitle: string;
@@ -52,7 +65,35 @@ interface CanvasPaneProps {
   onCommitNodeText: (nodeId: string, text: string) => void;
   onCommitNodeRichText: (nodeId: string, textRuns: TextRun[]) => void;
   onTextSelectionChange: (state: CanvasTextSelectionState) => void;
+  tocItems?: Array<{ id: string; depth: number; text: string; pageNumber?: number }>;
+  onNavigateToNode?: (nodeId: string) => void;
+  requestedStartEditingNodeId?: string | null;
+  onConsumeRequestedStartEditingNode?: (nodeId: string) => void;
+  requestedScrollToNodeId?: string | null;
+  onConsumeRequestedScrollToNode?: (nodeId: string) => void;
   isCondensed?: boolean;
+}
+
+interface RenderListTreeOptions {
+  block: LayoutBlock;
+  nodes: LayoutListTreeNode[];
+  selectedNodeId: string | null;
+  editingNodeId: string | null;
+  editingKind: CanvasEditorKind | null;
+  editingDraftTextRuns: TextRun[] | null;
+  editingText: string;
+  activeSelection: TextRangeSelection | null;
+  richEditorRef: MutableRefObject<HTMLDivElement | null>;
+  editorRef: RefObject<HTMLTextAreaElement>;
+  onSelectNode: (nodeId: string) => void;
+  onPrepareSelectNode: (nodeId: string) => void;
+  onStartEditing: (node: EditableCanvasNode) => void;
+  onSelectionChange: (selection: TextRangeSelection | null) => void;
+  onEditDraftTextRunsChange: (textRuns: TextRun[]) => void;
+  onEditTextChange: (text: string) => void;
+  onCommitEdit: () => void;
+  onCancelEdit: () => void;
+  onListItemContextMenu: (event: MouseEvent<HTMLElement>, itemId: string) => void;
 }
 
 type CanvasEditorKind =
@@ -86,6 +127,50 @@ interface FloatingToolbarPosition {
   top: number;
   placement: 'above' | 'below';
 }
+
+interface ActiveEquationEditor {
+  nodeId: string;
+  initialText: string;
+}
+
+interface ActiveImageResize {
+  nodeId: string;
+  startClientX: number;
+  startClientY: number;
+  startWidthPx: number;
+  startHeightPx: number;
+  lockAspectRatio: boolean;
+  aspectRatio: number | null;
+  pageScale: number;
+}
+
+type ImageCropEdge = 'top' | 'right' | 'bottom' | 'left';
+
+interface ImageDraftCrop {
+  cropTopPx: number;
+  cropRightPx: number;
+  cropBottomPx: number;
+  cropLeftPx: number;
+}
+
+interface ActiveImageCrop {
+  nodeId: string;
+  edge: ImageCropEdge;
+  startClientX: number;
+  startClientY: number;
+  startCrop: ImageDraftCrop;
+  fullWidthPx: number;
+  fullHeightPx: number;
+  pageScale: number;
+}
+
+interface ListItemContextMenuState {
+  x: number;
+  y: number;
+  itemId: string;
+}
+
+const equationEditorAnimationDurationMs = 170;
 
 const floatingTextMarkOptions: Array<{
   id: TextMarkType;
@@ -207,6 +292,227 @@ function buildBlockStyle(block: LayoutBlock): CSSProperties {
   };
 }
 
+function buildImageStyle(block: LayoutBlock): CSSProperties | undefined {
+  if (block.type !== 'image' || block.metadata.kind !== 'image') {
+    return undefined;
+  }
+
+  const layout = resolveImageLayout(block.metadata);
+  const styles: CSSProperties = {};
+
+  if (layout.wrapMode === 'center') {
+    styles.marginLeft = 'auto';
+    styles.marginRight = 'auto';
+  } else if (layout.wrapMode === 'left') {
+    styles.marginRight = 'auto';
+  } else if (layout.wrapMode === 'right') {
+    styles.marginLeft = 'auto';
+  }
+
+  return styles;
+}
+
+function resolveImageLayoutWithDraft(
+  block: LayoutBlock,
+  draftSize: { widthPx: number | null; heightPx: number | null } | null,
+  draftCrop: ImageDraftCrop | null,
+): ResolvedImageLayout | null {
+  if (block.type !== 'image' || block.metadata.kind !== 'image') {
+    return null;
+  }
+
+  return resolveImageLayout({
+    ...block.metadata,
+    widthPx: draftSize?.widthPx ?? block.metadata.widthPx,
+    heightPx: draftSize?.heightPx ?? block.metadata.heightPx,
+    cropTopPx: draftCrop?.cropTopPx ?? block.metadata.cropTopPx,
+    cropRightPx: draftCrop?.cropRightPx ?? block.metadata.cropRightPx,
+    cropBottomPx: draftCrop?.cropBottomPx ?? block.metadata.cropBottomPx,
+    cropLeftPx: draftCrop?.cropLeftPx ?? block.metadata.cropLeftPx,
+  });
+}
+
+function buildImageViewportStyle(
+  layout: ResolvedImageLayout | null,
+  measuredVisibleSize: ImageMeasuredVisibleSize | null,
+): CSSProperties | undefined {
+  if (!layout) {
+    return undefined;
+  }
+
+  const metrics = resolveImageRenderMetrics(layout, measuredVisibleSize);
+  return {
+    width: metrics.visibleWidthPx ? `${metrics.visibleWidthPx}px` : undefined,
+    height: metrics.visibleHeightPx ? `${metrics.visibleHeightPx}px` : undefined,
+  };
+}
+
+function buildImageContentStyle(
+  layout: ResolvedImageLayout | null,
+  measuredVisibleSize: ImageMeasuredVisibleSize | null,
+): CSSProperties | undefined {
+  if (!layout) {
+    return undefined;
+  }
+
+  const metrics = resolveImageRenderMetrics(layout, measuredVisibleSize);
+
+  return {
+    width: metrics.fullWidthPx ? `${metrics.fullWidthPx}px` : undefined,
+    height: metrics.fullHeightPx ? `${metrics.fullHeightPx}px` : undefined,
+    maxWidth: metrics.fullWidthPx ? 'none' : undefined,
+    maxHeight: metrics.fullHeightPx ? 'none' : undefined,
+    transform:
+      metrics.cropLeftPx || metrics.cropTopPx
+        ? `translate(${-metrics.cropLeftPx}px, ${-metrics.cropTopPx}px)`
+        : undefined,
+  };
+}
+
+function buildImageCropOverlayStyle(
+  layout: ResolvedImageLayout | null,
+  measuredVisibleSize: ImageMeasuredVisibleSize | null,
+): CSSProperties | undefined {
+  if (!layout) {
+    return undefined;
+  }
+
+  const metrics = resolveImageRenderMetrics(layout, measuredVisibleSize);
+  if (!metrics.fullWidthPx || !metrics.fullHeightPx) {
+    return undefined;
+  }
+
+  return {
+    left: `${-metrics.cropLeftPx}px`,
+    top: `${-metrics.cropTopPx}px`,
+    width: `${metrics.fullWidthPx}px`,
+    height: `${metrics.fullHeightPx}px`,
+  };
+}
+
+function buildImageCropSelectionStyle(
+  layout: ResolvedImageLayout | null,
+  measuredVisibleSize: ImageMeasuredVisibleSize | null,
+): CSSProperties | undefined {
+  if (!layout) {
+    return undefined;
+  }
+
+  const metrics = resolveImageRenderMetrics(layout, measuredVisibleSize);
+  if (!metrics.visibleWidthPx || !metrics.visibleHeightPx) {
+    return undefined;
+  }
+
+  return {
+    left: `${metrics.cropLeftPx}px`,
+    top: `${metrics.cropTopPx}px`,
+    width: `${metrics.visibleWidthPx}px`,
+    height: `${metrics.visibleHeightPx}px`,
+  };
+}
+
+function buildImageCropHandleStyle(
+  layout: ResolvedImageLayout | null,
+  measuredVisibleSize: ImageMeasuredVisibleSize | null,
+  edge: ImageCropEdge,
+): CSSProperties | undefined {
+  if (!layout) {
+    return undefined;
+  }
+
+  const metrics = resolveImageRenderMetrics(layout, measuredVisibleSize);
+  if (!metrics.visibleWidthPx || !metrics.visibleHeightPx) {
+    return undefined;
+  }
+
+  const left = metrics.cropLeftPx;
+  const top = metrics.cropTopPx;
+  const right = metrics.cropLeftPx + metrics.visibleWidthPx;
+  const bottom = metrics.cropTopPx + metrics.visibleHeightPx;
+
+  switch (edge) {
+    case 'top':
+      return {
+        left: `${left + metrics.visibleWidthPx / 2}px`,
+        top: `${top}px`,
+        transform: 'translate(-50%, -50%)',
+      };
+    case 'right':
+      return {
+        left: `${right}px`,
+        top: `${top + metrics.visibleHeightPx / 2}px`,
+        transform: 'translate(50%, -50%)',
+      };
+    case 'bottom':
+      return {
+        left: `${left + metrics.visibleWidthPx / 2}px`,
+        top: `${bottom}px`,
+        transform: 'translate(-50%, 50%)',
+      };
+    case 'left':
+      return {
+        left: `${left}px`,
+        top: `${top + metrics.visibleHeightPx / 2}px`,
+        transform: 'translate(-50%, -50%)',
+      };
+    default:
+      return undefined;
+  }
+}
+
+function buildImageCropMaskStyle(
+  layout: ResolvedImageLayout | null,
+  measuredVisibleSize: ImageMeasuredVisibleSize | null,
+  edge: ImageCropEdge,
+): CSSProperties | undefined {
+  if (!layout) {
+    return undefined;
+  }
+
+  const metrics = resolveImageRenderMetrics(layout, measuredVisibleSize);
+  if (!metrics.fullWidthPx || !metrics.fullHeightPx || !metrics.visibleWidthPx || !metrics.visibleHeightPx) {
+    return undefined;
+  }
+
+  const selectionLeft = metrics.cropLeftPx;
+  const selectionTop = metrics.cropTopPx;
+  const selectionRight = selectionLeft + metrics.visibleWidthPx;
+  const selectionBottom = selectionTop + metrics.visibleHeightPx;
+
+  switch (edge) {
+    case 'top':
+      return {
+        left: 0,
+        top: 0,
+        width: `${metrics.fullWidthPx}px`,
+        height: `${metrics.cropTopPx}px`,
+      };
+    case 'right':
+      return {
+        left: `${selectionRight}px`,
+        top: `${selectionTop}px`,
+        width: `${Math.max(0, metrics.fullWidthPx - selectionRight)}px`,
+        height: `${metrics.visibleHeightPx}px`,
+      };
+    case 'bottom':
+      return {
+        left: 0,
+        top: `${selectionBottom}px`,
+        width: `${metrics.fullWidthPx}px`,
+        height: `${Math.max(0, metrics.fullHeightPx - selectionBottom)}px`,
+      };
+    case 'left':
+      return {
+        left: 0,
+        top: `${selectionTop}px`,
+        width: `${metrics.cropLeftPx}px`,
+        height: `${metrics.visibleHeightPx}px`,
+      };
+    default:
+      return undefined;
+  }
+}
+
 function renderInlineText(text: string, keyPrefix: string): ReactNode {
   return text.split('\n').flatMap((part, index) => {
     if (index === 0) {
@@ -299,6 +605,12 @@ function getEditableBlockNode(block: LayoutBlock): EditableCanvasNode | null {
   };
 }
 
+function renderEquationPreview(value: string): { __html: string } {
+  return {
+    __html: renderEquationToHtml(value).html,
+  };
+}
+
 function getEditableListItemNode(item: LayoutListItem): EditableCanvasNode {
   return {
     id: item.id,
@@ -315,6 +627,151 @@ function getEditableTableCellNode(cell: LayoutTableCell): EditableCanvasNode {
     kind: 'tableCell',
     textRuns: cell.textRuns,
   };
+}
+
+function buildListItemClassName(item: LayoutListItem): string {
+  return [
+    item.checked === null ? '' : 'task-list-item',
+    `list-level-${getLayoutListItemLevel(item)}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function renderListTreeNodes({
+  block,
+  nodes,
+  selectedNodeId,
+  editingNodeId,
+  editingKind,
+  editingDraftTextRuns,
+  editingText,
+  activeSelection,
+  richEditorRef,
+  editorRef,
+  onSelectNode,
+  onPrepareSelectNode,
+  onStartEditing,
+  onSelectionChange,
+  onEditDraftTextRunsChange,
+  onEditTextChange,
+  onCommitEdit,
+  onCancelEdit,
+  onListItemContextMenu,
+}: RenderListTreeOptions): ReactNode[] {
+  const ListTag = block.metadata.kind === 'list' && block.metadata.ordered ? 'ol' : 'ul';
+
+  return nodes.map((node) => {
+    const item = node.item;
+    const itemNode = getEditableListItemNode(item);
+
+    return (
+      <li
+        key={item.id}
+        {...createSelectableTextNodeProps({
+          node: itemNode,
+          selectedNodeId,
+          onSelectNode,
+          onPrepareSelectNode,
+          onStartEditing,
+          className: buildListItemClassName(item),
+        })}
+        data-list-level={getLayoutListItemLevel(item)}
+        onContextMenu={(event) => onListItemContextMenu(event, item.id)}
+      >
+        <span className={item.checked === null ? 'list-item-content' : 'task-list-item-content'}>
+          {item.checked !== null ? (
+            <span className="task-list-checkbox" aria-hidden="true">
+              {item.checked ? '☑' : '☐'}
+            </span>
+          ) : null}
+          <span className="list-item-text">
+            {editingNodeId === item.id
+              ? isRichTextCanvasEditorKind(editingKind ?? 'listItem')
+                ? (
+                  <RichTextCanvasEditor
+                    nodeId={item.id}
+                    kind={editingKind ?? 'listItem'}
+                    textRuns={editingDraftTextRuns ?? item.textRuns}
+                    activeSelection={activeSelection}
+                    richEditorRef={richEditorRef}
+                    onSelectionChange={onSelectionChange}
+                    onDraftChange={onEditDraftTextRunsChange}
+                    onCommit={onCommitEdit}
+                    onCancel={onCancelEdit}
+                  />
+                )
+                : renderBlockEditor({
+                    kind: editingKind ?? 'listItem',
+                    editorRef,
+                    editingText,
+                    onChange: onEditTextChange,
+                    onSelectionChange,
+                    onCommit: onCommitEdit,
+                    onCancel: onCancelEdit,
+                  })
+              : renderTextRuns(item.textRuns, '空列表项')}
+          </span>
+        </span>
+        {node.children.length > 0 ? (
+          <ListTag>{renderListTreeNodes({
+            block,
+            nodes: node.children,
+            selectedNodeId,
+            editingNodeId,
+            editingKind,
+            editingDraftTextRuns,
+            editingText,
+            activeSelection,
+            richEditorRef,
+            editorRef,
+            onSelectNode,
+            onPrepareSelectNode,
+            onStartEditing,
+            onSelectionChange,
+            onEditDraftTextRunsChange,
+            onEditTextChange,
+            onCommitEdit,
+            onCancelEdit,
+            onListItemContextMenu,
+          })}</ListTag>
+        ) : null}
+      </li>
+    );
+  });
+}
+
+function findEditableNodeByIdInBlocks(blocks: LayoutBlock[], nodeId: string): EditableCanvasNode | null {
+  for (const block of blocks) {
+    if (block.id === nodeId) {
+      return getEditableBlockNode(block);
+    }
+
+    if (block.type === 'list' && block.metadata.kind === 'list') {
+      const matchedItem = block.metadata.items.find((item) => item.id === nodeId);
+      if (matchedItem) {
+        return getEditableListItemNode(matchedItem);
+      }
+    }
+
+    if (block.type === 'table' && block.metadata.kind === 'table') {
+      for (const row of block.metadata.rows) {
+        const matchedCell = row.cells.find((cell) => cell.id === nodeId);
+        if (matchedCell) {
+          return getEditableTableCellNode(matchedCell);
+        }
+      }
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedNode = findEditableNodeByIdInBlocks(block.metadata.blocks, nodeId);
+      if (nestedNode) {
+        return nestedNode;
+      }
+    }
+  }
+
+  return null;
 }
 
 function findEditableNodeTextRunsInBlocks(blocks: LayoutBlock[], nodeId: string): TextRun[] | null {
@@ -381,6 +838,55 @@ function createSelectableBlockProps(
     onClick: (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
       onSelectNode(block.id);
+    },
+    onDoubleClick: (event: MouseEvent<HTMLElement>) => {
+      event.stopPropagation();
+      onSelectNode(block.id);
+      const editableNode = getEditableBlockNode(block);
+      if (editableNode) {
+        onStartEditing(editableNode);
+      }
+    },
+  };
+}
+
+function createSelectableEquationBlockProps({
+  block,
+  selectedNodeId,
+  editingNodeId,
+  onSelectNode,
+  onPrepareSelectNode,
+  onStartEditing,
+}: {
+  block: LayoutBlock;
+  selectedNodeId: string | null;
+  editingNodeId: string | null;
+  onSelectNode: (nodeId: string) => void;
+  onPrepareSelectNode: (nodeId: string) => void;
+  onStartEditing: (node: EditableCanvasNode) => void;
+}) {
+  const classNames = ['selectable-layout-block', 'equation-shell', block.id === selectedNodeId ? 'selected' : '']
+    .filter(Boolean)
+    .join(' ');
+
+  return {
+    className: classNames,
+    'data-layout-node-id': block.id,
+    onMouseDown: (event: MouseEvent<HTMLElement>) => {
+      event.stopPropagation();
+      onPrepareSelectNode(block.id);
+    },
+    onClick: (event: MouseEvent<HTMLElement>) => {
+      event.stopPropagation();
+      onSelectNode(block.id);
+      if (editingNodeId === block.id) {
+        return;
+      }
+
+      const editableNode = getEditableBlockNode(block);
+      if (editableNode) {
+        onStartEditing(editableNode);
+      }
     },
     onDoubleClick: (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
@@ -495,6 +1001,10 @@ function focusCanvasEditorWithoutScroll(
 
   // 双击进入编辑时，浏览器会尝试把新焦点滚到可见区；这里把画布滚动位置拉回用户双击前的位置。
   restoreCanvasScrollSnapshotSoon(canvasPane, snapshot);
+}
+
+function findCanvasScrollContainer(element: HTMLElement | null): HTMLElement | null {
+  return element?.closest('.canvas-pane-scroll') as HTMLElement | null;
 }
 
 function isRichTextCanvasEditorKind(kind: CanvasEditorKind): boolean {
@@ -759,7 +1269,7 @@ function restoreRichSelection(root: HTMLElement, selection: TextRangeSelection |
   const range = document.createRange();
   const startPoint = findSelectionPoint(root, selection.start);
   const endPoint = findSelectionPoint(root, selection.end);
-  const canvasPane = root.closest('.canvas-pane') as HTMLElement | null;
+  const canvasPane = findCanvasScrollContainer(root);
   const scrollSnapshot = createCanvasScrollSnapshot(canvasPane);
   range.setStart(startPoint.node, startPoint.offset);
   range.setEnd(endPoint.node, endPoint.offset);
@@ -861,7 +1371,7 @@ function RichTextCanvasEditor({
       return;
     }
 
-    const canvasPane = editor.closest('.canvas-pane') as HTMLElement | null;
+    const canvasPane = findCanvasScrollContainer(editor);
     const scrollSnapshot = createCanvasScrollSnapshot(canvasPane);
     editor.innerHTML = nextHtml;
     lastRenderedHtmlRef.current = nextHtml;
@@ -913,6 +1423,12 @@ function RichTextCanvasEditor({
     }
 
     if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      onCommit();
+      return;
+    }
+
+    if (kind === 'listItem' && event.key === 'Tab') {
       event.preventDefault();
       onCommit();
     }
@@ -1029,6 +1545,230 @@ function renderBlockEditor({
   );
 }
 
+function EquationEditorOverlay({
+  nodeId,
+  initialText,
+  scrollContainerRef,
+  onCommitAndClose,
+}: {
+  nodeId: string;
+  initialText: string;
+  scrollContainerRef: RefObject<HTMLElement>;
+  onCommitAndClose: (payload: { nodeId: string; text: string; didChange: boolean }) => void;
+}): JSX.Element {
+  const [draftText, setDraftText] = useState(initialText);
+  const [draftSelection, setDraftSelection] = useState<TextRangeSelection | null>({
+    start: initialText.length,
+    end: initialText.length,
+  });
+  const [isVisible, setIsVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  const openFrameRef = useRef<number | null>(null);
+  const renderResult = renderEquationToHtml(draftText);
+
+  useEffect(() => {
+    openFrameRef.current = window.requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
+
+    return () => {
+      if (openFrameRef.current !== null) {
+        window.cancelAnimationFrame(openFrameRef.current);
+      }
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+
+    const scrollSnapshot = createCanvasScrollSnapshot(scrollContainerRef.current);
+    focusCanvasEditorWithoutScroll(editor, scrollContainerRef.current, scrollSnapshot);
+    editor.setSelectionRange(initialText.length, initialText.length);
+    restoreCanvasScrollSnapshot(scrollContainerRef.current, scrollSnapshot);
+  }, [initialText, scrollContainerRef]);
+
+  const syncSelection = (editor: HTMLTextAreaElement) => {
+    setDraftSelection({
+      start: editor.selectionStart ?? 0,
+      end: editor.selectionEnd ?? 0,
+    });
+  };
+
+  const requestCloseWithCommit = () => {
+    if (isClosing) {
+      return;
+    }
+
+    setIsClosing(true);
+    setIsVisible(false);
+    closeTimerRef.current = window.setTimeout(() => {
+      onCommitAndClose({
+        nodeId,
+        text: draftText,
+        didChange: draftText !== initialText,
+      });
+    }, equationEditorAnimationDurationMs);
+  };
+
+  const insertTemplate = (templateValue: string) => {
+    const editor = editorRef.current;
+    const selectionStart = editor?.selectionStart ?? draftSelection?.start ?? draftText.length;
+    const selectionEnd = editor?.selectionEnd ?? draftSelection?.end ?? draftText.length;
+    const nextText = `${draftText.slice(0, selectionStart)}${templateValue}${draftText.slice(selectionEnd)}`;
+    const nextCursor = selectionStart + templateValue.length;
+
+    setDraftText(nextText);
+    setDraftSelection({ start: nextCursor, end: nextCursor });
+
+    window.requestAnimationFrame(() => {
+      if (!editorRef.current) {
+        return;
+      }
+
+      try {
+        editorRef.current.focus({ preventScroll: true });
+      } catch {
+        editorRef.current.focus();
+      }
+      editorRef.current.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      requestCloseWithCommit();
+      return;
+    }
+
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      requestCloseWithCommit();
+    }
+  };
+
+  return (
+    <div
+      className={isVisible ? 'equation-editor-modal equation-editor-modal-visible' : 'equation-editor-modal'}
+      role="dialog"
+      aria-modal="true"
+      aria-label="公式编辑"
+      onMouseDown={(event) => {
+        if (event.target !== event.currentTarget) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        requestCloseWithCommit();
+      }}
+    >
+      <div
+        className="equation-editor-popover"
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="equation-editor-modal-head">
+          <div className="equation-editor-modal-title">
+            <strong>公式编辑</strong>
+            <span>{renderResult.error ? '当前公式解析失败' : '当前公式解析正常'}</span>
+          </div>
+          <button
+            type="button"
+            className="equation-editor-close"
+            aria-label="关闭公式编辑弹窗"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onClick={requestCloseWithCommit}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div className="equation-editor-main">
+          <section className="equation-editor-section">
+            <div className="equation-editor-head">
+              <strong>LaTeX 语法</strong>
+              <span>Esc 或 Ctrl + Enter 保存并关闭</span>
+            </div>
+            <textarea
+              ref={editorRef}
+              className="canvas-block-editor canvas-block-editor-equation equation-editor-source-input"
+              value={draftText}
+              rows={10}
+              autoFocus
+              aria-label="公式源码编辑"
+              onChange={(event) => {
+                setDraftText(event.target.value);
+                syncSelection(event.currentTarget);
+              }}
+              onFocus={(event) => syncSelection(event.currentTarget)}
+              onMouseDown={(event) => event.stopPropagation()}
+              onSelect={(event) => syncSelection(event.currentTarget)}
+              onMouseUp={(event) => syncSelection(event.currentTarget)}
+              onKeyUp={(event) => syncSelection(event.currentTarget)}
+              onKeyDown={handleKeyDown}
+              onClick={(event) => event.stopPropagation()}
+              onDoubleClick={(event) => event.stopPropagation()}
+            />
+          </section>
+          <section className="equation-editor-section">
+            <div className="equation-editor-head">
+              <strong>实时预览</strong>
+              <span>{renderResult.error ? '解析失败' : '解析正常'}</span>
+            </div>
+            <div className="equation-editor-preview">
+              <div className="equation-preview" dangerouslySetInnerHTML={{ __html: renderResult.html }} />
+            </div>
+          </section>
+        </div>
+        <section className="equation-editor-section">
+          <div className="equation-editor-head">
+            <strong>骨架内容</strong>
+            <span>点击后直接插入当前公式源码</span>
+          </div>
+          <div className="equation-editor-template-list">
+            {formulaTemplateGroups.map((group) => (
+              <section key={group.id} className="equation-template-group">
+                <strong>{group.label}</strong>
+                <div className="equation-template-grid">
+                  {group.templates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      className="equation-template-item"
+                      title={`${template.label}：${template.preview}`}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                      onClick={() => insertTemplate(template.value)}
+                    >
+                      <span>{template.label}</span>
+                      <small>{template.preview}</small>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function renderBlock(
   block: LayoutBlock,
   index: number,
@@ -1036,6 +1776,7 @@ function renderBlock(
   onSelectNode: (nodeId: string) => void,
   onPrepareSelectNode: (nodeId: string) => void,
   editingNodeId: string | null,
+  activeEquationEditorNodeId: string | null,
   editingKind: CanvasEditorKind | null,
   editingText: string,
   editingDraftTextRuns: TextRun[] | null,
@@ -1048,6 +1789,25 @@ function renderBlock(
   onEditDraftTextRunsChange: (textRuns: TextRun[]) => void,
   onCommitEdit: () => void,
   onCancelEdit: () => void,
+  tocItems: Array<{ id: string; depth: number; text: string; pageNumber?: number }>,
+  onNavigateToNode?: (nodeId: string) => void,
+  draftImageSizes?: Record<string, { widthPx: number | null; heightPx: number | null }>,
+  draftImageCrops?: Record<string, ImageDraftCrop>,
+  measuredImageVisibleSizes?: Record<string, ImageMeasuredVisibleSize>,
+  onImageLoad?: () => void,
+  onStartImageResize?: (
+    event: MouseEvent<HTMLButtonElement>,
+    block: LayoutBlock,
+    pageScale: number,
+  ) => void,
+  onStartImageCrop?: (
+    event: MouseEvent<HTMLButtonElement>,
+    block: LayoutBlock,
+    edge: ImageCropEdge,
+    pageScale: number,
+  ) => void,
+  onListItemContextMenu?: (event: MouseEvent<HTMLElement>, itemId: string) => void,
+  pageScale?: number,
 ): JSX.Element | null {
   const isEditing = editingNodeId === block.id;
 
@@ -1116,6 +1876,47 @@ function renderBlock(
         </h3>
       );
     }
+    case 'toc':
+      if (block.metadata.kind !== 'toc') {
+        return null;
+      }
+
+      {
+        const tocMetadata = block.metadata;
+        const filteredTocItems = tocItems.filter((item) => item.depth <= tocMetadata.maxDepth);
+
+        return (
+          <section
+            key={`toc-${block.id}-${index}`}
+            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing)}
+            className="toc-block"
+          >
+            <div className="toc-block-title">{tocMetadata.title || '目录'}</div>
+            {filteredTocItems.length > 0 ? (
+              <div className="toc-block-list">
+                {filteredTocItems.map((item) => (
+                  <button
+                    key={`toc-entry-${block.id}-${item.id}`}
+                    type="button"
+                    className="toc-entry"
+                    style={{ paddingLeft: `${item.depth > 1 ? (item.depth - 1) * 16 : 0}px` }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onNavigateToNode?.(item.id);
+                    }}
+                  >
+                    <span className="toc-entry-text">{item.text}</span>
+                    <span className="toc-entry-dots" aria-hidden="true" />
+                    <span className="toc-entry-page">{item.pageNumber ?? '-'}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="toc-empty-state">当前文档还没有符合当前目录层级的标题。</div>
+            )}
+          </section>
+        );
+      }
     case 'paragraph':
       return (
         <p
@@ -1156,53 +1957,34 @@ function renderBlock(
       }
 
       const ListTag = block.metadata.ordered ? 'ol' : 'ul';
+      const listTree = buildLayoutListTree(block.metadata.items);
       return (
         <ListTag
           key={`list-${block.id}-${index}`}
           {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing)}
+          start={block.metadata.ordered ? block.metadata.start ?? 1 : undefined}
           style={buildBlockStyle(block)}
         >
-          {block.metadata.items.map((item) => {
-            const itemNode = getEditableListItemNode(item);
-
-            return (
-              <li
-                key={item.id}
-                {...createSelectableTextNodeProps({
-                  node: itemNode,
-                  selectedNodeId,
-                  onSelectNode,
-                  onPrepareSelectNode,
-                  onStartEditing,
-                })}
-              >
-                {editingNodeId === item.id
-                  ? isRichTextCanvasEditorKind(editingKind ?? 'listItem')
-                    ? (
-                      <RichTextCanvasEditor
-                        nodeId={item.id}
-                        kind={editingKind ?? 'listItem'}
-                        textRuns={editingDraftTextRuns ?? item.textRuns}
-                        activeSelection={activeSelection}
-                        richEditorRef={richEditorRef}
-                        onSelectionChange={onSelectionChange}
-                        onDraftChange={onEditDraftTextRunsChange}
-                        onCommit={onCommitEdit}
-                        onCancel={onCancelEdit}
-                      />
-                    )
-                    : renderBlockEditor({
-                        kind: editingKind ?? 'listItem',
-                        editorRef,
-                        editingText,
-                        onChange: onEditTextChange,
-                        onSelectionChange,
-                        onCommit: onCommitEdit,
-                        onCancel: onCancelEdit,
-                      })
-                  : renderTextRuns(item.textRuns, '空列表项')}
-              </li>
-            );
+          {renderListTreeNodes({
+            block,
+            nodes: listTree,
+            selectedNodeId,
+            editingNodeId,
+            editingKind,
+            editingDraftTextRuns,
+            editingText,
+            activeSelection,
+            richEditorRef,
+            editorRef,
+            onSelectNode,
+            onPrepareSelectNode,
+            onStartEditing,
+            onSelectionChange,
+            onEditDraftTextRunsChange,
+            onEditTextChange,
+            onCommitEdit,
+            onCancelEdit,
+            onListItemContextMenu: onListItemContextMenu ?? (() => undefined),
           })}
         </ListTag>
       );
@@ -1221,6 +2003,7 @@ function renderBlock(
               onSelectNode,
               onPrepareSelectNode,
               editingNodeId,
+              activeEquationEditorNodeId,
               editingKind,
               editingText,
               editingDraftTextRuns,
@@ -1233,6 +2016,15 @@ function renderBlock(
               onEditDraftTextRunsChange,
               onCommitEdit,
               onCancelEdit,
+              tocItems,
+              onNavigateToNode,
+              draftImageSizes,
+              draftImageCrops,
+              measuredImageVisibleSizes,
+              onImageLoad,
+              onStartImageResize,
+              onStartImageCrop,
+              onListItemContextMenu,
             ),
           )}
         </blockquote>
@@ -1335,54 +2127,127 @@ function renderBlock(
         </div>
       ) : null;
     case 'image':
-      return block.metadata.kind === 'image' ? (
-        <figure
-          key={`image-${block.id}-${index}`}
-          {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'image-shell')}
-        >
-          {block.metadata.src ? (
-            <img
-              className="preview-image"
-              src={resolveAssetSrc(block.metadata.src)}
-              alt={block.metadata.alt || '图片'}
-              title={block.metadata.title ?? undefined}
-              loading="lazy"
-            />
-          ) : (
-            <div className="preview-image placeholder">图片占位</div>
-          )}
-          <figcaption>
-            {isEditing
-              ? renderBlockEditor({
-                  kind: editingKind ?? 'imageAlt',
-                  editorRef,
-                  editingText,
-                  onChange: onEditTextChange,
-                  onSelectionChange,
-                  onCommit: onCommitEdit,
-                  onCancel: onCancelEdit,
-                })
-              : block.metadata.alt || <span className="empty-text-placeholder">双击编辑图片说明</span>}
-          </figcaption>
-        </figure>
-      ) : null;
+      if (block.metadata.kind !== 'image') {
+        return null;
+      }
+
+      {
+        const imageLayout = resolveImageLayoutWithDraft(
+          block,
+          draftImageSizes?.[block.id] ?? null,
+          draftImageCrops?.[block.id] ?? null,
+        );
+        const measuredVisibleSize = measuredImageVisibleSizes?.[block.id] ?? null;
+        const cropOverlayStyle = buildImageCropOverlayStyle(imageLayout, measuredVisibleSize);
+        const cropSelectionStyle = buildImageCropSelectionStyle(imageLayout, measuredVisibleSize);
+
+        return (
+          <figure
+            key={`image-${block.id}-${index}`}
+            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'image-shell')}
+            style={buildImageStyle(block)}
+          >
+            {block.metadata.src ? (
+              <>
+                <span
+                  className="image-viewport"
+                  data-layout-node-id={block.id}
+                  data-page-scale={pageScale ?? 1}
+                  style={buildImageViewportStyle(imageLayout, measuredVisibleSize)}
+                >
+                  <img
+                    className="preview-image preview-image-fit preview-image-cropped"
+                    src={resolveAssetSrc(block.metadata.src)}
+                    alt={block.metadata.alt || '图片'}
+                    title={block.metadata.title ?? undefined}
+                    loading="lazy"
+                    onLoad={onImageLoad}
+                    style={buildImageContentStyle(imageLayout, measuredVisibleSize)}
+                  />
+                  {selectedNodeId === block.id && onStartImageResize ? (
+                    <button
+                      type="button"
+                      className="image-resize-handle"
+                      aria-label="拖拽缩放图片"
+                      title="拖拽缩放图片"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onStartImageResize(event, block, pageScale ?? 1);
+                      }}
+                    />
+                  ) : null}
+                </span>
+                {selectedNodeId === block.id && onStartImageCrop && cropOverlayStyle && cropSelectionStyle ? (
+                  <div className="image-crop-overlay" style={cropOverlayStyle}>
+                    <img
+                      className="preview-image image-crop-overlay-image"
+                      src={resolveAssetSrc(block.metadata.src)}
+                      alt=""
+                      aria-hidden="true"
+                    />
+                    {(['top', 'right', 'bottom', 'left'] as const).map((edge) => {
+                      const maskStyle = buildImageCropMaskStyle(imageLayout, measuredVisibleSize, edge);
+                      return maskStyle ? <div key={`mask-${block.id}-${edge}`} className="image-crop-mask" style={maskStyle} /> : null;
+                    })}
+                    <div className="image-crop-selection" style={cropSelectionStyle} />
+                    {(['top', 'right', 'bottom', 'left'] as const).map((edge) => {
+                      const handleStyle = buildImageCropHandleStyle(imageLayout, measuredVisibleSize, edge);
+                      return handleStyle ? (
+                        <button
+                          key={`crop-${block.id}-${edge}`}
+                          type="button"
+                          className={`image-crop-handle image-crop-handle-${edge}`}
+                          aria-label={`拖拽裁剪图片${edge === 'top' ? '上边' : edge === 'right' ? '右边' : edge === 'bottom' ? '下边' : '左边'}`}
+                          title={`拖拽裁剪图片${edge === 'top' ? '上边' : edge === 'right' ? '右边' : edge === 'bottom' ? '下边' : '左边'}`}
+                          style={handleStyle}
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onStartImageCrop(event, block, edge, pageScale ?? 1);
+                          }}
+                        />
+                      ) : null;
+                    })}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <div className="preview-image placeholder">图片占位</div>
+            )}
+            <figcaption>
+              {isEditing
+                ? renderBlockEditor({
+                    kind: editingKind ?? 'imageAlt',
+                    editorRef,
+                    editingText,
+                    onChange: onEditTextChange,
+                    onSelectionChange,
+                    onCommit: onCommitEdit,
+                    onCancel: onCancelEdit,
+                  })
+                : block.metadata.alt || <span className="empty-text-placeholder">双击编辑图片说明</span>}
+            </figcaption>
+          </figure>
+        );
+      }
     case 'equation':
       return block.metadata.kind === 'equation' ? (
         <div
           key={`equation-${block.id}-${index}`}
-          {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'equation-shell')}
+          {...createSelectableEquationBlockProps({
+            block,
+            selectedNodeId,
+            editingNodeId: activeEquationEditorNodeId,
+            onSelectNode,
+            onPrepareSelectNode,
+            onStartEditing,
+          })}
         >
-          {isEditing
-            ? renderBlockEditor({
-                kind: editingKind ?? 'equation',
-                editorRef,
-                editingText,
-                onChange: onEditTextChange,
-                onSelectionChange,
-                onCommit: onCommitEdit,
-                onCancel: onCancelEdit,
-              })
-            : block.metadata.value || <span className="empty-text-placeholder">空公式</span>}
+          <div
+            className="equation-preview"
+            dangerouslySetInnerHTML={renderEquationPreview(block.metadata.value)}
+          />
         </div>
       ) : null;
     case 'horizontalRule':
@@ -1441,24 +2306,47 @@ export function CanvasPane({
   onCommitNodeText,
   onCommitNodeRichText,
   onTextSelectionChange,
+  tocItems = [],
+  onNavigateToNode,
+  requestedStartEditingNodeId = null,
+  onConsumeRequestedStartEditingNode,
+  requestedScrollToNodeId = null,
+  onConsumeRequestedScrollToNode,
   isCondensed = false,
 }: CanvasPaneProps): JSX.Element {
+  const updateLayoutImageAttributes = useAppStore((state) => state.updateLayoutImageAttributes);
+  const updateLayoutListItemLevel = useAppStore((state) => state.updateLayoutListItemLevel);
+  const reorderLayoutListItem = useAppStore((state) => state.reorderLayoutListItem);
+  const convertLayoutListItemTaskState = useAppStore((state) => state.convertLayoutListItemTaskState);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingKind, setEditingKind] = useState<CanvasEditorKind | null>(null);
   const [editingText, setEditingText] = useState('');
   const [editingDraftTextRuns, setEditingDraftTextRuns] = useState<TextRun[] | null>(null);
   const [editingSelection, setEditingSelection] = useState<TextRangeSelection | null>(null);
+  const [activeEquationEditor, setActiveEquationEditor] = useState<ActiveEquationEditor | null>(null);
+  const [activeImageResize, setActiveImageResize] = useState<ActiveImageResize | null>(null);
+  const [activeImageCrop, setActiveImageCrop] = useState<ActiveImageCrop | null>(null);
+  const [draftImageSizes, setDraftImageSizes] = useState<Record<string, { widthPx: number | null; heightPx: number | null }>>({});
+  const [draftImageCrops, setDraftImageCrops] = useState<Record<string, ImageDraftCrop>>({});
+  const [measuredImageVisibleSizes, setMeasuredImageVisibleSizes] = useState<Record<string, ImageMeasuredVisibleSize>>({});
+  const [imageMeasureEpoch, setImageMeasureEpoch] = useState(0);
   const [floatingToolbarPosition, setFloatingToolbarPosition] = useState<FloatingToolbarPosition | null>(null);
   const [pageStackWidth, setPageStackWidth] = useState<number | null>(null);
-  const canvasPaneRef = useRef<HTMLElement>(null);
+  const [listItemContextMenu, setListItemContextMenu] = useState<ListItemContextMenuState | null>(null);
+  const canvasPaneRef = useRef<HTMLDivElement>(null);
   const pageStackRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const richEditorRef = useRef<HTMLDivElement | null>(null);
   const floatingToolbarRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollSnapshotRef = useRef<CanvasScrollSnapshot | null>(null);
   const pendingSelectionAfterCommitRef = useRef<string | null>(null);
+  const activeImageResizeRef = useRef<ActiveImageResize | null>(null);
+  const activeImageCropRef = useRef<ActiveImageCrop | null>(null);
+  const draftImageSizesRef = useRef<Record<string, { widthPx: number | null; heightPx: number | null }>>({});
+  const draftImageCropsRef = useRef<Record<string, ImageDraftCrop>>({});
   const skipBlurCommitRef = useRef(false);
   const isEditingRichText = !!editingKind && isRichTextCanvasEditorKind(editingKind);
+  const activeEquationEditorNodeId = activeEquationEditor?.nodeId ?? null;
   const floatingToolbarTextRuns =
     editingDraftTextRuns ?? (editingNodeId ? findEditableNodeTextRunsInBlocks(documentBlocks, editingNodeId) : null);
   const shouldShowFloatingToolbar =
@@ -1493,6 +2381,310 @@ export function CanvasPane({
       resizeObserver.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    activeImageResizeRef.current = activeImageResize;
+  }, [activeImageResize]);
+
+  useEffect(() => {
+    activeImageCropRef.current = activeImageCrop;
+  }, [activeImageCrop]);
+
+  useEffect(() => {
+    draftImageSizesRef.current = draftImageSizes;
+  }, [draftImageSizes]);
+
+  useEffect(() => {
+    draftImageCropsRef.current = draftImageCrops;
+  }, [draftImageCrops]);
+
+  useLayoutEffect(() => {
+    const canvasPane = canvasPaneRef.current;
+    if (!canvasPane) {
+      return;
+    }
+
+    const nextMeasuredSizes: Record<string, ImageMeasuredVisibleSize> = {};
+    const currentImageNodeIds = new Set(
+      documentBlocks.filter((block) => block.type === 'image' && block.metadata.kind === 'image').map((block) => block.id),
+    );
+    const viewportElements = canvasPane.querySelectorAll<HTMLElement>('.image-viewport[data-layout-node-id]');
+
+    viewportElements.forEach((element) => {
+      const nodeId = element.dataset.layoutNodeId;
+      if (!nodeId) {
+        return;
+      }
+
+      const ownerBlock = documentBlocks.find(
+        (block) => block.id === nodeId && block.type === 'image' && block.metadata.kind === 'image',
+      );
+      if (!ownerBlock || ownerBlock.type !== 'image' || ownerBlock.metadata.kind !== 'image') {
+        return;
+      }
+
+      const pageScale = Number(element.dataset.pageScale ?? '1');
+      const safeScale = Number.isFinite(pageScale) && pageScale > 0 ? pageScale : 1;
+      const rect = element.getBoundingClientRect();
+      const imageElement = element.querySelector<HTMLImageElement>('.preview-image-cropped');
+      const resolvedLayout = resolveImageLayoutWithDraft(
+        ownerBlock,
+        draftImageSizes[nodeId] ?? null,
+        draftImageCrops[nodeId] ?? null,
+      );
+      const hasExplicitSize = !!resolvedLayout && (resolvedLayout.widthPx !== null || resolvedLayout.heightPx !== null);
+      const isImageReady =
+        !!imageElement &&
+        imageElement.complete &&
+        imageElement.naturalWidth > 0 &&
+        imageElement.naturalHeight > 0;
+
+      // 没有显式宽高时，图片真正加载前不要把尚未稳定的临时盒子测量值收口成正式尺寸，否则会把图片提前压成 1 x 1。
+      if (!hasExplicitSize && (!isImageReady || rect.width < 2 || rect.height < 2)) {
+        return;
+      }
+
+      // 这里统一把当前页面缩放还原回排版像素，避免裁剪手柄按屏幕像素写回后越拖越偏。
+      nextMeasuredSizes[nodeId] = {
+        widthPx: Math.max(1, Math.round(rect.width / safeScale)),
+        heightPx: Math.max(1, Math.round(rect.height / safeScale)),
+      };
+    });
+
+    setMeasuredImageVisibleSizes((current) => {
+      const nextState: Record<string, ImageMeasuredVisibleSize> = {};
+
+      for (const nodeId of currentImageNodeIds) {
+        const nextMeasuredSize = nextMeasuredSizes[nodeId];
+        if (nextMeasuredSize) {
+          nextState[nodeId] = nextMeasuredSize;
+          continue;
+        }
+
+        if (current[nodeId]) {
+          nextState[nodeId] = current[nodeId];
+        }
+      }
+
+      const currentKeys = Object.keys(current);
+      const nextKeys = Object.keys(nextState);
+      if (currentKeys.length === nextKeys.length && nextKeys.every((key) => {
+        const currentValue = current[key];
+        const nextValue = nextState[key];
+        return !!currentValue && !!nextValue && currentValue.widthPx === nextValue.widthPx && currentValue.heightPx === nextValue.heightPx;
+      })) {
+        return current;
+      }
+
+      return nextState;
+    });
+  }, [documentBlocks, draftImageCrops, draftImageSizes, imageMeasureEpoch, pageLayouts, pageStackWidth]);
+
+  useEffect(() => {
+    if (!activeImageResize) {
+      return;
+    }
+
+    const handleMouseMove = (event: globalThis.MouseEvent) => {
+      const deltaX = (event.clientX - activeImageResize.startClientX) / Math.max(0.0001, activeImageResize.pageScale);
+      const deltaY = (event.clientY - activeImageResize.startClientY) / Math.max(0.0001, activeImageResize.pageScale);
+      const nextWidth = Math.max(48, Math.round(activeImageResize.startWidthPx + deltaX));
+      let nextHeight = Math.max(48, Math.round(activeImageResize.startHeightPx + deltaY));
+
+      if (activeImageResize.lockAspectRatio && activeImageResize.aspectRatio) {
+        nextHeight = Math.max(48, Math.round(nextWidth / activeImageResize.aspectRatio));
+      }
+
+      setDraftImageSizes((current) => ({
+        ...current,
+        [activeImageResize.nodeId]: {
+          widthPx: nextWidth,
+          heightPx: nextHeight,
+        },
+      }));
+    };
+
+    const handleMouseUp = () => {
+      const resizeState = activeImageResizeRef.current;
+      if (!resizeState) {
+        return;
+      }
+
+      const draftSize = draftImageSizesRef.current[resizeState.nodeId];
+      const targetBlock = documentBlocks.find((block) => block.id === resizeState.nodeId);
+      if (draftSize && targetBlock?.type === 'image' && targetBlock.metadata.kind === 'image') {
+        updateLayoutImageAttributes({
+          nodeId: resizeState.nodeId,
+          src: targetBlock.metadata.src,
+          alt: targetBlock.metadata.alt,
+          title: targetBlock.metadata.title,
+          widthPx: draftSize.widthPx,
+          heightPx: draftSize.heightPx,
+          lockAspectRatio: targetBlock.metadata.lockAspectRatio ?? true,
+          objectFit: targetBlock.metadata.objectFit ?? 'contain',
+          cropTopPx: targetBlock.metadata.cropTopPx ?? 0,
+          cropRightPx: targetBlock.metadata.cropRightPx ?? 0,
+          cropBottomPx: targetBlock.metadata.cropBottomPx ?? 0,
+          cropLeftPx: targetBlock.metadata.cropLeftPx ?? 0,
+          wrapMode: targetBlock.metadata.wrapMode ?? 'block',
+        });
+      }
+
+      setActiveImageResize(null);
+      setDraftImageSizes((current) => {
+        const next = { ...current };
+        delete next[resizeState.nodeId];
+        return next;
+      });
+    };
+
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'nwse-resize';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp, { once: true });
+
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [activeImageResize, documentBlocks, updateLayoutImageAttributes]);
+
+  useEffect(() => {
+    if (!activeImageCrop) {
+      return;
+    }
+
+    const handleMouseMove = (event: globalThis.MouseEvent) => {
+      const deltaX = (event.clientX - activeImageCrop.startClientX) / Math.max(0.0001, activeImageCrop.pageScale);
+      const deltaY = (event.clientY - activeImageCrop.startClientY) / Math.max(0.0001, activeImageCrop.pageScale);
+      const minVisibleWidthPx = 48;
+      const minVisibleHeightPx = 48;
+
+      setDraftImageCrops((current) => {
+        const previous = current[activeImageCrop.nodeId] ?? activeImageCrop.startCrop;
+        let nextCropTopPx = previous.cropTopPx;
+        let nextCropRightPx = previous.cropRightPx;
+        let nextCropBottomPx = previous.cropBottomPx;
+        let nextCropLeftPx = previous.cropLeftPx;
+
+        // 只让当前拖拽边改动对应裁剪值，另外三边沿用起始值，避免同一次拖拽把图片四边一起拉乱。
+        switch (activeImageCrop.edge) {
+          case 'top':
+            nextCropTopPx = Math.max(
+              0,
+              Math.min(
+                activeImageCrop.fullHeightPx - activeImageCrop.startCrop.cropBottomPx - minVisibleHeightPx,
+                Math.round(activeImageCrop.startCrop.cropTopPx + deltaY),
+              ),
+            );
+            nextCropRightPx = activeImageCrop.startCrop.cropRightPx;
+            nextCropBottomPx = activeImageCrop.startCrop.cropBottomPx;
+            nextCropLeftPx = activeImageCrop.startCrop.cropLeftPx;
+            break;
+          case 'right':
+            nextCropRightPx = Math.max(
+              0,
+              Math.min(
+                activeImageCrop.fullWidthPx - activeImageCrop.startCrop.cropLeftPx - minVisibleWidthPx,
+                Math.round(activeImageCrop.startCrop.cropRightPx - deltaX),
+              ),
+            );
+            nextCropTopPx = activeImageCrop.startCrop.cropTopPx;
+            nextCropBottomPx = activeImageCrop.startCrop.cropBottomPx;
+            nextCropLeftPx = activeImageCrop.startCrop.cropLeftPx;
+            break;
+          case 'bottom':
+            nextCropBottomPx = Math.max(
+              0,
+              Math.min(
+                activeImageCrop.fullHeightPx - activeImageCrop.startCrop.cropTopPx - minVisibleHeightPx,
+                Math.round(activeImageCrop.startCrop.cropBottomPx - deltaY),
+              ),
+            );
+            nextCropTopPx = activeImageCrop.startCrop.cropTopPx;
+            nextCropRightPx = activeImageCrop.startCrop.cropRightPx;
+            nextCropLeftPx = activeImageCrop.startCrop.cropLeftPx;
+            break;
+          case 'left':
+            nextCropLeftPx = Math.max(
+              0,
+              Math.min(
+                activeImageCrop.fullWidthPx - activeImageCrop.startCrop.cropRightPx - minVisibleWidthPx,
+                Math.round(activeImageCrop.startCrop.cropLeftPx + deltaX),
+              ),
+            );
+            nextCropTopPx = activeImageCrop.startCrop.cropTopPx;
+            nextCropRightPx = activeImageCrop.startCrop.cropRightPx;
+            nextCropBottomPx = activeImageCrop.startCrop.cropBottomPx;
+            break;
+          default:
+            break;
+        }
+
+        return {
+          ...current,
+          [activeImageCrop.nodeId]: {
+            cropTopPx: nextCropTopPx,
+            cropRightPx: nextCropRightPx,
+            cropBottomPx: nextCropBottomPx,
+            cropLeftPx: nextCropLeftPx,
+          },
+        };
+      });
+    };
+
+    const handleMouseUp = () => {
+      const cropState = activeImageCropRef.current;
+      if (!cropState) {
+        return;
+      }
+
+      const draftCrop = draftImageCropsRef.current[cropState.nodeId] ?? cropState.startCrop;
+      const targetBlock = documentBlocks.find((block) => block.id === cropState.nodeId);
+      if (targetBlock?.type === 'image' && targetBlock.metadata.kind === 'image') {
+        updateLayoutImageAttributes({
+          nodeId: cropState.nodeId,
+          src: targetBlock.metadata.src,
+          alt: targetBlock.metadata.alt,
+          title: targetBlock.metadata.title,
+          widthPx: targetBlock.metadata.widthPx ?? cropState.fullWidthPx,
+          heightPx: targetBlock.metadata.heightPx ?? cropState.fullHeightPx,
+          lockAspectRatio: targetBlock.metadata.lockAspectRatio ?? true,
+          objectFit: targetBlock.metadata.objectFit ?? 'contain',
+          cropTopPx: draftCrop.cropTopPx,
+          cropRightPx: draftCrop.cropRightPx,
+          cropBottomPx: draftCrop.cropBottomPx,
+          cropLeftPx: draftCrop.cropLeftPx,
+          wrapMode: targetBlock.metadata.wrapMode ?? 'block',
+        });
+      }
+
+      setActiveImageCrop(null);
+      setDraftImageCrops((current) => {
+        const next = { ...current };
+        delete next[cropState.nodeId];
+        return next;
+      });
+    };
+
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = activeImageCrop.edge === 'left' || activeImageCrop.edge === 'right' ? 'ew-resize' : 'ns-resize';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp, { once: true });
+
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [activeImageCrop, documentBlocks, updateLayoutImageAttributes]);
 
   useEffect(() => {
     if (!editingNodeId || isEditingRichText) {
@@ -1538,6 +2730,50 @@ export function CanvasPane({
 
     resizeCanvasEditor(editor);
   }, [editingNodeId, editingText]);
+
+  useEffect(() => {
+    if (!requestedStartEditingNodeId || editingNodeId === requestedStartEditingNodeId) {
+      return;
+    }
+
+    const requestedNode = findEditableNodeByIdInBlocks(documentBlocks, requestedStartEditingNodeId);
+    if (!requestedNode) {
+      return;
+    }
+
+    startEditingNode(requestedNode);
+    onConsumeRequestedStartEditingNode?.(requestedStartEditingNodeId);
+  }, [
+    documentBlocks,
+    editingNodeId,
+    onConsumeRequestedStartEditingNode,
+    requestedStartEditingNodeId,
+  ]);
+
+  useEffect(() => {
+    if (!requestedScrollToNodeId) {
+      return;
+    }
+
+    const canvasPane = canvasPaneRef.current;
+    if (!canvasPane) {
+      return;
+    }
+
+    const target = canvasPane.querySelector<HTMLElement>(`[data-layout-node-id="${requestedScrollToNodeId}"]`);
+    if (!target) {
+      return;
+    }
+
+    const containerRect = canvasPane.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const nextTop = canvasPane.scrollTop + (targetRect.top - containerRect.top) - 32;
+    canvasPane.scrollTo({
+      top: Math.max(0, nextTop),
+      behavior: 'smooth',
+    });
+    onConsumeRequestedScrollToNode?.(requestedScrollToNodeId);
+  }, [onConsumeRequestedScrollToNode, requestedScrollToNodeId]);
 
   useEffect(() => {
     if (!editingNodeId) {
@@ -1643,6 +2879,12 @@ export function CanvasPane({
   }, [documentBlocks, editingDraftTextRuns, editingNodeId, editingSelection, isEditingRichText, shouldShowFloatingToolbar]);
 
   const prepareSelectingNode = (nodeId: string) => {
+    if (activeImageResize && nodeId !== activeImageResize.nodeId) {
+      return;
+    }
+    if (activeImageCrop && nodeId !== activeImageCrop.nodeId) {
+      return;
+    }
     if (editingNodeId && nodeId !== editingNodeId) {
       pendingSelectionAfterCommitRef.current = nodeId;
     }
@@ -1656,13 +2898,123 @@ export function CanvasPane({
 
   const startEditingNode = (node: EditableCanvasNode) => {
     skipBlurCommitRef.current = false;
+    if (node.kind === 'equation') {
+      if (editingNodeId && editingNodeId !== node.id) {
+        commitEditingNode();
+      }
+      pendingSelectionAfterCommitRef.current = null;
+      setActiveEquationEditor({
+        nodeId: node.id,
+        initialText: node.text,
+      });
+      onTextSelectionChange({
+        nodeId: null,
+        text: '',
+        selection: null,
+        isEditing: false,
+        draftTextRuns: null,
+      });
+      return;
+    }
+
     pendingScrollSnapshotRef.current = createCanvasScrollSnapshot(canvasPaneRef.current);
     pendingSelectionAfterCommitRef.current = null;
+    setActiveEquationEditor(null);
+    setActiveImageCrop(null);
     setEditingNodeId(node.id);
     setEditingKind(node.kind);
     setEditingText(node.text);
     setEditingDraftTextRuns(isRichTextCanvasEditorKind(node.kind) ? node.textRuns : null);
     setEditingSelection(null);
+  };
+
+  const handleStartImageResize = (
+    event: MouseEvent<HTMLButtonElement>,
+    block: LayoutBlock,
+    pageScale: number,
+  ) => {
+    if (block.type !== 'image' || block.metadata.kind !== 'image') {
+      return;
+    }
+
+    const draftCrop = draftImageCrops[block.id] ?? null;
+    const measuredVisibleSize = measuredImageVisibleSizes[block.id] ?? null;
+    const resolved = resolveImageLayoutWithDraft(block, draftImageSizes[block.id] ?? null, draftCrop);
+    const metrics = resolved ? resolveImageRenderMetrics(resolved, measuredVisibleSize) : null;
+    const startWidthPx = metrics?.fullWidthPx ?? resolved?.widthPx ?? 320;
+    const startHeightPx = metrics?.fullHeightPx ?? resolved?.heightPx ?? Math.round(startWidthPx * 0.62);
+    const aspectRatio = startWidthPx > 0 && startHeightPx > 0 ? startWidthPx / startHeightPx : null;
+
+    onSelectNode(block.id);
+    setActiveImageCrop(null);
+    setActiveImageResize({
+      nodeId: block.id,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startWidthPx,
+      startHeightPx,
+      lockAspectRatio: block.metadata.lockAspectRatio ?? true,
+      aspectRatio,
+      pageScale,
+    });
+    setDraftImageSizes((current) => ({
+      ...current,
+      [block.id]: {
+        widthPx: startWidthPx,
+        heightPx: startHeightPx,
+      },
+    }));
+  };
+
+  const handleStartImageCrop = (
+    event: MouseEvent<HTMLButtonElement>,
+    block: LayoutBlock,
+    edge: ImageCropEdge,
+    pageScale: number,
+  ) => {
+    if (block.type !== 'image' || block.metadata.kind !== 'image') {
+      return;
+    }
+
+    const currentDraftCrop = draftImageCrops[block.id] ?? null;
+    const currentLayout = resolveImageLayoutWithDraft(
+      block,
+      draftImageSizes[block.id] ?? null,
+      currentDraftCrop,
+    );
+    const measuredVisibleSize = measuredImageVisibleSizes[block.id] ?? null;
+    const metrics = currentLayout ? resolveImageRenderMetrics(currentLayout, measuredVisibleSize) : null;
+    if (!metrics?.fullWidthPx || !metrics.fullHeightPx) {
+      return;
+    }
+
+    const startCrop: ImageDraftCrop = {
+      cropTopPx: metrics.cropTopPx,
+      cropRightPx: metrics.cropRightPx,
+      cropBottomPx: metrics.cropBottomPx,
+      cropLeftPx: metrics.cropLeftPx,
+    };
+
+    onSelectNode(block.id);
+    setActiveImageResize(null);
+    setActiveImageCrop({
+      nodeId: block.id,
+      edge,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startCrop,
+      fullWidthPx: metrics.fullWidthPx,
+      fullHeightPx: metrics.fullHeightPx,
+      pageScale,
+    });
+    setDraftImageCrops((current) => ({
+      ...current,
+      [block.id]: startCrop,
+    }));
+  };
+
+  const handleImageLoaded = () => {
+    setImageMeasureEpoch((current) => current + 1);
   };
 
   const commitEditingNode = () => {
@@ -1733,6 +3085,28 @@ export function CanvasPane({
     event.stopPropagation();
   };
 
+  const handleEquationEditorCommitAndClose = ({
+    nodeId,
+    text,
+    didChange,
+  }: {
+    nodeId: string;
+    text: string;
+    didChange: boolean;
+  }) => {
+    setActiveEquationEditor(null);
+    onTextSelectionChange({
+      nodeId: null,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+    if (didChange) {
+      onCommitNodeText(nodeId, text);
+    }
+  };
+
   const toggleFloatingTextMark = (markType: TextMarkType) => {
     applyFloatingToolbarRuns((textRuns, nodeId) =>
       toggleTextMarkInTextRuns(textRuns, nodeId, editingSelection, markType),
@@ -1759,6 +3133,85 @@ export function CanvasPane({
     applyFloatingToolbarRuns((textRuns, nodeId) =>
       clearTextFormattingInTextRuns(textRuns, nodeId, editingSelection),
     );
+  };
+
+  const handleListIndentAction = (itemId: string, action: 'indent' | 'outdent') => {
+    const nextSelectedNodeId = updateLayoutListItemLevel({ itemId, action });
+    if (nextSelectedNodeId) {
+      pendingSelectionAfterCommitRef.current = nextSelectedNodeId;
+      setListItemContextMenu(null);
+    }
+  };
+
+  const handleListReorderAction = (itemId: string, action: 'moveUp' | 'moveDown') => {
+    const nextSelectedNodeId = reorderLayoutListItem({ itemId, action });
+    if (nextSelectedNodeId) {
+      pendingSelectionAfterCommitRef.current = nextSelectedNodeId;
+      setListItemContextMenu(null);
+    }
+  };
+
+  const listItemContextMenuEntries: ContextMenuEntry[] = [
+    { id: 'move-up', label: '上移' },
+    { id: 'move-down', label: '下移' },
+    { separator: true },
+    { id: 'indent', label: '降低一级' },
+    { id: 'outdent', label: '提升一级' },
+    { separator: true },
+    { id: 'convert-task', label: '转任务项' },
+    { id: 'convert-plain', label: '取消任务项' },
+  ];
+
+  const handleListItemContextMenuSelect = (id: string) => {
+    if (!listItemContextMenu) {
+      return;
+    }
+
+    if (id === 'move-up') {
+      handleListReorderAction(listItemContextMenu.itemId, 'moveUp');
+      return;
+    }
+
+    if (id === 'move-down') {
+      handleListReorderAction(listItemContextMenu.itemId, 'moveDown');
+      return;
+    }
+
+    if (id === 'indent') {
+      handleListIndentAction(listItemContextMenu.itemId, 'indent');
+      return;
+    }
+
+    if (id === 'outdent') {
+      handleListIndentAction(listItemContextMenu.itemId, 'outdent');
+      return;
+    }
+
+    if (id === 'convert-task') {
+      const nextSelectedNodeId = convertLayoutListItemTaskState({
+        itemId: listItemContextMenu.itemId,
+        action: 'convertToTask',
+      });
+      if (nextSelectedNodeId) {
+        pendingSelectionAfterCommitRef.current = nextSelectedNodeId;
+      }
+      setListItemContextMenu(null);
+      return;
+    }
+
+    if (id === 'convert-plain') {
+      const nextSelectedNodeId = convertLayoutListItemTaskState({
+        itemId: listItemContextMenu.itemId,
+        action: 'convertToPlain',
+      });
+      if (nextSelectedNodeId) {
+        pendingSelectionAfterCommitRef.current = nextSelectedNodeId;
+      }
+      setListItemContextMenu(null);
+      return;
+    }
+
+    setListItemContextMenu(null);
   };
 
   const cancelEditingNode = () => {
@@ -1796,7 +3249,6 @@ export function CanvasPane({
 
   return (
     <section
-      ref={canvasPaneRef}
       className={isCondensed ? 'canvas-pane canvas-pane-condensed' : 'canvas-pane'}
       aria-label="分页预览"
     >
@@ -1811,156 +3263,201 @@ export function CanvasPane({
           </span>
         </div>
       </div>
-      {parseState === 'error' && parseError ? (
-        <div className="canvas-state canvas-state-error">{parseError}</div>
-      ) : null}
-      {parseState === 'parsing' && documentBlockCount === 0 ? (
-        <div className="canvas-state">正在导入 Markdown…</div>
-      ) : null}
-      {shouldShowFloatingToolbar ? (
-        <div
-          ref={floatingToolbarRef}
-          className={
-            floatingToolbarPosition?.placement === 'below'
-              ? 'floating-format-toolbar floating-format-toolbar-below'
-              : 'floating-format-toolbar'
-          }
-          style={
-            floatingToolbarPosition
-              ? {
-                  left: `${floatingToolbarPosition.left}px`,
-                  top: `${floatingToolbarPosition.top}px`,
-                }
-              : {
-                  left: '-9999px',
-                  top: '-9999px',
-                  visibility: 'hidden',
-                }
-          }
-          onMouseDown={handleFloatingToolbarMouseDown}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {floatingTextMarkOptions.map((option) => {
-            const Icon = option.icon;
-            const isActive =
-              floatingToolbarTextRuns && isFloatingTextMarkActive(floatingToolbarTextRuns, editingSelection, option.id);
-
-            return (
-              <button
-                key={option.id}
-                type="button"
-                className={isActive ? 'format-icon-button active' : 'format-icon-button'}
-                title={option.label}
-                aria-label={option.label}
-                aria-pressed={isActive}
-                onMouseDown={handleFloatingToolbarMouseDown}
-                onClick={() => toggleFloatingTextMark(option.id)}
-              >
-                <Icon size={16} />
-              </button>
-            );
-          })}
-          <span className="floating-toolbar-divider" aria-hidden="true" />
-          <span className="format-color-label text-color-mark" aria-hidden="true">A</span>
-          <div className="format-swatch-list" aria-label="浮动工具条文字颜色">
-            {standardColorOptions.map((option) => (
-              <button
-                key={`floating-text-${option.value}`}
-                type="button"
-                className={currentFloatingTextColor === option.value ? 'format-swatch active' : 'format-swatch'}
-                title={`文字颜色：${option.label}`}
-                aria-label={`文字颜色：${option.label}`}
-                onMouseDown={handleFloatingToolbarMouseDown}
-                onClick={() => applyFloatingTextColor(option.value)}
-              >
-                <span style={{ backgroundColor: option.value }} />
-              </button>
-            ))}
-          </div>
-          <span className="format-color-label highlight-mark" aria-hidden="true">
-            <Highlighter size={14} />
-          </span>
-          <div className="format-swatch-list" aria-label="浮动工具条高亮颜色">
-            {highlightColorOptions.map((option) => (
-              <button
-                key={`floating-highlight-${option.value}`}
-                type="button"
-                className={currentFloatingHighlightColor === option.value ? 'format-swatch active' : 'format-swatch'}
-                title={`高亮颜色：${option.label}`}
-                aria-label={`高亮颜色：${option.label}`}
-                onMouseDown={handleFloatingToolbarMouseDown}
-                onClick={() => applyFloatingHighlightColor(option.value)}
-              >
-                <span style={{ backgroundColor: option.value }} />
-              </button>
-            ))}
-          </div>
-          <span className="floating-toolbar-divider" aria-hidden="true" />
-          <button
-            type="button"
-            className="format-clear-button"
-            title="清除文字格式"
-            aria-label="清除文字格式"
+      <div className="canvas-pane-body">
+        {activeEquationEditor ? (
+          <EquationEditorOverlay
+            nodeId={activeEquationEditor.nodeId}
+            initialText={activeEquationEditor.initialText}
+            scrollContainerRef={canvasPaneRef}
+            onCommitAndClose={handleEquationEditorCommitAndClose}
+          />
+        ) : null}
+        {listItemContextMenu ? (
+          <ContextMenu
+            x={listItemContextMenu.x}
+            y={listItemContextMenu.y}
+            items={listItemContextMenuEntries}
+            onSelect={handleListItemContextMenuSelect}
+            onClose={() => setListItemContextMenu(null)}
+          />
+        ) : null}
+        {shouldShowFloatingToolbar ? (
+          <div
+            ref={floatingToolbarRef}
+            className={
+              floatingToolbarPosition?.placement === 'below'
+                ? 'floating-format-toolbar floating-format-toolbar-below'
+                : 'floating-format-toolbar'
+            }
+            style={
+              floatingToolbarPosition
+                ? {
+                    left: `${floatingToolbarPosition.left}px`,
+                    top: `${floatingToolbarPosition.top}px`,
+                  }
+                : {
+                    left: '-9999px',
+                    top: '-9999px',
+                    visibility: 'hidden',
+                  }
+            }
             onMouseDown={handleFloatingToolbarMouseDown}
-            onClick={clearFloatingTextFormatting}
+            onClick={(event) => event.stopPropagation()}
           >
-            <Eraser size={15} />
-            <span>清除</span>
-          </button>
-        </div>
-      ) : null}
-      <div className="page-stack" ref={pageStackRef}>
-        {pageLayouts.map((page) => {
-          const pageTitle = getPageTitle(page.blocks, documentTitle);
-          const { frameStyle, pageStyle } = createPageDisplayStyles(page, isCondensed, pageStackWidth);
+            {floatingTextMarkOptions.map((option) => {
+              const Icon = option.icon;
+              const isActive =
+                floatingToolbarTextRuns && isFloatingTextMarkActive(floatingToolbarTextRuns, editingSelection, option.id);
 
-          return (
-            <div
-              className="page-frame"
-              key={page.pageNumber}
-              style={frameStyle}
-            >
-              <div
-                className="page"
-                style={pageStyle}
-                onClick={onClearSelection}
-              >
-                <div className="page-header">
-                  <span>{pageTitle}</span>
-                  <span>{page.contract.pageLabel}</span>
-                </div>
-                <article className="page-body">
-                  {page.blocks.map((block, index) =>
-                    renderBlock(
-                      block,
-                      page.pageNumber * 1000 + index,
-                      selectedNodeId,
-                      onSelectNode,
-                      prepareSelectingNode,
-                      editingNodeId,
-                      editingKind,
-                      editingText,
-                      editingDraftTextRuns,
-                      editingSelection,
-                      setEditingSelection,
-                      editorRef,
-                      richEditorRef,
-                      startEditingNode,
-                      setEditingText,
-                      handleDraftTextRunsChange,
-                      commitEditingNodeOnBlur,
-                      cancelEditingNode,
-                    ),
-                  )}
-                </article>
-                <div className="page-footer">
-                  <span>{page.contract.templateLabel}</span>
-                  <span>{page.pageNumber}</span>
-                </div>
-              </div>
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={isActive ? 'format-icon-button active' : 'format-icon-button'}
+                  title={option.label}
+                  aria-label={option.label}
+                  aria-pressed={isActive}
+                  onMouseDown={handleFloatingToolbarMouseDown}
+                  onClick={() => toggleFloatingTextMark(option.id)}
+                >
+                  <Icon size={16} />
+                </button>
+              );
+            })}
+            <span className="floating-toolbar-divider" aria-hidden="true" />
+            <span className="format-color-label text-color-mark" aria-hidden="true">A</span>
+            <div className="format-swatch-list" aria-label="浮动工具条文字颜色">
+              {standardColorOptions.map((option) => (
+                <button
+                  key={`floating-text-${option.value}`}
+                  type="button"
+                  className={currentFloatingTextColor === option.value ? 'format-swatch active' : 'format-swatch'}
+                  title={`文字颜色：${option.label}`}
+                  aria-label={`文字颜色：${option.label}`}
+                  onMouseDown={handleFloatingToolbarMouseDown}
+                  onClick={() => applyFloatingTextColor(option.value)}
+                >
+                  <span style={{ backgroundColor: option.value }} />
+                </button>
+              ))}
             </div>
-          );
-        })}
+            <span className="format-color-label highlight-mark" aria-hidden="true">
+              <Highlighter size={14} />
+            </span>
+            <div className="format-swatch-list" aria-label="浮动工具条高亮颜色">
+              {highlightColorOptions.map((option) => (
+                <button
+                  key={`floating-highlight-${option.value}`}
+                  type="button"
+                  className={currentFloatingHighlightColor === option.value ? 'format-swatch active' : 'format-swatch'}
+                  title={`高亮颜色：${option.label}`}
+                  aria-label={`高亮颜色：${option.label}`}
+                  onMouseDown={handleFloatingToolbarMouseDown}
+                  onClick={() => applyFloatingHighlightColor(option.value)}
+                >
+                  <span style={{ backgroundColor: option.value }} />
+                </button>
+              ))}
+            </div>
+            <span className="floating-toolbar-divider" aria-hidden="true" />
+            <button
+              type="button"
+              className="format-clear-button"
+              title="清除文字格式"
+              aria-label="清除文字格式"
+              onMouseDown={handleFloatingToolbarMouseDown}
+              onClick={clearFloatingTextFormatting}
+            >
+              <Eraser size={15} />
+              <span>清除</span>
+            </button>
+          </div>
+        ) : null}
+        <div ref={canvasPaneRef} className="canvas-pane-scroll">
+          {parseState === 'error' && parseError ? (
+            <div className="canvas-state canvas-state-error">{parseError}</div>
+          ) : null}
+          {parseState === 'parsing' && documentBlockCount === 0 ? (
+            <div className="canvas-state">正在导入 Markdown…</div>
+          ) : null}
+          <div className="page-stack" ref={pageStackRef}>
+            {pageLayouts.map((page) => {
+              const pageTitle = getPageTitle(page.blocks, documentTitle);
+              const { frameStyle, pageStyle } = createPageDisplayStyles(page, isCondensed, pageStackWidth);
+              const maxWidth = isCondensed ? 620 : 760;
+              const measuredWidth = pageStackWidth && pageStackWidth > 0 ? pageStackWidth : maxWidth;
+              const displayWidth = Math.min(page.contract.pageWidthPx, maxWidth, measuredWidth);
+              const pageScale = displayWidth / page.contract.pageWidthPx;
+
+              return (
+                <div
+                  className="page-frame"
+                  key={page.pageNumber}
+                  style={frameStyle}
+                >
+                  <div
+                    className="page"
+                    style={pageStyle}
+                    onClick={activeImageResize || activeImageCrop ? undefined : onClearSelection}
+                  >
+                    <div className="page-header">
+                      <span>{pageTitle}</span>
+                      <span>{page.contract.pageLabel}</span>
+                    </div>
+                    <article className="page-body">
+                      {page.blocks.map((block, index) =>
+                        renderBlock(
+                          block,
+                          page.pageNumber * 1000 + index,
+                          selectedNodeId,
+                          onSelectNode,
+                          prepareSelectingNode,
+                          editingNodeId,
+                          activeEquationEditorNodeId,
+                          editingKind,
+                          editingText,
+                          editingDraftTextRuns,
+                          editingSelection,
+                          setEditingSelection,
+                          editorRef,
+                          richEditorRef,
+                          startEditingNode,
+                          setEditingText,
+                          handleDraftTextRunsChange,
+                          commitEditingNodeOnBlur,
+                          cancelEditingNode,
+                          tocItems,
+                          onNavigateToNode,
+                          draftImageSizes,
+                          draftImageCrops,
+                          measuredImageVisibleSizes,
+                          handleImageLoaded,
+                          handleStartImageResize,
+                          handleStartImageCrop,
+                          (event, itemId) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onSelectNode(itemId);
+                            setListItemContextMenu({
+                              x: event.clientX,
+                              y: event.clientY,
+                              itemId,
+                            });
+                          },
+                          Number.isFinite(pageScale) ? pageScale : 1,
+                        ),
+                      )}
+                    </article>
+                    <div className="page-footer">
+                      <span>{page.contract.templateLabel}</span>
+                      <span>{page.pageNumber}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </section>
   );

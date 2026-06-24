@@ -14,7 +14,7 @@ import type {
   TextRunPatch,
   TextStyleOverrides,
 } from './types';
-import { createTextFragment } from './utils';
+import { createTextFragment, getLayoutListItemLevel, normalizeLayoutListLevel } from './utils';
 
 export type EditableLayoutTextBlockType = 'heading' | 'paragraph' | 'code' | 'image' | 'equation';
 
@@ -22,12 +22,31 @@ export interface InsertImageBlockPayload {
   src: string;
   alt: string;
   title?: string | null;
+  widthPx?: number | null;
+  heightPx?: number | null;
+  lockAspectRatio?: boolean;
+  objectFit?: 'contain' | 'cover';
+  cropTopPx?: number | null;
+  cropRightPx?: number | null;
+  cropBottomPx?: number | null;
+  cropLeftPx?: number | null;
+  wrapMode?: 'block' | 'center' | 'left' | 'right';
   insertAfterNodeId?: string | null;
 }
 
 export interface InsertImageBlockResult {
   blocks: LayoutBlock[];
   resources: LayoutResource[];
+  insertedBlockId: string;
+}
+
+export interface InsertEquationBlockPayload {
+  value?: string;
+  insertAfterNodeId?: string | null;
+}
+
+export interface InsertEquationBlockResult {
+  blocks: LayoutBlock[];
   insertedBlockId: string;
 }
 
@@ -43,10 +62,42 @@ export interface InsertTableBlockResult {
   selectedNodeId: string;
 }
 
+export type InsertListBlockKind = 'unordered' | 'ordered' | 'task';
+
+export interface InsertListBlockPayload {
+  kind: InsertListBlockKind;
+  insertAfterNodeId?: string | null;
+}
+
+export interface InsertListBlockResult {
+  blocks: LayoutBlock[];
+  insertedBlockId: string;
+  selectedNodeId: string;
+}
+
+export interface InsertTocBlockPayload {
+  insertAfterNodeId?: string | null;
+}
+
+export interface InsertTocBlockResult {
+  blocks: LayoutBlock[];
+  insertedBlockId: string;
+}
+
 export type ListStructureAction =
   | 'insertItemAbove'
   | 'insertItemBelow'
   | 'deleteItem';
+
+export type ListReorderAction = 'moveUp' | 'moveDown';
+
+export type ListIndentAction = 'indent' | 'outdent';
+
+export type ListTaskConversionAction = 'convertToTask' | 'convertToPlain';
+
+export type ListBatchCheckedScope = 'all' | 'currentLevel';
+
+export type ListBatchCheckedAction = 'check' | 'uncheck';
 
 export interface ListStructureEditResult {
   block: LayoutBlock;
@@ -58,6 +109,13 @@ export interface ListPropertyEditResult {
   block: LayoutBlock;
   selectedNodeId: string | null;
   didUpdate: boolean;
+}
+
+export interface ListBatchEditResult {
+  block: LayoutBlock;
+  selectedNodeId: string | null;
+  didUpdate: boolean;
+  changedCount: number;
 }
 
 export type TableStructureAction =
@@ -75,6 +133,17 @@ export interface TableStructureEditResult {
 }
 
 export interface TablePropertyEditResult {
+  block: LayoutBlock;
+  selectedNodeId: string | null;
+  didUpdate: boolean;
+}
+
+export type BlockquoteStructureAction =
+  | 'insertParagraphAbove'
+  | 'insertParagraphBelow'
+  | 'deleteBlock';
+
+export interface BlockquoteStructureEditResult {
   block: LayoutBlock;
   selectedNodeId: string | null;
   didUpdate: boolean;
@@ -214,6 +283,36 @@ function createInsertedImageBlock(
       src: normalizedSrc,
       alt: normalizedAlt,
       title: payload.title?.trim() || null,
+      widthPx: normalizeOptionalNumber(payload.widthPx),
+      heightPx: normalizeOptionalNumber(payload.heightPx),
+      lockAspectRatio: payload.lockAspectRatio ?? true,
+      objectFit: payload.objectFit ?? 'contain',
+    cropTopPx: normalizeOptionalNumber(payload.cropTopPx) ?? 0,
+    cropRightPx: normalizeOptionalNumber(payload.cropRightPx) ?? 0,
+    cropBottomPx: normalizeOptionalNumber(payload.cropBottomPx) ?? 0,
+    cropLeftPx: normalizeOptionalNumber(payload.cropLeftPx) ?? 0,
+      wrapMode: payload.wrapMode ?? 'block',
+    },
+  };
+}
+
+function createInsertedEquationBlock(blocks: LayoutBlock[], payload: InsertEquationBlockPayload): LayoutBlock {
+  const normalizedValue = payload.value?.trim() ?? '';
+  const blockId = createInsertedBlockId(blocks, 'equation', normalizedValue || 'equation');
+
+  return {
+    id: blockId,
+    type: 'equation',
+    sourceRange: null,
+    blockStyleRef: 'equation',
+    blockStyleOverrides: {},
+    textRuns: normalizedValue
+      ? createReplacementTextRuns(blockId, normalizedValue, [])
+      : [],
+    pagination: { keepLinesTogether: true },
+    metadata: {
+      kind: 'equation',
+      value: normalizedValue,
     },
   };
 }
@@ -276,6 +375,78 @@ function createInsertedTableBlock(blocks: LayoutBlock[], payload: InsertTableBlo
   };
 }
 
+function createInsertedListBlock(blocks: LayoutBlock[], payload: InsertListBlockPayload): LayoutBlock {
+  const blockId = createInsertedBlockId(blocks, 'list', payload.kind);
+  const firstItemId = `${blockId}-item-1`;
+  const isOrdered = payload.kind === 'ordered';
+  const isTaskList = payload.kind === 'task';
+
+  return {
+    id: blockId,
+    type: 'list',
+    sourceRange: null,
+    blockStyleRef: 'list',
+    blockStyleOverrides: {},
+    textRuns: [],
+    pagination: {},
+    metadata: {
+      kind: 'list',
+      ordered: isOrdered,
+      start: isOrdered ? 1 : null,
+      spread: false,
+      items: [
+        {
+          id: firstItemId,
+          sourceRange: null,
+          // 新增列表项保持为空，后续由用户在画布原位编辑中输入真实内容。
+          textRuns: [],
+          level: 1,
+          checked: isTaskList ? false : null,
+        },
+      ],
+    },
+  };
+}
+
+function createInsertedTocBlock(blocks: LayoutBlock[]): LayoutBlock {
+  const blockId = createInsertedBlockId(blocks, 'toc', '目录');
+
+  return {
+    id: blockId,
+    type: 'toc',
+    sourceRange: null,
+    blockStyleRef: 'toc',
+    blockStyleOverrides: {},
+    textRuns: [],
+    pagination: {},
+    metadata: {
+      kind: 'toc',
+      title: '目录',
+      maxDepth: 3,
+    },
+  };
+}
+
+function createInsertedPageBreakBlock(blocks: LayoutBlock[]): LayoutBlock {
+  const blockId = createInsertedBlockId(blocks, 'pageBreak', '/pagebreak');
+
+  return {
+    id: blockId,
+    type: 'pageBreak',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {},
+    textRuns: [],
+    pagination: {
+      pageBreakAfter: true,
+    },
+    metadata: {
+      kind: 'pageBreak',
+      command: '/pagebreak',
+    },
+  };
+}
+
 function collectTableNodeIds(block: LayoutBlock): Set<string> {
   const ids = new Set<string>();
   if (block.type !== 'table' || block.metadata.kind !== 'table') {
@@ -298,6 +469,34 @@ function collectListItemIds(block: LayoutBlock): Set<string> {
 
   ids.add(block.id);
   block.metadata.items.forEach((item) => ids.add(item.id));
+  return ids;
+}
+
+function collectNestedNodeIds(blocks: LayoutBlock[]): Set<string> {
+  const ids = new Set<string>();
+
+  const visitBlocks = (items: LayoutBlock[]) => {
+    items.forEach((block) => {
+      ids.add(block.id);
+
+      if (block.type === 'list' && block.metadata.kind === 'list') {
+        block.metadata.items.forEach((item) => ids.add(item.id));
+      }
+
+      if (block.type === 'table' && block.metadata.kind === 'table') {
+        block.metadata.rows.forEach((row) => {
+          ids.add(row.id);
+          row.cells.forEach((cell) => ids.add(cell.id));
+        });
+      }
+
+      if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+        visitBlocks(block.metadata.blocks);
+      }
+    });
+  };
+
+  visitBlocks(blocks);
   return ids;
 }
 
@@ -327,11 +526,25 @@ function createUniqueListItemId(existingIds: Set<string>, baseId: string): strin
   return candidate;
 }
 
+function createUniqueBlockId(existingIds: Set<string>, baseId: string): string {
+  let index = 1;
+  let candidate = baseId;
+
+  while (existingIds.has(candidate)) {
+    index += 1;
+    candidate = `${baseId}-${index}`;
+  }
+
+  existingIds.add(candidate);
+  return candidate;
+}
+
 function createEmptyListItemWithId(itemId: string): LayoutListItem {
   return {
     id: itemId,
     sourceRange: null,
     textRuns: [],
+    level: 1,
     checked: null,
   };
 }
@@ -369,6 +582,36 @@ function findListItemIndex(block: LayoutBlock, itemId: string): number {
   }
 
   return block.metadata.items.findIndex((item) => item.id === itemId);
+}
+
+function getListItemSubtreeRange(items: LayoutListItem[], itemIndex: number): { start: number; end: number } {
+  const currentLevel = getLayoutListItemLevel(items[itemIndex]);
+  let end = itemIndex + 1;
+
+  while (end < items.length && getLayoutListItemLevel(items[end]) > currentLevel) {
+    end += 1;
+  }
+
+  return {
+    start: itemIndex,
+    end,
+  };
+}
+
+function moveListItemSlice(
+  items: LayoutListItem[],
+  sourceRange: { start: number; end: number },
+  targetIndex: number,
+): LayoutListItem[] {
+  const movingItems = items.slice(sourceRange.start, sourceRange.end);
+  const remainingItems = [...items.slice(0, sourceRange.start), ...items.slice(sourceRange.end)];
+  const normalizedTargetIndex = Math.max(0, Math.min(targetIndex, remainingItems.length));
+
+  return [
+    ...remainingItems.slice(0, normalizedTargetIndex),
+    ...movingItems,
+    ...remainingItems.slice(normalizedTargetIndex),
+  ];
 }
 
 function createEmptyTableRowForStructureEdit(
@@ -412,6 +655,50 @@ function createEmptyTableCellForStructureEdit(
     createUniqueTableNodeId(existingIds, `${row.id}-cell-manual-${insertIndex + 1}`),
     rowHasHeaderCells,
   );
+}
+
+function createEmptyParagraphBlockForStructureEdit(
+  blockquoteBlock: LayoutBlock,
+  existingIds: Set<string>,
+  insertIndex: number,
+): LayoutBlock {
+  const blockId = createUniqueBlockId(existingIds, `${blockquoteBlock.id}-paragraph-manual-${insertIndex + 1}`);
+
+  return {
+    id: blockId,
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: 'paragraph',
+    blockStyleOverrides: {},
+    // 空段落先不制造假文字，后续由用户直接在画布中输入真实内容。
+    textRuns: [],
+    pagination: {},
+    metadata: {
+      kind: 'paragraph',
+      text: '',
+    },
+  };
+}
+
+function findDirectBlockIndexForNodeId(
+  blocks: LayoutBlock[],
+  nodeId: string,
+): number {
+  return blocks.findIndex((block) => {
+    if (block.id === nodeId) {
+      return true;
+    }
+
+    if (block.type === 'list' && block.metadata.kind === 'list') {
+      return block.metadata.items.some((item) => item.id === nodeId);
+    }
+
+    if (block.type === 'table' && block.metadata.kind === 'table') {
+      return block.metadata.rows.some((row) => row.cells.some((cell) => cell.id === nodeId));
+    }
+
+    return false;
+  });
 }
 
 function getBlockIndexForNodeId(blocks: LayoutBlock[], nodeId: string | null | undefined): number {
@@ -479,6 +766,70 @@ export function insertTableBlockAfterNode(
     blocks: nextBlocks,
     insertedBlockId: tableBlock.id,
     selectedNodeId: firstCellId ?? tableBlock.id,
+  };
+}
+
+export function insertEquationBlockAfterNode(
+  blocks: LayoutBlock[],
+  payload: InsertEquationBlockPayload,
+): InsertEquationBlockResult {
+  const equationBlock = createInsertedEquationBlock(blocks, payload);
+  const insertAfterIndex = getBlockIndexForNodeId(blocks, payload.insertAfterNodeId);
+  const insertIndex = insertAfterIndex >= 0 ? insertAfterIndex + 1 : blocks.length;
+  const nextBlocks = [...blocks.slice(0, insertIndex), equationBlock, ...blocks.slice(insertIndex)];
+
+  return {
+    blocks: nextBlocks,
+    insertedBlockId: equationBlock.id,
+  };
+}
+
+export function insertListBlockAfterNode(
+  blocks: LayoutBlock[],
+  payload: InsertListBlockPayload,
+): InsertListBlockResult {
+  const listBlock = createInsertedListBlock(blocks, payload);
+  const insertAfterIndex = getBlockIndexForNodeId(blocks, payload.insertAfterNodeId);
+  const insertIndex = insertAfterIndex >= 0 ? insertAfterIndex + 1 : blocks.length;
+  const nextBlocks = [
+    ...blocks.slice(0, insertIndex),
+    listBlock,
+    ...blocks.slice(insertIndex),
+  ];
+  const firstItemId =
+    listBlock.metadata.kind === 'list'
+      ? listBlock.metadata.items[0]?.id
+      : null;
+
+  return {
+    blocks: nextBlocks,
+    insertedBlockId: listBlock.id,
+    selectedNodeId: firstItemId ?? listBlock.id,
+  };
+}
+
+export function insertTocBlockAfterNode(
+  blocks: LayoutBlock[],
+  payload: InsertTocBlockPayload,
+): InsertTocBlockResult {
+  const remainingBlocks =
+    blocks[0]?.type === 'toc' &&
+    blocks[0].metadata.kind === 'toc' &&
+    blocks[1]?.type === 'pageBreak' &&
+    blocks[1].metadata.kind === 'pageBreak'
+      ? blocks.slice(2)
+      : blocks;
+  const tocBlock = createInsertedTocBlock(blocks);
+  const pageBreakBlock = createInsertedPageBreakBlock([...remainingBlocks, tocBlock]);
+  const nextBlocks = [
+    tocBlock,
+    pageBreakBlock,
+    ...remainingBlocks,
+  ];
+
+  return {
+    blocks: nextBlocks,
+    insertedBlockId: tocBlock.id,
   };
 }
 
@@ -631,6 +982,7 @@ export function updateListStructureByItem(
     const insertIndex = action === 'insertItemAbove' ? itemIndex : itemIndex + 1;
     const existingIds = collectListItemIds(block);
     const newItem = createEmptyListItemForStructureEdit(block, existingIds, insertIndex);
+    newItem.level = getLayoutListItemLevel(block.metadata.items[itemIndex]);
     const nextItems = [
       ...block.metadata.items.slice(0, insertIndex),
       newItem,
@@ -656,8 +1008,12 @@ export function updateListStructureByItem(
       return { block, selectedNodeId: itemId, didUpdate: false };
     }
 
-    const nextItems = block.metadata.items.filter((_, index) => index !== itemIndex);
-    const nextItemIndex = Math.min(itemIndex, nextItems.length - 1);
+    const subtreeRange = getListItemSubtreeRange(block.metadata.items, itemIndex);
+    const nextItems = block.metadata.items.filter((_, index) => index < subtreeRange.start || index >= subtreeRange.end);
+    if (nextItems.length === 0) {
+      return { block, selectedNodeId: itemId, didUpdate: false };
+    }
+    const nextItemIndex = Math.min(subtreeRange.start, nextItems.length - 1);
 
     return {
       block: {
@@ -702,6 +1058,12 @@ export function updateListOrderedByItem(
         ...block.metadata,
         ordered,
         start: nextStart,
+        items: ordered
+          ? block.metadata.items.map((item) => ({
+              ...item,
+              checked: null,
+            }))
+          : block.metadata.items,
       },
     },
     selectedNodeId: itemId,
@@ -739,6 +1101,305 @@ export function updateListStartByItem(
     },
     selectedNodeId: itemId,
     didUpdate: true,
+  };
+}
+
+export function updateListItemCheckedByItem(
+  block: LayoutBlock,
+  itemId: string,
+  checked: boolean,
+): ListPropertyEditResult {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const itemIndex = findListItemIndex(block, itemId);
+  if (itemIndex < 0) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const currentItem = block.metadata.items[itemIndex];
+  // 只有 Markdown 导入识别出的任务项才允许切换勾选状态，普通列表项不自动变成任务项。
+  if (!currentItem || currentItem.checked === null || currentItem.checked === checked) {
+    return { block, selectedNodeId: itemId, didUpdate: false };
+  }
+
+  const nextItems = block.metadata.items.map((item, index) =>
+    index === itemIndex
+      ? {
+          ...item,
+          sourceRange: null,
+          checked,
+        }
+      : item,
+  );
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        items: nextItems,
+      },
+    },
+    selectedNodeId: itemId,
+    didUpdate: true,
+  };
+}
+
+export function updateListItemLevelByItem(
+  block: LayoutBlock,
+  itemId: string,
+  action: ListIndentAction,
+): ListPropertyEditResult {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const itemIndex = findListItemIndex(block, itemId);
+  if (itemIndex < 0) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const currentItem = block.metadata.items[itemIndex];
+  const currentLevel = getLayoutListItemLevel(currentItem);
+  const previousLevel = itemIndex > 0 ? getLayoutListItemLevel(block.metadata.items[itemIndex - 1]) : 1;
+  const nextLevel =
+    action === 'indent'
+      ? normalizeLayoutListLevel(Math.min(3, Math.max(currentLevel + 1, Math.min(previousLevel + 1, 3))))
+      : normalizeLayoutListLevel(Math.max(1, currentLevel - 1));
+
+  if (nextLevel === currentLevel || (action === 'indent' && itemIndex === 0)) {
+    return { block, selectedNodeId: itemId, didUpdate: false };
+  }
+
+  const subtreeRange = getListItemSubtreeRange(block.metadata.items, itemIndex);
+  const levelDelta = nextLevel - currentLevel;
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        items: block.metadata.items.map((item, index) =>
+          index >= subtreeRange.start && index < subtreeRange.end
+            ? {
+                ...item,
+                sourceRange: null,
+                level: normalizeLayoutListLevel(getLayoutListItemLevel(item) + levelDelta),
+              }
+            : item,
+        ),
+      },
+    },
+    selectedNodeId: itemId,
+    didUpdate: true,
+  };
+}
+
+export function reorderListItemByItem(
+  block: LayoutBlock,
+  itemId: string,
+  action: ListReorderAction,
+): ListPropertyEditResult {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const itemIndex = findListItemIndex(block, itemId);
+  if (itemIndex < 0) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const subtreeRange = getListItemSubtreeRange(block.metadata.items, itemIndex);
+  const siblingLevel = getLayoutListItemLevel(block.metadata.items[itemIndex]);
+  let targetIndex = -1;
+
+  if (action === 'moveUp') {
+    for (let index = subtreeRange.start - 1; index >= 0; index -= 1) {
+      if (getLayoutListItemLevel(block.metadata.items[index]) === siblingLevel) {
+        targetIndex = index;
+        break;
+      }
+    }
+    if (targetIndex < 0) {
+      return { block, selectedNodeId: itemId, didUpdate: false };
+    }
+
+    const targetRange = getListItemSubtreeRange(block.metadata.items, targetIndex);
+    return {
+      block: {
+        ...block,
+        sourceRange: null,
+        metadata: {
+          ...block.metadata,
+          items: moveListItemSlice(block.metadata.items, subtreeRange, targetRange.start),
+        },
+      },
+      selectedNodeId: itemId,
+      didUpdate: true,
+    };
+  }
+
+  for (let index = subtreeRange.end; index < block.metadata.items.length; index += 1) {
+    if (getLayoutListItemLevel(block.metadata.items[index]) === siblingLevel) {
+      targetIndex = index;
+      break;
+    }
+  }
+
+  if (targetIndex < 0) {
+    return { block, selectedNodeId: itemId, didUpdate: false };
+  }
+
+  const targetRange = getListItemSubtreeRange(block.metadata.items, targetIndex);
+  const nextItems = moveListItemSlice(block.metadata.items, subtreeRange, targetRange.end - (subtreeRange.end - subtreeRange.start));
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        items: nextItems,
+      },
+    },
+    selectedNodeId: itemId,
+    didUpdate: true,
+  };
+}
+
+export function convertListItemTaskStateByItem(
+  block: LayoutBlock,
+  itemId: string,
+  action: ListTaskConversionAction,
+): ListPropertyEditResult {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const itemIndex = findListItemIndex(block, itemId);
+  if (itemIndex < 0) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const currentItem = block.metadata.items[itemIndex];
+  const nextChecked = action === 'convertToTask' ? (currentItem.checked ?? false) : null;
+  if (currentItem.checked === nextChecked) {
+    return { block, selectedNodeId: itemId, didUpdate: false };
+  }
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        items: block.metadata.items.map((item, index) =>
+          index === itemIndex
+            ? {
+                ...item,
+                sourceRange: null,
+                checked: nextChecked,
+              }
+            : item,
+        ),
+      },
+    },
+    selectedNodeId: itemId,
+    didUpdate: true,
+  };
+}
+
+export function updateListTaskModeByItem(
+  block: LayoutBlock,
+  itemId: string,
+  taskMode: boolean,
+): ListPropertyEditResult {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const metadata = block.metadata;
+
+  if (findListItemIndex(block, itemId) < 0) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const nextItems = metadata.items.map((item) => ({
+    ...item,
+    checked: taskMode ? (item.checked ?? false) : null,
+  }));
+  const didUpdate = nextItems.some((item, index) => item.checked !== metadata.items[index].checked);
+  if (!didUpdate) {
+    return { block, selectedNodeId: itemId, didUpdate: false };
+  }
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...metadata,
+        ordered: taskMode ? false : metadata.ordered,
+        items: nextItems,
+      },
+    },
+    selectedNodeId: itemId,
+    didUpdate: true,
+  };
+}
+
+export function updateListBatchCheckedByItem(
+  block: LayoutBlock,
+  itemId: string,
+  scope: ListBatchCheckedScope,
+  action: ListBatchCheckedAction,
+): ListBatchEditResult {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return { block, selectedNodeId: null, didUpdate: false, changedCount: 0 };
+  }
+
+  const itemIndex = findListItemIndex(block, itemId);
+  if (itemIndex < 0) {
+    return { block, selectedNodeId: null, didUpdate: false, changedCount: 0 };
+  }
+
+  const targetLevel = getLayoutListItemLevel(block.metadata.items[itemIndex]);
+  let changedCount = 0;
+  const nextChecked = action === 'check';
+  const nextItems = block.metadata.items.map((item) => {
+    const shouldApply = item.checked !== null && (scope === 'all' || getLayoutListItemLevel(item) === targetLevel);
+    if (!shouldApply || item.checked === nextChecked) {
+      return item;
+    }
+
+    changedCount += 1;
+    return {
+      ...item,
+      sourceRange: null,
+      checked: nextChecked,
+    };
+  });
+
+  if (changedCount === 0) {
+    return { block, selectedNodeId: itemId, didUpdate: false, changedCount: 0 };
+  }
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        items: nextItems,
+      },
+    },
+    selectedNodeId: itemId,
+    didUpdate: true,
+    changedCount,
   };
 }
 
@@ -827,6 +1488,71 @@ export function updateTableColumnAlignByCell(
     selectedNodeId: cellId,
     didUpdate: true,
   };
+}
+
+export function updateBlockquoteStructureByNode(
+  block: LayoutBlock,
+  nodeId: string,
+  action: BlockquoteStructureAction,
+): BlockquoteStructureEditResult {
+  if (block.type !== 'blockquote' || block.metadata.kind !== 'blockquote') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const childIndex = findDirectBlockIndexForNodeId(block.metadata.blocks, nodeId);
+  if (childIndex < 0) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const childCount = block.metadata.blocks.length;
+
+  if (action === 'insertParagraphAbove' || action === 'insertParagraphBelow') {
+    const insertIndex = action === 'insertParagraphAbove' ? childIndex : childIndex + 1;
+    const existingIds = collectNestedNodeIds(block.metadata.blocks);
+    const newParagraphBlock = createEmptyParagraphBlockForStructureEdit(block, existingIds, insertIndex);
+    const nextBlocks = [
+      ...block.metadata.blocks.slice(0, insertIndex),
+      newParagraphBlock,
+      ...block.metadata.blocks.slice(insertIndex),
+    ];
+
+    return {
+      block: {
+        ...block,
+        sourceRange: null,
+        metadata: {
+          ...block.metadata,
+          blocks: nextBlocks,
+        },
+      },
+      selectedNodeId: newParagraphBlock.id,
+      didUpdate: true,
+    };
+  }
+
+  if (action === 'deleteBlock') {
+    if (childCount <= 1) {
+      return { block, selectedNodeId: nodeId, didUpdate: false };
+    }
+
+    const nextBlocks = block.metadata.blocks.filter((_, index) => index !== childIndex);
+    const nextChildIndex = Math.min(childIndex, nextBlocks.length - 1);
+
+    return {
+      block: {
+        ...block,
+        sourceRange: null,
+        metadata: {
+          ...block.metadata,
+          blocks: nextBlocks,
+        },
+      },
+      selectedNodeId: nextBlocks[nextChildIndex]?.id ?? null,
+      didUpdate: true,
+    };
+  }
+
+  return { block, selectedNodeId: null, didUpdate: false };
 }
 
 export function getTextContentFromRuns(textRuns: TextRun[]): string {
@@ -930,7 +1656,20 @@ export function updateLayoutBlockText(block: LayoutBlock, nextText: string): Lay
 
 export function updateLayoutImageAttributes(
   block: LayoutBlock,
-  attributes: { src: string; alt: string; title: string | null },
+  attributes: {
+    src: string;
+    alt: string;
+    title: string | null;
+    widthPx?: number | null;
+    heightPx?: number | null;
+    lockAspectRatio?: boolean;
+    objectFit?: 'contain' | 'cover';
+    cropTopPx?: number | null;
+    cropRightPx?: number | null;
+    cropBottomPx?: number | null;
+    cropLeftPx?: number | null;
+    wrapMode?: 'block' | 'center' | 'left' | 'right';
+  },
 ): LayoutBlock {
   if (block.type !== 'image' || block.metadata.kind !== 'image') {
     return block;
@@ -939,10 +1678,26 @@ export function updateLayoutImageAttributes(
   if (
     block.metadata.src === attributes.src &&
     block.metadata.alt === attributes.alt &&
-    block.metadata.title === attributes.title
+    block.metadata.title === attributes.title &&
+    (attributes.widthPx === undefined || block.metadata.widthPx === attributes.widthPx) &&
+    (attributes.heightPx === undefined || block.metadata.heightPx === attributes.heightPx) &&
+    (attributes.lockAspectRatio === undefined || (block.metadata.lockAspectRatio ?? true) === attributes.lockAspectRatio) &&
+    (attributes.objectFit === undefined || (block.metadata.objectFit ?? 'contain') === attributes.objectFit) &&
+    (attributes.cropTopPx === undefined || (block.metadata.cropTopPx ?? 0) === normalizeOptionalNumber(attributes.cropTopPx)) &&
+    (attributes.cropRightPx === undefined || (block.metadata.cropRightPx ?? 0) === normalizeOptionalNumber(attributes.cropRightPx)) &&
+    (attributes.cropBottomPx === undefined || (block.metadata.cropBottomPx ?? 0) === normalizeOptionalNumber(attributes.cropBottomPx)) &&
+    (attributes.cropLeftPx === undefined || (block.metadata.cropLeftPx ?? 0) === normalizeOptionalNumber(attributes.cropLeftPx)) &&
+    (attributes.wrapMode === undefined || (block.metadata.wrapMode ?? 'block') === attributes.wrapMode)
   ) {
     return block;
   }
+
+  const currentWidthPx = block.metadata.widthPx ?? null;
+  const currentHeightPx = block.metadata.heightPx ?? null;
+  const currentCropTopPx = block.metadata.cropTopPx ?? 0;
+  const currentCropRightPx = block.metadata.cropRightPx ?? 0;
+  const currentCropBottomPx = block.metadata.cropBottomPx ?? 0;
+  const currentCropLeftPx = block.metadata.cropLeftPx ?? 0;
 
   return {
     ...block,
@@ -952,8 +1707,31 @@ export function updateLayoutImageAttributes(
       src: attributes.src,
       alt: attributes.alt,
       title: attributes.title,
+      widthPx:
+        attributes.widthPx === undefined ? currentWidthPx : normalizeOptionalNumber(attributes.widthPx),
+      heightPx:
+        attributes.heightPx === undefined ? currentHeightPx : normalizeOptionalNumber(attributes.heightPx),
+      lockAspectRatio: attributes.lockAspectRatio ?? block.metadata.lockAspectRatio ?? true,
+      objectFit: attributes.objectFit ?? block.metadata.objectFit ?? 'contain',
+      cropTopPx:
+        attributes.cropTopPx === undefined ? currentCropTopPx : normalizeOptionalNumber(attributes.cropTopPx) ?? 0,
+      cropRightPx:
+        attributes.cropRightPx === undefined ? currentCropRightPx : normalizeOptionalNumber(attributes.cropRightPx) ?? 0,
+      cropBottomPx:
+        attributes.cropBottomPx === undefined ? currentCropBottomPx : normalizeOptionalNumber(attributes.cropBottomPx) ?? 0,
+      cropLeftPx:
+        attributes.cropLeftPx === undefined ? currentCropLeftPx : normalizeOptionalNumber(attributes.cropLeftPx) ?? 0,
+      wrapMode: attributes.wrapMode ?? block.metadata.wrapMode ?? 'block',
     },
   };
+}
+
+function normalizeOptionalNumber(value: number | null | undefined): number | null | undefined {
+  if (value === null || value === undefined) {
+    return value;
+  }
+
+  return Number.isFinite(value) ? Math.max(0, Math.round(value)) : null;
 }
 
 export function updateLayoutListItemText(item: LayoutListItem, nextText: string): LayoutListItem {

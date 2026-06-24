@@ -12,6 +12,9 @@ import {
   Highlighter,
   ImagePlus,
   Italic,
+  ListOrdered,
+  ListPlus,
+  ListTodo,
   ListTree,
   PanelLeft,
   PanelRight,
@@ -39,6 +42,7 @@ import { highlightColorOptions, standardColorOptions } from '@/constants/styleCo
 import { workspaceViewModes } from '@/constants/workspace';
 import {
   getSelectedLayoutNodeInfo,
+  type InsertListBlockKind,
   type LayoutBlock,
   type SelectedLayoutNodeInfo,
   type TextMarkType,
@@ -62,7 +66,10 @@ interface ToolbarProps {
   onSaveDocumentAs: () => void;
   onExportPdf: () => void;
   onInsertImage: () => void;
+  onInsertEquation: () => void;
   onInsertTable: () => void;
+  onInsertList: (kind: InsertListBlockKind) => void;
+  onInsertToc: () => void;
   onToggleLeftPanel: () => void;
   onToggleRightPanel: () => void;
   onChangeViewMode: (mode: WorkspaceViewMode) => void;
@@ -97,16 +104,24 @@ const quickParagraphAlignOptions: Array<{
   { id: 'justify', label: '两端对齐', icon: AlignJustify },
 ];
 
+const quickListInsertOptions: Array<{
+  id: InsertListBlockKind;
+  label: string;
+  icon: typeof ListPlus;
+}> = [
+  { id: 'unordered', label: '新增无序列表', icon: ListPlus },
+  { id: 'ordered', label: '新增有序列表', icon: ListOrdered },
+  { id: 'task', label: '新增任务列表', icon: ListTodo },
+];
+
 const insertPlaceholderMessage = '该插入入口已预留，后续小步接入真实逻辑。';
 const insertPlaceholderOptions: Array<{
-  id: 'stickyNote' | 'emptyText' | 'equation' | 'toc';
+  id: 'stickyNote' | 'emptyText';
   label: string;
   icon: typeof StickyNote;
 }> = [
   { id: 'stickyNote', label: '便利贴', icon: StickyNote },
   { id: 'emptyText', label: '空文本块', icon: TextCursorInput },
-  { id: 'equation', label: '公式', icon: Sigma },
-  { id: 'toc', label: '目录', icon: ListTree },
 ];
 
 const quickTextEditableBlockTypes: LayoutBlock['type'][] = ['heading', 'paragraph', 'code'];
@@ -209,7 +224,10 @@ export function Toolbar({
   onSaveDocumentAs,
   onExportPdf,
   onInsertImage,
+  onInsertEquation,
   onInsertTable,
+  onInsertList,
+  onInsertToc,
   onToggleLeftPanel,
   onToggleRightPanel,
   onChangeViewMode,
@@ -566,6 +584,28 @@ export function Toolbar({
           </div>
         </section>
 
+        <section className="format-toolbar-group list-group" aria-label="列表">
+          <span className="format-toolbar-title">列表</span>
+          <div className="format-toolbar-controls">
+            {quickListInsertOptions.map((option) => {
+              const Icon = option.icon;
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className="format-icon-button"
+                  title={option.label}
+                  aria-label={option.label}
+                  onClick={() => onInsertList(option.id)}
+                >
+                  <Icon size={17} />
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
         <section className="format-toolbar-group insert-group" aria-label="插入">
           <span className="format-toolbar-title">插入</span>
           <div className="format-toolbar-controls">
@@ -577,6 +617,25 @@ export function Toolbar({
               onClick={onInsertImage}
             >
               <ImagePlus size={17} />
+            </button>
+            <button
+              type="button"
+              className="format-icon-button"
+              title="插入公式"
+              aria-label="插入公式"
+              onClick={onInsertEquation}
+            >
+              <Sigma size={17} />
+            </button>
+            <button
+              type="button"
+              className="format-select-button format-insert-text-button"
+              title="插入目录"
+              aria-label="插入目录"
+              onClick={onInsertToc}
+            >
+              <ListTree size={17} />
+              <span>目录</span>
             </button>
             <button
               type="button"

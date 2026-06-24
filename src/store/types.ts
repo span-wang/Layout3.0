@@ -1,6 +1,13 @@
 import type {
   BlockStyleOverrides,
+  BlockquoteStructureAction,
   DocumentFormat,
+  InsertListBlockKind,
+  ListBatchCheckedAction,
+  ListBatchCheckedScope,
+  ListIndentAction,
+  ListReorderAction,
+  ListTaskConversionAction,
   ListStructureAction,
   LayoutDocument,
   ParseState,
@@ -99,6 +106,15 @@ export interface DocumentSlice {
     src: string;
     alt: string;
     title?: string | null;
+    widthPx?: number | null;
+    heightPx?: number | null;
+    lockAspectRatio?: boolean;
+    objectFit?: 'contain' | 'cover';
+    cropTopPx?: number | null;
+    cropRightPx?: number | null;
+    cropBottomPx?: number | null;
+    cropLeftPx?: number | null;
+    wrapMode?: 'block' | 'center' | 'left' | 'right';
     insertAfterNodeId?: string | null;
   }) => string | null;
   insertLayoutTableBlock: (payload: {
@@ -106,6 +122,24 @@ export interface DocumentSlice {
     columnCount?: number;
     insertAfterNodeId?: string | null;
   }) => string | null;
+  insertLayoutEquationBlock: (payload: {
+    value?: string;
+    insertAfterNodeId?: string | null;
+  }) => string | null;
+  insertLayoutListBlock: (payload: {
+    kind: InsertListBlockKind;
+    insertAfterNodeId?: string | null;
+  }) => string | null;
+  insertLayoutTocBlock: (payload: {
+    insertAfterNodeId?: string | null;
+  }) => string | null;
+  updateLayoutTocMaxDepth: (payload: {
+    nodeId: string;
+    maxDepth: 1 | 2 | 3;
+  }) => void;
+  refreshLayoutTocBlock: (payload: {
+    nodeId: string;
+  }) => boolean;
   updateLayoutTableStructure: (payload: {
     cellId: string;
     action: TableStructureAction;
@@ -130,11 +164,50 @@ export interface DocumentSlice {
     itemId: string;
     start: number;
   }) => string | null;
+  updateLayoutListItemChecked: (payload: {
+    itemId: string;
+    checked: boolean;
+  }) => string | null;
+  updateLayoutListItemLevel: (payload: {
+    itemId: string;
+    action: ListIndentAction;
+  }) => string | null;
+  reorderLayoutListItem: (payload: {
+    itemId: string;
+    action: ListReorderAction;
+  }) => string | null;
+  updateLayoutListTaskMode: (payload: {
+    itemId: string;
+    taskMode: boolean;
+  }) => string | null;
+  convertLayoutListItemTaskState: (payload: {
+    itemId: string;
+    action: ListTaskConversionAction;
+  }) => string | null;
+  updateLayoutListBatchChecked: (payload: {
+    itemId: string;
+    scope: ListBatchCheckedScope;
+    action: ListBatchCheckedAction;
+  }) => { selectedNodeId: string | null; changedCount: number };
+  updateLayoutBlockquoteStructure: (payload: {
+    blockquoteId: string;
+    targetNodeId: string;
+    action: BlockquoteStructureAction;
+  }) => string | null;
   updateLayoutImageAttributes: (payload: {
     nodeId: string;
     src: string;
     alt: string;
     title: string | null;
+    widthPx?: number | null;
+    heightPx?: number | null;
+    lockAspectRatio?: boolean;
+    objectFit?: 'contain' | 'cover';
+    cropTopPx?: number | null;
+    cropRightPx?: number | null;
+    cropBottomPx?: number | null;
+    cropLeftPx?: number | null;
+    wrapMode?: 'block' | 'center' | 'left' | 'right';
   }) => void;
   applyLayoutNodeBlockStyle: (payload: {
     nodeId: string;

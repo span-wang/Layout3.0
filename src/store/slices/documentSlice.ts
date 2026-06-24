@@ -2,13 +2,23 @@ import { starterMarkdown, starterTitle } from '@/constants/workspace';
 import {
   applyTextRunPatchToTextRuns,
   applyBlockStyleOverridesToBlock,
+  convertListItemTaskStateByItem,
+  updateBlockquoteStructureByNode,
   clearTextFormattingInTextRuns,
   createEmptyLayoutDocument,
   getLayoutBlockPlainText,
+  insertEquationBlockAfterNode,
   insertImageBlockAfterNode,
+  insertListBlockAfterNode,
   insertTableBlockAfterNode,
+  insertTocBlockAfterNode,
   toggleTextMarkInTextRuns,
+  reorderListItemByItem,
+  updateListItemCheckedByItem,
+  updateListBatchCheckedByItem,
+  updateListItemLevelByItem,
   updateListOrderedByItem,
+  updateListTaskModeByItem,
   updateListStartByItem,
   updateListStructureByItem,
   updateTableColumnAlignByCell,
@@ -21,10 +31,16 @@ import {
 } from '@/engine/document-model';
 import type {
   BlockStyleOverrides,
+  BlockquoteStructureAction,
   LayoutBlock,
   LayoutResource,
+  ListBatchCheckedAction,
+  ListBatchCheckedScope,
+  ListIndentAction,
   ListPropertyEditResult,
+  ListReorderAction,
   ListStructureAction,
+  ListTaskConversionAction,
   TableColumnAlign,
   TablePropertyEditResult,
   TableStructureAction,
@@ -617,6 +633,49 @@ function replaceTablePropertyByCell(
   return { blocks: nextBlocks, didUpdate, selectedNodeId };
 }
 
+function replaceBlockquoteStructureByNode(
+  blocks: LayoutBlock[],
+  blockquoteId: string,
+  targetNodeId: string,
+  action: BlockquoteStructureAction,
+): { blocks: LayoutBlock[]; didUpdate: boolean; selectedNodeId: string | null } {
+  let didUpdate = false;
+  let selectedNodeId: string | null = null;
+
+  const nextBlocks = blocks.map((block) => {
+    if (block.id === blockquoteId && block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const result = updateBlockquoteStructureByNode(block, targetNodeId, action);
+      if (!result.didUpdate) {
+        return block;
+      }
+
+      didUpdate = true;
+      selectedNodeId = result.selectedNodeId;
+      return result.block;
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedResult = replaceBlockquoteStructureByNode(block.metadata.blocks, blockquoteId, targetNodeId, action);
+      if (nestedResult.didUpdate) {
+        didUpdate = true;
+        selectedNodeId = nestedResult.selectedNodeId;
+        return {
+          ...block,
+          sourceRange: null,
+          metadata: {
+            ...block.metadata,
+            blocks: nestedResult.blocks,
+          },
+        };
+      }
+    }
+
+    return block;
+  });
+
+  return { blocks: nextBlocks, didUpdate, selectedNodeId };
+}
+
 function getFirstHeadingTitle(blocks: LayoutBlock[]): string | null {
   for (const block of blocks) {
     if (block.type === 'heading' && block.metadata.kind === 'heading') {
@@ -943,7 +1002,21 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       );
       applyDocumentMutation(state, nodeId, result);
     }),
-  insertLayoutImageBlock: ({ src, alt, title, insertAfterNodeId }) => {
+  insertLayoutImageBlock: ({
+    src,
+    alt,
+    title,
+    widthPx,
+    heightPx,
+    lockAspectRatio,
+    objectFit,
+    cropTopPx,
+    cropRightPx,
+    cropBottomPx,
+    cropLeftPx,
+    wrapMode,
+    insertAfterNodeId,
+  }) => {
     let insertedBlockId: string | null = null;
 
     set((state) => {
@@ -958,6 +1031,15 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
           src,
           alt,
           title,
+          widthPx,
+          heightPx,
+          lockAspectRatio,
+          objectFit,
+          cropTopPx,
+          cropRightPx,
+          cropBottomPx,
+          cropLeftPx,
+          wrapMode,
           insertAfterNodeId,
         },
       );
@@ -1001,6 +1083,139 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
     });
 
     return selectedNodeId;
+  },
+  insertLayoutEquationBlock: ({ value, insertAfterNodeId }) => {
+    let insertedBlockId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = insertEquationBlockAfterNode(state.layoutDocument.blocks, {
+        value,
+        insertAfterNodeId,
+      });
+
+      insertedBlockId = result.insertedBlockId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      // 默认选中新公式块，方便用户直接进入公式编辑。
+      state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return insertedBlockId;
+  },
+  insertLayoutListBlock: ({ kind, insertAfterNodeId }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = insertListBlockAfterNode(state.layoutDocument.blocks, {
+        kind,
+        insertAfterNodeId,
+      });
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      // 默认选中新列表的第一个列表项，让用户插入后能直接进入列表项编辑。
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  insertLayoutTocBlock: ({ insertAfterNodeId }) => {
+    let insertedBlockId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = insertTocBlockAfterNode(state.layoutDocument.blocks, {
+        insertAfterNodeId,
+      });
+
+      insertedBlockId = result.insertedBlockId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return insertedBlockId;
+  },
+  updateLayoutTocMaxDepth: ({ nodeId, maxDepth }) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceOwnerBlock(state.layoutDocument.blocks, nodeId, (block) => {
+        if (block.type !== 'toc' || block.metadata.kind !== 'toc' || block.metadata.maxDepth === maxDepth) {
+          return block;
+        }
+
+        return {
+          ...block,
+          sourceRange: null,
+          metadata: {
+            ...block.metadata,
+            maxDepth,
+          },
+        };
+      });
+      applyDocumentMutation(state, nodeId, result);
+    }),
+  refreshLayoutTocBlock: ({ nodeId }) => {
+    let didRefresh = false;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceOwnerBlock(state.layoutDocument.blocks, nodeId, (block) => {
+        if (block.type !== 'toc' || block.metadata.kind !== 'toc') {
+          return block;
+        }
+
+        return {
+          ...block,
+          metadata: {
+            ...block.metadata,
+          },
+        };
+      });
+
+      if (!result.didUpdate) {
+        return;
+      }
+
+      didRefresh = true;
+      state.documentEpoch += 1;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.viewState.selectedNodeId = nodeId;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return didRefresh;
   },
   updateLayoutTableStructure: ({ cellId, action }) => {
     let selectedNodeId: string | null = null;
@@ -1160,14 +1375,243 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
 
     return selectedNodeId;
   },
-  updateLayoutImageAttributes: ({ nodeId, src, alt, title }) =>
+  updateLayoutListItemChecked: ({ itemId, checked }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceListPropertyByItem(state.layoutDocument.blocks, itemId, (block, targetItemId) =>
+        updateListItemCheckedByItem(block, targetItemId, checked),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  updateLayoutListItemLevel: ({ itemId, action }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceListPropertyByItem(state.layoutDocument.blocks, itemId, (block, targetItemId) =>
+        updateListItemLevelByItem(block, targetItemId, action),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  reorderLayoutListItem: ({ itemId, action }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceListPropertyByItem(state.layoutDocument.blocks, itemId, (block, targetItemId) =>
+        reorderListItemByItem(block, targetItemId, action),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  updateLayoutListTaskMode: ({ itemId, taskMode }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceListPropertyByItem(state.layoutDocument.blocks, itemId, (block, targetItemId) =>
+        updateListTaskModeByItem(block, targetItemId, taskMode),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  convertLayoutListItemTaskState: ({ itemId, action }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceListPropertyByItem(state.layoutDocument.blocks, itemId, (block, targetItemId) =>
+        convertListItemTaskStateByItem(block, targetItemId, action),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  updateLayoutListBatchChecked: ({ itemId, scope, action }) => {
+    let selectedNodeId: string | null = null;
+    let changedCount = 0;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceListPropertyByItem(state.layoutDocument.blocks, itemId, (block, targetItemId) => {
+        const batchResult = updateListBatchCheckedByItem(block, targetItemId, scope, action);
+        changedCount = batchResult.changedCount;
+        return {
+          block: batchResult.block,
+          selectedNodeId: batchResult.selectedNodeId,
+          didUpdate: batchResult.didUpdate,
+        };
+      });
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return {
+      selectedNodeId,
+      changedCount,
+    };
+  },
+  updateLayoutBlockquoteStructure: ({ blockquoteId, targetNodeId, action }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceBlockquoteStructureByNode(
+        state.layoutDocument.blocks,
+        blockquoteId,
+        targetNodeId,
+        action,
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  updateLayoutImageAttributes: ({
+    nodeId,
+    src,
+    alt,
+    title,
+    widthPx,
+    heightPx,
+    lockAspectRatio,
+    objectFit,
+    cropTopPx,
+    cropRightPx,
+    cropBottomPx,
+    cropLeftPx,
+    wrapMode,
+  }) =>
     set((state) => {
       if (!state.layoutDocument) {
         return;
       }
 
       const result = replaceOwnerBlock(state.layoutDocument.blocks, nodeId, (block) =>
-        updateLayoutImageAttributesModel(block, { src, alt, title }),
+        updateLayoutImageAttributesModel(block, {
+          src,
+          alt,
+          title,
+          widthPx,
+          heightPx,
+          lockAspectRatio,
+          objectFit,
+          cropTopPx,
+          cropRightPx,
+          cropBottomPx,
+          cropLeftPx,
+          wrapMode,
+        }),
       );
       applyDocumentMutation(state, nodeId, result);
     }),

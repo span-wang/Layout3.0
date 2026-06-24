@@ -1,11 +1,12 @@
 import {
   getHeadingText,
+  getLayoutListItemLevel,
   getLayoutBlockPlainText,
   type LayoutBlock,
   type LayoutTableRow,
   type TableBlockMetadata,
 } from '@/engine/document-model';
-import { resolveHangingIndentLineWidths } from '@/engine/document-model/utils';
+import { estimateImageVisibleHeightPx, resolveHangingIndentLineWidths } from '@/engine/document-model';
 import type { ResolvedStyleContract, TextBlockStyleRule } from '@/engine/style/types';
 import { estimateTextLines } from '../textMetrics';
 import type {
@@ -272,6 +273,8 @@ function getBlockLabel(block: LayoutBlock): string {
   switch (block.type) {
     case 'heading':
       return `标题“${getHeadingText(block) || '未命名标题'}”`;
+    case 'toc':
+      return '目录';
     case 'paragraph':
       return `段落“${getLayoutBlockPlainText(block).slice(0, 18) || '空段落'}${
         getLayoutBlockPlainText(block).length > 18 ? '…' : ''
@@ -328,6 +331,8 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
   switch (block.type) {
     case 'pageBreak':
       return 0;
+    case 'toc':
+      return 220;
     case 'heading': {
       const lineWidths = resolveHangingIndentLineWidths(contentWidthPx, block.blockStyleOverrides);
       // 标题同时受左右缩进、首行缩进与悬挂缩进影响，宽度先统一收窄再估算。
@@ -367,9 +372,10 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
         block.metadata.kind === 'list'
           ? block.metadata.items.reduce((total, item, index) => {
               const itemText = item.textRuns.map((run) => run.text).join('');
+              const levelIndentPx = Math.max(0, getLayoutListItemLevel(item) - 1) * Math.max(16, contract.blockStyles.list.indent * 0.72);
               const lines = estimateTextLines(
                 itemText,
-                widthPx,
+                Math.max(80, widthPx - levelIndentPx),
                 getMaxFontSize(item.textRuns, contract.blockStyles.list.fontSize),
               );
               const gap = index === 0 ? 0 : contract.blockStyles.list.itemGap;
@@ -421,14 +427,7 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
 
       return estimateTableBlockHeight(block, contract);
     case 'image':
-      return (
-        contract.blockStyles.image.marginTop +
-        contract.blockStyles.image.placeholderHeight +
-        (block.metadata.kind === 'image' && block.metadata.alt
-          ? contract.blockStyles.image.captionGap + contract.blockStyles.paragraph.lineHeight
-          : 0) +
-        contract.blockStyles.image.marginBottom
-      );
+      return estimateImageBlockHeight(block, contract);
     case 'horizontalRule':
       return (
         contract.blockStyles.horizontalRule.marginTop +
@@ -438,6 +437,26 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
     default:
       return 48;
   }
+}
+
+function estimateImageBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract): number {
+  if (block.type !== 'image' || block.metadata.kind !== 'image') {
+    return contract.blockStyles.image.marginTop + contract.blockStyles.image.placeholderHeight + contract.blockStyles.image.marginBottom;
+  }
+
+  const imageHeightPx = estimateImageVisibleHeightPx(block.metadata, contract.blockStyles.image.placeholderHeight);
+  const wrapMode = block.metadata.wrapMode ?? 'block';
+  const wrapCompensation =
+    wrapMode === 'left' || wrapMode === 'right'
+      ? Math.max(0, Math.round(contract.contentWidthPx * 0.22))
+      : 0;
+
+  return (
+    contract.blockStyles.image.marginTop +
+    Math.max(1, imageHeightPx - wrapCompensation) +
+    (block.metadata.alt ? contract.blockStyles.image.captionGap + contract.blockStyles.paragraph.lineHeight : 0) +
+    contract.blockStyles.image.marginBottom
+  );
 }
 
 function hasRemainingContent(blocks: LayoutBlock[], startIndex: number): boolean {

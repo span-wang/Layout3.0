@@ -1,5 +1,19 @@
-import { getHeadingText, type LayoutBlock, type TextRun } from '@/engine/document-model';
-import { resolveHangingIndentStyle } from '@/engine/document-model/utils';
+import {
+  applyPageNumbersToTocItems,
+  buildHeadingPageNumberMap,
+  buildTocItems,
+  getHeadingText,
+  resolveImageLayout,
+  resolveImageRenderMetrics,
+  resolveHangingIndentStyle,
+  buildLayoutListTree,
+  getLayoutListItemLevel,
+  type LayoutBlock,
+  type LayoutListTreeNode,
+  type LayoutListItem,
+  type TextRun,
+} from '@/engine/document-model';
+import { renderEquationToHtml } from '@/engine/document-model/equation';
 import type { PageLayout } from '@/engine/typesetting/types';
 import { resolveAssetSrc } from '@/utils/filePath';
 
@@ -87,6 +101,35 @@ function buildTableCellStyle(align: 'left' | 'center' | 'right' | null | undefin
   return align ? ` style="${escapeHtml(`text-align:${align}`)}"` : '';
 }
 
+function renderListItemContent(item: LayoutListItem): string {
+  const listItemClass = item.checked === null ? '' : ' class="task-list-item"';
+  const checkedMark =
+    item.checked === null
+      ? ''
+      : `<span class="task-list-checkbox">${item.checked ? '☑' : '☐'}</span>`;
+  return `<li${listItemClass} data-list-level="${getLayoutListItemLevel(item)}">${checkedMark}${renderTextRuns(item.textRuns)}`;
+}
+
+function renderListTreeNodes(
+  nodes: LayoutListTreeNode[],
+  ordered: boolean,
+  start: number | null,
+  isRoot = false,
+): string {
+  const tagName = ordered ? 'ol' : 'ul';
+  const startAttribute = ordered && start !== null && isRoot ? ` start="${start}"` : '';
+  const childrenHtml = nodes
+    .map((node) => {
+      const nestedListHtml = node.children.length > 0
+        ? renderListTreeNodes(node.children, ordered, null)
+        : '';
+      return `${renderListItemContent(node.item)}${nestedListHtml}</li>`;
+    })
+    .join('');
+
+  return `<${tagName}${startAttribute}>${childrenHtml}</${tagName}>`;
+}
+
 function renderBlock(block: LayoutBlock): string {
   switch (block.type) {
     case 'pageBreak':
@@ -102,16 +145,21 @@ function renderBlock(block: LayoutBlock): string {
               : 'h4';
       return `<${tagName}${buildBlockStyle(block)}>${renderTextRuns(block.textRuns)}</${tagName}>`;
     }
+    case 'toc':
+      return '';
     case 'paragraph':
       return `<p${buildBlockStyle(block)}>${renderTextRuns(block.textRuns)}</p>`;
     case 'list': {
       if (block.metadata.kind !== 'list') {
         return '';
       }
-
-      const tagName = block.metadata.ordered ? 'ol' : 'ul';
-      const items = block.metadata.items.map((item) => `<li>${renderTextRuns(item.textRuns)}</li>`).join('');
-      return `<${tagName}${buildBlockStyle(block)}>${items}</${tagName}>`;
+      const rootListHtml = renderListTreeNodes(
+        buildLayoutListTree(block.metadata.items),
+        block.metadata.ordered,
+        block.metadata.start,
+        true,
+      );
+      return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockStyle(block)}>`);
     }
     case 'blockquote':
       return block.metadata.kind === 'blockquote'
@@ -119,6 +167,10 @@ function renderBlock(block: LayoutBlock): string {
         : '';
     case 'code':
       return `<pre${buildBlockStyle(block)}><code>${renderTextRuns(block.textRuns)}</code></pre>`;
+    case 'equation':
+      return block.metadata.kind === 'equation'
+        ? `<div class="equation-shell"${buildBlockStyle(block)}>${renderEquationToHtml(block.metadata.value).html}</div>`
+        : '';
     case 'table':
       return block.metadata.kind === 'table'
         ? `<table${buildBlockStyle(block)}><tbody>${block.metadata.rows
@@ -138,16 +190,45 @@ function renderBlock(block: LayoutBlock): string {
         return '';
       }
 
-      return `<figure class="image-shell">${
-        block.metadata.src
-          ? `<img class="preview-image" src="${escapeHtml(resolveAssetSrc(block.metadata.src))}" alt="${escapeHtml(block.metadata.alt || '图片')}"${block.metadata.title ? ` title="${escapeHtml(block.metadata.title)}"` : ''} />`
-          : '<div class="preview-image placeholder">图片占位</div>'
-      }${block.metadata.alt ? `<figcaption>${escapeHtml(block.metadata.alt)}</figcaption>` : ''}</figure>`;
+      return renderImageBlock(block);
     case 'horizontalRule':
       return '<hr />';
     default:
       return '';
   }
+}
+
+function renderImageBlock(block: LayoutBlock): string {
+  if (block.type !== 'image' || block.metadata.kind !== 'image') {
+    return '';
+  }
+
+  const layout = resolveImageLayout(block.metadata);
+  const wrapperStyleParts = [
+    layout.wrapMode === 'center' ? 'margin-left:auto;margin-right:auto' : '',
+    layout.wrapMode === 'left' ? 'margin-right:auto' : '',
+    layout.wrapMode === 'right' ? 'margin-left:auto' : '',
+  ].filter(Boolean);
+  const metrics = resolveImageRenderMetrics(layout);
+  const viewportStyleParts = [
+    metrics.visibleWidthPx ? `width:${metrics.visibleWidthPx}px` : '',
+    metrics.visibleHeightPx ? `height:${metrics.visibleHeightPx}px` : '',
+  ].filter(Boolean);
+  const imageStyleParts = [
+    metrics.fullWidthPx ? `width:${metrics.fullWidthPx}px` : '',
+    metrics.fullHeightPx ? `height:${metrics.fullHeightPx}px` : '',
+    metrics.fullWidthPx ? 'max-width:none' : '',
+    metrics.fullHeightPx ? 'max-height:none' : '',
+    metrics.cropLeftPx || metrics.cropTopPx
+      ? `transform:translate(${-metrics.cropLeftPx}px, ${-metrics.cropTopPx}px)`
+      : '',
+  ].filter(Boolean);
+
+  return `<figure class="image-shell image-wrap-${escapeHtml(layout.wrapMode)}"${wrapperStyleParts.length > 0 ? ` style="${escapeHtml(wrapperStyleParts.join(';'))}"` : ''}>${
+    block.metadata.src
+      ? `<span class="image-viewport"${viewportStyleParts.length > 0 ? ` style="${escapeHtml(viewportStyleParts.join(';'))}"` : ''}><img class="preview-image preview-image-fit preview-image-cropped" src="${escapeHtml(resolveAssetSrc(block.metadata.src))}" alt="${escapeHtml(block.metadata.alt || '图片')}"${block.metadata.title ? ` title="${escapeHtml(block.metadata.title)}"` : ''}${imageStyleParts.length > 0 ? ` style="${escapeHtml(imageStyleParts.join(';'))}"` : ''} /></span>`
+      : '<div class="preview-image placeholder">图片占位</div>'
+  }${block.metadata.alt ? `<figcaption>${escapeHtml(block.metadata.alt)}</figcaption>` : ''}</figure>`;
 }
 
 function getPageMetrics(page: PageLayout) {
@@ -165,6 +246,29 @@ function getPageMetrics(page: PageLayout) {
 }
 
 function renderPages(pages: PageLayout[]): string {
+  const allBlocks = pages.flatMap((page) => page.blocks);
+  const tocItems = applyPageNumbersToTocItems(
+    buildTocItems({
+      version: '1.0.0',
+      id: 'export-runtime-document',
+      title: '',
+      source: '',
+      blocks: allBlocks,
+      resources: [],
+      styles: { blockStyles: {}, textStyles: {} },
+      template: { templateId: null, templateOverrides: {} },
+      viewState: { answerDisplayMode: 'show', zoom: 1, selectedNodeId: null },
+      meta: {
+        sourceFormat: 'markdown',
+        wordCount: 0,
+        characterCount: 0,
+        blockCount: allBlocks.length,
+        updatedAt: new Date(0).toISOString(),
+      },
+    }),
+    buildHeadingPageNumberMap(pages),
+  );
+
   return pages
     .map((page) => {
       const titleBlock = page.blocks.find((block) => block.type === 'heading');
@@ -173,7 +277,27 @@ function renderPages(pages: PageLayout[]): string {
 
       return `<section class="page" style="width:${metrics.pageWidthPx}px;min-height:${metrics.pageHeightPx}px;grid-template-rows:${metrics.headerHeight}px 1fr ${metrics.footerHeight}px;">
         <header class="page-header">${escapeHtml(pageTitle)}<span>${escapeHtml(page.contract.pageLabel)}</span></header>
-        <article class="page-body">${page.blocks.map((block) => renderBlock(block)).join('')}</article>
+        <article class="page-body">${page.blocks
+          .map((block) => {
+            if (block.type === 'toc' && block.metadata.kind === 'toc') {
+              const tocMetadata = block.metadata;
+              const filteredTocItems = tocItems.filter((item) => item.depth <= tocMetadata.maxDepth);
+              const entries =
+                filteredTocItems.length > 0
+                  ? filteredTocItems
+                      .map(
+                        (item) =>
+                          `<div class="toc-entry-export" style="padding-left:${Math.max(0, item.depth - 1) * 16}px"><span class="toc-entry-export-text">${escapeHtml(item.text)}</span><span class="toc-entry-export-dots"></span><span class="toc-entry-export-page">${escapeHtml(String(item.pageNumber ?? '-'))}</span></div>`,
+                      )
+                      .join('')
+                  : '<div class="toc-empty-state-export">当前文档还没有符合当前目录层级的标题。</div>';
+
+              return `<section class="toc-block-export"${buildBlockStyle(block)}><div class="toc-block-export-title">${escapeHtml(tocMetadata.title || '目录')}</div>${entries}</section>`;
+            }
+
+            return renderBlock(block);
+          })
+          .join('')}</article>
         <footer class="page-footer"><span>${escapeHtml(page.contract.templateLabel)}</span><span>${page.pageNumber}</span></footer>
       </section>`;
     })
@@ -223,6 +347,54 @@ export function buildExportHtml({ pages, title }: PdfExportPayload): string {
 
       .page:last-child {
         margin-bottom: 0;
+      }
+
+      .toc-block-export {
+        display: grid;
+        gap: 10px;
+        margin: 16px 0 24px;
+        padding: 18px 20px;
+        border: 1px solid #d8e1e8;
+        border-radius: 12px;
+        background: #fcfdff;
+      }
+
+      .toc-block-export-title {
+        color: #1f2937;
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .toc-entry-export {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 24px;
+        color: #334155;
+        font-size: 14px;
+      }
+
+      .toc-entry-export-text {
+        flex: 0 1 auto;
+      }
+
+      .toc-entry-export-dots {
+        flex: 1 1 auto;
+        min-width: 12px;
+        border-bottom: 1px dotted #c4ced8;
+        transform: translateY(2px);
+      }
+
+      .toc-entry-export-page {
+        flex: 0 0 auto;
+        min-width: 20px;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .toc-empty-state-export {
+        color: #64748b;
+        font-size: 13px;
       }
 
       .page-header,
@@ -282,6 +454,18 @@ export function buildExportHtml({ pages, title }: PdfExportPayload): string {
         padding-left: 24px;
       }
 
+      li.task-list-item {
+        list-style: none;
+      }
+
+      .task-list-checkbox {
+        display: inline-block;
+        width: 18px;
+        min-width: 18px;
+        color: #0d5663;
+        font-weight: 700;
+      }
+
       blockquote {
         margin: 20px 0;
         padding: 4px 0 4px 16px;
@@ -324,6 +508,18 @@ export function buildExportHtml({ pages, title }: PdfExportPayload): string {
         display: grid;
         gap: 8px;
         margin: 20px 0;
+        width: fit-content;
+        max-width: 100%;
+        position: relative;
+        overflow: visible;
+      }
+
+      .image-viewport {
+        display: block;
+        width: fit-content;
+        max-width: 100%;
+        overflow: hidden;
+        line-height: 0;
       }
 
       .preview-image {
@@ -331,8 +527,16 @@ export function buildExportHtml({ pages, title }: PdfExportPayload): string {
         max-width: 100%;
         width: auto;
         height: auto;
-        border-radius: 12px;
-        border: 1px solid #d7e0e8;
+        border-radius: 0;
+        border: 0;
+      }
+
+      .preview-image-fit {
+        margin: 0;
+      }
+
+      .preview-image-cropped {
+        transform-origin: top left;
       }
 
       .preview-image.placeholder {

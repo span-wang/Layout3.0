@@ -3,17 +3,29 @@ import { FileText, Layers3, PanelBottom, PanelTop, SlidersHorizontal } from 'luc
 import { fontFamilyPlaceholderValue, textFontFamilyGroups } from '@/constants/fontFamilies';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import {
+  getSelectedBlockquoteContext,
   getSelectedLayoutNodeInfo,
   getLayoutBlockPlainText,
+  getLayoutListItemLevel,
+  type BlockquoteStructureAction,
+  type ListStructureAction,
   type LayoutBlock,
   type SourceRange,
+  type SelectedBlockquoteContext,
   type SelectedLayoutNodeInfo,
   type TableColumnAlign,
   type TableStructureAction,
+  type ListBatchCheckedAction,
+  type ListBatchCheckedScope,
+  type ListIndentAction,
+  type ListReorderAction,
+  type ListTaskConversionAction,
   type TextMarkType,
   type TextRangeSelection,
   type TextRun,
 } from '@/engine/document-model';
+import { resolveImageLayout } from '@/engine/document-model/imageLayout';
+import { renderEquationToHtml } from '@/engine/document-model/equation';
 import {
   headerFooterPresetDefinitions,
   marginPresetDefinitions,
@@ -36,6 +48,7 @@ import type {
 import { useResolvedStyleContract } from '@/hooks/useResolvedStyleContract';
 import { useAppStore } from '@/store';
 import type { CanvasTextSelectionState, PageSettingsTab, WorkspaceViewMode } from '@/types/workspace';
+import { getBlockStyleControlSupportByBlockType } from './objectStyleSupport';
 
 interface RightPanelProps {
   currentPageCount: number;
@@ -81,6 +94,7 @@ const pageSettingsTabs: Array<{
 const blockTypeLabels: Record<LayoutBlock['type'], string> = {
   paragraph: '段落',
   heading: '标题',
+  toc: '目录',
   list: '列表',
   table: '表格',
   image: '图片',
@@ -134,7 +148,6 @@ const textMarkOptions: Array<{ id: TextMarkType; label: string }> = [
 ];
 
 const textEditableBlockTypes: LayoutBlock['type'][] = ['heading', 'paragraph', 'code'];
-const blockStyleEditableBlockTypes: LayoutBlock['type'][] = ['heading', 'paragraph', 'code', 'list', 'table'];
 const defaultTextColor = '#344054';
 const defaultHighlightColor = '#FEF08A';
 
@@ -159,6 +172,26 @@ const tableColumnAlignOptions: Array<{
   { id: 'left', label: '左对齐' },
   { id: 'center', label: '居中' },
   { id: 'right', label: '右对齐' },
+];
+
+const listStructureActions: Array<{
+  id: ListStructureAction;
+  label: string;
+  disabledWhen?: 'singleItem';
+}> = [
+  { id: 'insertItemAbove', label: '上方插入项' },
+  { id: 'insertItemBelow', label: '下方插入项' },
+  { id: 'deleteItem', label: '删除当前项', disabledWhen: 'singleItem' },
+];
+
+const blockquoteStructureActions: Array<{
+  id: BlockquoteStructureAction;
+  label: string;
+  disabledWhen?: 'singleBlock';
+}> = [
+  { id: 'insertParagraphAbove', label: '上方插入段落' },
+  { id: 'insertParagraphBelow', label: '下方插入段落' },
+  { id: 'deleteBlock', label: '删除当前子块', disabledWhen: 'singleBlock' },
 ];
 
 function getViewModeLabel(workspaceViewMode: WorkspaceViewMode): string {
@@ -369,11 +402,7 @@ function isTextStyleEditable(nodeInfo: SelectedLayoutNodeInfo | null): boolean {
 }
 
 function isBlockStyleEditable(nodeInfo: SelectedLayoutNodeInfo | null): boolean {
-  return !!nodeInfo && blockStyleEditableBlockTypes.includes(nodeInfo.ownerBlock.type);
-}
-
-function isHangingIndentEditable(nodeInfo: SelectedLayoutNodeInfo | null): boolean {
-  return !!nodeInfo && nodeInfo.kind === 'block' && (nodeInfo.ownerBlock.type === 'heading' || nodeInfo.ownerBlock.type === 'paragraph');
+  return !!nodeInfo && getBlockStyleControlSupportByBlockType(nodeInfo.ownerBlock.type) !== null;
 }
 
 function getSelectedTableCellPosition(
@@ -399,6 +428,37 @@ function getSelectedTableCellPosition(
   return null;
 }
 
+function getSelectedListItemPosition(
+  nodeInfo: SelectedLayoutNodeInfo,
+): { itemIndex: number; itemCount: number } | null {
+  if (nodeInfo.kind !== 'listItem' || nodeInfo.ownerBlock.type !== 'list' || nodeInfo.ownerBlock.metadata.kind !== 'list') {
+    return null;
+  }
+
+  const itemIndex = nodeInfo.ownerBlock.metadata.items.findIndex((item) => item.id === nodeInfo.nodeId);
+  if (itemIndex < 0) {
+    return null;
+  }
+
+  return {
+    itemIndex,
+    itemCount: nodeInfo.ownerBlock.metadata.items.length,
+  };
+}
+
+function getListStructureActionMessage(action: ListStructureAction): string {
+  switch (action) {
+    case 'insertItemAbove':
+      return '已在上方插入列表项';
+    case 'insertItemBelow':
+      return '已在下方插入列表项';
+    case 'deleteItem':
+      return '已删除当前列表项';
+    default:
+      return '列表结构已更新';
+  }
+}
+
 function getTableStructureActionMessage(action: TableStructureAction): string {
   switch (action) {
     case 'insertRowAbove':
@@ -418,8 +478,43 @@ function getTableStructureActionMessage(action: TableStructureAction): string {
   }
 }
 
+function getBlockquoteStructureActionMessage(action: BlockquoteStructureAction): string {
+  switch (action) {
+    case 'insertParagraphAbove':
+      return '已在上方插入段落';
+    case 'insertParagraphBelow':
+      return '已在下方插入段落';
+    case 'deleteBlock':
+      return '已删除当前子块';
+    default:
+      return '引用结构已更新';
+  }
+}
+
+function getBlockPreviewText(block: LayoutBlock): string {
+  const text = getLayoutBlockPlainText(block).replace(/\s+/g, ' ').trim();
+  if (text) {
+    return text.length > 40 ? `${text.slice(0, 40)}...` : text;
+  }
+
+  if (block.type === 'image' && block.metadata.kind === 'image') {
+    return block.metadata.src || '图片';
+  }
+
+  return '暂无文本内容';
+}
+
+function getEquationRenderSummary(value: string): { statusText: string; errorText: string | null } {
+  const result = renderEquationToHtml(value);
+  return {
+    statusText: result.error ? '解析失败' : '解析成功',
+    errorText: result.error,
+  };
+}
+
 function renderObjectPropertiesPanel(
   selectedNodeInfo: SelectedLayoutNodeInfo | null,
+  selectedBlockquoteContext: SelectedBlockquoteContext | null,
   selectedNodeId: string | null,
   canvasTextSelection: CanvasTextSelectionState,
   resolvedStyleContract: ReturnType<typeof useResolvedStyleContract>,
@@ -433,6 +528,10 @@ function renderObjectPropertiesPanel(
     selection: TextRangeSelection | null;
     styleOverrides: { fontFamily?: string; fontSize?: number; color?: string; highlightColor?: string };
   }) => void,
+  updateLayoutNodeText: (payload: {
+    nodeId: string;
+    text: string;
+  }) => void,
   clearLayoutNodeTextFormatting: (payload: {
     nodeId: string;
     selection: TextRangeSelection | null;
@@ -442,7 +541,23 @@ function renderObjectPropertiesPanel(
     src: string;
     alt: string;
     title: string | null;
+    widthPx?: number | null;
+    heightPx?: number | null;
+    lockAspectRatio?: boolean;
+    objectFit?: 'contain' | 'cover';
+    cropTopPx?: number | null;
+    cropRightPx?: number | null;
+    cropBottomPx?: number | null;
+    cropLeftPx?: number | null;
+    wrapMode?: 'block' | 'center' | 'left' | 'right';
   }) => void,
+  updateLayoutTocMaxDepth: (payload: {
+    nodeId: string;
+    maxDepth: 1 | 2 | 3;
+  }) => void,
+  refreshLayoutTocBlock: (payload: {
+    nodeId: string;
+  }) => boolean,
   updateLayoutTableStructure: (payload: {
     cellId: string;
     action: TableStructureAction;
@@ -454,6 +569,48 @@ function renderObjectPropertiesPanel(
   updateLayoutTableColumnAlign: (payload: {
     cellId: string;
     align: TableColumnAlign;
+  }) => string | null,
+  updateLayoutListStructure: (payload: {
+    itemId: string;
+    action: ListStructureAction;
+  }) => string | null,
+  updateLayoutListOrdered: (payload: {
+    itemId: string;
+    ordered: boolean;
+  }) => string | null,
+  updateLayoutListStart: (payload: {
+    itemId: string;
+    start: number;
+  }) => string | null,
+  updateLayoutListItemChecked: (payload: {
+    itemId: string;
+    checked: boolean;
+  }) => string | null,
+  updateLayoutListItemLevel: (payload: {
+    itemId: string;
+    action: ListIndentAction;
+  }) => string | null,
+  reorderLayoutListItem: (payload: {
+    itemId: string;
+    action: ListReorderAction;
+  }) => string | null,
+  updateLayoutListTaskMode: (payload: {
+    itemId: string;
+    taskMode: boolean;
+  }) => string | null,
+  convertLayoutListItemTaskState: (payload: {
+    itemId: string;
+    action: ListTaskConversionAction;
+  }) => string | null,
+  updateLayoutListBatchChecked: (payload: {
+    itemId: string;
+    scope: ListBatchCheckedScope;
+    action: ListBatchCheckedAction;
+  }) => { selectedNodeId: string | null; changedCount: number },
+  updateLayoutBlockquoteStructure: (payload: {
+    blockquoteId: string;
+    targetNodeId: string;
+    action: BlockquoteStructureAction;
   }) => string | null,
   applyLayoutNodeBlockStyle: (payload: {
     nodeId: string;
@@ -470,6 +627,12 @@ function renderObjectPropertiesPanel(
   }) => void,
   tableStructureFeedback: string | null,
   onTableStructureFeedback: (message: string) => void,
+  listStructureFeedback: string | null,
+  onListStructureFeedback: (message: string) => void,
+  tocRefreshFeedback: string | null,
+  onTocRefreshFeedback: (message: string | null) => void,
+  blockquoteStructureFeedback: string | null,
+  onBlockquoteStructureFeedback: (message: string) => void,
   syncEditingTextBeforeStyleAction: (nodeId: string) => void,
 ): JSX.Element {
   if (!selectedNodeInfo) {
@@ -512,6 +675,14 @@ function renderObjectPropertiesPanel(
     selectedNodeInfo.ownerBlock.metadata.kind === 'image'
       ? selectedNodeInfo.ownerBlock.metadata
       : null;
+  const selectedImageLayout = selectedImageMetadata ? resolveImageLayout(selectedImageMetadata) : null;
+  const selectedListItemPosition = getSelectedListItemPosition(selectedNodeInfo);
+  const selectedListBlockWithoutItem =
+    selectedNodeInfo.kind === 'block' && selectedNodeInfo.ownerBlock.type === 'list';
+  const selectedListMetadata =
+    selectedNodeInfo.ownerBlock.type === 'list' && selectedNodeInfo.ownerBlock.metadata.kind === 'list'
+      ? selectedNodeInfo.ownerBlock.metadata
+      : null;
   const selectedTableCellPosition = getSelectedTableCellPosition(selectedNodeInfo);
   const selectedTableBlockWithoutCell =
     selectedNodeInfo.kind === 'block' && selectedNodeInfo.ownerBlock.type === 'table';
@@ -519,11 +690,309 @@ function renderObjectPropertiesPanel(
     selectedNodeInfo.ownerBlock.type === 'table' && selectedNodeInfo.ownerBlock.metadata.kind === 'table'
       ? selectedNodeInfo.ownerBlock.metadata
       : null;
+  const selectedEquationMetadata =
+    selectedNodeInfo.ownerBlock.type === 'equation' && selectedNodeInfo.ownerBlock.metadata.kind === 'equation'
+      ? selectedNodeInfo.ownerBlock.metadata
+      : null;
   const isHeaderRowEnabled = selectedTableMetadata?.rows[0]?.cells.every((cell) => cell.isHeader) ?? false;
   const currentTableColumnAlign =
     selectedTableCellPosition && selectedTableMetadata
       ? selectedTableMetadata.align[selectedTableCellPosition.columnIndex] ?? null
       : null;
+  const currentListStart = selectedListMetadata?.start ?? 1;
+  const selectedListItem =
+    selectedListMetadata && selectedListItemPosition
+      ? selectedListMetadata.items[selectedListItemPosition.itemIndex] ?? null
+      : null;
+  const currentListLevel = selectedListItem ? getLayoutListItemLevel(selectedListItem) : 1;
+  const isTaskList = !!selectedListMetadata?.items.some((item) => item.checked !== null);
+  const selectedBlockquoteDirectChild = selectedBlockquoteContext?.directChildBlock ?? null;
+  const selectedBlockquoteChildren =
+    selectedBlockquoteContext?.blockquoteBlock.type === 'blockquote' &&
+    selectedBlockquoteContext.blockquoteBlock.metadata.kind === 'blockquote'
+      ? selectedBlockquoteContext.blockquoteBlock.metadata.blocks
+      : [];
+  const blockStyleControlSupport = getBlockStyleControlSupportByBlockType(selectedNodeInfo.ownerBlock.type);
+  const selectedEquationRenderSummary = selectedEquationMetadata
+    ? getEquationRenderSummary(selectedEquationMetadata.value)
+    : null;
+  const commitImageMetadata = (patch: Partial<NonNullable<typeof selectedImageMetadata>>) => {
+    if (!selectedImageMetadata) {
+      return;
+    }
+
+    const hasOwn = <K extends keyof NonNullable<typeof selectedImageMetadata>>(key: K): boolean =>
+      Object.prototype.hasOwnProperty.call(patch, key);
+
+    updateLayoutImageAttributes({
+      nodeId: selectedNodeInfo.nodeId,
+      src: hasOwn('src') ? patch.src ?? '' : selectedImageMetadata.src,
+      alt: hasOwn('alt') ? patch.alt ?? '' : selectedImageMetadata.alt,
+      title: hasOwn('title') ? patch.title ?? null : selectedImageMetadata.title,
+      widthPx: hasOwn('widthPx') ? patch.widthPx ?? null : selectedImageMetadata.widthPx ?? null,
+      heightPx: hasOwn('heightPx') ? patch.heightPx ?? null : selectedImageMetadata.heightPx ?? null,
+      lockAspectRatio: hasOwn('lockAspectRatio')
+        ? patch.lockAspectRatio ?? true
+        : selectedImageMetadata.lockAspectRatio ?? true,
+      objectFit: hasOwn('objectFit') ? patch.objectFit ?? 'contain' : selectedImageMetadata.objectFit ?? 'contain',
+      cropTopPx: hasOwn('cropTopPx') ? patch.cropTopPx ?? 0 : selectedImageMetadata.cropTopPx ?? 0,
+      cropRightPx: hasOwn('cropRightPx') ? patch.cropRightPx ?? 0 : selectedImageMetadata.cropRightPx ?? 0,
+      cropBottomPx: hasOwn('cropBottomPx') ? patch.cropBottomPx ?? 0 : selectedImageMetadata.cropBottomPx ?? 0,
+      cropLeftPx: hasOwn('cropLeftPx') ? patch.cropLeftPx ?? 0 : selectedImageMetadata.cropLeftPx ?? 0,
+      wrapMode: hasOwn('wrapMode') ? patch.wrapMode ?? 'block' : selectedImageMetadata.wrapMode ?? 'block',
+    });
+  };
+
+  const handleImageFieldChange = (
+    field:
+      | 'widthPx'
+      | 'heightPx'
+      | 'cropTopPx'
+      | 'cropRightPx'
+      | 'cropBottomPx'
+      | 'cropLeftPx',
+    value: string,
+  ) => {
+    if (!selectedImageMetadata) {
+      return;
+    }
+
+    if (value.trim() === '') {
+      commitImageMetadata({
+        [field]: field === 'widthPx' || field === 'heightPx' ? null : 0,
+      } as Partial<NonNullable<typeof selectedImageMetadata>>);
+      return;
+    }
+
+    const nextValue = Number(value);
+    const normalizedValue = Number.isFinite(nextValue) ? Math.max(0, Math.round(nextValue)) : 0;
+
+    commitImageMetadata({
+      [field]: normalizedValue,
+    } as Partial<NonNullable<typeof selectedImageMetadata>>);
+  };
+
+  const handleImageDimensionChange = (field: 'widthPx' | 'heightPx', value: string) => {
+    if (!selectedImageMetadata) {
+      return;
+    }
+
+    if (value.trim() === '') {
+      commitImageMetadata({
+        [field]: null,
+      } as Partial<NonNullable<typeof selectedImageMetadata>>);
+      return;
+    }
+
+    const nextValue = Number(value);
+    const normalizedValue = Number.isFinite(nextValue) ? Math.max(0, Math.round(nextValue)) : null;
+    const currentWidth = selectedImageLayout?.widthPx ?? null;
+    const currentHeight = selectedImageLayout?.heightPx ?? null;
+    let nextWidth = selectedImageMetadata.widthPx ?? null;
+    let nextHeight = selectedImageMetadata.heightPx ?? null;
+
+    if (field === 'widthPx') {
+      nextWidth = normalizedValue;
+      if ((selectedImageMetadata.lockAspectRatio ?? true) && currentWidth && currentHeight && normalizedValue !== null) {
+        nextHeight = Math.max(1, Math.round((normalizedValue * currentHeight) / currentWidth));
+      }
+    } else {
+      nextHeight = normalizedValue;
+      if ((selectedImageMetadata.lockAspectRatio ?? true) && currentWidth && currentHeight && normalizedValue !== null) {
+        nextWidth = Math.max(1, Math.round((normalizedValue * currentWidth) / currentHeight));
+      }
+    }
+
+    commitImageMetadata({
+      widthPx: nextWidth,
+      heightPx: nextHeight,
+    });
+  };
+
+  const handleListOrderedChange = (ordered: boolean) => {
+    if (!selectedListItemPosition) {
+      onListStructureFeedback('请先选中一个列表项');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = updateLayoutListOrdered({
+      itemId: selectedNodeInfo.nodeId,
+      ordered,
+    });
+
+    onListStructureFeedback(
+      nextSelectedNodeId
+        ? ordered
+          ? '已切换为有序列表'
+          : '已切换为无序列表'
+        : '列表类型没有变化',
+    );
+  };
+
+  const handleListTaskModeChange = (taskMode: boolean) => {
+    if (!selectedListItemPosition) {
+      onListStructureFeedback('请先选中一个列表项');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = updateLayoutListTaskMode({
+      itemId: selectedNodeInfo.nodeId,
+      taskMode,
+    });
+
+    onListStructureFeedback(
+      nextSelectedNodeId
+        ? taskMode
+          ? '已切换为任务列表'
+          : '已切换为普通列表'
+        : '列表类型没有变化',
+    );
+  };
+
+  const handleListStartChange = (start: number) => {
+    if (!selectedListItemPosition) {
+      onListStructureFeedback('请先选中一个列表项');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = updateLayoutListStart({
+      itemId: selectedNodeInfo.nodeId,
+      start,
+    });
+
+    onListStructureFeedback(nextSelectedNodeId ? `已将起始编号设置为 ${Math.max(1, Math.floor(start))}` : '起始编号没有变化');
+  };
+
+  const handleListItemCheckedChange = (checked: boolean) => {
+    if (!selectedListItemPosition || !selectedListItem || selectedListItem.checked === null) {
+      onListStructureFeedback('当前不是任务列表项');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = updateLayoutListItemChecked({
+      itemId: selectedNodeInfo.nodeId,
+      checked,
+    });
+
+    onListStructureFeedback(
+      nextSelectedNodeId
+        ? checked
+          ? '已勾选任务项'
+          : '已取消勾选任务项'
+        : '任务勾选没有变化',
+    );
+  };
+
+  const handleListLevelChange = (action: ListIndentAction) => {
+    if (!selectedListItemPosition) {
+      onListStructureFeedback('请先选中一个列表项');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = updateLayoutListItemLevel({
+      itemId: selectedNodeInfo.nodeId,
+      action,
+    });
+
+    onListStructureFeedback(
+      nextSelectedNodeId
+        ? action === 'indent'
+          ? '已降低一级'
+          : '已提升一级'
+        : action === 'indent'
+          ? '当前项不能继续降低一级'
+          : '当前项不能继续提升一级',
+    );
+  };
+
+  const handleListReorderAction = (action: ListReorderAction) => {
+    if (!selectedListItemPosition) {
+      onListStructureFeedback('请先选中一个列表项');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = reorderLayoutListItem({
+      itemId: selectedNodeInfo.nodeId,
+      action,
+    });
+
+    onListStructureFeedback(
+      nextSelectedNodeId
+        ? action === 'moveUp'
+          ? '已上移当前项'
+          : '已下移当前项'
+        : action === 'moveUp'
+          ? '当前项已经在最上方'
+          : '当前项已经在最下方',
+    );
+  };
+
+  const handleListBatchCheckedAction = (scope: ListBatchCheckedScope, action: ListBatchCheckedAction) => {
+    if (!selectedListItemPosition) {
+      onListStructureFeedback('请先选中一个列表项');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const result = updateLayoutListBatchChecked({
+      itemId: selectedNodeInfo.nodeId,
+      scope,
+      action,
+    });
+
+    onListStructureFeedback(
+      result.changedCount > 0
+        ? `${scope === 'all' ? '整列表' : '当前层级'}已${action === 'check' ? '全部勾选' : '全部取消'}（${result.changedCount} 项）`
+        : '没有可更新的任务项',
+    );
+  };
+
+  const handleListTaskConversionAction = (action: ListTaskConversionAction) => {
+    if (!selectedListItemPosition) {
+      onListStructureFeedback('请先选中一个列表项');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = convertLayoutListItemTaskState({
+      itemId: selectedNodeInfo.nodeId,
+      action,
+    });
+
+    onListStructureFeedback(
+      nextSelectedNodeId
+        ? action === 'convertToTask'
+          ? '已转换为任务项'
+          : '已取消任务项'
+        : '任务项状态没有变化',
+    );
+  };
+
+  const handleListStructureAction = (action: ListStructureAction) => {
+    if (!selectedListItemPosition) {
+      onListStructureFeedback('请先选中一个列表项');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = updateLayoutListStructure({
+      itemId: selectedNodeInfo.nodeId,
+      action,
+    });
+
+    if (!nextSelectedNodeId) {
+      onListStructureFeedback('至少需要保留 1 个列表项');
+      return;
+    }
+
+    onListStructureFeedback(getListStructureActionMessage(action));
+  };
 
   const handleTableStructureAction = (action: TableStructureAction) => {
     if (!selectedTableCellPosition) {
@@ -584,6 +1053,40 @@ function renderObjectPropertiesPanel(
     );
   };
 
+  const handleBlockquoteStructureAction = (action: BlockquoteStructureAction) => {
+    if (!selectedBlockquoteContext || !selectedBlockquoteDirectChild) {
+      onBlockquoteStructureFeedback('请先在引用中选中具体子块');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = updateLayoutBlockquoteStructure({
+      blockquoteId: selectedBlockquoteContext.blockquoteBlock.id,
+      targetNodeId: selectedBlockquoteDirectChild.id,
+      action,
+    });
+
+    if (!nextSelectedNodeId) {
+      onBlockquoteStructureFeedback('至少需要保留 1 个引用子块');
+      return;
+    }
+
+    onBlockquoteStructureFeedback(getBlockquoteStructureActionMessage(action));
+  };
+
+  const handleTocRefresh = () => {
+    if (selectedNodeInfo.ownerBlock.type !== 'toc' || selectedNodeInfo.ownerBlock.metadata.kind !== 'toc') {
+      onTocRefreshFeedback('当前不是目录块');
+      return;
+    }
+
+    const didRefresh = refreshLayoutTocBlock({
+      nodeId: selectedNodeInfo.nodeId,
+    });
+
+    onTocRefreshFeedback(didRefresh ? '目录已刷新' : '当前目录不可刷新');
+  };
+
   return (
     <>
       <section className="detail-panel object-detail-panel">
@@ -605,7 +1108,7 @@ function renderObjectPropertiesPanel(
         <section className="detail-panel object-detail-panel">
           <div className="detail-panel-head">
             <h3>图片属性</h3>
-            <span>只保存路径和说明，不处理上传或资源复制</span>
+            <span>尺寸、裁剪与环绕会同步写回图片块</span>
           </div>
           <div className="property-stack">
             <label>
@@ -614,14 +1117,7 @@ function renderObjectPropertiesPanel(
                 className="style-text-input"
                 type="text"
                 value={selectedImageMetadata.src}
-                onChange={(event) =>
-                  updateLayoutImageAttributes({
-                    nodeId: selectedNodeInfo.nodeId,
-                    src: event.target.value,
-                    alt: selectedImageMetadata.alt,
-                    title: selectedImageMetadata.title,
-                  })
-                }
+                onChange={(event) => commitImageMetadata({ src: event.target.value })}
               />
             </label>
             <label>
@@ -630,14 +1126,7 @@ function renderObjectPropertiesPanel(
                 className="style-text-input"
                 type="text"
                 value={selectedImageMetadata.alt}
-                onChange={(event) =>
-                  updateLayoutImageAttributes({
-                    nodeId: selectedNodeInfo.nodeId,
-                    src: selectedImageMetadata.src,
-                    alt: event.target.value,
-                    title: selectedImageMetadata.title,
-                  })
-                }
+                onChange={(event) => commitImageMetadata({ alt: event.target.value })}
               />
             </label>
             <label>
@@ -646,17 +1135,447 @@ function renderObjectPropertiesPanel(
                 className="style-text-input"
                 type="text"
                 value={selectedImageMetadata.title ?? ''}
-                onChange={(event) =>
-                  updateLayoutImageAttributes({
-                    nodeId: selectedNodeInfo.nodeId,
-                    src: selectedImageMetadata.src,
-                    alt: selectedImageMetadata.alt,
-                    title: event.target.value === '' ? null : event.target.value,
-                  })
-                }
+                onChange={(event) => commitImageMetadata({ title: event.target.value === '' ? null : event.target.value })}
               />
             </label>
+            <div className="image-property-group">
+              <div className="image-property-group-title">尺寸</div>
+              <div className="margin-grid">
+                <label>
+                  宽度
+                  <div className="number-input-shell">
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={selectedImageLayout?.widthPx ?? ''}
+                      onChange={(event) => handleImageDimensionChange('widthPx', event.target.value)}
+                    />
+                    <span>px</span>
+                  </div>
+                </label>
+                <label>
+                  高度
+                  <div className="number-input-shell">
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={selectedImageLayout?.heightPx ?? ''}
+                      onChange={(event) => handleImageDimensionChange('heightPx', event.target.value)}
+                    />
+                    <span>px</span>
+                  </div>
+                </label>
+              </div>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={selectedImageMetadata.lockAspectRatio ?? true}
+                  onChange={(event) =>
+                    commitImageMetadata({ lockAspectRatio: event.target.checked })
+                  }
+                />
+                <span>锁定比例</span>
+              </label>
+            </div>
+            <div className="image-property-group">
+              <div className="image-property-group-title">裁剪</div>
+              <div className="margin-grid">
+                <label>
+                  上
+                  <div className="number-input-shell">
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={selectedImageLayout?.cropTopPx ?? 0}
+                      onChange={(event) => handleImageFieldChange('cropTopPx', event.target.value)}
+                    />
+                    <span>px</span>
+                  </div>
+                </label>
+                <label>
+                  右
+                  <div className="number-input-shell">
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={selectedImageLayout?.cropRightPx ?? 0}
+                      onChange={(event) => handleImageFieldChange('cropRightPx', event.target.value)}
+                    />
+                    <span>px</span>
+                  </div>
+                </label>
+                <label>
+                  下
+                  <div className="number-input-shell">
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={selectedImageLayout?.cropBottomPx ?? 0}
+                      onChange={(event) => handleImageFieldChange('cropBottomPx', event.target.value)}
+                    />
+                    <span>px</span>
+                  </div>
+                </label>
+                <label>
+                  左
+                  <div className="number-input-shell">
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={selectedImageLayout?.cropLeftPx ?? 0}
+                      onChange={(event) => handleImageFieldChange('cropLeftPx', event.target.value)}
+                    />
+                    <span>px</span>
+                  </div>
+                </label>
+              </div>
+              <p className="panel-note">裁剪只影响可视区域，不会改原始图片文件。</p>
+            </div>
+            <div className="image-property-group">
+              <div className="image-property-group-title">环绕</div>
+              <div className="segmented-group">
+                {([
+                  { id: 'block', label: '独占一行' },
+                  { id: 'center', label: '居中显示' },
+                  { id: 'left', label: '左侧排布' },
+                  { id: 'right', label: '右侧排布' },
+                ] as const).map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={(selectedImageMetadata.wrapMode ?? 'block') === option.id ? 'segment-chip active' : 'segment-chip'}
+                    onClick={() =>
+                      commitImageMetadata({ wrapMode: option.id })
+                    }
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p className="panel-note">V1 先按图片块自身版式对齐处理，不做复杂正文绕排。</p>
+            </div>
           </div>
+        </section>
+      ) : null}
+
+      {selectedNodeInfo.ownerBlock.type === 'toc' && selectedNodeInfo.ownerBlock.metadata.kind === 'toc' ? (
+        (() => {
+          const tocMetadata = selectedNodeInfo.ownerBlock.metadata;
+
+          return (
+            <section className="detail-panel object-detail-panel">
+              <div className="detail-panel-head">
+                <h3>目录层级</h3>
+                <span>控制正文目录显示到哪一级标题</span>
+              </div>
+              <div className="segmented-group">
+                {([
+                  { depth: 3 as const, label: '显示 H1-H3' },
+                  { depth: 2 as const, label: '显示 H1-H2' },
+                  { depth: 1 as const, label: '仅 H1' },
+                ]).map((option) => (
+                  <button
+                    key={option.depth}
+                    type="button"
+                    className={tocMetadata.maxDepth === option.depth ? 'segment-chip active' : 'segment-chip'}
+                    onClick={() =>
+                      updateLayoutTocMaxDepth({
+                        nodeId: selectedNodeInfo.nodeId,
+                        maxDepth: option.depth,
+                      })
+                    }
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="table-structure-grid">
+                <button
+                  type="button"
+                  className="segment-chip table-structure-button"
+                  onClick={handleTocRefresh}
+                >
+                  刷新目录
+                </button>
+              </div>
+              {tocRefreshFeedback ? <p className="table-structure-feedback">{tocRefreshFeedback}</p> : null}
+            </section>
+          );
+        })()
+      ) : null}
+
+      {selectedBlockquoteContext ? (
+        <section className="detail-panel object-detail-panel">
+          <div className="detail-panel-head">
+            <h3>引用容器</h3>
+            <span>
+              共 {selectedBlockquoteContext.childCount} 个子块
+              {selectedBlockquoteDirectChild
+                ? ` · 当前第 ${selectedBlockquoteContext.directChildIndex + 1} 个`
+                : ' · 当前选中整个引用容器'}
+            </span>
+          </div>
+          <div className="blockquote-structure-list">
+            {selectedBlockquoteChildren.map((childBlock, index) => {
+              const isActive = childBlock.id === selectedBlockquoteDirectChild?.id;
+
+              return (
+                <div
+                  key={childBlock.id}
+                  className={isActive ? 'blockquote-structure-item active' : 'blockquote-structure-item'}
+                >
+                  <div className="blockquote-structure-item-head">
+                    <strong>
+                      第 {index + 1} 项 · {blockTypeLabels[childBlock.type]}
+                    </strong>
+                    {isActive ? <span>当前子块</span> : null}
+                  </div>
+                  <p>{getBlockPreviewText(childBlock)}</p>
+                </div>
+              );
+            })}
+          </div>
+          {!selectedBlockquoteDirectChild ? (
+            <div className="object-empty-state">请先选中引用中的具体子块，再执行结构操作</div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {selectedBlockquoteContext ? (
+        <section className="detail-panel object-detail-panel">
+          <div className="detail-panel-head">
+            <h3>引用结构</h3>
+            <span>
+              {selectedBlockquoteDirectChild
+                ? `${blockTypeLabels[selectedBlockquoteDirectChild.type]} · 围绕当前子块操作`
+                : '当前未定位到具体子块'}
+            </span>
+          </div>
+          <div className="table-structure-grid">
+            {blockquoteStructureActions.map((option) => {
+              const isDisabled =
+                !selectedBlockquoteDirectChild ||
+                (option.disabledWhen === 'singleBlock' && selectedBlockquoteContext.childCount <= 1);
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className="segment-chip table-structure-button"
+                  disabled={isDisabled}
+                  title={
+                    !selectedBlockquoteDirectChild
+                      ? '请先选中引用中的具体子块'
+                      : isDisabled
+                        ? '至少需要保留 1 个引用子块'
+                        : option.label
+                  }
+                  onClick={() => handleBlockquoteStructureAction(option.id)}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          {blockquoteStructureFeedback ? <p className="table-structure-feedback">{blockquoteStructureFeedback}</p> : null}
+        </section>
+      ) : null}
+
+      {selectedListBlockWithoutItem ? (
+        <section className="detail-panel object-detail-panel">
+          <div className="detail-panel-head">
+            <h3>列表属性</h3>
+            <span>请先选中具体列表项</span>
+          </div>
+          <div className="object-empty-state">选中列表项后可切换类型、设置起始编号和增删列表项</div>
+        </section>
+      ) : null}
+
+      {selectedListItemPosition && selectedListMetadata ? (
+        <section className="detail-panel object-detail-panel">
+          <div className="detail-panel-head">
+            <h3>列表属性</h3>
+            <span>
+              {isTaskList ? '任务列表' : selectedListMetadata.ordered ? '有序列表' : '无序列表'} · 当前第 {selectedListItemPosition.itemIndex + 1} 项
+            </span>
+          </div>
+          <div className="property-stack">
+            <label>
+              列表类型
+              <div className="segmented-group">
+                <button
+                  type="button"
+                  className={!selectedListMetadata.ordered && !isTaskList ? 'segment-chip active' : 'segment-chip'}
+                  onClick={() => handleListOrderedChange(false)}
+                >
+                  无序列表
+                </button>
+                <button
+                  type="button"
+                  className={selectedListMetadata.ordered && !isTaskList ? 'segment-chip active' : 'segment-chip'}
+                  onClick={() => handleListOrderedChange(true)}
+                >
+                  有序列表
+                </button>
+                <button
+                  type="button"
+                  className={isTaskList ? 'segment-chip active' : 'segment-chip'}
+                  onClick={() => handleListTaskModeChange(true)}
+                >
+                  任务列表
+                </button>
+              </div>
+            </label>
+            <label>
+              起始编号
+              <div className="number-input-shell">
+                <input
+                  key={`list-start-${selectedNodeInfo.ownerBlock.id}-${currentListStart}`}
+                  type="number"
+                  min={1}
+                  max={999}
+                  step={1}
+                  defaultValue={currentListStart}
+                  disabled={!selectedListMetadata.ordered}
+                  onBlur={(event) => {
+                    const nextValue = Number(event.currentTarget.value);
+                    if (!Number.isFinite(nextValue)) {
+                      event.currentTarget.value = String(currentListStart);
+                      return;
+                    }
+
+                    handleListStartChange(Math.max(1, Math.min(999, Math.round(nextValue))));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') {
+                      return;
+                    }
+
+                    (event.currentTarget as HTMLInputElement).blur();
+                  }}
+                />
+                <span>号</span>
+              </div>
+            </label>
+            <div className="object-property-list">
+              {renderObjectPropertyRow('当前层级', `第 ${currentListLevel} 级`)}
+            </div>
+            <div className="table-structure-grid">
+              <button type="button" className="segment-chip table-structure-button" onClick={() => handleListLevelChange('outdent')}>
+                提升一级
+              </button>
+              <button type="button" className="segment-chip table-structure-button" onClick={() => handleListLevelChange('indent')}>
+                降低一级
+              </button>
+              <button type="button" className="segment-chip table-structure-button" onClick={() => handleListReorderAction('moveUp')}>
+                上移
+              </button>
+              <button type="button" className="segment-chip table-structure-button" onClick={() => handleListReorderAction('moveDown')}>
+                下移
+              </button>
+            </div>
+            {selectedListItem && selectedListItem.checked !== null ? (
+              <label className="toggle-row">
+                <input
+                  type="checkbox"
+                  checked={selectedListItem?.checked ?? false}
+                  onChange={(event) => handleListItemCheckedChange(event.target.checked)}
+                />
+                <span>任务项勾选</span>
+              </label>
+            ) : null}
+            <div className="table-structure-grid">
+              <button
+                type="button"
+                className="segment-chip table-structure-button"
+                onClick={() => handleListTaskConversionAction('convertToTask')}
+              >
+                转任务项
+              </button>
+              <button
+                type="button"
+                className="segment-chip table-structure-button"
+                onClick={() => handleListTaskConversionAction('convertToPlain')}
+              >
+                取消任务项
+              </button>
+              <button
+                type="button"
+                className="segment-chip table-structure-button"
+                onClick={() => handleListTaskModeChange(false)}
+              >
+                整列表转普通
+              </button>
+            </div>
+            {isTaskList ? (
+              <div className="table-structure-grid">
+                <button
+                  type="button"
+                  className="segment-chip table-structure-button"
+                  onClick={() => handleListBatchCheckedAction('all', 'check')}
+                >
+                  全部勾选
+                </button>
+                <button
+                  type="button"
+                  className="segment-chip table-structure-button"
+                  onClick={() => handleListBatchCheckedAction('all', 'uncheck')}
+                >
+                  全部取消
+                </button>
+                <button
+                  type="button"
+                  className="segment-chip table-structure-button"
+                  onClick={() => handleListBatchCheckedAction('currentLevel', 'check')}
+                >
+                  当前层级全勾选
+                </button>
+                <button
+                  type="button"
+                  className="segment-chip table-structure-button"
+                  onClick={() => handleListBatchCheckedAction('currentLevel', 'uncheck')}
+                >
+                  当前层级全取消
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {selectedListItemPosition ? (
+        <section className="detail-panel object-detail-panel">
+          <div className="detail-panel-head">
+            <h3>列表结构</h3>
+            <span>
+              共 {selectedListItemPosition.itemCount} 项 · 当前第 {selectedListItemPosition.itemIndex + 1} 项
+            </span>
+          </div>
+          <div className="table-structure-grid">
+            {listStructureActions.map((option) => {
+              const isDisabled = option.disabledWhen === 'singleItem' && selectedListItemPosition.itemCount <= 1;
+
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  className="segment-chip table-structure-button"
+                  disabled={isDisabled}
+                  title={isDisabled ? '至少需要保留 1 个列表项' : option.label}
+                  onClick={() => handleListStructureAction(option.id)}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+          {listStructureFeedback ? <p className="table-structure-feedback">{listStructureFeedback}</p> : null}
         </section>
       ) : null}
 
@@ -740,6 +1659,35 @@ function renderObjectPropertiesPanel(
             })}
           </div>
           {tableStructureFeedback ? <p className="table-structure-feedback">{tableStructureFeedback}</p> : null}
+        </section>
+      ) : null}
+
+      {selectedEquationMetadata ? (
+        <section className="detail-panel object-detail-panel">
+          <div className="detail-panel-head">
+            <h3>公式属性</h3>
+            <span>{selectedEquationRenderSummary?.statusText ?? '公式'}</span>
+          </div>
+          <div className="property-stack">
+            <label>
+              公式源码
+              <textarea
+                className="style-text-input equation-source-input"
+                value={selectedEquationMetadata.value}
+                rows={4}
+                onChange={(event) =>
+                  updateLayoutNodeText({
+                    nodeId: selectedNodeInfo.nodeId,
+                    text: event.target.value,
+                  })
+                }
+              />
+            </label>
+          </div>
+          <div className="panel-note-list">
+            <p>当前公式会同步到画布预览和导出结果。</p>
+            <p>{selectedEquationRenderSummary?.errorText ? `解析错误：${selectedEquationRenderSummary.errorText}` : '解析正常'}</p>
+          </div>
         </section>
       ) : null}
 
@@ -919,145 +1867,155 @@ function renderObjectPropertiesPanel(
         </section>
       ) : null}
 
-      {isBlockStyleEditable(selectedNodeInfo) ? (
+      {blockStyleControlSupport ? (
         <section className="detail-panel object-detail-panel">
           <div className="detail-panel-head">
-            <h3>段落样式</h3>
-            <span>始终作用到所属块，不跟文字选区绑定</span>
+            <h3>{blockStyleControlSupport.sectionTitle}</h3>
+            <span>{blockStyleControlSupport.sectionHint}</span>
           </div>
-          <div className="segmented-group">
-            {([
-              { id: 'left', label: '左对齐' },
-              { id: 'center', label: '居中' },
-              { id: 'right', label: '右对齐' },
-              { id: 'justify', label: '两端' },
-            ] as const).map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={currentTextAlign === option.id ? 'segment-chip active' : 'segment-chip'}
-                onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
-                onClick={() =>
-                  applyLayoutNodeBlockStyle({
-                    nodeId: selectedNodeInfo.nodeId,
-                    blockStyleOverrides: { textAlign: option.id },
-                  })
-                }
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          {blockStyleControlSupport.supportsTextAlign ? (
+            <div className="segmented-group">
+              {([
+                { id: 'left', label: '左对齐' },
+                { id: 'center', label: '居中' },
+                { id: 'right', label: '右对齐' },
+                { id: 'justify', label: '两端' },
+              ] as const).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={currentTextAlign === option.id ? 'segment-chip active' : 'segment-chip'}
+                  onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
+                  onClick={() =>
+                    applyLayoutNodeBlockStyle({
+                      nodeId: selectedNodeInfo.nodeId,
+                      blockStyleOverrides: { textAlign: option.id },
+                    })
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="margin-grid">
-            <label>
-              行高
-              <div className="number-input-shell">
-                <input
-                  key={`line-height-${selectedNodeInfo.nodeId}-${currentLineHeight}`}
-                  type="number"
-                  min={16}
-                  max={72}
-                  step={1}
-                  defaultValue={currentLineHeight}
-                  onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
-                  onBlur={(event) => {
-                    const nextValue = Number(event.currentTarget.value);
-                    if (!Number.isFinite(nextValue)) {
-                      event.currentTarget.value = String(currentLineHeight);
-                      return;
-                    }
+            {blockStyleControlSupport.supportsLineHeight ? (
+              <label>
+                行高
+                <div className="number-input-shell">
+                  <input
+                    key={`line-height-${selectedNodeInfo.nodeId}-${currentLineHeight}`}
+                    type="number"
+                    min={16}
+                    max={72}
+                    step={1}
+                    defaultValue={currentLineHeight}
+                    onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
+                    onBlur={(event) => {
+                      const nextValue = Number(event.currentTarget.value);
+                      if (!Number.isFinite(nextValue)) {
+                        event.currentTarget.value = String(currentLineHeight);
+                        return;
+                      }
 
-                    applyLayoutNodeBlockStyle({
-                      nodeId: selectedNodeInfo.nodeId,
-                      blockStyleOverrides: { lineHeight: Math.max(16, Math.min(72, Math.round(nextValue))) },
-                    });
-                  }}
-                />
-                <span>px</span>
-              </div>
-            </label>
-            <label>
-              左缩进
-              <div className="number-input-shell">
-                <input
-                  key={`indent-left-${selectedNodeInfo.nodeId}-${currentIndentLeft}`}
-                  type="number"
-                  min={0}
-                  max={200}
-                  step={2}
-                  defaultValue={currentIndentLeft}
-                  onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
-                  onBlur={(event) => {
-                    const nextValue = Number(event.currentTarget.value);
-                    if (!Number.isFinite(nextValue)) {
-                      event.currentTarget.value = String(currentIndentLeft);
-                      return;
-                    }
+                      applyLayoutNodeBlockStyle({
+                        nodeId: selectedNodeInfo.nodeId,
+                        blockStyleOverrides: { lineHeight: Math.max(16, Math.min(72, Math.round(nextValue))) },
+                      });
+                    }}
+                  />
+                  <span>px</span>
+                </div>
+              </label>
+            ) : null}
+            {blockStyleControlSupport.supportsIndentLeft ? (
+              <label>
+                左缩进
+                <div className="number-input-shell">
+                  <input
+                    key={`indent-left-${selectedNodeInfo.nodeId}-${currentIndentLeft}`}
+                    type="number"
+                    min={0}
+                    max={200}
+                    step={2}
+                    defaultValue={currentIndentLeft}
+                    onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
+                    onBlur={(event) => {
+                      const nextValue = Number(event.currentTarget.value);
+                      if (!Number.isFinite(nextValue)) {
+                        event.currentTarget.value = String(currentIndentLeft);
+                        return;
+                      }
 
-                    applyLayoutNodeBlockStyle({
-                      nodeId: selectedNodeInfo.nodeId,
-                      blockStyleOverrides: { indentLeft: Math.max(0, Math.min(200, Math.round(nextValue))) },
-                    });
-                  }}
-                />
-                <span>px</span>
-              </div>
-            </label>
-            <label>
-              右缩进
-              <div className="number-input-shell">
-                <input
-                  key={`indent-right-${selectedNodeInfo.nodeId}-${currentIndentRight}`}
-                  type="number"
-                  min={0}
-                  max={200}
-                  step={2}
-                  defaultValue={currentIndentRight}
-                  onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
-                  onBlur={(event) => {
-                    const nextValue = Number(event.currentTarget.value);
-                    if (!Number.isFinite(nextValue)) {
-                      event.currentTarget.value = String(currentIndentRight);
-                      return;
-                    }
+                      applyLayoutNodeBlockStyle({
+                        nodeId: selectedNodeInfo.nodeId,
+                        blockStyleOverrides: { indentLeft: Math.max(0, Math.min(200, Math.round(nextValue))) },
+                      });
+                    }}
+                  />
+                  <span>px</span>
+                </div>
+              </label>
+            ) : null}
+            {blockStyleControlSupport.supportsIndentRight ? (
+              <label>
+                右缩进
+                <div className="number-input-shell">
+                  <input
+                    key={`indent-right-${selectedNodeInfo.nodeId}-${currentIndentRight}`}
+                    type="number"
+                    min={0}
+                    max={200}
+                    step={2}
+                    defaultValue={currentIndentRight}
+                    onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
+                    onBlur={(event) => {
+                      const nextValue = Number(event.currentTarget.value);
+                      if (!Number.isFinite(nextValue)) {
+                        event.currentTarget.value = String(currentIndentRight);
+                        return;
+                      }
 
-                    applyLayoutNodeBlockStyle({
-                      nodeId: selectedNodeInfo.nodeId,
-                      blockStyleOverrides: { indentRight: Math.max(0, Math.min(200, Math.round(nextValue))) },
-                    });
-                  }}
-                />
-                <span>px</span>
-              </div>
-            </label>
-            <label>
-              首行缩进
-              <div className="number-input-shell">
-                <input
-                  key={`first-line-indent-${selectedNodeInfo.nodeId}-${currentFirstLineIndent}`}
-                  type="number"
-                  min={0}
-                  max={120}
-                  step={2}
-                  defaultValue={currentFirstLineIndent}
-                  onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
-                  onBlur={(event) => {
-                    const nextValue = Number(event.currentTarget.value);
-                    if (!Number.isFinite(nextValue)) {
-                      event.currentTarget.value = String(currentFirstLineIndent);
-                      return;
-                    }
+                      applyLayoutNodeBlockStyle({
+                        nodeId: selectedNodeInfo.nodeId,
+                        blockStyleOverrides: { indentRight: Math.max(0, Math.min(200, Math.round(nextValue))) },
+                      });
+                    }}
+                  />
+                  <span>px</span>
+                </div>
+              </label>
+            ) : null}
+            {blockStyleControlSupport.supportsFirstLineIndent ? (
+              <label>
+                首行缩进
+                <div className="number-input-shell">
+                  <input
+                    key={`first-line-indent-${selectedNodeInfo.nodeId}-${currentFirstLineIndent}`}
+                    type="number"
+                    min={0}
+                    max={120}
+                    step={2}
+                    defaultValue={currentFirstLineIndent}
+                    onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
+                    onBlur={(event) => {
+                      const nextValue = Number(event.currentTarget.value);
+                      if (!Number.isFinite(nextValue)) {
+                        event.currentTarget.value = String(currentFirstLineIndent);
+                        return;
+                      }
 
-                    applyLayoutNodeBlockStyle({
-                      nodeId: selectedNodeInfo.nodeId,
-                      blockStyleOverrides: { firstLineIndent: Math.max(0, Math.min(120, Math.round(nextValue))) },
-                    });
-                  }}
-                />
-                <span>px</span>
-              </div>
-            </label>
-            {isHangingIndentEditable(selectedNodeInfo) ? (
+                      applyLayoutNodeBlockStyle({
+                        nodeId: selectedNodeInfo.nodeId,
+                        blockStyleOverrides: { firstLineIndent: Math.max(0, Math.min(120, Math.round(nextValue))) },
+                      });
+                    }}
+                  />
+                  <span>px</span>
+                </div>
+              </label>
+            ) : null}
+            {blockStyleControlSupport.supportsHangingIndent ? (
               <label>
                 悬挂缩进
                 <div className="number-input-shell">
@@ -1086,65 +2044,77 @@ function renderObjectPropertiesPanel(
                 </div>
               </label>
             ) : null}
-            <label>
-              段前距
-              <div className="number-input-shell">
-                <input
-                  key={`space-before-${selectedNodeInfo.nodeId}-${currentSpaceBefore}`}
-                  type="number"
-                  min={0}
-                  max={120}
-                  step={1}
-                  defaultValue={currentSpaceBefore}
-                  onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
-                  onBlur={(event) => {
-                    const nextValue = Number(event.currentTarget.value);
-                    if (!Number.isFinite(nextValue)) {
-                      event.currentTarget.value = String(currentSpaceBefore);
-                      return;
-                    }
+            {blockStyleControlSupport.supportsSpaceBefore ? (
+              <label>
+                段前距
+                <div className="number-input-shell">
+                  <input
+                    key={`space-before-${selectedNodeInfo.nodeId}-${currentSpaceBefore}`}
+                    type="number"
+                    min={0}
+                    max={120}
+                    step={1}
+                    defaultValue={currentSpaceBefore}
+                    onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
+                    onBlur={(event) => {
+                      const nextValue = Number(event.currentTarget.value);
+                      if (!Number.isFinite(nextValue)) {
+                        event.currentTarget.value = String(currentSpaceBefore);
+                        return;
+                      }
 
-                    applyLayoutNodeBlockStyle({
-                      nodeId: selectedNodeInfo.nodeId,
-                      blockStyleOverrides: { spaceBefore: Math.max(0, Math.min(120, Math.round(nextValue))) },
-                    });
-                  }}
-                />
-                <span>px</span>
-              </div>
-            </label>
-            <label>
-              段后距
-              <div className="number-input-shell">
-                <input
-                  key={`space-after-${selectedNodeInfo.nodeId}-${currentSpaceAfter}`}
-                  type="number"
-                  min={0}
-                  max={120}
-                  step={1}
-                  defaultValue={currentSpaceAfter}
-                  onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
-                  onBlur={(event) => {
-                    const nextValue = Number(event.currentTarget.value);
-                    if (!Number.isFinite(nextValue)) {
-                      event.currentTarget.value = String(currentSpaceAfter);
-                      return;
-                    }
+                      applyLayoutNodeBlockStyle({
+                        nodeId: selectedNodeInfo.nodeId,
+                        blockStyleOverrides: { spaceBefore: Math.max(0, Math.min(120, Math.round(nextValue))) },
+                      });
+                    }}
+                  />
+                  <span>px</span>
+                </div>
+              </label>
+            ) : null}
+            {blockStyleControlSupport.supportsSpaceAfter ? (
+              <label>
+                段后距
+                <div className="number-input-shell">
+                  <input
+                    key={`space-after-${selectedNodeInfo.nodeId}-${currentSpaceAfter}`}
+                    type="number"
+                    min={0}
+                    max={120}
+                    step={1}
+                    defaultValue={currentSpaceAfter}
+                    onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
+                    onBlur={(event) => {
+                      const nextValue = Number(event.currentTarget.value);
+                      if (!Number.isFinite(nextValue)) {
+                        event.currentTarget.value = String(currentSpaceAfter);
+                        return;
+                      }
 
-                    applyLayoutNodeBlockStyle({
-                      nodeId: selectedNodeInfo.nodeId,
-                      blockStyleOverrides: { spaceAfter: Math.max(0, Math.min(120, Math.round(nextValue))) },
-                    });
-                  }}
-                />
-                <span>px</span>
-              </div>
-            </label>
+                      applyLayoutNodeBlockStyle({
+                        nodeId: selectedNodeInfo.nodeId,
+                        blockStyleOverrides: { spaceAfter: Math.max(0, Math.min(120, Math.round(nextValue))) },
+                      });
+                    }}
+                  />
+                  <span>px</span>
+                </div>
+              </label>
+            ) : null}
           </div>
+          {blockStyleControlSupport.note ? (
+            <div className="panel-note-list">
+              <p>{blockStyleControlSupport.note}</p>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
-      {!selectedImageMetadata && !isTextStyleEditable(selectedNodeInfo) && !isBlockStyleEditable(selectedNodeInfo) ? (
+      {!selectedImageMetadata &&
+      !selectedBlockquoteContext &&
+      !isTextStyleEditable(selectedNodeInfo) &&
+      !isBlockStyleEditable(selectedNodeInfo) ? (
         <section className="detail-panel object-detail-panel">
           <div className="detail-panel-head">
             <h3>本步边界说明</h3>
@@ -1599,8 +2569,23 @@ export function RightPanel({
   const updateLayoutTableStructure = useAppStore((state) => state.updateLayoutTableStructure);
   const updateLayoutTableHeaderRow = useAppStore((state) => state.updateLayoutTableHeaderRow);
   const updateLayoutTableColumnAlign = useAppStore((state) => state.updateLayoutTableColumnAlign);
+  const updateLayoutListStructure = useAppStore((state) => state.updateLayoutListStructure);
+  const updateLayoutListOrdered = useAppStore((state) => state.updateLayoutListOrdered);
+  const updateLayoutListStart = useAppStore((state) => state.updateLayoutListStart);
+  const updateLayoutListItemChecked = useAppStore((state) => state.updateLayoutListItemChecked);
+  const updateLayoutListItemLevel = useAppStore((state) => state.updateLayoutListItemLevel);
+  const reorderLayoutListItem = useAppStore((state) => state.reorderLayoutListItem);
+  const updateLayoutListTaskMode = useAppStore((state) => state.updateLayoutListTaskMode);
+  const convertLayoutListItemTaskState = useAppStore((state) => state.convertLayoutListItemTaskState);
+  const updateLayoutListBatchChecked = useAppStore((state) => state.updateLayoutListBatchChecked);
+  const updateLayoutBlockquoteStructure = useAppStore((state) => state.updateLayoutBlockquoteStructure);
   const applyLayoutNodeBlockStyle = useAppStore((state) => state.applyLayoutNodeBlockStyle);
+  const updateLayoutTocMaxDepth = useAppStore((state) => state.updateLayoutTocMaxDepth);
+  const refreshLayoutTocBlock = useAppStore((state) => state.refreshLayoutTocBlock);
   const [tableStructureFeedback, setTableStructureFeedback] = useState<string | null>(null);
+  const [listStructureFeedback, setListStructureFeedback] = useState<string | null>(null);
+  const [tocRefreshFeedback, setTocRefreshFeedback] = useState<string | null>(null);
+  const [blockquoteStructureFeedback, setBlockquoteStructureFeedback] = useState<string | null>(null);
   const [marginDrafts, setMarginDrafts] = useState<Record<MarginSide, string>>({
     top: String(styleSettings.customMarginsMm.top),
     right: String(styleSettings.customMarginsMm.right),
@@ -1613,9 +2598,13 @@ export function RightPanel({
   });
   const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
   const selectedNodeInfo = getSelectedLayoutNodeInfo(layoutDocument);
+  const selectedBlockquoteContext = getSelectedBlockquoteContext(layoutDocument);
 
   useEffect(() => {
     setTableStructureFeedback(null);
+    setListStructureFeedback(null);
+    setTocRefreshFeedback(null);
+    setBlockquoteStructureFeedback(null);
   }, [selectedNodeId]);
 
   useEffect(() => {
@@ -1755,19 +2744,39 @@ export function RightPanel({
         <div className="right-panel-detail">
           {renderObjectPropertiesPanel(
             selectedNodeInfo,
+            selectedBlockquoteContext,
             selectedNodeId,
             canvasTextSelection,
             resolvedStyleContract,
             toggleLayoutNodeTextMark,
             applyLayoutNodeTextStyle,
+            updateLayoutNodeText,
             clearLayoutNodeTextFormatting,
             updateLayoutImageAttributes,
+            updateLayoutTocMaxDepth,
+            refreshLayoutTocBlock,
             updateLayoutTableStructure,
             updateLayoutTableHeaderRow,
             updateLayoutTableColumnAlign,
+            updateLayoutListStructure,
+            updateLayoutListOrdered,
+            updateLayoutListStart,
+            updateLayoutListItemChecked,
+            updateLayoutListItemLevel,
+            reorderLayoutListItem,
+            updateLayoutListTaskMode,
+            convertLayoutListItemTaskState,
+            updateLayoutListBatchChecked,
+            updateLayoutBlockquoteStructure,
             applyLayoutNodeBlockStyle,
             tableStructureFeedback,
             setTableStructureFeedback,
+            listStructureFeedback,
+            setListStructureFeedback,
+            tocRefreshFeedback,
+            setTocRefreshFeedback,
+            blockquoteStructureFeedback,
+            setBlockquoteStructureFeedback,
             syncEditingTextBeforeStyleAction,
           )}
         </div>

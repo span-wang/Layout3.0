@@ -8,6 +8,8 @@ import type {
   TextRun,
   TocItem,
 } from './types';
+import { getLayoutListItemLevel } from './utils';
+import type { PageLayout } from '@/engine/typesetting/types';
 
 export type SelectedLayoutNodeKind = 'block' | 'listItem' | 'tableCell';
 
@@ -18,6 +20,13 @@ export interface SelectedLayoutNodeInfo {
   textRuns: TextRun[];
   plainText: string;
   sourceRange: SourceRange | null;
+}
+
+export interface SelectedBlockquoteContext {
+  blockquoteBlock: LayoutBlock;
+  directChildBlock: LayoutBlock | null;
+  directChildIndex: number;
+  childCount: number;
 }
 
 export function findLayoutBlockById(blocks: LayoutBlock[], blockId: string): LayoutBlock | null {
@@ -85,6 +94,27 @@ function createSelectedNodeInfoForBlock(block: LayoutBlock): SelectedLayoutNodeI
   };
 }
 
+function findDirectChildBlockIndexForSelectedNode(
+  blocks: LayoutBlock[],
+  selectedNodeId: string,
+): number {
+  return blocks.findIndex((block) => {
+    if (block.id === selectedNodeId) {
+      return true;
+    }
+
+    if (block.type === 'list' && block.metadata.kind === 'list') {
+      return block.metadata.items.some((item) => item.id === selectedNodeId);
+    }
+
+    if (block.type === 'table' && block.metadata.kind === 'table') {
+      return block.metadata.rows.some((row) => row.cells.some((cell) => cell.id === selectedNodeId));
+    }
+
+    return false;
+  });
+}
+
 export function findSelectedLayoutNodeInfo(
   blocks: LayoutBlock[],
   selectedNodeId: string,
@@ -130,6 +160,52 @@ export function getSelectedLayoutNodeInfo(document: LayoutDocument | null): Sele
   return findSelectedLayoutNodeInfo(document.blocks, selectedNodeId);
 }
 
+export function findSelectedBlockquoteContext(
+  blocks: LayoutBlock[],
+  selectedNodeId: string,
+): SelectedBlockquoteContext | null {
+  for (const block of blocks) {
+    if (block.type !== 'blockquote' || block.metadata.kind !== 'blockquote') {
+      continue;
+    }
+
+    if (block.id === selectedNodeId) {
+      return {
+        blockquoteBlock: block,
+        directChildBlock: null,
+        directChildIndex: -1,
+        childCount: block.metadata.blocks.length,
+      };
+    }
+
+    const directChildIndex = findDirectChildBlockIndexForSelectedNode(block.metadata.blocks, selectedNodeId);
+    if (directChildIndex >= 0) {
+      return {
+        blockquoteBlock: block,
+        directChildBlock: block.metadata.blocks[directChildIndex] ?? null,
+        directChildIndex,
+        childCount: block.metadata.blocks.length,
+      };
+    }
+
+    const nestedContext = findSelectedBlockquoteContext(block.metadata.blocks, selectedNodeId);
+    if (nestedContext) {
+      return nestedContext;
+    }
+  }
+
+  return null;
+}
+
+export function getSelectedBlockquoteContext(document: LayoutDocument | null): SelectedBlockquoteContext | null {
+  const selectedNodeId = document?.viewState.selectedNodeId;
+  if (!document || !selectedNodeId) {
+    return null;
+  }
+
+  return findSelectedBlockquoteContext(document.blocks, selectedNodeId);
+}
+
 export function getHeadingText(block: LayoutBlock): string | null {
   if (block.type !== 'heading' || block.metadata.kind !== 'heading') {
     return null;
@@ -142,11 +218,14 @@ export function getLayoutBlockPlainText(block: LayoutBlock): string {
   switch (block.type) {
     case 'paragraph':
     case 'heading':
+    case 'toc':
     case 'code':
       return getTextContentFromRuns(block.textRuns);
     case 'list':
       return block.metadata.kind === 'list'
-        ? block.metadata.items.map((item) => getTextContentFromRuns(item.textRuns)).join('\n')
+        ? block.metadata.items
+            .map((item) => `${'  '.repeat(getLayoutListItemLevel(item) - 1)}${getTextContentFromRuns(item.textRuns)}`)
+            .join('\n')
         : '';
     case 'table':
       return block.metadata.kind === 'table'
@@ -193,4 +272,36 @@ export function buildTocItems(document: LayoutDocument | null): TocItem[] {
   }
 
   return collectTocItems(document.blocks);
+}
+
+export function buildHeadingPageNumberMap(pageLayouts: PageLayout[]): Record<string, number> {
+  const pageNumberMap: Record<string, number> = {};
+
+  const collectFromBlocks = (blocks: LayoutBlock[], pageNumber: number) => {
+    for (const block of blocks) {
+      if (block.type === 'heading' && block.metadata.kind === 'heading' && pageNumberMap[block.id] === undefined) {
+        pageNumberMap[block.id] = pageNumber;
+      }
+
+      if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+        collectFromBlocks(block.metadata.blocks, pageNumber);
+      }
+    }
+  };
+
+  for (const page of pageLayouts) {
+    collectFromBlocks(page.blocks, page.pageNumber);
+  }
+
+  return pageNumberMap;
+}
+
+export function applyPageNumbersToTocItems(
+  tocItems: TocItem[],
+  headingPageNumberMap: Record<string, number>,
+): TocItem[] {
+  return tocItems.map((item) => ({
+    ...item,
+    pageNumber: headingPageNumberMap[item.id],
+  }));
 }

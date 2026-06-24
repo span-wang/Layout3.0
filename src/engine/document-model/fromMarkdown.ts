@@ -329,15 +329,28 @@ function extractPlainTextFromListItem(node: ListItem): string {
     .join('\n');
 }
 
-function buildListItem(blockId: string, index: number, node: ListItem): LayoutListItem {
-  const itemId = `${blockId}-item-${index + 1}-${createTextFragment(extractPlainTextFromListItem(node), 'item')}`;
+function buildListItem(blockId: string, pathKey: string, node: ListItem, level = 1): LayoutListItem {
+  const itemId = `${blockId}-item-${pathKey}-${createTextFragment(extractPlainTextFromListItem(node), 'item')}`;
 
   return {
     id: itemId,
     sourceRange: createSourceRange(node.position),
     textRuns: buildListItemTextRuns(itemId, node),
+    level: Math.max(1, Math.min(3, Math.floor(level))),
     checked: typeof node.checked === 'boolean' ? node.checked : null,
   };
+}
+
+function flattenListItems(blockId: string, items: ListItem[], level = 1, pathPrefix = 'root'): LayoutListItem[] {
+  return items.flatMap((item, index) => {
+    const pathKey = `${pathPrefix}-${index + 1}`;
+    const currentItem = buildListItem(blockId, pathKey, item, level);
+    const nestedItems = item.children
+      .filter((child): child is List => child.type === 'list')
+      .flatMap((nestedList, nestedIndex) => flattenListItems(blockId, nestedList.children, level + 1, `${pathKey}-list-${nestedIndex + 1}`));
+
+    return [currentItem, ...nestedItems];
+  });
 }
 
 function buildTableCell(blockId: string, rowIndex: number, cellIndex: number, node: TableCell, isHeader: boolean): LayoutTableCell {
@@ -442,7 +455,7 @@ function buildListBlock(state: BuilderState, node: List): LayoutBlock {
       ordered: node.ordered ?? false,
       start: node.start ?? null,
       spread: node.spread ?? false,
-      items: node.children.map((item, index) => buildListItem(blockId, index, item)),
+      items: flattenListItems(blockId, node.children, 1),
     },
   };
 }
