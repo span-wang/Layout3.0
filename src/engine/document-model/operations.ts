@@ -13,8 +13,25 @@ import type {
   TextRun,
   TextRunPatch,
   TextStyleOverrides,
+  ImageBlockMetadata,
+  ImageWrapSide,
 } from './types';
-import { createTextFragment, getLayoutListItemLevel, normalizeLayoutListLevel } from './utils';
+import { normalizeImageWrapMode, resolveImageWrapSide } from './imageLayout';
+import {
+  createTextFragment,
+  getLayoutListItemLevel,
+  normalizeLayoutListLevel,
+  normalizeTableColumnWidths,
+  normalizeTableColumnWidthPx,
+  normalizeTableRowHeightPx,
+} from './utils';
+import {
+  buildTableCellRangeSelection,
+  findTableCellPosition,
+  getTableCellColSpan,
+  getTableCellRowSpan,
+  isCoveredTableCell,
+} from './tableLayout';
 
 export type EditableLayoutTextBlockType = 'heading' | 'paragraph' | 'code' | 'image' | 'equation';
 
@@ -30,7 +47,8 @@ export interface InsertImageBlockPayload {
   cropRightPx?: number | null;
   cropBottomPx?: number | null;
   cropLeftPx?: number | null;
-  wrapMode?: 'block' | 'center' | 'left' | 'right';
+  wrapMode?: ImageBlockMetadata['wrapMode'];
+  wrapSide?: ImageWrapSide;
   insertAfterNodeId?: string | null;
 }
 
@@ -82,6 +100,30 @@ export interface InsertTocBlockPayload {
 export interface InsertTocBlockResult {
   blocks: LayoutBlock[];
   insertedBlockId: string;
+}
+
+export interface InsertParagraphBlockPayload {
+  insertAfterNodeId?: string | null;
+}
+
+export interface InsertParagraphBlockResult {
+  blocks: LayoutBlock[];
+  insertedBlockId: string;
+}
+
+export interface InsertPageBreakBlockPayload {
+  insertAfterNodeId?: string | null;
+}
+
+export interface InsertPageBreakBlockResult {
+  blocks: LayoutBlock[];
+  insertedBlockId: string;
+}
+
+export interface DeleteTopLevelBlockResult {
+  blocks: LayoutBlock[];
+  selectedNodeId: string | null;
+  didUpdate: boolean;
 }
 
 export type ListStructureAction =
@@ -136,6 +178,13 @@ export interface TablePropertyEditResult {
   block: LayoutBlock;
   selectedNodeId: string | null;
   didUpdate: boolean;
+}
+
+export interface TableMergeEditResult {
+  block: LayoutBlock;
+  selectedNodeId: string | null;
+  didUpdate: boolean;
+  reason: 'merged' | 'invalidSelection' | 'singleCell' | 'containsMergedCell';
 }
 
 export type BlockquoteStructureAction =
@@ -287,11 +336,12 @@ function createInsertedImageBlock(
       heightPx: normalizeOptionalNumber(payload.heightPx),
       lockAspectRatio: payload.lockAspectRatio ?? true,
       objectFit: payload.objectFit ?? 'contain',
-    cropTopPx: normalizeOptionalNumber(payload.cropTopPx) ?? 0,
-    cropRightPx: normalizeOptionalNumber(payload.cropRightPx) ?? 0,
-    cropBottomPx: normalizeOptionalNumber(payload.cropBottomPx) ?? 0,
-    cropLeftPx: normalizeOptionalNumber(payload.cropLeftPx) ?? 0,
-      wrapMode: payload.wrapMode ?? 'block',
+      cropTopPx: normalizeOptionalNumber(payload.cropTopPx) ?? 0,
+      cropRightPx: normalizeOptionalNumber(payload.cropRightPx) ?? 0,
+      cropBottomPx: normalizeOptionalNumber(payload.cropBottomPx) ?? 0,
+      cropLeftPx: normalizeOptionalNumber(payload.cropLeftPx) ?? 0,
+      wrapMode: normalizeImageWrapMode(payload.wrapMode),
+      wrapSide: payload.wrapSide ?? resolveImageWrapSide({ wrapMode: payload.wrapMode }),
     },
   };
 }
@@ -346,6 +396,7 @@ function createInsertedTableRow(blockId: string, rowIndex: number, columnCount: 
   return {
     id: `${blockId}-row-${rowIndex + 1}`,
     sourceRange: null,
+    heightPx: null,
     cells: Array.from({ length: columnCount }, (_, cellIndex) =>
       createEmptyInsertedTableCell(blockId, rowIndex, cellIndex),
     ),
@@ -368,6 +419,7 @@ function createInsertedTableBlock(blocks: LayoutBlock[], payload: InsertTableBlo
     metadata: {
       kind: 'table',
       align: Array.from({ length: columnCount }, () => null),
+      columnWidthsPx: Array.from({ length: columnCount }, () => null),
       rows: Array.from({ length: rowCount }, (_, rowIndex) =>
         createInsertedTableRow(blockId, rowIndex, columnCount),
       ),
@@ -423,6 +475,25 @@ function createInsertedTocBlock(blocks: LayoutBlock[]): LayoutBlock {
       kind: 'toc',
       title: '目录',
       maxDepth: 3,
+    },
+  };
+}
+
+function createInsertedParagraphBlock(blocks: LayoutBlock[]): LayoutBlock {
+  const blockId = createInsertedBlockId(blocks, 'paragraph', '空文本块');
+
+  return {
+    id: blockId,
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: 'paragraph',
+    blockStyleOverrides: {},
+    // 空文本块先不制造假文字，后续由用户直接在画布原位编辑中输入真实内容。
+    textRuns: [],
+    pagination: {},
+    metadata: {
+      kind: 'paragraph',
+      text: '',
     },
   };
 }
@@ -558,24 +629,6 @@ function createEmptyTableCellWithId(cellId: string, isHeader: boolean): LayoutTa
   };
 }
 
-function findTableCellPosition(
-  block: LayoutBlock,
-  cellId: string,
-): { rowIndex: number; columnIndex: number } | null {
-  if (block.type !== 'table' || block.metadata.kind !== 'table') {
-    return null;
-  }
-
-  for (let rowIndex = 0; rowIndex < block.metadata.rows.length; rowIndex += 1) {
-    const columnIndex = block.metadata.rows[rowIndex].cells.findIndex((cell) => cell.id === cellId);
-    if (columnIndex >= 0) {
-      return { rowIndex, columnIndex };
-    }
-  }
-
-  return null;
-}
-
 function findListItemIndex(block: LayoutBlock, itemId: string): number {
   if (block.type !== 'list' || block.metadata.kind !== 'list') {
     return -1;
@@ -625,6 +678,7 @@ function createEmptyTableRowForStructureEdit(
   return {
     id: rowId,
     sourceRange: null,
+    heightPx: null,
     cells: Array.from({ length: columnCount }, (_, columnIndex) =>
       createEmptyTableCellWithId(
         createUniqueTableNodeId(existingIds, `${rowId}-cell-${columnIndex + 1}`),
@@ -678,6 +732,38 @@ function createEmptyParagraphBlockForStructureEdit(
       text: '',
     },
   };
+}
+
+function buildMergedTableCellTextRuns(mainCell: LayoutTableCell, mergedCells: LayoutTableCell[]): TextRun[] {
+  const collectedRuns: TextRun[] = [];
+
+  mergedCells.forEach((cell) => {
+    if (cell.textRuns.length === 0 || getTextContentFromRuns(cell.textRuns).length === 0) {
+      return;
+    }
+
+    if (collectedRuns.length > 0) {
+      collectedRuns.push({
+        id: `${mainCell.id}-merge-break-${collectedRuns.length + 1}`,
+        text: '\n',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      });
+    }
+
+    cell.textRuns.forEach((run) => {
+      collectedRuns.push({
+        ...run,
+        sourceRange: null,
+      });
+    });
+  });
+
+  // 合并后的内容统一挂回主单元格，所以 TextRun ID 也重新归到主单元格名下。
+  return rebuildRunIds(mainCell.id, mergeAdjacentTextRuns(collectedRuns));
 }
 
 function findDirectBlockIndexForNodeId(
@@ -833,6 +919,68 @@ export function insertTocBlockAfterNode(
   };
 }
 
+export function insertParagraphBlockAfterNode(
+  blocks: LayoutBlock[],
+  payload: InsertParagraphBlockPayload,
+): InsertParagraphBlockResult {
+  const paragraphBlock = createInsertedParagraphBlock(blocks);
+  const insertAfterIndex = getBlockIndexForNodeId(blocks, payload.insertAfterNodeId);
+  const insertIndex = insertAfterIndex >= 0 ? insertAfterIndex + 1 : blocks.length;
+  const nextBlocks = [
+    ...blocks.slice(0, insertIndex),
+    paragraphBlock,
+    ...blocks.slice(insertIndex),
+  ];
+
+  return {
+    blocks: nextBlocks,
+    insertedBlockId: paragraphBlock.id,
+  };
+}
+
+export function insertPageBreakBlockAfterNode(
+  blocks: LayoutBlock[],
+  payload: InsertPageBreakBlockPayload,
+): InsertPageBreakBlockResult {
+  const pageBreakBlock = createInsertedPageBreakBlock(blocks);
+  const insertAfterIndex = getBlockIndexForNodeId(blocks, payload.insertAfterNodeId);
+  const insertIndex = insertAfterIndex >= 0 ? insertAfterIndex + 1 : blocks.length;
+  const nextBlocks = [
+    ...blocks.slice(0, insertIndex),
+    pageBreakBlock,
+    ...blocks.slice(insertIndex),
+  ];
+
+  return {
+    blocks: nextBlocks,
+    insertedBlockId: pageBreakBlock.id,
+  };
+}
+
+export function deleteTopLevelBlockById(
+  blocks: LayoutBlock[],
+  blockId: string,
+): DeleteTopLevelBlockResult {
+  const blockIndex = blocks.findIndex((block) => block.id === blockId);
+  if (blockIndex < 0) {
+    return {
+      blocks,
+      selectedNodeId: null,
+      didUpdate: false,
+    };
+  }
+
+  const nextBlocks = blocks.filter((_, index) => index !== blockIndex);
+  const nextSelectedBlock = nextBlocks[blockIndex] ?? nextBlocks[blockIndex - 1] ?? null;
+
+  return {
+    blocks: nextBlocks,
+    // 删除后优先选中后一个相邻块，没有后项时回退到前一个相邻块。
+    selectedNodeId: nextSelectedBlock?.id ?? null,
+    didUpdate: true,
+  };
+}
+
 export function updateTableStructureByCell(
   block: LayoutBlock,
   cellId: string,
@@ -850,6 +998,7 @@ export function updateTableStructureByCell(
   const rowCount = block.metadata.rows.length;
   const columnCount = block.metadata.rows[0]?.cells.length ?? 0;
   const existingIds = collectTableNodeIds(block);
+  const currentColumnWidths = normalizeTableColumnWidths(block.metadata.columnWidthsPx, columnCount);
 
   if (action === 'insertRowAbove' || action === 'insertRowBelow') {
     const insertIndex = action === 'insertRowAbove' ? position.rowIndex : position.rowIndex + 1;
@@ -889,6 +1038,11 @@ export function updateTableStructureByCell(
       };
     });
     const selectedRow = nextRows[position.rowIndex];
+    const nextColumnWidths = [
+      ...currentColumnWidths.slice(0, insertIndex),
+      null,
+      ...currentColumnWidths.slice(insertIndex),
+    ];
 
     return {
       block: {
@@ -901,6 +1055,7 @@ export function updateTableStructureByCell(
             null,
             ...block.metadata.align.slice(insertIndex),
           ],
+          columnWidthsPx: nextColumnWidths,
           rows: nextRows,
         },
       },
@@ -943,6 +1098,7 @@ export function updateTableStructureByCell(
       cells: row.cells.filter((_, columnIndex) => columnIndex !== position.columnIndex),
     }));
     const nextColumnIndex = Math.min(position.columnIndex, nextRows[position.rowIndex].cells.length - 1);
+    const nextColumnWidths = currentColumnWidths.filter((_, columnIndex) => columnIndex !== position.columnIndex);
 
     return {
       block: {
@@ -951,6 +1107,7 @@ export function updateTableStructureByCell(
         metadata: {
           ...block.metadata,
           align: block.metadata.align.filter((_, columnIndex) => columnIndex !== position.columnIndex),
+          columnWidthsPx: nextColumnWidths,
           rows: nextRows,
         },
       },
@@ -960,6 +1117,93 @@ export function updateTableStructureByCell(
   }
 
   return { block, selectedNodeId: null, didUpdate: false };
+}
+
+export function mergeTableCellsByRange(
+  block: LayoutBlock,
+  anchorCellId: string,
+  focusCellId: string,
+): TableMergeEditResult {
+  if (block.type !== 'table' || block.metadata.kind !== 'table') {
+    return { block, selectedNodeId: null, didUpdate: false, reason: 'invalidSelection' };
+  }
+
+  const selection = buildTableCellRangeSelection(block, anchorCellId, focusCellId);
+  if (!selection) {
+    return { block, selectedNodeId: null, didUpdate: false, reason: 'invalidSelection' };
+  }
+
+  const rowSpan = selection.endRowIndex - selection.startRowIndex + 1;
+  const colSpan = selection.endColumnIndex - selection.startColumnIndex + 1;
+  if (rowSpan <= 1 && colSpan <= 1) {
+    return { block, selectedNodeId: anchorCellId, didUpdate: false, reason: 'singleCell' };
+  }
+
+  const tableRows = block.metadata.rows;
+  const selectedCells = selection.cellIds
+    .map((cellId) => {
+      const position = findTableCellPosition(block, cellId);
+      return position ? tableRows[position.rowIndex]?.cells[position.columnIndex] ?? null : null;
+    })
+    .filter((cell): cell is LayoutTableCell => !!cell);
+
+  const hasExistingMerge = selectedCells.some(
+    (cell) => isCoveredTableCell(cell) || getTableCellRowSpan(cell) > 1 || getTableCellColSpan(cell) > 1,
+  );
+  if (hasExistingMerge) {
+    return { block, selectedNodeId: anchorCellId, didUpdate: false, reason: 'containsMergedCell' };
+  }
+
+  const mainCell = tableRows[selection.startRowIndex]?.cells[selection.startColumnIndex];
+  if (!mainCell) {
+    return { block, selectedNodeId: anchorCellId, didUpdate: false, reason: 'invalidSelection' };
+  }
+
+  const selectedCellIds = new Set(selection.cellIds);
+  const mergedTextRuns = buildMergedTableCellTextRuns(mainCell, selectedCells);
+  const nextRows = tableRows.map((row) => ({
+    ...row,
+    sourceRange: null,
+    cells: row.cells.map((cell, columnIndex) => {
+      if (!selectedCellIds.has(cell.id)) {
+        return cell;
+      }
+
+      if (cell.id === mainCell.id) {
+        return {
+          ...cell,
+          sourceRange: null,
+          textRuns: mergedTextRuns,
+          rowSpan,
+          colSpan,
+          coveredByCellId: null,
+        };
+      }
+
+      return {
+        ...cell,
+        sourceRange: null,
+        textRuns: [],
+        rowSpan: null,
+        colSpan: null,
+        coveredByCellId: mainCell.id,
+      };
+    }),
+  }));
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        rows: nextRows,
+      },
+    },
+    selectedNodeId: mainCell.id,
+    didUpdate: true,
+    reason: 'merged',
+  };
 }
 
 export function updateListStructureByItem(
@@ -1490,6 +1734,94 @@ export function updateTableColumnAlignByCell(
   };
 }
 
+export function updateTableColumnWidthsByCell(
+  block: LayoutBlock,
+  cellId: string,
+  columnWidthsPx: Array<number | null>,
+): TablePropertyEditResult {
+  if (block.type !== 'table' || block.metadata.kind !== 'table') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const position = findTableCellPosition(block, cellId);
+  if (!position) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const columnCount = block.metadata.rows[0]?.cells.length ?? 0;
+  if (columnCount <= 0) {
+    return { block, selectedNodeId: cellId, didUpdate: false };
+  }
+
+  const nextColumnWidths = normalizeTableColumnWidths(columnWidthsPx, columnCount);
+  const currentColumnWidths = normalizeTableColumnWidths(block.metadata.columnWidthsPx, columnCount);
+  const didChange = nextColumnWidths.some((width, index) => width !== currentColumnWidths[index]);
+  if (!didChange) {
+    return { block, selectedNodeId: cellId, didUpdate: false };
+  }
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        columnWidthsPx: nextColumnWidths,
+      },
+    },
+    selectedNodeId: cellId,
+    didUpdate: true,
+  };
+}
+
+export function updateTableRowHeightByCell(
+  block: LayoutBlock,
+  cellId: string,
+  heightPx: number | null,
+): TablePropertyEditResult {
+  if (block.type !== 'table' || block.metadata.kind !== 'table') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const position = findTableCellPosition(block, cellId);
+  if (!position) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const row = block.metadata.rows[position.rowIndex];
+  if (!row) {
+    return { block, selectedNodeId: cellId, didUpdate: false };
+  }
+
+  const nextHeightPx = normalizeTableRowHeightPx(heightPx);
+  if ((row.heightPx ?? null) === nextHeightPx) {
+    return { block, selectedNodeId: cellId, didUpdate: false };
+  }
+
+  const nextRows = block.metadata.rows.map((currentRow, rowIndex) =>
+    rowIndex === position.rowIndex
+      ? {
+          ...currentRow,
+          sourceRange: null,
+          heightPx: nextHeightPx,
+        }
+      : currentRow,
+  );
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        rows: nextRows,
+      },
+    },
+    selectedNodeId: cellId,
+    didUpdate: true,
+  };
+}
+
 export function updateBlockquoteStructureByNode(
   block: LayoutBlock,
   nodeId: string,
@@ -1668,7 +2000,11 @@ export function updateLayoutImageAttributes(
     cropRightPx?: number | null;
     cropBottomPx?: number | null;
     cropLeftPx?: number | null;
-    wrapMode?: 'block' | 'center' | 'left' | 'right';
+    wrapMode?: ImageBlockMetadata['wrapMode'];
+    wrapSide?: ImageWrapSide;
+    showCaption?: boolean;
+    offsetX?: number | null;
+    offsetY?: number | null;
   },
 ): LayoutBlock {
   if (block.type !== 'image' || block.metadata.kind !== 'image') {
@@ -1687,7 +2023,12 @@ export function updateLayoutImageAttributes(
     (attributes.cropRightPx === undefined || (block.metadata.cropRightPx ?? 0) === normalizeOptionalNumber(attributes.cropRightPx)) &&
     (attributes.cropBottomPx === undefined || (block.metadata.cropBottomPx ?? 0) === normalizeOptionalNumber(attributes.cropBottomPx)) &&
     (attributes.cropLeftPx === undefined || (block.metadata.cropLeftPx ?? 0) === normalizeOptionalNumber(attributes.cropLeftPx)) &&
-    (attributes.wrapMode === undefined || (block.metadata.wrapMode ?? 'block') === attributes.wrapMode)
+    (attributes.wrapMode === undefined || normalizeImageWrapMode(block.metadata.wrapMode) === normalizeImageWrapMode(attributes.wrapMode)) &&
+    (attributes.wrapSide === undefined || resolveImageWrapSide(block.metadata) === attributes.wrapSide) &&
+    (attributes.showCaption === undefined || (block.metadata.showCaption ?? false) === attributes.showCaption) &&
+    // 偏移量判断使用 normalizeOffsetValue 进行取整比较
+    (attributes.offsetX === undefined || normalizeOffsetValue(block.metadata.offsetX ?? 0) === normalizeOffsetValue(attributes.offsetX)) &&
+    (attributes.offsetY === undefined || normalizeOffsetValue(block.metadata.offsetY ?? 0) === normalizeOffsetValue(attributes.offsetY))
   ) {
     return block;
   }
@@ -1698,6 +2039,13 @@ export function updateLayoutImageAttributes(
   const currentCropRightPx = block.metadata.cropRightPx ?? 0;
   const currentCropBottomPx = block.metadata.cropBottomPx ?? 0;
   const currentCropLeftPx = block.metadata.cropLeftPx ?? 0;
+  const currentWrapSide = resolveImageWrapSide(block.metadata);
+  const nextWrapMode = normalizeImageWrapMode(attributes.wrapMode ?? block.metadata.wrapMode);
+  const nextWrapSide = attributes.wrapSide ?? (
+    attributes.wrapMode === 'left' || attributes.wrapMode === 'right'
+      ? resolveImageWrapSide({ wrapMode: attributes.wrapMode })
+      : currentWrapSide
+  );
 
   return {
     ...block,
@@ -1721,7 +2069,12 @@ export function updateLayoutImageAttributes(
         attributes.cropBottomPx === undefined ? currentCropBottomPx : normalizeOptionalNumber(attributes.cropBottomPx) ?? 0,
       cropLeftPx:
         attributes.cropLeftPx === undefined ? currentCropLeftPx : normalizeOptionalNumber(attributes.cropLeftPx) ?? 0,
-      wrapMode: attributes.wrapMode ?? block.metadata.wrapMode ?? 'block',
+      wrapMode: nextWrapMode,
+      wrapSide: nextWrapSide,
+      showCaption: attributes.showCaption ?? block.metadata.showCaption ?? false,
+      // 偏移量可以允许负数，所以使用 normalizeOffsetValue 而不是 normalizeOptionalNumber
+      offsetX: attributes.offsetX === undefined ? (block.metadata.offsetX ?? 0) : normalizeOffsetValue(attributes.offsetX),
+      offsetY: attributes.offsetY === undefined ? (block.metadata.offsetY ?? 0) : normalizeOffsetValue(attributes.offsetY),
     },
   };
 }
@@ -1732,6 +2085,15 @@ function normalizeOptionalNumber(value: number | null | undefined): number | nul
   }
 
   return Number.isFinite(value) ? Math.max(0, Math.round(value)) : null;
+}
+
+// 偏移量可以允许负数，只需要取整
+function normalizeOffsetValue(value: number | null | undefined): number {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+
+  return Number.isFinite(value) ? Math.round(value) : 0;
 }
 
 export function updateLayoutListItemText(item: LayoutListItem, nextText: string): LayoutListItem {

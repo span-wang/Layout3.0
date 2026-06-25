@@ -1,4 +1,6 @@
-import type { ImageBlockMetadata } from './types';
+import type { ImageBlockMetadata, ImageWrapMode, ImageWrapSide } from './types';
+
+export type ResolvedImageWrapMode = ImageWrapMode;
 
 export interface ResolvedImageLayout {
   widthPx: number | null;
@@ -8,7 +10,14 @@ export interface ResolvedImageLayout {
   cropRightPx: number;
   cropBottomPx: number;
   cropLeftPx: number;
-  wrapMode: 'block' | 'center' | 'left' | 'right';
+  wrapMode: ResolvedImageWrapMode;
+  wrapSide: ImageWrapSide;
+  legacyWrapMode: ImageBlockMetadata['wrapMode'];
+  // 新增：标题显示开关
+  showCaption: boolean;
+  // 新增：位置偏移量
+  offsetX: number;
+  offsetY: number;
 }
 
 export interface ImageMeasuredVisibleSize {
@@ -25,7 +34,12 @@ export interface ResolvedImageRenderMetrics {
   cropRightPx: number;
   cropBottomPx: number;
   cropLeftPx: number;
-  wrapMode: 'block' | 'center' | 'left' | 'right';
+  wrapMode: ResolvedImageWrapMode;
+  wrapSide: ImageWrapSide;
+  legacyWrapMode: ImageBlockMetadata['wrapMode'];
+  showCaption: boolean;
+  offsetX: number;
+  offsetY: number;
 }
 
 function normalizeOptionalPositiveNumber(value: number | null | undefined): number | null {
@@ -40,6 +54,59 @@ function normalizeOptionalPositiveNumber(value: number | null | undefined): numb
   return Math.max(0, Math.round(value));
 }
 
+// 偏移量可以允许负数，只需要取整
+function normalizeOffsetValue(value: number | null | undefined): number {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+
+  return Number.isFinite(value) ? Math.round(value) : 0;
+}
+
+export function normalizeImageWrapSide(value: ImageWrapSide | null | undefined): ImageWrapSide {
+  return value === 'left' ? 'left' : 'right';
+}
+
+// 旧文档只有 block/center/left/right 四种值；这里统一映射到最终四种 Word 风格环绕。
+export function normalizeImageWrapMode(value: ImageBlockMetadata['wrapMode']): ResolvedImageWrapMode {
+  switch (value) {
+    case 'square':
+    case 'tight':
+    case 'topBottom':
+    case 'inline':
+      return value;
+    case 'center':
+      return 'topBottom';
+    case 'left':
+    case 'right':
+      return 'square';
+    case 'block':
+    default:
+      return 'inline';
+  }
+}
+
+export function resolveImageWrapSide(metadata: Pick<ImageBlockMetadata, 'wrapMode' | 'wrapSide'>): ImageWrapSide {
+  if (metadata.wrapMode === 'left') {
+    return 'left';
+  }
+
+  if (metadata.wrapMode === 'right') {
+    return 'right';
+  }
+
+  return normalizeImageWrapSide(metadata.wrapSide);
+}
+
+export function isImageTextWrapMode(wrapMode: ResolvedImageWrapMode): boolean {
+  return wrapMode === 'square' || wrapMode === 'tight';
+}
+
+export function getImageWrapClassName(layout: Pick<ResolvedImageLayout, 'wrapMode' | 'wrapSide'>): string {
+  const sideClass = isImageTextWrapMode(layout.wrapMode) ? ` image-wrap-side-${layout.wrapSide}` : '';
+  return `image-wrap-${layout.wrapMode}${sideClass}`;
+}
+
 // 图片布局只收口成一份可复用结果，避免预览、导出和分页估算各算各的。
 export function resolveImageLayout(metadata: ImageBlockMetadata): ResolvedImageLayout {
   const cropTopPx = normalizeOptionalPositiveNumber(metadata.cropTopPx) ?? 0;
@@ -47,6 +114,8 @@ export function resolveImageLayout(metadata: ImageBlockMetadata): ResolvedImageL
   const cropBottomPx = normalizeOptionalPositiveNumber(metadata.cropBottomPx) ?? 0;
   const cropLeftPx = normalizeOptionalPositiveNumber(metadata.cropLeftPx) ?? 0;
   const hasCrop = cropTopPx + cropRightPx + cropBottomPx + cropLeftPx > 0;
+  const wrapMode = normalizeImageWrapMode(metadata.wrapMode);
+  const wrapSide = resolveImageWrapSide(metadata);
 
   return {
     widthPx: normalizeOptionalPositiveNumber(metadata.widthPx),
@@ -56,7 +125,13 @@ export function resolveImageLayout(metadata: ImageBlockMetadata): ResolvedImageL
     cropRightPx,
     cropBottomPx,
     cropLeftPx,
-    wrapMode: metadata.wrapMode ?? 'block',
+    wrapMode,
+    wrapSide,
+    legacyWrapMode: metadata.wrapMode,
+    // 新增字段：标题显示开关默认 false，偏移量默认 0（允许负数）
+    showCaption: metadata.showCaption ?? false,
+    offsetX: normalizeOffsetValue(metadata.offsetX),
+    offsetY: normalizeOffsetValue(metadata.offsetY),
   };
 }
 
@@ -88,6 +163,11 @@ export function resolveImageRenderMetrics(
     cropBottomPx: layout.cropBottomPx,
     cropLeftPx: layout.cropLeftPx,
     wrapMode: layout.wrapMode,
+    wrapSide: layout.wrapSide,
+    legacyWrapMode: layout.legacyWrapMode,
+    showCaption: layout.showCaption,
+    offsetX: layout.offsetX,
+    offsetY: layout.offsetY,
   };
 }
 
@@ -95,4 +175,15 @@ export function estimateImageVisibleHeightPx(metadata: ImageBlockMetadata, fallb
   const layout = resolveImageLayout(metadata);
   const fullHeightPx = layout.heightPx ?? Math.max(1, Math.round(fallbackHeightPx));
   return Math.max(1, fullHeightPx - layout.cropTopPx - layout.cropBottomPx);
+}
+
+// 图片标题区域预估高度，只有在 showCaption 为 true 时才计入。
+const IMAGE_CAPTION_HEIGHT_PX = 20;
+
+export function estimateImageBlockHeightPx(metadata: ImageBlockMetadata, fallbackHeightPx: number): number {
+  const layout = resolveImageLayout(metadata);
+  const imageHeight = layout.heightPx ?? Math.max(1, Math.round(fallbackHeightPx));
+  const visibleHeight = Math.max(1, imageHeight - layout.cropTopPx - layout.cropBottomPx);
+  // 只有显示标题时才计入标题高度
+  return layout.showCaption ? visibleHeight + IMAGE_CAPTION_HEIGHT_PX : visibleHeight;
 }

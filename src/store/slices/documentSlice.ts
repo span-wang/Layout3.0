@@ -6,10 +6,13 @@ import {
   updateBlockquoteStructureByNode,
   clearTextFormattingInTextRuns,
   createEmptyLayoutDocument,
+  deleteTopLevelBlockById,
   getLayoutBlockPlainText,
   insertEquationBlockAfterNode,
   insertImageBlockAfterNode,
   insertListBlockAfterNode,
+  insertPageBreakBlockAfterNode,
+  insertParagraphBlockAfterNode,
   insertTableBlockAfterNode,
   insertTocBlockAfterNode,
   toggleTextMarkInTextRuns,
@@ -22,8 +25,11 @@ import {
   updateListStartByItem,
   updateListStructureByItem,
   updateTableColumnAlignByCell,
+  updateTableColumnWidthsByCell,
   updateTableHeaderRowByCell,
+  updateTableRowHeightByCell,
   updateTableStructureByCell,
+  mergeTableCellsByRange,
   updateLayoutBlockText as updateLayoutBlockTextModel,
   updateLayoutImageAttributes as updateLayoutImageAttributesModel,
   updateLayoutListItemText,
@@ -49,6 +55,7 @@ import type {
   TextRangeSelection,
   TextStyleOverrides,
 } from '@/engine/document-model';
+import { buildTableCellRangeSelection } from '@/engine/document-model/tableLayout';
 import { loadRecentFiles } from '@/services/RecentFilesService';
 import type { DocumentSlice, StoreSlice } from '@/store/types';
 import { getDocumentFormatFromPath } from '@/utils/filePath';
@@ -633,6 +640,78 @@ function replaceTablePropertyByCell(
   return { blocks: nextBlocks, didUpdate, selectedNodeId };
 }
 
+function findTableBlockByCellId(blocks: LayoutBlock[], cellId: string): LayoutBlock | null {
+  for (const block of blocks) {
+    if (
+      block.type === 'table' &&
+      block.metadata.kind === 'table' &&
+      block.metadata.rows.some((row) => row.cells.some((cell) => cell.id === cellId))
+    ) {
+      return block;
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedBlock = findTableBlockByCellId(block.metadata.blocks, cellId);
+      if (nestedBlock) {
+        return nestedBlock;
+      }
+    }
+  }
+
+  return null;
+}
+
+function findTableBlockById(blocks: LayoutBlock[], tableBlockId: string): LayoutBlock | null {
+  for (const block of blocks) {
+    if (block.id === tableBlockId && block.type === 'table' && block.metadata.kind === 'table') {
+      return block;
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedBlock = findTableBlockById(block.metadata.blocks, tableBlockId);
+      if (nestedBlock) {
+        return nestedBlock;
+      }
+    }
+  }
+
+  return null;
+}
+
+function replaceTableBlockById(
+  blocks: LayoutBlock[],
+  tableBlockId: string,
+  nextTableBlock: LayoutBlock,
+): { blocks: LayoutBlock[]; didUpdate: boolean } {
+  let didUpdate = false;
+
+  const nextBlocks = blocks.map((block) => {
+    if (block.id === tableBlockId) {
+      didUpdate = true;
+      return nextTableBlock;
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedResult = replaceTableBlockById(block.metadata.blocks, tableBlockId, nextTableBlock);
+      if (nestedResult.didUpdate) {
+        didUpdate = true;
+        return {
+          ...block,
+          sourceRange: null,
+          metadata: {
+            ...block.metadata,
+            blocks: nestedResult.blocks,
+          },
+        };
+      }
+    }
+
+    return block;
+  });
+
+  return { blocks: nextBlocks, didUpdate };
+}
+
 function replaceBlockquoteStructureByNode(
   blocks: LayoutBlock[],
   blockquoteId: string,
@@ -779,6 +858,13 @@ function syncImageResource(
   ];
 }
 
+function removeImageResourcesByBlockId(
+  resources: LayoutResource[],
+  blockId: string,
+): LayoutResource[] {
+  return resources.filter((resource) => resource.blockId !== blockId);
+}
+
 function refreshDocumentMeta(state: DocumentSlice, blocks: LayoutBlock[]): void {
   const text = buildDocumentText(blocks);
   state.layoutDocument!.meta.wordCount = countWords(text);
@@ -808,6 +894,7 @@ function applyDocumentMutation(
   state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
   refreshDocumentMeta(state, result.blocks);
   state.layoutDocument.viewState.selectedNodeId = nodeId;
+  state.layoutDocument.viewState.tableSelection = null;
   state.isDirty = true;
   state.parseState = 'ready';
   state.parseError = null;
@@ -940,6 +1027,30 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       state.layoutDocument.viewState.selectedNodeId = nodeId;
+      state.layoutDocument.viewState.tableSelection = null;
+    }),
+  selectLayoutTableCell: ({ cellId, extendRange }) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const tableBlock = findTableBlockByCellId(state.layoutDocument.blocks, cellId);
+      if (!tableBlock) {
+        state.layoutDocument.viewState.selectedNodeId = cellId;
+        state.layoutDocument.viewState.tableSelection = null;
+        return;
+      }
+
+      const currentSelection = state.layoutDocument.viewState.tableSelection ?? null;
+      const anchorCellId =
+        extendRange && currentSelection?.tableBlockId === tableBlock.id
+          ? currentSelection.anchorCellId
+          : cellId;
+      const nextSelection = buildTableCellRangeSelection(tableBlock, anchorCellId, cellId);
+
+      state.layoutDocument.viewState.selectedNodeId = cellId;
+      state.layoutDocument.viewState.tableSelection = nextSelection;
     }),
   clearLayoutSelection: () =>
     set((state) => {
@@ -948,6 +1059,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       state.layoutDocument.viewState.selectedNodeId = null;
+      state.layoutDocument.viewState.tableSelection = null;
     }),
   updateLayoutNodeText: ({ nodeId, text }) =>
     set((state) => {
@@ -1015,6 +1127,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
     cropBottomPx,
     cropLeftPx,
     wrapMode,
+    wrapSide,
     insertAfterNodeId,
   }) => {
     let insertedBlockId: string | null = null;
@@ -1040,6 +1153,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
           cropBottomPx,
           cropLeftPx,
           wrapMode,
+          wrapSide,
           insertAfterNodeId,
         },
       );
@@ -1136,6 +1250,56 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
 
     return selectedNodeId;
   },
+  insertLayoutParagraphBlock: ({ insertAfterNodeId }) => {
+    let insertedBlockId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = insertParagraphBlockAfterNode(state.layoutDocument.blocks, {
+        insertAfterNodeId,
+      });
+
+      insertedBlockId = result.insertedBlockId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      // 新空文本块插入后直接选中，方便上层立即请求进入原位编辑。
+      state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return insertedBlockId;
+  },
+  insertLayoutPageBreakBlock: ({ insertAfterNodeId }) => {
+    let insertedBlockId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = insertPageBreakBlockAfterNode(state.layoutDocument.blocks, {
+        insertAfterNodeId,
+      });
+
+      insertedBlockId = result.insertedBlockId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      // 分页符不进入编辑态，但插入后仍保持选中，方便用户确认位置。
+      state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return insertedBlockId;
+  },
   insertLayoutTocBlock: ({ insertAfterNodeId }) => {
     let insertedBlockId: string | null = null;
 
@@ -1159,6 +1323,66 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
     });
 
     return insertedBlockId;
+  },
+  deleteLayoutTopLevelBlock: ({ nodeId }) => {
+    let didDelete = false;
+    let selectedNodeId: string | null = null;
+    let deletedBlockType: LayoutBlock['type'] | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const blockIndex = state.layoutDocument.blocks.findIndex((block) => {
+        if (block.id === nodeId) {
+          return true;
+        }
+
+        if (block.type === 'list' && block.metadata.kind === 'list') {
+          return block.metadata.items.some((item) => item.id === nodeId);
+        }
+
+        if (block.type === 'table' && block.metadata.kind === 'table') {
+          return block.metadata.rows.some((row) => row.cells.some((cell) => cell.id === nodeId));
+        }
+
+        return false;
+      });
+
+      if (blockIndex < 0) {
+        return;
+      }
+
+      const targetBlock = state.layoutDocument.blocks[blockIndex];
+      const result = deleteTopLevelBlockById(state.layoutDocument.blocks, targetBlock.id);
+      if (!result.didUpdate) {
+        return;
+      }
+
+      didDelete = true;
+      selectedNodeId = result.selectedNodeId;
+      deletedBlockType = targetBlock.type;
+      state.layoutDocument.blocks = result.blocks;
+      if (targetBlock.type === 'image') {
+        state.layoutDocument.resources = removeImageResourcesByBlockId(
+          state.layoutDocument.resources,
+          targetBlock.id,
+        );
+      }
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return {
+      didDelete,
+      selectedNodeId,
+      deletedBlockType,
+    };
   },
   updateLayoutTocMaxDepth: ({ nodeId, maxDepth }) =>
     set((state) => {
@@ -1235,6 +1459,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1262,6 +1487,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1289,12 +1515,123 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
     });
 
     return selectedNodeId;
+  },
+  updateLayoutTableColumnWidths: ({ cellId, columnWidthsPx }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceTablePropertyByCell(state.layoutDocument.blocks, cellId, (block, targetCellId) =>
+        updateTableColumnWidthsByCell(block, targetCellId, columnWidthsPx),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  updateLayoutTableRowHeight: ({ cellId, heightPx }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceTablePropertyByCell(state.layoutDocument.blocks, cellId, (block, targetCellId) =>
+        updateTableRowHeightByCell(block, targetCellId, heightPx),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  mergeLayoutSelectedTableCells: () => {
+    let selectedNodeId: string | null = null;
+    let didUpdate = false;
+    let reason: 'merged' | 'invalidSelection' | 'singleCell' | 'containsMergedCell' = 'invalidSelection';
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const selection = state.layoutDocument.viewState.tableSelection;
+      if (!selection) {
+        reason = 'invalidSelection';
+        return;
+      }
+
+      const tableBlock = findTableBlockById(state.layoutDocument.blocks, selection.tableBlockId);
+      if (!tableBlock) {
+        reason = 'invalidSelection';
+        state.layoutDocument.viewState.tableSelection = null;
+        return;
+      }
+
+      const result = mergeTableCellsByRange(tableBlock, selection.anchorCellId, selection.focusCellId);
+      reason = result.reason;
+      if (!result.didUpdate || !result.selectedNodeId) {
+        state.layoutDocument.viewState.tableSelection = null;
+        return;
+      }
+
+      const replaced = replaceTableBlockById(state.layoutDocument.blocks, tableBlock.id, result.block);
+      if (!replaced.didUpdate) {
+        state.layoutDocument.viewState.tableSelection = null;
+        reason = 'invalidSelection';
+        return;
+      }
+
+      didUpdate = true;
+      selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.blocks = replaced.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(replaced.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, replaced.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return {
+      selectedNodeId,
+      didUpdate,
+      reason,
+    };
   },
   updateLayoutListStructure: ({ itemId, action }) => {
     let selectedNodeId: string | null = null;
@@ -1591,6 +1928,10 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
     cropBottomPx,
     cropLeftPx,
     wrapMode,
+    wrapSide,
+    showCaption,
+    offsetX,
+    offsetY,
   }) =>
     set((state) => {
       if (!state.layoutDocument) {
@@ -1611,6 +1952,10 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
           cropBottomPx,
           cropLeftPx,
           wrapMode,
+          wrapSide,
+          showCaption,
+          offsetX,
+          offsetY,
         }),
       );
       applyDocumentMutation(state, nodeId, result);

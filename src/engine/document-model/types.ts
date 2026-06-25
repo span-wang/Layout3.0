@@ -104,12 +104,19 @@ export interface LayoutTableCell {
   sourceRange: SourceRange | null;
   textRuns: TextRun[];
   isHeader: boolean;
+  // 合并单元格 V1：主单元格保存跨度；旧文档缺字段时按 1 x 1 普通单元格兼容。
+  rowSpan?: number | null;
+  colSpan?: number | null;
+  // 被主单元格覆盖的格子不渲染内容，但仍保留在模型网格中，方便后续拆分能力继续找回结构。
+  coveredByCellId?: string | null;
 }
 
 export interface LayoutTableRow {
   id: string;
   sourceRange: SourceRange | null;
   cells: LayoutTableCell[];
+  // 表格行高是可选的最小高度；旧文档缺字段时继续按模板默认高度自动排版。
+  heightPx?: number | null;
 }
 
 export type TableColumnAlign = 'left' | 'center' | 'right' | null;
@@ -142,8 +149,14 @@ export interface ListBlockMetadata {
 export interface TableBlockMetadata {
   kind: 'table';
   align: TableColumnAlign[];
+  // 每列宽度以排版像素保存；缺省列按自动宽度兼容旧文档。
+  columnWidthsPx?: Array<number | null>;
   rows: LayoutTableRow[];
 }
+
+export type ImageWrapMode = 'inline' | 'square' | 'topBottom' | 'tight';
+export type LegacyImageWrapMode = 'block' | 'center' | 'left' | 'right';
+export type ImageWrapSide = 'left' | 'right';
 
 export interface ImageBlockMetadata {
   kind: 'image';
@@ -158,7 +171,15 @@ export interface ImageBlockMetadata {
   cropRightPx?: number | null;
   cropBottomPx?: number | null;
   cropLeftPx?: number | null;
-  wrapMode?: 'block' | 'center' | 'left' | 'right';
+  // 新环绕模式对齐 Word 常用名称；旧文档里的 block/center/left/right 由解析层兼容。
+  wrapMode?: ImageWrapMode | LegacyImageWrapMode;
+  // 四周型/紧密型需要保存图片靠左或靠右，旧 left/right 会自动映射到这里。
+  wrapSide?: ImageWrapSide;
+  // 新增：标题显示开关，默认 false（不显示标题）
+  showCaption?: boolean;
+  // 新增：位置偏移量（单位px，相对于原始位置的偏移）
+  offsetX?: number | null;
+  offsetY?: number | null;
 }
 
 export interface EquationBlockMetadata {
@@ -235,6 +256,18 @@ export interface LayoutViewState {
   answerDisplayMode: AnswerDisplayMode;
   zoom: number;
   selectedNodeId: string | null;
+  tableSelection?: TableCellRangeSelection | null;
+}
+
+export interface TableCellRangeSelection {
+  tableBlockId: string;
+  anchorCellId: string;
+  focusCellId: string;
+  cellIds: string[];
+  startRowIndex: number;
+  endRowIndex: number;
+  startColumnIndex: number;
+  endColumnIndex: number;
 }
 
 export interface LayoutDocumentMeta {

@@ -46,6 +46,15 @@ interface MathBlockNode {
   position?: Position;
 }
 
+/**
+ * 自定义下划线节点类型
+ * 由 remark-text-marks 插件从 ++text++ 或 \underline{} 语法转换而来
+ */
+interface UnderlineNode {
+  type: 'underline';
+  children: PhrasingContent[];
+}
+
 type LayoutBlockContentNode = BlockContent | MathBlockNode;
 
 function createSourceRange(position?: Position | null): SourceRange | null {
@@ -161,7 +170,7 @@ function extractPlainTextFromPhrasing(nodes: PhrasingContent[]): string {
 
 function buildTextRunsFromPhrasing(
   blockId: string,
-  nodes: PhrasingContent[],
+  nodes: (PhrasingContent | UnderlineNode)[],
   inheritedMarks: TextMark[] = [],
 ): TextRun[] {
   const runs: TextRun[] = [];
@@ -211,6 +220,16 @@ function buildTextRunsFromPhrasing(
       case 'delete':
         runs.push(
           ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'strike' })),
+        );
+        break;
+      case 'underline':
+        // 处理自定义 underline 节点（由 remark-text-marks 插件从 ++text++ 或 \underline{} 语法转换而来）
+        runs.push(
+          ...buildTextRunsFromPhrasing(
+            blockId,
+            (node as UnderlineNode).children,
+            appendMark(inheritedMarks, { type: 'underline' }),
+          ),
         );
         break;
       case 'link':
@@ -372,6 +391,7 @@ function buildTableRow(blockId: string, rowIndex: number, node: TableRow): Layou
   return {
     id: `${blockId}-row-${rowIndex + 1}`,
     sourceRange: createSourceRange(node.position),
+    heightPx: null,
     cells: node.children.map((cell, cellIndex) =>
       buildTableCell(blockId, rowIndex, cellIndex, cell, rowIndex === 0),
     ),
@@ -512,6 +532,7 @@ function buildTableBlock(state: BuilderState, node: Table): LayoutBlock {
     metadata: {
       kind: 'table',
       align: (node.align ?? []).map((align) => align ?? null),
+      columnWidthsPx: (node.align ?? []).map(() => null),
       rows: node.children.map((row, rowIndex) => buildTableRow(blockId, rowIndex, row)),
     },
   };
@@ -667,6 +688,7 @@ export function createEmptyLayoutDocument(payload: {
       answerDisplayMode: 'show',
       zoom: 1,
       selectedNodeId: null,
+      tableSelection: null,
     },
     meta: {
       sourceFormat: 'markdown',
@@ -681,6 +703,8 @@ export function createEmptyLayoutDocument(payload: {
 export async function createLayoutDocumentFromMarkdown(source: string): Promise<LayoutDocument> {
   const processor = createRemarkProcessor();
   const tree = processor.parse(source) as Root;
+  // 运行已注册的插件（如 remarkTextMarks 语法映射插件）
+  await processor.run(tree, source);
   const state: BuilderState = {
     blockCounter: 0,
     resourceCounter: 0,
@@ -711,6 +735,7 @@ export async function createLayoutDocumentFromMarkdown(source: string): Promise<
       answerDisplayMode: 'show',
       zoom: 1,
       selectedNodeId: null,
+      tableSelection: null,
     },
     meta: {
       sourceFormat: 'markdown',

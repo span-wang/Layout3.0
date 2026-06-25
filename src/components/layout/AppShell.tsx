@@ -98,6 +98,7 @@ export function AppShell(): JSX.Element {
   const resetStyleSettings = useAppStore((state) => state.resetStyleSettings);
   const replaceStyleSettings = useAppStore((state) => state.replaceStyleSettings);
   const selectLayoutNode = useAppStore((state) => state.selectLayoutNode);
+  const selectLayoutTableCell = useAppStore((state) => state.selectLayoutTableCell);
   const clearLayoutSelection = useAppStore((state) => state.clearLayoutSelection);
   const updateLayoutNodeText = useAppStore((state) => state.updateLayoutNodeText);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
@@ -105,6 +106,8 @@ export function AppShell(): JSX.Element {
   const insertLayoutEquationBlock = useAppStore((state) => state.insertLayoutEquationBlock);
   const insertLayoutTableBlock = useAppStore((state) => state.insertLayoutTableBlock);
   const insertLayoutListBlock = useAppStore((state) => state.insertLayoutListBlock);
+  const insertLayoutParagraphBlock = useAppStore((state) => state.insertLayoutParagraphBlock);
+  const insertLayoutPageBreakBlock = useAppStore((state) => state.insertLayoutPageBreakBlock);
   const insertLayoutTocBlock = useAppStore((state) => state.insertLayoutTocBlock);
   const shouldShowEditor = workspaceViewMode !== 'preview';
   const shouldShowCanvas = workspaceViewMode !== 'source';
@@ -152,6 +155,21 @@ export function AppShell(): JSX.Element {
       });
     },
     [selectLayoutNode, setActiveRightPanelTab],
+  );
+
+  const handleSelectLayoutTableCell = useCallback(
+    (cellId: string, extendRange: boolean) => {
+      selectLayoutTableCell({ cellId, extendRange });
+      setActiveRightPanelTab('对象属性');
+      setCanvasTextSelection({
+        nodeId: cellId,
+        text: '',
+        selection: null,
+        isEditing: false,
+        draftTextRuns: null,
+      });
+    },
+    [selectLayoutTableCell, setActiveRightPanelTab],
   );
 
   const handleClearLayoutSelection = useCallback(() => {
@@ -782,6 +800,59 @@ export function AppShell(): JSX.Element {
     showMessage(`已插入${listKindLabel[kind]}`);
   };
 
+  const handleInsertParagraph = (): void => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入空文本块的文档');
+      return;
+    }
+
+    const insertedBlockId = insertLayoutParagraphBlock({
+      insertAfterNodeId: selectedNodeId,
+    });
+
+    if (!insertedBlockId) {
+      showMessage('空文本块插入失败：当前文档不可写');
+      return;
+    }
+
+    setActiveRightPanelTab('对象属性');
+    setCanvasTextSelection({
+      nodeId: insertedBlockId,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+    setRequestedEditNodeId(insertedBlockId);
+    showMessage('已插入空文本块');
+  };
+
+  const handleInsertPageBreak = (): void => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入分页符的文档');
+      return;
+    }
+
+    const insertedBlockId = insertLayoutPageBreakBlock({
+      insertAfterNodeId: selectedNodeId,
+    });
+
+    if (!insertedBlockId) {
+      showMessage('分页符插入失败：当前文档不可写');
+      return;
+    }
+
+    setActiveRightPanelTab('对象属性');
+    setCanvasTextSelection({
+      nodeId: insertedBlockId,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+    showMessage('已插入分页符');
+  };
+
   const handleInsertToc = (): void => {
     if (!layoutDocument) {
       showMessage('当前没有可插入目录的文档');
@@ -858,6 +929,8 @@ export function AppShell(): JSX.Element {
         onInsertEquation={handleInsertEquation}
         onInsertTable={handleInsertTable}
         onInsertList={handleInsertList}
+        onInsertParagraph={handleInsertParagraph}
+        onInsertPageBreak={handleInsertPageBreak}
         onInsertToc={handleInsertToc}
         onToggleLeftPanel={toggleLeftPanel}
         onToggleRightPanel={toggleRightPanel}
@@ -934,6 +1007,7 @@ export function AppShell(): JSX.Element {
                 resolvedStyleContract={resolvedStyleContract}
                 selectedNodeId={selectedNodeId}
                 onSelectNode={handleSelectLayoutNode}
+                onSelectTableCell={handleSelectLayoutTableCell}
                 onClearSelection={handleClearLayoutSelection}
                 onCommitNodeText={handleCommitLayoutNodeText}
                 onCommitNodeRichText={handleCommitLayoutNodeRichText}

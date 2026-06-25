@@ -11,6 +11,7 @@
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
     "smoke:m1": "tsx scripts/m1-smoke.ts",
+    "smoke:m2": "tsx scripts/m2-smoke.ts",
     "progress:build": "node scripts/generate-progress.mjs",
     "progress:check": "node scripts/generate-progress.mjs --check"
   },

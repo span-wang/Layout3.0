@@ -115,6 +115,31 @@ function findDirectChildBlockIndexForSelectedNode(
   });
 }
 
+export function findTopLevelBlockForSelectedNode(
+  blocks: LayoutBlock[],
+  selectedNodeId: string,
+): LayoutBlock | null {
+  for (const block of blocks) {
+    if (block.id === selectedNodeId) {
+      return block;
+    }
+
+    if (block.type === 'list' && block.metadata.kind === 'list') {
+      if (block.metadata.items.some((item) => item.id === selectedNodeId)) {
+        return block;
+      }
+    }
+
+    if (block.type === 'table' && block.metadata.kind === 'table') {
+      if (block.metadata.rows.some((row) => row.cells.some((cell) => cell.id === selectedNodeId))) {
+        return block;
+      }
+    }
+  }
+
+  return null;
+}
+
 export function findSelectedLayoutNodeInfo(
   blocks: LayoutBlock[],
   selectedNodeId: string,

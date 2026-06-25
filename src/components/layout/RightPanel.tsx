@@ -5,6 +5,7 @@ import { highlightColorOptions, standardColorOptions } from '@/constants/styleCo
 import {
   getSelectedBlockquoteContext,
   getSelectedLayoutNodeInfo,
+  findTopLevelBlockForSelectedNode,
   getLayoutBlockPlainText,
   getLayoutListItemLevel,
   type BlockquoteStructureAction,
@@ -13,6 +14,7 @@ import {
   type SourceRange,
   type SelectedBlockquoteContext,
   type SelectedLayoutNodeInfo,
+  type TableCellRangeSelection,
   type TableColumnAlign,
   type TableStructureAction,
   type ListBatchCheckedAction,
@@ -23,8 +25,11 @@ import {
   type TextMarkType,
   type TextRangeSelection,
   type TextRun,
+  type ImageBlockMetadata,
+  type ImageWrapMode,
+  type ImageWrapSide,
 } from '@/engine/document-model';
-import { resolveImageLayout } from '@/engine/document-model/imageLayout';
+import { isImageTextWrapMode, resolveImageLayout } from '@/engine/document-model/imageLayout';
 import { renderEquationToHtml } from '@/engine/document-model/equation';
 import {
   headerFooterPresetDefinitions,
@@ -32,6 +37,7 @@ import {
   pageSizeDefinitions,
   templateDefinitions,
 } from '@/engine/style/presets';
+import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '@/engine/style/blockStyleResolution';
 import { listPaginationAlgorithms } from '@/engine/typesetting';
 import type { LayoutWarning } from '@/engine/typesetting/types';
 import type {
@@ -102,6 +108,19 @@ const blockTypeLabels: Record<LayoutBlock['type'], string> = {
   blockquote: '引用',
   code: '代码块',
   horizontalRule: '分隔线',
+  pageBreak: '分页符',
+};
+
+const topLevelBlockDeleteLabels: Partial<Record<LayoutBlock['type'], string>> = {
+  paragraph: '空文本块',
+  heading: '标题',
+  toc: '目录',
+  list: '列表',
+  table: '表格',
+  image: '图片',
+  equation: '公式',
+  blockquote: '引用',
+  code: '代码块',
   pageBreak: '分页符',
 };
 
@@ -248,6 +267,10 @@ function getBlockStyleSummary(block: LayoutBlock): string {
     .join('；');
 }
 
+function getBlockStyleSourceText(block: LayoutBlock, resolvedStyleContract: ReturnType<typeof useResolvedStyleContract>): string {
+  return getBlockStyleSourceSummary(block, resolvedStyleContract);
+}
+
 function renderObjectPropertyRow(label: string, value: string): JSX.Element {
   return (
     <div className="object-property-row">
@@ -348,45 +371,7 @@ function getDefaultTextMetrics(
   spaceBefore: number;
   spaceAfter: number;
 } {
-  if (nodeInfo.ownerBlock.type === 'heading' && nodeInfo.ownerBlock.metadata.kind === 'heading') {
-    const blockStyle =
-      nodeInfo.ownerBlock.metadata.depth === 1
-        ? resolvedStyleContract.blockStyles.heading1
-        : nodeInfo.ownerBlock.metadata.depth === 2
-          ? resolvedStyleContract.blockStyles.heading2
-          : resolvedStyleContract.blockStyles.heading3;
-    return {
-      fontSize: blockStyle.fontSize,
-      lineHeight: blockStyle.lineHeight,
-      spaceBefore: blockStyle.marginTop,
-      spaceAfter: blockStyle.marginBottom,
-    };
-  }
-
-  if (nodeInfo.ownerBlock.type === 'code') {
-    return {
-      fontSize: resolvedStyleContract.blockStyles.code.fontSize,
-      lineHeight: resolvedStyleContract.blockStyles.code.lineHeight,
-      spaceBefore: resolvedStyleContract.blockStyles.code.marginTop,
-      spaceAfter: resolvedStyleContract.blockStyles.code.marginBottom,
-    };
-  }
-
-  if (nodeInfo.ownerBlock.type === 'list') {
-    return {
-      fontSize: resolvedStyleContract.blockStyles.list.fontSize,
-      lineHeight: resolvedStyleContract.blockStyles.list.lineHeight,
-      spaceBefore: resolvedStyleContract.blockStyles.list.marginTop,
-      spaceAfter: resolvedStyleContract.blockStyles.list.marginBottom,
-    };
-  }
-
-  return {
-    fontSize: resolvedStyleContract.blockStyles.paragraph.fontSize,
-    lineHeight: resolvedStyleContract.blockStyles.paragraph.lineHeight,
-    spaceBefore: resolvedStyleContract.blockStyles.paragraph.marginTop,
-    spaceAfter: resolvedStyleContract.blockStyles.paragraph.marginBottom,
-  };
+  return resolveBlockDefaultTextMetrics(nodeInfo.ownerBlock, resolvedStyleContract);
 }
 
 function isTextStyleEditable(nodeInfo: SelectedLayoutNodeInfo | null): boolean {
@@ -491,6 +476,14 @@ function getBlockquoteStructureActionMessage(action: BlockquoteStructureAction):
   }
 }
 
+function getTopLevelBlockDeleteMessage(blockType: LayoutBlock['type'] | null): string {
+  if (!blockType) {
+    return '已删除当前块';
+  }
+
+  return `已删除${topLevelBlockDeleteLabels[blockType] ?? '当前块'}`;
+}
+
 function getBlockPreviewText(block: LayoutBlock): string {
   const text = getLayoutBlockPlainText(block).replace(/\s+/g, ' ').trim();
   if (text) {
@@ -515,6 +508,7 @@ function getEquationRenderSummary(value: string): { statusText: string; errorTex
 function renderObjectPropertiesPanel(
   selectedNodeInfo: SelectedLayoutNodeInfo | null,
   selectedBlockquoteContext: SelectedBlockquoteContext | null,
+  selectedTopLevelBlock: LayoutBlock | null,
   selectedNodeId: string | null,
   canvasTextSelection: CanvasTextSelectionState,
   resolvedStyleContract: ReturnType<typeof useResolvedStyleContract>,
@@ -549,7 +543,11 @@ function renderObjectPropertiesPanel(
     cropRightPx?: number | null;
     cropBottomPx?: number | null;
     cropLeftPx?: number | null;
-    wrapMode?: 'block' | 'center' | 'left' | 'right';
+    wrapMode?: ImageBlockMetadata['wrapMode'];
+    wrapSide?: ImageWrapSide;
+    showCaption?: boolean;
+    offsetX?: number | null;
+    offsetY?: number | null;
   }) => void,
   updateLayoutTocMaxDepth: (payload: {
     nodeId: string;
@@ -570,6 +568,11 @@ function renderObjectPropertiesPanel(
     cellId: string;
     align: TableColumnAlign;
   }) => string | null,
+  mergeLayoutSelectedTableCells: () => {
+    selectedNodeId: string | null;
+    didUpdate: boolean;
+    reason: 'merged' | 'invalidSelection' | 'singleCell' | 'containsMergedCell';
+  },
   updateLayoutListStructure: (payload: {
     itemId: string;
     action: ListStructureAction;
@@ -612,6 +615,9 @@ function renderObjectPropertiesPanel(
     targetNodeId: string;
     action: BlockquoteStructureAction;
   }) => string | null,
+  deleteLayoutTopLevelBlock: (payload: {
+    nodeId: string;
+  }) => { didDelete: boolean; selectedNodeId: string | null; deletedBlockType: LayoutBlock['type'] | null },
   applyLayoutNodeBlockStyle: (payload: {
     nodeId: string;
     blockStyleOverrides: {
@@ -625,6 +631,7 @@ function renderObjectPropertiesPanel(
       spaceAfter?: number;
     };
   }) => void,
+  tableSelection: TableCellRangeSelection | null,
   tableStructureFeedback: string | null,
   onTableStructureFeedback: (message: string) => void,
   listStructureFeedback: string | null,
@@ -633,6 +640,8 @@ function renderObjectPropertiesPanel(
   onTocRefreshFeedback: (message: string | null) => void,
   blockquoteStructureFeedback: string | null,
   onBlockquoteStructureFeedback: (message: string) => void,
+  topLevelBlockFeedback: string | null,
+  onTopLevelBlockFeedback: (message: string) => void,
   syncEditingTextBeforeStyleAction: (nodeId: string) => void,
 ): JSX.Element {
   if (!selectedNodeInfo) {
@@ -699,6 +708,12 @@ function renderObjectPropertiesPanel(
     selectedTableCellPosition && selectedTableMetadata
       ? selectedTableMetadata.align[selectedTableCellPosition.columnIndex] ?? null
       : null;
+  const selectedTableRangeCellCount = tableSelection?.cellIds.length ?? 0;
+  const canMergeSelectedTableCells =
+    !!selectedTableCellPosition &&
+    !!tableSelection &&
+    tableSelection.tableBlockId === selectedNodeInfo.ownerBlock.id &&
+    selectedTableRangeCellCount > 1;
   const currentListStart = selectedListMetadata?.start ?? 1;
   const selectedListItem =
     selectedListMetadata && selectedListItemPosition
@@ -716,6 +731,9 @@ function renderObjectPropertiesPanel(
   const selectedEquationRenderSummary = selectedEquationMetadata
     ? getEquationRenderSummary(selectedEquationMetadata.value)
     : null;
+  const canDeleteTopLevelBlock =
+    !!selectedTopLevelBlock &&
+    Object.prototype.hasOwnProperty.call(topLevelBlockDeleteLabels, selectedTopLevelBlock.type);
   const commitImageMetadata = (patch: Partial<NonNullable<typeof selectedImageMetadata>>) => {
     if (!selectedImageMetadata) {
       return;
@@ -739,7 +757,11 @@ function renderObjectPropertiesPanel(
       cropRightPx: hasOwn('cropRightPx') ? patch.cropRightPx ?? 0 : selectedImageMetadata.cropRightPx ?? 0,
       cropBottomPx: hasOwn('cropBottomPx') ? patch.cropBottomPx ?? 0 : selectedImageMetadata.cropBottomPx ?? 0,
       cropLeftPx: hasOwn('cropLeftPx') ? patch.cropLeftPx ?? 0 : selectedImageMetadata.cropLeftPx ?? 0,
-      wrapMode: hasOwn('wrapMode') ? patch.wrapMode ?? 'block' : selectedImageMetadata.wrapMode ?? 'block',
+      wrapMode: hasOwn('wrapMode') ? patch.wrapMode ?? 'inline' : selectedImageLayout?.wrapMode ?? 'inline',
+      wrapSide: hasOwn('wrapSide') ? patch.wrapSide ?? 'right' : selectedImageLayout?.wrapSide ?? 'right',
+      showCaption: hasOwn('showCaption') ? patch.showCaption ?? false : selectedImageMetadata.showCaption ?? false,
+      offsetX: hasOwn('offsetX') ? patch.offsetX ?? 0 : selectedImageMetadata.offsetX ?? 0,
+      offsetY: hasOwn('offsetY') ? patch.offsetY ?? 0 : selectedImageMetadata.offsetY ?? 0,
     });
   };
 
@@ -1053,6 +1075,30 @@ function renderObjectPropertiesPanel(
     );
   };
 
+  const handleTableMergeCells = () => {
+    if (!canMergeSelectedTableCells) {
+      onTableStructureFeedback('请先按住 Shift 选择相邻单元格');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const result = mergeLayoutSelectedTableCells();
+
+    if (result.didUpdate) {
+      onTableStructureFeedback('已合并选中单元格');
+      return;
+    }
+
+    const failureMessage: Record<typeof result.reason, string> = {
+      merged: '已合并选中单元格',
+      invalidSelection: '请选择同一表格内的相邻矩形单元格',
+      singleCell: '至少需要选择 2 个单元格',
+      containsMergedCell: '当前选区包含已合并单元格，后续再支持复杂合并',
+    };
+
+    onTableStructureFeedback(failureMessage[result.reason]);
+  };
+
   const handleBlockquoteStructureAction = (action: BlockquoteStructureAction) => {
     if (!selectedBlockquoteContext || !selectedBlockquoteDirectChild) {
       onBlockquoteStructureFeedback('请先在引用中选中具体子块');
@@ -1087,6 +1133,17 @@ function renderObjectPropertiesPanel(
     onTocRefreshFeedback(didRefresh ? '目录已刷新' : '当前目录不可刷新');
   };
 
+  const handleTopLevelBlockDelete = () => {
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const result = deleteLayoutTopLevelBlock({
+      nodeId: selectedNodeInfo.nodeId,
+    });
+
+    onTopLevelBlockFeedback(
+      result.didDelete ? getTopLevelBlockDeleteMessage(result.deletedBlockType) : '当前块删除失败',
+    );
+  };
+
   return (
     <>
       <section className="detail-panel object-detail-panel">
@@ -1100,7 +1157,8 @@ function renderObjectPropertiesPanel(
           {renderObjectPropertyRow('所属块', blockTypeLabels[selectedNodeInfo.ownerBlock.type])}
           {renderObjectPropertyRow('文本摘要', getSelectedNodeTextSummary(selectedNodeInfo))}
           {renderObjectPropertyRow('源码范围', getSourceRangeLabel(selectedNodeInfo.sourceRange))}
-          {renderObjectPropertyRow('样式覆盖', getBlockStyleSummary(selectedNodeInfo.ownerBlock))}
+          {renderObjectPropertyRow('样式来源', getBlockStyleSourceText(selectedNodeInfo.ownerBlock, resolvedStyleContract))}
+          {renderObjectPropertyRow('块级覆盖', getBlockStyleSummary(selectedNodeInfo.ownerBlock))}
         </div>
       </section>
 
@@ -1241,25 +1299,60 @@ function renderObjectPropertiesPanel(
               <div className="image-property-group-title">环绕</div>
               <div className="segmented-group">
                 {([
-                  { id: 'block', label: '独占一行' },
-                  { id: 'center', label: '居中显示' },
-                  { id: 'left', label: '左侧排布' },
-                  { id: 'right', label: '右侧排布' },
+                  { id: 'inline', label: '嵌入型' },
+                  { id: 'square', label: '四周型环绕' },
+                  { id: 'topBottom', label: '上下型环绕' },
+                  { id: 'tight', label: '紧密型环绕' },
                 ] as const).map((option) => (
                   <button
                     key={option.id}
                     type="button"
-                    className={(selectedImageMetadata.wrapMode ?? 'block') === option.id ? 'segment-chip active' : 'segment-chip'}
-                    onClick={() =>
-                      commitImageMetadata({ wrapMode: option.id })
-                    }
+                    className={selectedImageLayout?.wrapMode === option.id ? 'segment-chip active' : 'segment-chip'}
+                    onClick={() => {
+                      const patch: { wrapMode: ImageWrapMode; wrapSide?: ImageWrapSide } = { wrapMode: option.id };
+                      if (isImageTextWrapMode(option.id)) {
+                        patch.wrapSide = selectedImageLayout?.wrapSide ?? 'right';
+                      }
+                      commitImageMetadata(patch);
+                    }}
                   >
                     {option.label}
                   </button>
                 ))}
               </div>
-              <p className="panel-note">V1 先按图片块自身版式对齐处理，不做复杂正文绕排。</p>
+              {selectedImageLayout && isImageTextWrapMode(selectedImageLayout.wrapMode) ? (
+                <div className="image-wrap-side-row">
+                  <span>绕排方向</span>
+                  <div className="segmented-group">
+                    {([
+                      { id: 'left', label: '左侧' },
+                      { id: 'right', label: '右侧' },
+                    ] as const).map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={selectedImageLayout.wrapSide === option.id ? 'segment-chip active' : 'segment-chip'}
+                        onClick={() => commitImageMetadata({ wrapSide: option.id })}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <p className="panel-note">紧密型当前按裁剪后的可见区域绕排，后续再扩展透明轮廓分析。</p>
             </div>
+            {/* 新增：显示标题勾选开关 */}
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={selectedImageMetadata.showCaption ?? false}
+                onChange={(event) =>
+                  commitImageMetadata({ showCaption: event.target.checked })
+                }
+              />
+              <span>显示标题</span>
+            </label>
           </div>
         </section>
       ) : null}
@@ -1635,6 +1728,25 @@ function renderObjectPropertiesPanel(
               {selectedTableCellPosition.rowIndex + 1} 行第 {selectedTableCellPosition.columnIndex + 1} 列
             </span>
           </div>
+          <div className="object-property-list">
+            {renderObjectPropertyRow(
+              '当前选区',
+              canMergeSelectedTableCells
+                ? `${tableSelection!.endRowIndex - tableSelection!.startRowIndex + 1} 行 x ${tableSelection!.endColumnIndex - tableSelection!.startColumnIndex + 1} 列，共 ${selectedTableRangeCellCount} 个单元格`
+                : '单个单元格',
+            )}
+          </div>
+          <div className="table-structure-grid">
+            <button
+              type="button"
+              className="segment-chip table-structure-button"
+              disabled={!canMergeSelectedTableCells}
+              title={canMergeSelectedTableCells ? '合并选中单元格' : '按住 Shift 点击相邻单元格后可合并'}
+              onClick={handleTableMergeCells}
+            >
+              合并选中单元格
+            </button>
+          </div>
           <div className="table-structure-grid">
             {tableStructureActions.map((option) => {
               const isDisabled =
@@ -1732,6 +1844,9 @@ function renderObjectPropertiesPanel(
             >
               清除文字格式
             </button>
+          </div>
+          <div className="panel-note-list">
+            <p>清除文字格式只回退文字级视觉覆盖，当前模板基线和块级样式会保留。</p>
           </div>
           <div className="margin-grid">
             <label>
@@ -2108,6 +2223,25 @@ function renderObjectPropertiesPanel(
               <p>{blockStyleControlSupport.note}</p>
             </div>
           ) : null}
+        </section>
+      ) : null}
+
+      {canDeleteTopLevelBlock ? (
+        <section className="detail-panel object-detail-panel">
+          <div className="detail-panel-head">
+            <h3>块操作</h3>
+            <span>删除当前顶层块</span>
+          </div>
+          <div className="table-structure-grid">
+            <button
+              type="button"
+              className="segment-chip table-structure-button danger-chip"
+              onClick={handleTopLevelBlockDelete}
+            >
+              删除当前块
+            </button>
+          </div>
+          {topLevelBlockFeedback ? <p className="table-structure-feedback">{topLevelBlockFeedback}</p> : null}
         </section>
       ) : null}
 
@@ -2541,6 +2675,7 @@ export function RightPanel({
   const resolvedStyleContract = useResolvedStyleContract();
   const styleSettings = useAppStore((state) => state.styleSettings);
   const layoutDocument = useAppStore((state) => state.layoutDocument);
+  const tableSelection = useAppStore((state) => state.layoutDocument?.viewState.tableSelection ?? null);
   const activeRightPanelTab = useAppStore((state) => state.activeRightPanelTab);
   const activePageSettingsTab = useAppStore((state) => state.activePageSettingsTab);
   const setActiveRightPanelTab = useAppStore((state) => state.setActiveRightPanelTab);
@@ -2569,6 +2704,7 @@ export function RightPanel({
   const updateLayoutTableStructure = useAppStore((state) => state.updateLayoutTableStructure);
   const updateLayoutTableHeaderRow = useAppStore((state) => state.updateLayoutTableHeaderRow);
   const updateLayoutTableColumnAlign = useAppStore((state) => state.updateLayoutTableColumnAlign);
+  const mergeLayoutSelectedTableCells = useAppStore((state) => state.mergeLayoutSelectedTableCells);
   const updateLayoutListStructure = useAppStore((state) => state.updateLayoutListStructure);
   const updateLayoutListOrdered = useAppStore((state) => state.updateLayoutListOrdered);
   const updateLayoutListStart = useAppStore((state) => state.updateLayoutListStart);
@@ -2582,10 +2718,12 @@ export function RightPanel({
   const applyLayoutNodeBlockStyle = useAppStore((state) => state.applyLayoutNodeBlockStyle);
   const updateLayoutTocMaxDepth = useAppStore((state) => state.updateLayoutTocMaxDepth);
   const refreshLayoutTocBlock = useAppStore((state) => state.refreshLayoutTocBlock);
+  const deleteLayoutTopLevelBlock = useAppStore((state) => state.deleteLayoutTopLevelBlock);
   const [tableStructureFeedback, setTableStructureFeedback] = useState<string | null>(null);
   const [listStructureFeedback, setListStructureFeedback] = useState<string | null>(null);
   const [tocRefreshFeedback, setTocRefreshFeedback] = useState<string | null>(null);
   const [blockquoteStructureFeedback, setBlockquoteStructureFeedback] = useState<string | null>(null);
+  const [topLevelBlockFeedback, setTopLevelBlockFeedback] = useState<string | null>(null);
   const [marginDrafts, setMarginDrafts] = useState<Record<MarginSide, string>>({
     top: String(styleSettings.customMarginsMm.top),
     right: String(styleSettings.customMarginsMm.right),
@@ -2599,12 +2737,17 @@ export function RightPanel({
   const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
   const selectedNodeInfo = getSelectedLayoutNodeInfo(layoutDocument);
   const selectedBlockquoteContext = getSelectedBlockquoteContext(layoutDocument);
+  const selectedTopLevelBlock =
+    layoutDocument && selectedNodeId
+      ? findTopLevelBlockForSelectedNode(layoutDocument.blocks, selectedNodeId)
+      : null;
 
   useEffect(() => {
     setTableStructureFeedback(null);
     setListStructureFeedback(null);
     setTocRefreshFeedback(null);
     setBlockquoteStructureFeedback(null);
+    setTopLevelBlockFeedback(null);
   }, [selectedNodeId]);
 
   useEffect(() => {
@@ -2745,6 +2888,7 @@ export function RightPanel({
           {renderObjectPropertiesPanel(
             selectedNodeInfo,
             selectedBlockquoteContext,
+            selectedTopLevelBlock,
             selectedNodeId,
             canvasTextSelection,
             resolvedStyleContract,
@@ -2758,6 +2902,7 @@ export function RightPanel({
             updateLayoutTableStructure,
             updateLayoutTableHeaderRow,
             updateLayoutTableColumnAlign,
+            mergeLayoutSelectedTableCells,
             updateLayoutListStructure,
             updateLayoutListOrdered,
             updateLayoutListStart,
@@ -2768,7 +2913,9 @@ export function RightPanel({
             convertLayoutListItemTaskState,
             updateLayoutListBatchChecked,
             updateLayoutBlockquoteStructure,
+            deleteLayoutTopLevelBlock,
             applyLayoutNodeBlockStyle,
+            tableSelection,
             tableStructureFeedback,
             setTableStructureFeedback,
             listStructureFeedback,
@@ -2777,6 +2924,8 @@ export function RightPanel({
             setTocRefreshFeedback,
             blockquoteStructureFeedback,
             setBlockquoteStructureFeedback,
+            topLevelBlockFeedback,
+            setTopLevelBlockFeedback,
             syncEditingTextBeforeStyleAction,
           )}
         </div>

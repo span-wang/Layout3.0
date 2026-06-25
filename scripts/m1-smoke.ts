@@ -6,6 +6,7 @@ import {
   applyAnswerAnnotationToBlock,
   applyBlockStyleOverridesToBlock,
   applyTextStyleToBlock,
+  clearTextFormattingInTextRuns,
   buildHeadingPageNumberMap,
   buildTocItems,
   createLayoutDocumentFromMarkdown,
@@ -36,9 +37,11 @@ import { defaultStyleSettings } from '../src/engine/style/presets.ts';
 import { formulaTemplateGroups } from '../src/constants/formulaTemplates.ts';
 import { resolveStyleContract } from '../src/engine/style/resolveContract.ts';
 import { cloneStyleSettings } from '../src/engine/style/styleSettings.ts';
+import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '../src/engine/style/blockStyleResolution.ts';
 import { buildExportHtml } from '../src/services/exportHtml.ts';
 import { getBlockStyleControlSupportByBlockType } from '../src/components/layout/objectStyleSupport.ts';
 import {
+  ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
   ESTIMATED_GREEDY_BALANCED_PAGINATION_ALGORITHM_ID,
   ESTIMATED_GREEDY_BALANCED_V2_PAGINATION_ALGORITHM_ID,
   ESTIMATED_GREEDY_PAGINATION_ALGORITHM_ID,
@@ -279,6 +282,7 @@ async function main(): Promise<void> {
   customizedStyleSettings.customMarginsMm.top = 26;
   customizedStyleSettings.customMarginsMm.right = 18;
   customizedStyleSettings.templateId = 'lecture';
+  customizedStyleSettings.paginationAlgorithmId = ESTIMATED_COST_PAGINATION_ALGORITHM_ID;
   const serializedProjectFile = serializeLayoutProjectFile({
     document: layoutDocument,
     styleSettings: customizedStyleSettings,
@@ -319,6 +323,7 @@ async function main(): Promise<void> {
 
   const algorithmIds = listPaginationAlgorithms().map((algorithm) => algorithm.id);
   if (
+    !algorithmIds.includes(ESTIMATED_COST_PAGINATION_ALGORITHM_ID) ||
     !algorithmIds.includes(ESTIMATED_GREEDY_PAGINATION_ALGORITHM_ID) ||
     !algorithmIds.includes(ESTIMATED_GREEDY_BALANCED_PAGINATION_ALGORITHM_ID) ||
     !algorithmIds.includes(ESTIMATED_GREEDY_BALANCED_V2_PAGINATION_ALGORITHM_ID)
@@ -426,6 +431,15 @@ async function main(): Promise<void> {
     throw new Error('样式编辑验证失败：首行缩进没有写回 blockStyleOverrides');
   }
 
+  const zeroSpacingParagraph = applyBlockStyleOverridesToBlock(blockStyledParagraph, {
+    spaceBefore: 0,
+    spaceAfter: 0,
+  });
+
+  if (zeroSpacingParagraph.blockStyleOverrides.spaceBefore !== 0 || zeroSpacingParagraph.blockStyleOverrides.spaceAfter !== 0) {
+    throw new Error('样式优先级验证失败：块级样式的 0 覆盖不应被当成空值忽略');
+  }
+
   const styledDocument = {
     ...styleEditingDocument,
     blocks: styleEditingDocument.blocks.map((block) =>
@@ -453,11 +467,65 @@ async function main(): Promise<void> {
     throw new Error('样式编辑验证失败：导出 HTML 没有消费首行缩进样式');
   }
 
+  const zeroSpacingHtml = buildExportHtml({
+    pages: paginateBlocks([zeroSpacingParagraph], contract),
+    title: '零间距验证',
+  });
+
+  if (!zeroSpacingHtml.includes('margin-top:0px') || !zeroSpacingHtml.includes('margin-bottom:0px')) {
+    throw new Error('样式优先级验证失败：导出 HTML 没有正确消费 0 值段前段后距');
+  }
+
   const restoredStyledParagraph = restoredStyledProject.document.blocks.find(
     (block) => block.id === blockStyledParagraph.id,
   );
   if (!restoredStyledParagraph || restoredStyledParagraph.blockStyleOverrides.spaceAfter !== 26) {
     throw new Error('样式编辑验证失败：`.layout` 工程文件没有恢复段后距样式');
+  }
+
+  const notesStyleSettings = cloneStyleSettings(defaultStyleSettings);
+  notesStyleSettings.templateId = 'notes';
+  const notesContract = resolveStyleContract(notesStyleSettings);
+  const noteParagraph = styleEditingDocument.blocks.find((block) => block.type === 'paragraph');
+  if (!noteParagraph) {
+    throw new Error('样式优先级验证失败：未找到用于模板基线验证的段落块');
+  }
+
+  const noteDefaultMetrics = resolveBlockDefaultTextMetrics(noteParagraph, notesContract);
+  const noteSourceSummary = getBlockStyleSourceSummary(noteParagraph, notesContract);
+
+  if (noteDefaultMetrics.fontSize !== notesContract.blockStyles.paragraph.fontSize) {
+    throw new Error('样式优先级验证失败：模板基线字号没有按模板解析结果返回');
+  }
+
+  if (!noteSourceSummary.includes('模板基线') || !noteSourceSummary.includes('局部覆盖')) {
+    throw new Error('样式优先级验证失败：块级样式来源摘要没有清楚说明模板与局部覆盖关系');
+  }
+
+  const notesStyledHtml = buildExportHtml({
+    pages: paginateBlocks(styledDocument.blocks, notesContract),
+    title: `${styledDocument.title}（笔记模板）`,
+  });
+
+  if (!notesStyledHtml.includes(`--page-paragraph-font-size:${notesContract.blockStyles.paragraph.fontSize}px`)) {
+    throw new Error('样式优先级验证失败：导出 HTML 没有注入模板基线变量');
+  }
+
+  if (
+    !notesStyledHtml.includes(`font-size:${notesContract.blockStyles.paragraph.fontSize}px`) ||
+    !notesStyledHtml.includes(`line-height:${notesContract.blockStyles.paragraph.lineHeight}px`)
+  ) {
+    throw new Error('样式优先级验证失败：导出 HTML 没有消费笔记模板的段落基线');
+  }
+
+  const clearedStyledParagraph = clearTextFormattingInTextRuns(
+    blockStyledParagraph.textRuns,
+    blockStyledParagraph.id,
+    { start: 0, end: 4 },
+  );
+
+  if (clearedStyledParagraph.some((run) => run.styleOverrides.fontSize !== undefined)) {
+    throw new Error('样式优先级验证失败：清除文字格式不应保留文字字号覆盖');
   }
 
   const paragraphStyleSupport = getBlockStyleControlSupportByBlockType('paragraph');
@@ -1503,6 +1571,44 @@ async function main(): Promise<void> {
     throw new Error('表格结构编辑验证失败：store 没有正确删除当前列');
   }
 
+  const mergeAnchorCellId = columnDeletedTableBlock.metadata.rows[0]?.cells[0]?.id;
+  const mergeFocusCellId = columnDeletedTableBlock.metadata.rows[1]?.cells[1]?.id;
+  if (!mergeAnchorCellId || !mergeFocusCellId) {
+    throw new Error('表格合并验证失败：缺少可用于合并的 2 x 2 单元格区域');
+  }
+
+  useAppStore.getState().selectLayoutTableCell({ cellId: mergeAnchorCellId });
+  useAppStore.getState().selectLayoutTableCell({ cellId: mergeFocusCellId, extendRange: true });
+  const tableSelectionBeforeMerge = useAppStore.getState().layoutDocument?.viewState.tableSelection;
+  if (!tableSelectionBeforeMerge || tableSelectionBeforeMerge.cellIds.length !== 4) {
+    throw new Error('表格合并验证失败：Shift 选择没有形成 2 x 2 表格选区');
+  }
+
+  const mergeResult = useAppStore.getState().mergeLayoutSelectedTableCells();
+  const mergedTableBlock = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === insertedTableBlock.id);
+  if (
+    !mergeResult.didUpdate ||
+    mergeResult.selectedNodeId !== mergeAnchorCellId ||
+    !mergedTableBlock ||
+    mergedTableBlock.metadata.kind !== 'table' ||
+    mergedTableBlock.metadata.rows[0].cells[0].rowSpan !== 2 ||
+    mergedTableBlock.metadata.rows[0].cells[0].colSpan !== 2 ||
+    mergedTableBlock.metadata.rows[1].cells[1].coveredByCellId !== mergeAnchorCellId ||
+    useAppStore.getState().layoutDocument?.viewState.tableSelection !== null
+  ) {
+    throw new Error('表格合并验证失败：store 没有正确合并选中单元格或清理选区');
+  }
+
+  const mergedTableHtml = buildExportHtml({
+    pages: paginateBlocks([mergedTableBlock], contract),
+    title: '表格合并导出验证',
+  });
+  if (!mergedTableHtml.includes('rowspan="2"') || !mergedTableHtml.includes('colspan="2"')) {
+    throw new Error('表格合并导出验证失败：HTML 没有输出 rowspan/colspan');
+  }
+
   const singleCellTable = insertTableBlockAfterNode([], {
     rowCount: 1,
     columnCount: 1,
@@ -1803,6 +1909,68 @@ async function main(): Promise<void> {
   if (complexTailV2SecondPageSignature !== 'image:image|table:table') {
     throw new Error(
       `页尾平衡 V2 回归验证失败：复杂尾块场景第二页应保留“图片 + 表格”组合，实际得到 ${complexTailV2SecondPageSignature || '空页'}`,
+    );
+  }
+
+  const costStyleSettings = cloneStyleSettings(defaultStyleSettings);
+  costStyleSettings.pageSize = 'B5';
+  costStyleSettings.marginMode = 'custom';
+  costStyleSettings.customMarginsMm = { top: 34, right: 24, bottom: 34, left: 24 };
+  costStyleSettings.headerFooterMode = 'custom';
+  costStyleSettings.customHeaderReservedMm = 20;
+  costStyleSettings.customFooterReservedMm = 20;
+  const costContract = resolveStyleContract(costStyleSettings);
+  const costBreakDocument = await createLayoutDocumentFromMarkdown([
+    '# 分页代价函数测试',
+    '',
+    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
+    '',
+    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
+    '',
+    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
+    '',
+    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
+    '',
+    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
+  ].join('\n'));
+  const costGreedyPages = paginateBlocks(costBreakDocument.blocks, costContract, {
+    algorithmId: ESTIMATED_GREEDY_PAGINATION_ALGORITHM_ID,
+  });
+  const costScoredPages = paginateBlocks(costBreakDocument.blocks, costContract, {
+    algorithmId: ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
+  });
+  const costGreedyFirstPageFill = costGreedyPages[0]?.blocks.length ?? 0;
+  const costGreedySecondPageFill = costGreedyPages[1]?.blocks.length ?? 0;
+  const costScoredFirstPageFill = costScoredPages[0]?.blocks.length ?? 0;
+  const costScoredSecondPageFill = costScoredPages[1]?.blocks.length ?? 0;
+  const costGreedyLastPageFill = costGreedyPages[costGreedyPages.length - 1]?.blocks.length ?? 0;
+  const costScoredLastPageFill = costScoredPages[costScoredPages.length - 1]?.blocks.length ?? 0;
+
+  if (costScoredPages.length < 2) {
+    throw new Error('分页代价函数验证失败：estimated-cost-v1 未能正常输出多页结果');
+  }
+
+  if (costScoredPages.length !== costGreedyPages.length) {
+    throw new Error(
+      `分页代价函数验证失败：estimated-cost-v1 不应凭空改变页数，greedy=${costGreedyPages.length}，cost=${costScoredPages.length}`,
+    );
+  }
+
+  if (costScoredFirstPageFill >= costGreedyFirstPageFill) {
+    throw new Error(
+      `分页代价函数验证失败：estimated-cost-v1 应适度回收首屏尾块，greedy=${costGreedyFirstPageFill}，cost=${costScoredFirstPageFill}`,
+    );
+  }
+
+  if (costScoredSecondPageFill < costGreedySecondPageFill) {
+    throw new Error(
+      `分页代价函数验证失败：estimated-cost-v1 不应让第二页比 greedy 更空，greedy=${costGreedySecondPageFill}，cost=${costScoredSecondPageFill}`,
+    );
+  }
+
+  if (costScoredLastPageFill < costGreedyLastPageFill) {
+    throw new Error(
+      `分页代价函数验证失败：estimated-cost-v1 不应让最后一页比 greedy 更空，greedy=${costGreedyLastPageFill}，cost=${costScoredLastPageFill}`,
     );
   }
 

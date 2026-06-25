@@ -1,5 +1,6 @@
 import type { PaginationAlgorithmId } from '@/engine/style/types';
 import { DEFAULT_PAGINATION_ALGORITHM_ID } from './algorithmIds';
+import { estimatedCostPaginationAlgorithm } from './algorithms/estimatedCost';
 import { estimatedGreedyBalancedPaginationAlgorithm } from './algorithms/estimatedGreedyBalanced';
 import { estimatedGreedyBalancedV2PaginationAlgorithm } from './algorithms/estimatedGreedyBalancedV2';
 import { estimatedGreedyPaginationAlgorithm } from './algorithms/estimatedGreedy';
@@ -12,6 +13,7 @@ function seedBuiltinPaginationAlgorithms(): void {
     estimatedGreedyPaginationAlgorithm,
     estimatedGreedyBalancedPaginationAlgorithm,
     estimatedGreedyBalancedV2PaginationAlgorithm,
+    estimatedCostPaginationAlgorithm,
   ].forEach((algorithm) => {
     paginationAlgorithms.set(algorithm.id, algorithm);
   });

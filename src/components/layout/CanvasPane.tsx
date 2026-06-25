@@ -28,20 +28,32 @@ import {
   type LayoutListTreeNode,
   type LayoutListItem,
   type LayoutTableCell,
+  type LayoutTableRow,
   type ParseState,
+  type TableCellRangeSelection,
   type TextMark,
   type TextMarkType,
   type TextRangeSelection,
   type TextRun,
   type TextStyleOverrides,
 } from '@/engine/document-model';
-import { renderEquationToHtml } from '@/engine/document-model/equation';
+import { renderEquationToHtml, splitInlineEquations, renderInlineEquationToHtml } from '@/engine/document-model/equation';
 import {
   resolveImageLayout,
   resolveImageRenderMetrics,
+  getImageWrapClassName,
+  isImageTextWrapMode,
   type ImageMeasuredVisibleSize,
   type ResolvedImageLayout,
 } from '@/engine/document-model/imageLayout';
+import {
+  getTableCellColSpan,
+  getTableCellRowSpan,
+  isCoveredTableCell,
+  isTableCellInRangeSelection,
+  resolveTableColumnWidths,
+} from '@/engine/document-model/tableLayout';
+import { buildPageStyleVariables } from '@/engine/style/blockStyleResolution';
 import type { ResolvedStyleContract } from '@/engine/style/types';
 import type { PageLayout } from '@/engine/typesetting/types';
 import { useAppStore } from '@/store';
@@ -61,6 +73,7 @@ interface CanvasPaneProps {
   resolvedStyleContract: ResolvedStyleContract;
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
+  onSelectTableCell: (cellId: string, extendRange: boolean) => void;
   onClearSelection: () => void;
   onCommitNodeText: (nodeId: string, text: string) => void;
   onCommitNodeRichText: (nodeId: string, textRuns: TextRun[]) => void;
@@ -162,6 +175,61 @@ interface ActiveImageCrop {
   fullWidthPx: number;
   fullHeightPx: number;
   pageScale: number;
+}
+
+// 图片拖动状态接口
+interface ActiveImageDrag {
+  nodeId: string;
+  startClientX: number;
+  startClientY: number;
+  startOffsetX: number;
+  startOffsetY: number;
+  pageScale: number;
+}
+
+interface ActiveTableColumnResize {
+  blockId: string;
+  cellId: string;
+  columnIndex: number;
+  nextCellId: string;
+  startClientX: number;
+  startWidthPx: number;
+  startNextWidthPx: number;
+  pageScale: number;
+}
+
+interface ActiveTableRowResize {
+  rowId: string;
+  cellId: string;
+  nextRowId: string;
+  nextCellId: string;
+  rowIndex: number;
+  startClientY: number;
+  startHeightPx: number;
+  startNextHeightPx: number;
+  pageScale: number;
+}
+
+interface TableResizeRenderState {
+  pageContract?: ResolvedStyleContract;
+  draftTableColumnWidths?: Record<string, number[]>;
+  draftTableRowHeights?: Record<string, number>;
+  onStartTableColumnResize?: (
+    event: MouseEvent<HTMLButtonElement>,
+    block: LayoutBlock,
+    cellId: string,
+    columnIndex: number,
+    rowIndex: number,
+    pageScale: number,
+  ) => void;
+  onStartTableRowResize?: (
+    event: MouseEvent<HTMLButtonElement>,
+    block: LayoutBlock,
+    cellId: string,
+    rowId: string,
+    rowIndex: number,
+    pageScale: number,
+  ) => void;
 }
 
 interface ListItemContextMenuState {
@@ -274,13 +342,13 @@ function buildBlockStyle(block: LayoutBlock): CSSProperties {
 
   return {
     textAlign: block.blockStyleOverrides.textAlign,
-    lineHeight: block.blockStyleOverrides.lineHeight
+    lineHeight: block.blockStyleOverrides.lineHeight !== undefined
       ? `${block.blockStyleOverrides.lineHeight}px`
       : undefined,
-    marginTop: block.blockStyleOverrides.spaceBefore
+    marginTop: block.blockStyleOverrides.spaceBefore !== undefined
       ? `${block.blockStyleOverrides.spaceBefore}px`
       : undefined,
-    marginBottom: block.blockStyleOverrides.spaceAfter
+    marginBottom: block.blockStyleOverrides.spaceAfter !== undefined
       ? `${block.blockStyleOverrides.spaceAfter}px`
       : undefined,
     paddingLeft: indentStyle && indentStyle.paddingLeft > 0 ? `${indentStyle.paddingLeft}px` : undefined,
@@ -300,22 +368,47 @@ function buildImageStyle(block: LayoutBlock): CSSProperties | undefined {
   const layout = resolveImageLayout(block.metadata);
   const styles: CSSProperties = {};
 
-  if (layout.wrapMode === 'center') {
+  if (layout.wrapMode === 'topBottom') {
     styles.marginLeft = 'auto';
     styles.marginRight = 'auto';
-  } else if (layout.wrapMode === 'left') {
-    styles.marginRight = 'auto';
-  } else if (layout.wrapMode === 'right') {
-    styles.marginLeft = 'auto';
+    // 上下型不让正文进入图片左右侧，图片自身默认居中；仍允许横向偏移。
+    if (layout.offsetX !== 0) {
+      styles.marginLeft = `calc(50% + ${layout.offsetX}px - ${(layout.widthPx ?? 0) / 2}px)`;
+      styles.marginRight = 'auto';
+    }
+  } else if (isImageTextWrapMode(layout.wrapMode)) {
+    styles.float = layout.wrapSide;
+    styles.clear = 'none';
+    styles.marginRight = layout.wrapSide === 'left' ? '16px' : '0';
+    styles.marginLeft = layout.wrapSide === 'right' ? '16px' : '0';
+    // Word 式绕排需要图片作为正文流里的浮动对象，不再为图片单独占整块高度。
+  } else {
+    // 嵌入型仍作为稳定图片块随文档流移动。
+    if (layout.offsetX !== 0) {
+      styles.marginLeft = layout.offsetX > 0 ? `${layout.offsetX}px` : 'auto';
+      styles.marginRight = layout.offsetX < 0 ? `${Math.abs(layout.offsetX)}px` : 'auto';
+    }
+    if (layout.offsetY !== 0) {
+      styles.marginTop = layout.offsetY > 0 ? `${layout.offsetY}px` : '0';
+    }
   }
 
   return styles;
+}
+
+function buildImageShellClassName(block: LayoutBlock, selectedNodeId: string | null): string {
+  if (block.type !== 'image' || block.metadata.kind !== 'image') {
+    return 'image-shell';
+  }
+
+  return `image-shell ${getImageWrapClassName(resolveImageLayout(block.metadata))}`;
 }
 
 function resolveImageLayoutWithDraft(
   block: LayoutBlock,
   draftSize: { widthPx: number | null; heightPx: number | null } | null,
   draftCrop: ImageDraftCrop | null,
+  draftOffset?: { offsetX: number; offsetY: number } | null,
 ): ResolvedImageLayout | null {
   if (block.type !== 'image' || block.metadata.kind !== 'image') {
     return null;
@@ -329,7 +422,48 @@ function resolveImageLayoutWithDraft(
     cropRightPx: draftCrop?.cropRightPx ?? block.metadata.cropRightPx,
     cropBottomPx: draftCrop?.cropBottomPx ?? block.metadata.cropBottomPx,
     cropLeftPx: draftCrop?.cropLeftPx ?? block.metadata.cropLeftPx,
+    offsetX: draftOffset?.offsetX ?? block.metadata.offsetX,
+    offsetY: draftOffset?.offsetY ?? block.metadata.offsetY,
   });
+}
+
+function buildImageAttributePayload(
+  block: LayoutBlock,
+  overrides: {
+    widthPx?: number | null;
+    heightPx?: number | null;
+    cropTopPx?: number | null;
+    cropRightPx?: number | null;
+    cropBottomPx?: number | null;
+    cropLeftPx?: number | null;
+    offsetX?: number | null;
+    offsetY?: number | null;
+  } = {},
+) {
+  if (block.type !== 'image' || block.metadata.kind !== 'image') {
+    return null;
+  }
+
+  const layout = resolveImageLayout(block.metadata);
+
+  return {
+    src: block.metadata.src,
+    alt: block.metadata.alt,
+    title: block.metadata.title,
+    widthPx: overrides.widthPx ?? block.metadata.widthPx ?? null,
+    heightPx: overrides.heightPx ?? block.metadata.heightPx ?? null,
+    lockAspectRatio: block.metadata.lockAspectRatio ?? true,
+    objectFit: block.metadata.objectFit ?? 'contain',
+    cropTopPx: overrides.cropTopPx ?? block.metadata.cropTopPx ?? 0,
+    cropRightPx: overrides.cropRightPx ?? block.metadata.cropRightPx ?? 0,
+    cropBottomPx: overrides.cropBottomPx ?? block.metadata.cropBottomPx ?? 0,
+    cropLeftPx: overrides.cropLeftPx ?? block.metadata.cropLeftPx ?? 0,
+    wrapMode: layout.wrapMode,
+    wrapSide: layout.wrapSide,
+    showCaption: block.metadata.showCaption ?? false,
+    offsetX: overrides.offsetX ?? block.metadata.offsetX ?? 0,
+    offsetY: overrides.offsetY ?? block.metadata.offsetY ?? 0,
+  };
 }
 
 function buildImageViewportStyle(
@@ -513,13 +647,77 @@ function buildImageCropMaskStyle(
   }
 }
 
-function renderInlineText(text: string, keyPrefix: string): ReactNode {
-  return text.split('\n').flatMap((part, index) => {
-    if (index === 0) {
-      return [part];
+function isTableCellSelected(block: LayoutBlock, selectedNodeId: string | null): boolean {
+  if (block.type !== 'table' || block.metadata.kind !== 'table' || !selectedNodeId) {
+    return false;
+  }
+
+  return block.metadata.rows.some((row) => row.cells.some((cell) => cell.id === selectedNodeId));
+}
+
+function findTableBlockByCellId(blocks: LayoutBlock[], cellId: string): LayoutBlock | null {
+  for (const block of blocks) {
+    if (block.type === 'table' && block.metadata.kind === 'table') {
+      const hasCell = block.metadata.rows.some((row) => row.cells.some((cell) => cell.id === cellId));
+      if (hasCell) {
+        return block;
+      }
     }
 
-    return [<br key={`${keyPrefix}-br-${index}`} />, part];
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedBlock = findTableBlockByCellId(block.metadata.blocks, cellId);
+      if (nestedBlock) {
+        return nestedBlock;
+      }
+    }
+  }
+
+  return null;
+}
+
+function isHeaderLikeTableRow(row: LayoutTableRow, rowIndex: number): boolean {
+  return rowIndex === 0 || row.cells.some((cell) => cell.isHeader);
+}
+
+function getTableRowBaseHeightPx(
+  row: LayoutTableRow,
+  rowIndex: number,
+  pageContract: ResolvedStyleContract | undefined,
+): number {
+  if (!pageContract) {
+    return isHeaderLikeTableRow(row, rowIndex) ? 44 : 40;
+  }
+
+  return isHeaderLikeTableRow(row, rowIndex)
+    ? pageContract.blockStyles.table.headerRowHeight
+    : pageContract.blockStyles.table.rowHeight;
+}
+
+function renderInlineText(text: string, keyPrefix: string): ReactNode {
+  // 分割普通文本和行内公式
+  const fragments = splitInlineEquations(text);
+
+  return fragments.flatMap((fragment, fragmentIndex) => {
+    if (fragment.type === 'equation') {
+      // 行内公式：使用 dangerouslySetInnerHTML 渲染，保持字体大小继承
+      const equationHtml = renderInlineEquationToHtml(fragment.content);
+      return [
+        <span
+          key={`${keyPrefix}-eq-${fragmentIndex}`}
+          className="inline-equation"
+          dangerouslySetInnerHTML={{ __html: equationHtml }}
+        />,
+      ];
+    }
+
+    // 普通文本：处理换行
+    const textParts = fragment.content.split('\n');
+    return textParts.flatMap((part, partIndex) => {
+      if (partIndex === 0) {
+        return [part];
+      }
+      return [<br key={`${keyPrefix}-br-${fragmentIndex}-${partIndex}`} />, part];
+    });
   });
 }
 
@@ -943,6 +1141,61 @@ function createSelectableTextNodeProps({
   };
 }
 
+function createSelectableTableCellProps({
+  node,
+  selectedNodeId,
+  tableSelection,
+  onSelectTableCell,
+  onPrepareSelectNode,
+  onStartEditing,
+  className = '',
+}: {
+  node: EditableCanvasNode;
+  selectedNodeId: string | null;
+  tableSelection: TableCellRangeSelection | null | undefined;
+  onSelectTableCell: (cellId: string, extendRange: boolean) => void;
+  onPrepareSelectNode: (nodeId: string) => void;
+  onStartEditing: (node: EditableCanvasNode) => void;
+  className?: string;
+}) {
+  const isActiveRangeCell = isTableCellInRangeSelection(tableSelection, node.id);
+  const classNames = [
+    'selectable-layout-node',
+    className,
+    node.id === selectedNodeId ? 'selected' : '',
+    isActiveRangeCell ? 'table-cell-range-selected' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const selectCell = (event: MouseEvent<HTMLElement>) => {
+    onSelectTableCell(node.id, event.shiftKey);
+  };
+
+  return {
+    className: classNames,
+    'data-layout-node-id': node.id,
+    onMouseDown: (event: MouseEvent<HTMLElement>) => {
+      event.stopPropagation();
+      onPrepareSelectNode(node.id);
+      if (event.detail >= 2) {
+        event.preventDefault();
+        selectCell(event);
+        onStartEditing(node);
+      }
+    },
+    onClick: (event: MouseEvent<HTMLElement>) => {
+      event.stopPropagation();
+      selectCell(event);
+    },
+    onDoubleClick: (event: MouseEvent<HTMLElement>) => {
+      event.stopPropagation();
+      selectCell(event);
+      onStartEditing(node);
+    },
+  };
+}
+
 function getEditorClassName(kind: CanvasEditorKind): string {
   const classNames = ['canvas-block-editor', `canvas-block-editor-${kind}`];
   if (kind === 'code') {
@@ -1044,8 +1297,6 @@ function escapeHtml(value: string): string {
 }
 
 function renderTextRunsToHtml(textRuns: TextRun[]): string {
-  const renderRunText = (text: string) => escapeHtml(text).replaceAll('\n', '<br data-layout-break="1" />');
-
   const applyRunMarks = (content: string, marks: TextMark[]): string =>
     marks.reduce((currentHtml, mark) => {
       switch (mark.type) {
@@ -1066,8 +1317,22 @@ function renderTextRunsToHtml(textRuns: TextRun[]): string {
       }
     }, content);
 
+  const renderFragment = (fragment: { type: 'text' | 'equation'; content: string }, marks: TextMark[]): string => {
+    if (fragment.type === 'equation') {
+      // 行内公式：不应用 marks，直接渲染
+      return renderInlineEquationToHtml(fragment.content);
+    }
+    // 普通文本：HTML 转义 + 处理换行 + 应用 marks
+    const escaped = escapeHtml(fragment.content).replaceAll('\n', '<br data-layout-break="1" />');
+    return applyRunMarks(escaped, marks);
+  };
+
   return textRuns
-    .map((run) => `<span data-layout-run-id="${run.id}"${buildTextRunStyleString(run)}>${applyRunMarks(renderRunText(run.text), run.marks)}</span>`)
+    .map((run) => {
+      const fragments = splitInlineEquations(run.text);
+      const content = fragments.map((fragment) => renderFragment(fragment, run.marks)).join('');
+      return `<span data-layout-run-id="${run.id}"${buildTextRunStyleString(run)}>${content}</span>`;
+    })
     .join('');
 }
 
@@ -1774,6 +2039,7 @@ function renderBlock(
   index: number,
   selectedNodeId: string | null,
   onSelectNode: (nodeId: string) => void,
+  onSelectTableCell: (cellId: string, extendRange: boolean) => void,
   onPrepareSelectNode: (nodeId: string) => void,
   editingNodeId: string | null,
   activeEquationEditorNodeId: string | null,
@@ -1806,14 +2072,40 @@ function renderBlock(
     edge: ImageCropEdge,
     pageScale: number,
   ) => void,
+  draftImageOffsets?: Record<string, { offsetX: number; offsetY: number }>,
+  onStartImageDrag?: (
+    event: MouseEvent<HTMLElement>,
+    block: LayoutBlock,
+    pageScale: number,
+  ) => void,
+  tableResizeState?: TableResizeRenderState,
+  tableSelection?: TableCellRangeSelection | null,
   onListItemContextMenu?: (event: MouseEvent<HTMLElement>, itemId: string) => void,
   pageScale?: number,
+  imageTextWrapBundle = false,
 ): JSX.Element | null {
   const isEditing = editingNodeId === block.id;
 
   switch (block.type) {
     case 'pageBreak':
-      return null;
+      return (
+        <div
+          key={`page-break-${block.id}-${index}`}
+          {...createSelectableBlockProps(
+            block,
+            selectedNodeId,
+            onSelectNode,
+            onPrepareSelectNode,
+            onStartEditing,
+            'page-break-marker',
+          )}
+          aria-label="分页符"
+        >
+          <span className="page-break-marker-line" aria-hidden="true" />
+          <span className="page-break-marker-label">分页符</span>
+          <span className="page-break-marker-line" aria-hidden="true" />
+        </div>
+      );
     case 'heading': {
       const depth = block.metadata.kind === 'heading' ? block.metadata.depth : 3;
       const content = isEditing
@@ -1994,6 +2286,7 @@ function renderBlock(
         <blockquote
           key={`blockquote-${block.id}-${index}`}
           {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'quote-block')}
+          style={buildBlockStyle(block)}
         >
           {block.metadata.blocks.map((item, childIndex) =>
             renderBlock(
@@ -2001,6 +2294,7 @@ function renderBlock(
               childIndex,
               selectedNodeId,
               onSelectNode,
+              onSelectTableCell,
               onPrepareSelectNode,
               editingNodeId,
               activeEquationEditorNodeId,
@@ -2024,6 +2318,10 @@ function renderBlock(
               onImageLoad,
               onStartImageResize,
               onStartImageCrop,
+              draftImageOffsets,
+              onStartImageDrag,
+              tableResizeState,
+              tableSelection,
               onListItemContextMenu,
             ),
           )}
@@ -2066,66 +2364,151 @@ function renderBlock(
         </pre>
       );
     case 'table':
-      return block.metadata.kind === 'table' ? (
-        <div
-          key={`table-${block.id}-${index}`}
-          {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'table-shell')}
-        >
-          <table className="preview-table" style={buildBlockStyle(block)}>
-            <tbody>
-              {block.metadata.rows.map((row) => (
-                <tr key={row.id}>
-                  {row.cells.map((cell, cellIndex) => {
-                    const cellNode = getEditableTableCellNode(cell);
-                    const CellTag = cell.isHeader ? 'th' : 'td';
-                    const columnAlign = block.metadata.kind === 'table' ? block.metadata.align[cellIndex] : null;
+      return (() => {
+        if (block.metadata.kind !== 'table') {
+          return null;
+        }
 
-                    return (
-                      <CellTag
-                        key={cell.id}
-                        style={columnAlign ? { textAlign: columnAlign } : undefined}
-                        {...createSelectableTextNodeProps({
-                          node: cellNode,
-                          selectedNodeId,
-                          onSelectNode,
-                          onPrepareSelectNode,
-                          onStartEditing,
-                        })}
-                      >
-                        {editingNodeId === cell.id
-                          ? isRichTextCanvasEditorKind(editingKind ?? 'tableCell')
-                            ? (
-                              <RichTextCanvasEditor
-                                nodeId={cell.id}
-                                kind={editingKind ?? 'tableCell'}
-                                textRuns={editingDraftTextRuns ?? cell.textRuns}
-                                activeSelection={activeSelection}
-                                richEditorRef={richEditorRef}
-                                onSelectionChange={onSelectionChange}
-                                onDraftChange={onEditDraftTextRunsChange}
-                                onCommit={onCommitEdit}
-                                onCancel={onCancelEdit}
+        const tableRows = block.metadata.rows;
+        const tableAlign = block.metadata.align;
+        const columnCount = tableRows[0]?.cells.length ?? 0;
+        const resolvedColumnWidths = resolveTableColumnWidths(
+          tableResizeState?.draftTableColumnWidths?.[block.id] ?? block.metadata.columnWidthsPx,
+          columnCount,
+          tableResizeState?.pageContract?.contentWidthPx ?? 640,
+        );
+        const shouldShowResizeHandles =
+          block.id === selectedNodeId || isTableCellSelected(block, selectedNodeId);
+
+        return (
+          <div
+            key={`table-${block.id}-${index}`}
+            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'table-shell')}
+          >
+            <table className="preview-table" style={buildBlockStyle(block)}>
+              <colgroup>
+                {resolvedColumnWidths.map((width, columnIndex) => (
+                  <col key={`${block.id}-col-${columnIndex + 1}`} style={{ width: `${width}px` }} />
+                ))}
+              </colgroup>
+              <tbody>
+                {tableRows.map((row, rowIndex) => {
+                  const rowMinHeightPx =
+                    tableResizeState?.draftTableRowHeights?.[row.id] ??
+                    row.heightPx ??
+                    getTableRowBaseHeightPx(row, rowIndex, tableResizeState?.pageContract);
+
+                  return (
+                    <tr key={row.id} style={{ height: `${rowMinHeightPx}px` }}>
+                      {row.cells.map((cell, cellIndex) => {
+                        if (isCoveredTableCell(cell)) {
+                          return null;
+                        }
+
+                        const cellNode = getEditableTableCellNode(cell);
+                        const CellTag = cell.isHeader ? 'th' : 'td';
+                        const columnAlign = tableAlign[cellIndex] ?? null;
+                        const rowSpan = getTableCellRowSpan(cell);
+                        const colSpan = getTableCellColSpan(cell);
+
+                        return (
+                          <CellTag
+                            key={cell.id}
+                            rowSpan={rowSpan > 1 ? rowSpan : undefined}
+                            colSpan={colSpan > 1 ? colSpan : undefined}
+                            style={{
+                              ...(columnAlign ? { textAlign: columnAlign } : undefined),
+                              width: `${resolvedColumnWidths[cellIndex] ?? 48}px`,
+                              minWidth: `${resolvedColumnWidths[cellIndex] ?? 48}px`,
+                              height: `${rowMinHeightPx}px`,
+                            }}
+                            {...createSelectableTableCellProps({
+                              node: cellNode,
+                              selectedNodeId,
+                              tableSelection,
+                              onSelectTableCell,
+                              onPrepareSelectNode,
+                              onStartEditing,
+                            })}
+                          >
+                            <div className="table-cell-content">
+                              {editingNodeId === cell.id
+                                ? isRichTextCanvasEditorKind(editingKind ?? 'tableCell')
+                                  ? (
+                                    <RichTextCanvasEditor
+                                      nodeId={cell.id}
+                                      kind={editingKind ?? 'tableCell'}
+                                      textRuns={editingDraftTextRuns ?? cell.textRuns}
+                                      activeSelection={activeSelection}
+                                      richEditorRef={richEditorRef}
+                                      onSelectionChange={onSelectionChange}
+                                      onDraftChange={onEditDraftTextRunsChange}
+                                      onCommit={onCommitEdit}
+                                      onCancel={onCancelEdit}
+                                    />
+                                  )
+                                  : renderBlockEditor({
+                                      kind: editingKind ?? 'tableCell',
+                                      editorRef,
+                                      editingText,
+                                      onChange: onEditTextChange,
+                                      onSelectionChange,
+                                      onCommit: onCommitEdit,
+                                      onCancel: onCancelEdit,
+                                    })
+                                : renderTextRuns(cell.textRuns, '空单元格')}
+                            </div>
+                            {shouldShowResizeHandles && cellIndex < row.cells.length - 1 && tableResizeState?.onStartTableColumnResize ? (
+                              <button
+                                type="button"
+                                className="table-column-resize-handle"
+                                aria-label="拖拽调整列宽"
+                                title="拖拽调整列宽"
+                                onMouseDown={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  tableResizeState.onStartTableColumnResize?.(
+                                    event,
+                                    block,
+                                    cell.id,
+                                    cellIndex,
+                                    rowIndex,
+                                    pageScale ?? 1,
+                                  );
+                                }}
                               />
-                            )
-                            : renderBlockEditor({
-                                kind: editingKind ?? 'tableCell',
-                                editorRef,
-                                editingText,
-                                onChange: onEditTextChange,
-                                onSelectionChange,
-                                onCommit: onCommitEdit,
-                                onCancel: onCancelEdit,
-                              })
-                          : renderTextRuns(cell.textRuns, '空单元格')}
-                      </CellTag>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null;
+                            ) : null}
+                            {shouldShowResizeHandles && rowIndex < tableRows.length - 1 && cellIndex === 0 && tableResizeState?.onStartTableRowResize ? (
+                              <button
+                                type="button"
+                                className="table-row-resize-handle"
+                                aria-label="拖拽调整行高"
+                                title="拖拽调整行高"
+                                onMouseDown={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  tableResizeState.onStartTableRowResize?.(
+                                    event,
+                                    block,
+                                    cell.id,
+                                    row.id,
+                                    rowIndex,
+                                    pageScale ?? 1,
+                                  );
+                                }}
+                              />
+                            ) : null}
+                          </CellTag>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })();
     case 'image':
       if (block.metadata.kind !== 'image') {
         return null;
@@ -2136,15 +2519,22 @@ function renderBlock(
           block,
           draftImageSizes?.[block.id] ?? null,
           draftImageCrops?.[block.id] ?? null,
+          draftImageOffsets?.[block.id] ?? null,
         );
+        if (!imageLayout) {
+          return null;
+        }
         const measuredVisibleSize = measuredImageVisibleSizes?.[block.id] ?? null;
         const cropOverlayStyle = buildImageCropOverlayStyle(imageLayout, measuredVisibleSize);
         const cropSelectionStyle = buildImageCropSelectionStyle(imageLayout, measuredVisibleSize);
 
+        // 判断是否为当前选中图片，用于显示交互状态
+        const isSelected = selectedNodeId === block.id;
+
         return (
           <figure
             key={`image-${block.id}-${index}`}
-            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'image-shell')}
+            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, buildImageShellClassName(block, selectedNodeId))}
             style={buildImageStyle(block)}
           >
             {block.metadata.src ? (
@@ -2154,6 +2544,15 @@ function renderBlock(
                   data-layout-node-id={block.id}
                   data-page-scale={pageScale ?? 1}
                   style={buildImageViewportStyle(imageLayout, measuredVisibleSize)}
+                  onMouseDown={(event) => {
+                    // 选中图片并开始拖动
+                    if (onStartImageDrag) {
+                      // 先选中图片
+                      onSelectNode(block.id);
+                      // 开始拖动
+                      onStartImageDrag(event, block, pageScale ?? 1);
+                    }
+                  }}
                 >
                   <img
                     className="preview-image preview-image-fit preview-image-cropped"
@@ -2215,19 +2614,22 @@ function renderBlock(
             ) : (
               <div className="preview-image placeholder">图片占位</div>
             )}
-            <figcaption>
-              {isEditing
-                ? renderBlockEditor({
-                    kind: editingKind ?? 'imageAlt',
-                    editorRef,
-                    editingText,
-                    onChange: onEditTextChange,
-                    onSelectionChange,
-                    onCommit: onCommitEdit,
-                    onCancel: onCancelEdit,
-                  })
-                : block.metadata.alt || <span className="empty-text-placeholder">双击编辑图片说明</span>}
-            </figcaption>
+            {/* 只有 showCaption 为 true 时才渲染标题区域 */}
+            {imageLayout.showCaption ? (
+              <figcaption>
+                {isEditing
+                  ? renderBlockEditor({
+                      kind: editingKind ?? 'imageAlt',
+                      editorRef,
+                      editingText,
+                      onChange: onEditTextChange,
+                      onSelectionChange,
+                      onCommit: onCommitEdit,
+                      onCancel: onCancelEdit,
+                    })
+                  : block.metadata.title || block.metadata.alt || <span className="empty-text-placeholder">双击编辑图片说明</span>}
+              </figcaption>
+            ) : null}
           </figure>
         );
       }
@@ -2281,6 +2683,7 @@ function createPageDisplayStyles(
       '--page-frame-height': `${displayHeight}px`,
     } as CSSProperties,
     pageStyle: {
+      ...buildPageStyleVariables(page.contract),
       '--page-source-width': `${page.contract.pageWidthPx}px`,
       '--page-source-height': `${page.contract.pageHeightPx}px`,
       '--page-scale': displayScale,
@@ -2302,6 +2705,7 @@ export function CanvasPane({
   resolvedStyleContract,
   selectedNodeId,
   onSelectNode,
+  onSelectTableCell,
   onClearSelection,
   onCommitNodeText,
   onCommitNodeRichText,
@@ -2315,6 +2719,9 @@ export function CanvasPane({
   isCondensed = false,
 }: CanvasPaneProps): JSX.Element {
   const updateLayoutImageAttributes = useAppStore((state) => state.updateLayoutImageAttributes);
+  const tableSelection = useAppStore((state) => state.layoutDocument?.viewState.tableSelection ?? null);
+  const updateLayoutTableColumnWidths = useAppStore((state) => state.updateLayoutTableColumnWidths);
+  const updateLayoutTableRowHeight = useAppStore((state) => state.updateLayoutTableRowHeight);
   const updateLayoutListItemLevel = useAppStore((state) => state.updateLayoutListItemLevel);
   const reorderLayoutListItem = useAppStore((state) => state.reorderLayoutListItem);
   const convertLayoutListItemTaskState = useAppStore((state) => state.convertLayoutListItemTaskState);
@@ -2326,8 +2733,13 @@ export function CanvasPane({
   const [activeEquationEditor, setActiveEquationEditor] = useState<ActiveEquationEditor | null>(null);
   const [activeImageResize, setActiveImageResize] = useState<ActiveImageResize | null>(null);
   const [activeImageCrop, setActiveImageCrop] = useState<ActiveImageCrop | null>(null);
+  const [activeTableColumnResize, setActiveTableColumnResize] = useState<ActiveTableColumnResize | null>(null);
+  const [activeTableRowResize, setActiveTableRowResize] = useState<ActiveTableRowResize | null>(null);
   const [draftImageSizes, setDraftImageSizes] = useState<Record<string, { widthPx: number | null; heightPx: number | null }>>({});
   const [draftImageCrops, setDraftImageCrops] = useState<Record<string, ImageDraftCrop>>({});
+  const [draftImageOffsets, setDraftImageOffsets] = useState<Record<string, { offsetX: number; offsetY: number }>>({});
+  const [draftTableColumnWidths, setDraftTableColumnWidths] = useState<Record<string, number[]>>({});
+  const [draftTableRowHeights, setDraftTableRowHeights] = useState<Record<string, number>>({});
   const [measuredImageVisibleSizes, setMeasuredImageVisibleSizes] = useState<Record<string, ImageMeasuredVisibleSize>>({});
   const [imageMeasureEpoch, setImageMeasureEpoch] = useState(0);
   const [floatingToolbarPosition, setFloatingToolbarPosition] = useState<FloatingToolbarPosition | null>(null);
@@ -2342,8 +2754,15 @@ export function CanvasPane({
   const pendingSelectionAfterCommitRef = useRef<string | null>(null);
   const activeImageResizeRef = useRef<ActiveImageResize | null>(null);
   const activeImageCropRef = useRef<ActiveImageCrop | null>(null);
+  const activeImageDragRef = useRef<ActiveImageDrag | null>(null);
+  const [activeImageDrag, setActiveImageDrag] = useState<ActiveImageDrag | null>(null);
+  const activeTableColumnResizeRef = useRef<ActiveTableColumnResize | null>(null);
+  const activeTableRowResizeRef = useRef<ActiveTableRowResize | null>(null);
   const draftImageSizesRef = useRef<Record<string, { widthPx: number | null; heightPx: number | null }>>({});
   const draftImageCropsRef = useRef<Record<string, ImageDraftCrop>>({});
+  const draftImageOffsetsRef = useRef<Record<string, { offsetX: number; offsetY: number }>>({});
+  const draftTableColumnWidthsRef = useRef<Record<string, number[]>>({});
+  const draftTableRowHeightsRef = useRef<Record<string, number>>({});
   const skipBlurCommitRef = useRef(false);
   const isEditingRichText = !!editingKind && isRichTextCanvasEditorKind(editingKind);
   const activeEquationEditorNodeId = activeEquationEditor?.nodeId ?? null;
@@ -2391,12 +2810,36 @@ export function CanvasPane({
   }, [activeImageCrop]);
 
   useEffect(() => {
+    activeImageDragRef.current = activeImageDrag;
+  }, [activeImageDrag]);
+
+  useEffect(() => {
+    activeTableColumnResizeRef.current = activeTableColumnResize;
+  }, [activeTableColumnResize]);
+
+  useEffect(() => {
+    activeTableRowResizeRef.current = activeTableRowResize;
+  }, [activeTableRowResize]);
+
+  useEffect(() => {
     draftImageSizesRef.current = draftImageSizes;
   }, [draftImageSizes]);
 
   useEffect(() => {
     draftImageCropsRef.current = draftImageCrops;
   }, [draftImageCrops]);
+
+  useEffect(() => {
+    draftTableColumnWidthsRef.current = draftTableColumnWidths;
+  }, [draftTableColumnWidths]);
+
+  useEffect(() => {
+    draftTableRowHeightsRef.current = draftTableRowHeights;
+  }, [draftTableRowHeights]);
+
+  useEffect(() => {
+    draftImageOffsetsRef.current = draftImageOffsets;
+  }, [draftImageOffsets]);
 
   useLayoutEffect(() => {
     const canvasPane = canvasPaneRef.current;
@@ -2431,6 +2874,7 @@ export function CanvasPane({
         ownerBlock,
         draftImageSizes[nodeId] ?? null,
         draftImageCrops[nodeId] ?? null,
+        draftImageOffsets[nodeId] ?? null,
       );
       const hasExplicitSize = !!resolvedLayout && (resolvedLayout.widthPx !== null || resolvedLayout.heightPx !== null);
       const isImageReady =
@@ -2513,21 +2957,16 @@ export function CanvasPane({
       const draftSize = draftImageSizesRef.current[resizeState.nodeId];
       const targetBlock = documentBlocks.find((block) => block.id === resizeState.nodeId);
       if (draftSize && targetBlock?.type === 'image' && targetBlock.metadata.kind === 'image') {
-        updateLayoutImageAttributes({
-          nodeId: resizeState.nodeId,
-          src: targetBlock.metadata.src,
-          alt: targetBlock.metadata.alt,
-          title: targetBlock.metadata.title,
+        const imageAttributes = buildImageAttributePayload(targetBlock, {
           widthPx: draftSize.widthPx,
           heightPx: draftSize.heightPx,
-          lockAspectRatio: targetBlock.metadata.lockAspectRatio ?? true,
-          objectFit: targetBlock.metadata.objectFit ?? 'contain',
-          cropTopPx: targetBlock.metadata.cropTopPx ?? 0,
-          cropRightPx: targetBlock.metadata.cropRightPx ?? 0,
-          cropBottomPx: targetBlock.metadata.cropBottomPx ?? 0,
-          cropLeftPx: targetBlock.metadata.cropLeftPx ?? 0,
-          wrapMode: targetBlock.metadata.wrapMode ?? 'block',
         });
+        if (imageAttributes) {
+          updateLayoutImageAttributes({
+            nodeId: resizeState.nodeId,
+            ...imageAttributes,
+          });
+        }
       }
 
       setActiveImageResize(null);
@@ -2646,21 +3085,20 @@ export function CanvasPane({
       const draftCrop = draftImageCropsRef.current[cropState.nodeId] ?? cropState.startCrop;
       const targetBlock = documentBlocks.find((block) => block.id === cropState.nodeId);
       if (targetBlock?.type === 'image' && targetBlock.metadata.kind === 'image') {
-        updateLayoutImageAttributes({
-          nodeId: cropState.nodeId,
-          src: targetBlock.metadata.src,
-          alt: targetBlock.metadata.alt,
-          title: targetBlock.metadata.title,
+        const imageAttributes = buildImageAttributePayload(targetBlock, {
           widthPx: targetBlock.metadata.widthPx ?? cropState.fullWidthPx,
           heightPx: targetBlock.metadata.heightPx ?? cropState.fullHeightPx,
-          lockAspectRatio: targetBlock.metadata.lockAspectRatio ?? true,
-          objectFit: targetBlock.metadata.objectFit ?? 'contain',
           cropTopPx: draftCrop.cropTopPx,
           cropRightPx: draftCrop.cropRightPx,
           cropBottomPx: draftCrop.cropBottomPx,
           cropLeftPx: draftCrop.cropLeftPx,
-          wrapMode: targetBlock.metadata.wrapMode ?? 'block',
         });
+        if (imageAttributes) {
+          updateLayoutImageAttributes({
+            nodeId: cropState.nodeId,
+            ...imageAttributes,
+          });
+        }
       }
 
       setActiveImageCrop(null);
@@ -2685,6 +3123,224 @@ export function CanvasPane({
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [activeImageCrop, documentBlocks, updateLayoutImageAttributes]);
+
+  // 图片拖动逻辑：按住图片区域并拖动可以调整图片偏移量
+  useEffect(() => {
+    if (!activeImageDrag) {
+      return;
+    }
+
+    const handleMouseMove = (event: globalThis.MouseEvent) => {
+      const deltaX = (event.clientX - activeImageDrag.startClientX) / Math.max(0.0001, activeImageDrag.pageScale);
+      const deltaY = (event.clientY - activeImageDrag.startClientY) / Math.max(0.0001, activeImageDrag.pageScale);
+
+      // 更新 draftImageOffsets 以实时预览偏移效果
+      setDraftImageOffsets((current) => ({
+        ...current,
+        [activeImageDrag.nodeId]: {
+          offsetX: Math.round(activeImageDrag.startOffsetX + deltaX),
+          offsetY: Math.round(activeImageDrag.startOffsetY + deltaY),
+        },
+      }));
+    };
+
+    const handleMouseUp = () => {
+      const dragState = activeImageDragRef.current;
+      if (!dragState) {
+        return;
+      }
+
+      // 获取最终偏移量
+      const draftOffsets = draftImageOffsetsRef.current;
+      const currentOffset = draftOffsets[dragState.nodeId];
+      const finalOffsetX = currentOffset?.offsetX ?? dragState.startOffsetX;
+      const finalOffsetY = currentOffset?.offsetY ?? dragState.startOffsetY;
+
+      // 只有偏移量真正改变时才写回模型
+      const targetBlock = documentBlocks.find((block) => block.id === dragState.nodeId);
+      if (targetBlock?.type === 'image' && targetBlock.metadata.kind === 'image') {
+        const originalOffsetX = targetBlock.metadata.offsetX ?? 0;
+        const originalOffsetY = targetBlock.metadata.offsetY ?? 0;
+
+        // 只有偏移量变化了才写回
+        if (finalOffsetX !== originalOffsetX || finalOffsetY !== originalOffsetY) {
+          const imageAttributes = buildImageAttributePayload(targetBlock, {
+            offsetX: finalOffsetX,
+            offsetY: finalOffsetY,
+          });
+          if (imageAttributes) {
+            updateLayoutImageAttributes({
+              nodeId: dragState.nodeId,
+              ...imageAttributes,
+            });
+          }
+        }
+      }
+
+      setActiveImageDrag(null);
+      // 清除临时偏移量
+      setDraftImageOffsets((current) => {
+        const next = { ...current };
+        delete next[dragState.nodeId];
+        return next;
+      });
+    };
+
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'move';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp, { once: true });
+
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [activeImageDrag, documentBlocks, updateLayoutImageAttributes]);
+
+  useEffect(() => {
+    if (!activeTableColumnResize) {
+      return;
+    }
+
+    const handleMouseMove = (event: globalThis.MouseEvent) => {
+      const deltaX =
+        (event.clientX - activeTableColumnResize.startClientX) / Math.max(0.0001, activeTableColumnResize.pageScale);
+      const minWidthPx = 48;
+      const totalWidthPx = activeTableColumnResize.startWidthPx + activeTableColumnResize.startNextWidthPx;
+      const nextWidth = Math.max(
+        minWidthPx,
+        Math.min(
+          Math.round(activeTableColumnResize.startWidthPx + deltaX),
+          Math.max(minWidthPx, totalWidthPx - minWidthPx),
+        ),
+      );
+      const nextNeighborWidth = Math.max(minWidthPx, totalWidthPx - nextWidth);
+
+      setDraftTableColumnWidths((current) => {
+        const previousWidths = current[activeTableColumnResize.blockId] ?? [];
+        const nextWidths = [...previousWidths];
+        nextWidths[activeTableColumnResize.columnIndex] = nextWidth;
+        nextWidths[activeTableColumnResize.columnIndex + 1] = nextNeighborWidth;
+
+        return {
+          ...current,
+          [activeTableColumnResize.blockId]: nextWidths,
+        };
+      });
+    };
+
+    const handleMouseUp = () => {
+      const resizeState = activeTableColumnResizeRef.current;
+      if (!resizeState) {
+        return;
+      }
+
+      const draftWidths = draftTableColumnWidthsRef.current[resizeState.blockId];
+      if (draftWidths) {
+        updateLayoutTableColumnWidths({
+          cellId: resizeState.cellId,
+          columnWidthsPx: draftWidths,
+        });
+      }
+
+      setActiveTableColumnResize(null);
+      setDraftTableColumnWidths((current) => {
+        const next = { ...current };
+        delete next[resizeState.blockId];
+        return next;
+      });
+    };
+
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ew-resize';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp, { once: true });
+
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [activeTableColumnResize, updateLayoutTableColumnWidths]);
+
+  useEffect(() => {
+    if (!activeTableRowResize) {
+      return;
+    }
+
+    const handleMouseMove = (event: globalThis.MouseEvent) => {
+      const deltaY =
+        (event.clientY - activeTableRowResize.startClientY) / Math.max(0.0001, activeTableRowResize.pageScale);
+      const minHeightPx = 28;
+      const totalHeightPx = activeTableRowResize.startHeightPx + activeTableRowResize.startNextHeightPx;
+      const nextHeight = Math.max(
+        minHeightPx,
+        Math.min(
+          Math.round(activeTableRowResize.startHeightPx + deltaY),
+          Math.max(minHeightPx, totalHeightPx - minHeightPx),
+        ),
+      );
+      const nextNeighborHeight = Math.max(minHeightPx, totalHeightPx - nextHeight);
+
+      setDraftTableRowHeights((current) => ({
+        ...current,
+        [activeTableRowResize.rowId]: nextHeight,
+        [activeTableRowResize.nextRowId]: nextNeighborHeight,
+      }));
+    };
+
+    const handleMouseUp = () => {
+      const resizeState = activeTableRowResizeRef.current;
+      if (!resizeState) {
+        return;
+      }
+
+      const draftHeight = draftTableRowHeightsRef.current[resizeState.rowId];
+      const draftNextHeight = draftTableRowHeightsRef.current[resizeState.nextRowId];
+      if (draftNextHeight !== undefined) {
+        updateLayoutTableRowHeight({
+          cellId: resizeState.nextCellId,
+          heightPx: draftNextHeight,
+        });
+      }
+
+      if (draftHeight !== undefined) {
+        updateLayoutTableRowHeight({
+          cellId: resizeState.cellId,
+          heightPx: draftHeight,
+        });
+      }
+
+      setActiveTableRowResize(null);
+      setDraftTableRowHeights((current) => {
+        const next = { ...current };
+        delete next[resizeState.rowId];
+        delete next[resizeState.nextRowId];
+        return next;
+      });
+    };
+
+    const previousUserSelect = document.body.style.userSelect;
+    const previousCursor = document.body.style.cursor;
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'ns-resize';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp, { once: true });
+
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      document.body.style.cursor = previousCursor;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [activeTableRowResize, updateLayoutTableRowHeight]);
 
   useEffect(() => {
     if (!editingNodeId || isEditingRichText) {
@@ -2885,6 +3541,12 @@ export function CanvasPane({
     if (activeImageCrop && nodeId !== activeImageCrop.nodeId) {
       return;
     }
+    if (activeTableColumnResize && nodeId !== activeTableColumnResize.cellId) {
+      return;
+    }
+    if (activeTableRowResize && nodeId !== activeTableRowResize.cellId) {
+      return;
+    }
     if (editingNodeId && nodeId !== editingNodeId) {
       pendingSelectionAfterCommitRef.current = nodeId;
     }
@@ -2921,6 +3583,8 @@ export function CanvasPane({
     pendingSelectionAfterCommitRef.current = null;
     setActiveEquationEditor(null);
     setActiveImageCrop(null);
+    setActiveTableColumnResize(null);
+    setActiveTableRowResize(null);
     setEditingNodeId(node.id);
     setEditingKind(node.kind);
     setEditingText(node.text);
@@ -2939,7 +3603,7 @@ export function CanvasPane({
 
     const draftCrop = draftImageCrops[block.id] ?? null;
     const measuredVisibleSize = measuredImageVisibleSizes[block.id] ?? null;
-    const resolved = resolveImageLayoutWithDraft(block, draftImageSizes[block.id] ?? null, draftCrop);
+    const resolved = resolveImageLayoutWithDraft(block, draftImageSizes[block.id] ?? null, draftCrop, draftImageOffsets[block.id] ?? null);
     const metrics = resolved ? resolveImageRenderMetrics(resolved, measuredVisibleSize) : null;
     const startWidthPx = metrics?.fullWidthPx ?? resolved?.widthPx ?? 320;
     const startHeightPx = metrics?.fullHeightPx ?? resolved?.heightPx ?? Math.round(startWidthPx * 0.62);
@@ -2966,6 +3630,47 @@ export function CanvasPane({
     }));
   };
 
+  // 图片拖动开始处理函数
+  const handleStartImageDrag = (
+    event: MouseEvent<HTMLElement>,
+    block: LayoutBlock,
+    pageScale: number,
+  ) => {
+    if (block.type !== 'image' || block.metadata.kind !== 'image') {
+      return;
+    }
+
+    // 阻止浏览器默认行为，防止文本选择等干扰
+    event.preventDefault();
+    event.stopPropagation();
+
+    // 拖动时取消缩放和裁剪状态
+    setActiveImageResize(null);
+    setActiveImageCrop(null);
+
+    // 获取当前偏移量
+    const currentOffset = draftImageOffsets[block.id] ?? {
+      offsetX: block.metadata.offsetX ?? 0,
+      offsetY: block.metadata.offsetY ?? 0,
+    };
+
+    // 开始拖动（选中操作已在 mousedown 时完成）
+    setActiveImageDrag({
+      nodeId: block.id,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startOffsetX: currentOffset.offsetX,
+      startOffsetY: currentOffset.offsetY,
+      pageScale,
+    });
+
+    // 初始化 draft offsets 以便预览
+    setDraftImageOffsets((current) => ({
+      ...current,
+      [block.id]: currentOffset,
+    }));
+  };
+
   const handleStartImageCrop = (
     event: MouseEvent<HTMLButtonElement>,
     block: LayoutBlock,
@@ -2981,6 +3686,7 @@ export function CanvasPane({
       block,
       draftImageSizes[block.id] ?? null,
       currentDraftCrop,
+      draftImageOffsets[block.id] ?? null,
     );
     const measuredVisibleSize = measuredImageVisibleSizes[block.id] ?? null;
     const metrics = currentLayout ? resolveImageRenderMetrics(currentLayout, measuredVisibleSize) : null;
@@ -3010,6 +3716,118 @@ export function CanvasPane({
     setDraftImageCrops((current) => ({
       ...current,
       [block.id]: startCrop,
+    }));
+  };
+
+  const handleStartTableColumnResize = (
+    event: MouseEvent<HTMLButtonElement>,
+    block: LayoutBlock,
+    cellId: string,
+    columnIndex: number,
+    rowIndex: number,
+    pageScale: number,
+  ) => {
+    if (block.type !== 'table' || block.metadata.kind !== 'table') {
+      return;
+    }
+
+    const cellElement = event.currentTarget.closest('th, td') as HTMLTableCellElement | null;
+    if (!cellElement) {
+      return;
+    }
+
+    const row = block.metadata.rows[rowIndex];
+    const nextCell = row?.cells[columnIndex + 1] ?? null;
+    if (!row || !nextCell) {
+      return;
+    }
+
+    const measuredWidthPx = Math.max(48, Math.round(cellElement.getBoundingClientRect().width / Math.max(0.0001, pageScale)));
+    const nextCellElement = cellElement.nextElementSibling as HTMLTableCellElement | null;
+    const measuredNextWidthPx = nextCellElement
+      ? Math.max(48, Math.round(nextCellElement.getBoundingClientRect().width / Math.max(0.0001, pageScale)))
+      : measuredWidthPx;
+    const existingWidths = resolveTableColumnWidths(
+      draftTableColumnWidths[block.id] ?? block.metadata.columnWidthsPx,
+      block.metadata.rows[0]?.cells.length ?? 0,
+      resolvedStyleContract.contentWidthPx,
+    );
+    const startWidthPx = existingWidths[columnIndex] ?? measuredWidthPx;
+    const startNextWidthPx = existingWidths[columnIndex + 1] ?? measuredNextWidthPx;
+
+    onSelectNode(cellId);
+    setActiveImageResize(null);
+    setActiveImageCrop(null);
+    setActiveTableRowResize(null);
+    setActiveTableColumnResize({
+      blockId: block.id,
+      cellId,
+      columnIndex,
+      nextCellId: nextCell.id,
+      startClientX: event.clientX,
+      startWidthPx,
+      startNextWidthPx,
+      pageScale,
+    });
+    setDraftTableColumnWidths((current) => ({
+      ...current,
+      [block.id]: existingWidths,
+    }));
+  };
+
+  const handleStartTableRowResize = (
+    event: MouseEvent<HTMLButtonElement>,
+    block: LayoutBlock,
+    cellId: string,
+    rowId: string,
+    rowIndex: number,
+    pageScale: number,
+  ) => {
+    if (block.type !== 'table' || block.metadata.kind !== 'table') {
+      return;
+    }
+
+    const rowElement = event.currentTarget.closest('tr') as HTMLTableRowElement | null;
+    if (!rowElement) {
+      return;
+    }
+
+    const row = block.metadata.rows[rowIndex];
+    const nextRow = block.metadata.rows[rowIndex + 1];
+    if (!row) {
+      return;
+    }
+    if (!nextRow) {
+      return;
+    }
+
+    const measuredHeightPx = Math.max(28, Math.round(rowElement.getBoundingClientRect().height / Math.max(0.0001, pageScale)));
+    const nextRowElement = rowElement.nextElementSibling as HTMLTableRowElement | null;
+    const measuredNextHeightPx = nextRowElement
+      ? Math.max(28, Math.round(nextRowElement.getBoundingClientRect().height / Math.max(0.0001, pageScale)))
+      : measuredHeightPx;
+    const startHeightPx = draftTableRowHeights[rowId] ?? row.heightPx ?? measuredHeightPx;
+    const startNextHeightPx = draftTableRowHeights[nextRow.id] ?? nextRow.heightPx ?? measuredNextHeightPx;
+
+    onSelectNode(cellId);
+    setActiveImageResize(null);
+    setActiveImageCrop(null);
+    setActiveTableColumnResize(null);
+    setActiveTableRowResize({
+      rowId,
+      cellId,
+      nextRowId: nextRow.id,
+      nextCellId: nextRow.cells[0]?.id ?? cellId,
+      rowIndex,
+      startClientY: event.clientY,
+      startHeightPx,
+      startNextHeightPx,
+      pageScale,
+    });
+    setDraftTableRowHeights((current) => ({
+      ...current,
+      [rowId]: startHeightPx,
+      [nextRow.id]: startNextHeightPx,
     }));
   };
 
@@ -3398,55 +4216,81 @@ export function CanvasPane({
                   <div
                     className="page"
                     style={pageStyle}
-                    onClick={activeImageResize || activeImageCrop ? undefined : onClearSelection}
+                    onClick={
+                      activeImageResize || activeImageCrop || activeTableColumnResize || activeTableRowResize
+                        ? undefined
+                        : onClearSelection
+                    }
                   >
                     <div className="page-header">
                       <span>{pageTitle}</span>
                       <span>{page.contract.pageLabel}</span>
                     </div>
                     <article className="page-body">
-                      {page.blocks.map((block, index) =>
-                        renderBlock(
-                          block,
-                          page.pageNumber * 1000 + index,
-                          selectedNodeId,
-                          onSelectNode,
-                          prepareSelectingNode,
-                          editingNodeId,
-                          activeEquationEditorNodeId,
-                          editingKind,
-                          editingText,
-                          editingDraftTextRuns,
-                          editingSelection,
-                          setEditingSelection,
-                          editorRef,
-                          richEditorRef,
-                          startEditingNode,
-                          setEditingText,
-                          handleDraftTextRunsChange,
-                          commitEditingNodeOnBlur,
-                          cancelEditingNode,
-                          tocItems,
-                          onNavigateToNode,
-                          draftImageSizes,
-                          draftImageCrops,
-                          measuredImageVisibleSizes,
-                          handleImageLoaded,
-                          handleStartImageResize,
-                          handleStartImageCrop,
-                          (event, itemId) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            onSelectNode(itemId);
-                            setListItemContextMenu({
-                              x: event.clientX,
-                              y: event.clientY,
-                              itemId,
-                            });
-                          },
-                          Number.isFinite(pageScale) ? pageScale : 1,
-                        ),
-                      )}
+                      {(() => {
+                        const renderedBlocks: ReactNode[] = [];
+
+                        for (let index = 0; index < page.blocks.length; index += 1) {
+                          const block = page.blocks[index];
+                          
+
+                          renderedBlocks.push(
+                            renderBlock(
+                              block,
+                              page.pageNumber * 1000 + index,
+                              selectedNodeId,
+                              onSelectNode,
+                              onSelectTableCell,
+                              prepareSelectingNode,
+                              editingNodeId,
+                              activeEquationEditorNodeId,
+                              editingKind,
+                              editingText,
+                              editingDraftTextRuns,
+                              editingSelection,
+                              setEditingSelection,
+                              editorRef,
+                              richEditorRef,
+                              startEditingNode,
+                              setEditingText,
+                              handleDraftTextRunsChange,
+                              commitEditingNodeOnBlur,
+                              cancelEditingNode,
+                              tocItems,
+                              onNavigateToNode,
+                              draftImageSizes,
+                              draftImageCrops,
+                              measuredImageVisibleSizes,
+                              handleImageLoaded,
+                              handleStartImageResize,
+                              handleStartImageCrop,
+                              draftImageOffsets,
+                              handleStartImageDrag,
+                              {
+                                pageContract: resolvedStyleContract,
+                                draftTableColumnWidths,
+                                draftTableRowHeights,
+                                onStartTableColumnResize: handleStartTableColumnResize,
+                                onStartTableRowResize: handleStartTableRowResize,
+                              },
+                              tableSelection,
+                              (event, itemId) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                onSelectNode(itemId);
+                                setListItemContextMenu({
+                                  x: event.clientX,
+                                  y: event.clientY,
+                                  itemId,
+                                });
+                              },
+                              Number.isFinite(pageScale) ? pageScale : 1,
+                            ),
+                          );
+                        }
+
+                        return renderedBlocks;
+                      })()}
                     </article>
                     <div className="page-footer">
                       <span>{page.contract.templateLabel}</span>

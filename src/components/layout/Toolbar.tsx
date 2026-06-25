@@ -19,6 +19,7 @@ import {
   PanelLeft,
   PanelRight,
   PanelsTopLeft,
+  Pilcrow,
   RectangleHorizontal,
   Redo2,
   Save,
@@ -69,6 +70,8 @@ interface ToolbarProps {
   onInsertEquation: () => void;
   onInsertTable: () => void;
   onInsertList: (kind: InsertListBlockKind) => void;
+  onInsertParagraph: () => void;
+  onInsertPageBreak: () => void;
   onInsertToc: () => void;
   onToggleLeftPanel: () => void;
   onToggleRightPanel: () => void;
@@ -114,14 +117,12 @@ const quickListInsertOptions: Array<{
   { id: 'task', label: '新增任务列表', icon: ListTodo },
 ];
 
-const insertPlaceholderMessage = '该插入入口已预留，后续小步接入真实逻辑。';
 const insertPlaceholderOptions: Array<{
-  id: 'stickyNote' | 'emptyText';
+  id: 'stickyNote';
   label: string;
   icon: typeof StickyNote;
 }> = [
   { id: 'stickyNote', label: '便利贴', icon: StickyNote },
-  { id: 'emptyText', label: '空文本块', icon: TextCursorInput },
 ];
 
 const quickTextEditableBlockTypes: LayoutBlock['type'][] = ['heading', 'paragraph', 'code'];
@@ -227,6 +228,8 @@ export function Toolbar({
   onInsertEquation,
   onInsertTable,
   onInsertList,
+  onInsertParagraph,
+  onInsertPageBreak,
   onInsertToc,
   onToggleLeftPanel,
   onToggleRightPanel,
@@ -360,7 +363,7 @@ export function Toolbar({
   };
 
   const handleInsertPlaceholder = (label: string) => {
-    window.alert(`${label}：${insertPlaceholderMessage}`);
+    window.alert(`${label}：该插入入口已预留，后续小步接入真实逻辑。`);
   };
 
   return (
@@ -630,6 +633,16 @@ export function Toolbar({
             <button
               type="button"
               className="format-select-button format-insert-text-button"
+              title="插入空文本块"
+              aria-label="插入空文本块"
+              onClick={onInsertParagraph}
+            >
+              <TextCursorInput size={17} />
+              <span>空文本块</span>
+            </button>
+            <button
+              type="button"
+              className="format-select-button format-insert-text-button"
               title="插入目录"
               aria-label="插入目录"
               onClick={onInsertToc}
@@ -645,6 +658,16 @@ export function Toolbar({
               onClick={onInsertTable}
             >
               <Table2 size={17} />
+            </button>
+            <button
+              type="button"
+              className="format-select-button format-insert-text-button"
+              title="插入分页符"
+              aria-label="插入分页符"
+              onClick={onInsertPageBreak}
+            >
+              <Pilcrow size={17} />
+              <span>分页符</span>
             </button>
             {insertPlaceholderOptions.map((option) => {
               const Icon = option.icon;

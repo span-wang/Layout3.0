@@ -5,4 +5,5 @@ export * from './selectors';
 export * from './projectFile';
 export * from './equation';
 export * from './imageLayout';
+export * from './tableLayout';
 export * from './utils';

@@ -2,11 +2,15 @@ import {
   getHeadingText,
   getLayoutListItemLevel,
   getLayoutBlockPlainText,
+  getTableCellColSpan,
+  isCoveredTableCell,
+  resolveTableColumnWidths,
+  resolveTableRowHeightPx,
   type LayoutBlock,
   type LayoutTableRow,
   type TableBlockMetadata,
 } from '@/engine/document-model';
-import { estimateImageVisibleHeightPx, resolveHangingIndentLineWidths } from '@/engine/document-model';
+import { estimateImageVisibleHeightPx, isImageTextWrapMode, resolveHangingIndentLineWidths, resolveImageLayout } from '@/engine/document-model';
 import type { ResolvedStyleContract, TextBlockStyleRule } from '@/engine/style/types';
 import { estimateTextLines } from '../textMetrics';
 import type {
@@ -19,6 +23,7 @@ import type {
 interface EstimatedPaginationOptions {
   rebalanceTrailingBlock?: boolean;
   rebalanceStrategy?: RebalanceTrailingBlockStrategy;
+  costBasedBreak?: boolean;
 }
 
 interface PlacedBlockEntry {
@@ -45,6 +50,10 @@ interface TableFragmentBuildResult {
 
 // 这一段是分页估算的基础常量，命名后更容易在后续校准时统一调整。
 const BLOCKQUOTE_NESTED_BLOCK_HEIGHT_RATIO = 0.92;
+const COST_V1_MAX_TRAILING_MOVE_COUNT = 3;
+const COST_V1_MIN_SCORE_IMPROVEMENT = 0.08;
+const COST_V1_LAST_HEADING_PENALTY = 0.45;
+const COST_V1_LAST_TOC_PENALTY = 0.28;
 
 function getMaxFontSize(textRuns: Array<{ styleOverrides: { fontSize?: number } }>, fallback: number): number {
   return textRuns.reduce((max, run) => Math.max(max, run.styleOverrides.fontSize ?? fallback), fallback);
@@ -94,10 +103,25 @@ function estimateTableRowHeight(
   contract: ResolvedStyleContract,
 ): number {
   const contentWidthPx = contract.contentWidthPx;
+  const columnWidths = resolveTableColumnWidths(
+    block.metadata.columnWidthsPx,
+    row.cells.length,
+    contentWidthPx,
+  );
   const estimatedRowHeight = row.cells.reduce((maxHeight, cell) => {
+    if (isCoveredTableCell(cell)) {
+      return maxHeight;
+    }
+
+    const cellIndex = row.cells.indexOf(cell);
+    const colSpan = getTableCellColSpan(cell);
+    const mergedWidthPx = columnWidths
+      .slice(cellIndex, cellIndex + colSpan)
+      .reduce((total, width) => total + width, 0);
     const cellWidthPx = Math.max(
       80,
-      contentWidthPx / Math.max(1, row.cells.length) - contract.blockStyles.table.cellPaddingX * 2,
+      (mergedWidthPx || columnWidths[cellIndex] || (contentWidthPx / Math.max(1, row.cells.length))) -
+        contract.blockStyles.table.cellPaddingX * 2,
     );
     const lines = estimateTextLines(
       cell.textRuns.map((run) => run.text).join(''),
@@ -116,7 +140,7 @@ function estimateTableRowHeight(
   const fallbackHeight =
     isHeaderLikeRow ? contract.blockStyles.table.headerRowHeight : contract.blockStyles.table.rowHeight;
 
-  return Math.max(fallbackHeight, estimatedRowHeight);
+  return Math.max(resolveTableRowHeightPx(row, fallbackHeight), estimatedRowHeight);
 }
 
 function estimateTableBlockHeight(block: TableLayoutBlock, contract: ResolvedStyleContract): number {
@@ -444,17 +468,45 @@ function estimateImageBlockHeight(block: LayoutBlock, contract: ResolvedStyleCon
     return contract.blockStyles.image.marginTop + contract.blockStyles.image.placeholderHeight + contract.blockStyles.image.marginBottom;
   }
 
+  const layout = resolveImageLayout(block.metadata);
+  if (isImageTextWrapMode(layout.wrapMode)) {
+    // 四周型/紧密型是正文流里的浮动障碍，不再像普通图片块一样单独撑开整段高度。
+    return 0;
+  }
+
   const imageHeightPx = estimateImageVisibleHeightPx(block.metadata, contract.blockStyles.image.placeholderHeight);
-  const wrapMode = block.metadata.wrapMode ?? 'block';
-  const wrapCompensation =
-    wrapMode === 'left' || wrapMode === 'right'
-      ? Math.max(0, Math.round(contract.contentWidthPx * 0.22))
-      : 0;
+
+  // 只有 showCaption 为 true 时才计入标题高度
+  const captionHeight = block.metadata.showCaption
+    ? contract.blockStyles.image.captionGap + contract.blockStyles.paragraph.lineHeight
+    : 0;
 
   return (
     contract.blockStyles.image.marginTop +
-    Math.max(1, imageHeightPx - wrapCompensation) +
-    (block.metadata.alt ? contract.blockStyles.image.captionGap + contract.blockStyles.paragraph.lineHeight : 0) +
+    Math.max(1, imageHeightPx) +
+    captionHeight +
+    contract.blockStyles.image.marginBottom
+  );
+}
+
+function estimateFloatingImageFootprintHeight(block: LayoutBlock, contract: ResolvedStyleContract): number {
+  if (block.type !== 'image' || block.metadata.kind !== 'image') {
+    return 0;
+  }
+
+  const layout = resolveImageLayout(block.metadata);
+  if (!isImageTextWrapMode(layout.wrapMode)) {
+    return 0;
+  }
+
+  const captionHeight = layout.showCaption
+    ? contract.blockStyles.image.captionGap + contract.blockStyles.paragraph.lineHeight
+    : 0;
+
+  return (
+    contract.blockStyles.image.marginTop +
+    estimateImageVisibleHeightPx(block.metadata, contract.blockStyles.image.placeholderHeight) +
+    captionHeight +
     contract.blockStyles.image.marginBottom
   );
 }
@@ -482,6 +534,10 @@ function syncPlacedBlocksToPage(page: PageLayout, placedBlocks: PlacedBlockEntry
   page.blocks = placedBlocks.map((entry) => entry.block);
 }
 
+function sumPlacedBlockHeights(placedBlocks: PlacedBlockEntry[]): number {
+  return placedBlocks.reduce((total, entry) => total + entry.height, 0);
+}
+
 function addOversizedWarningsIfNeeded(
   page: PageLayout,
   placedBlocks: PlacedBlockEntry[],
@@ -492,6 +548,115 @@ function addOversizedWarningsIfNeeded(
   if (placedBlocks.length === 0 && blockHeight > pageCapacity) {
     page.warnings.push(...createOversizedWarnings(block, page.pageNumber));
   }
+}
+
+function canSplitPlacedBlocksAtIndex(
+  placedBlocks: PlacedBlockEntry[],
+  keepCount: number,
+  contract: ResolvedStyleContract,
+): boolean {
+  if (keepCount <= 0 || keepCount >= placedBlocks.length) {
+    return false;
+  }
+
+  const lastKeptBlock = placedBlocks[keepCount - 1]?.block;
+  if (!lastKeptBlock) {
+    return false;
+  }
+
+  return !lastKeptBlock.pagination.keepWithNext && !getBlockKeepWithNext(lastKeptBlock, contract);
+}
+
+function scoreCostBasedBreak(payload: {
+  currentFillRatio: number;
+  nextFillRatio: number;
+  keptLastBlock: LayoutBlock | null;
+  movedCount: number;
+  currentBlock: LayoutBlock;
+}): number {
+  const { currentFillRatio, nextFillRatio, keptLastBlock, movedCount, currentBlock } = payload;
+  const fillGapPenalty = Math.abs(currentFillRatio - nextFillRatio);
+  const currentUnderfillPenalty = Math.max(0, 0.46 - currentFillRatio) * 1.35;
+  const nextUnderfillPenalty = Math.max(0, 0.36 - nextFillRatio) * 1.15;
+  const movedCountPenalty = movedCount * 0.04;
+  const lastBlockPenalty =
+    keptLastBlock?.type === 'heading'
+      ? COST_V1_LAST_HEADING_PENALTY
+      : keptLastBlock?.type === 'toc'
+        ? COST_V1_LAST_TOC_PENALTY
+        : 0;
+  const tableNextPagePenalty =
+    currentBlock.type === 'table' && nextFillRatio < 0.4
+      ? 0.08
+      : 0;
+
+  return (
+    fillGapPenalty +
+    currentUnderfillPenalty +
+    nextUnderfillPenalty +
+    movedCountPenalty +
+    lastBlockPenalty +
+    tableNextPagePenalty
+  );
+}
+
+function selectCostBasedTrailingMoveCount(payload: {
+  currentHeight: number;
+  incomingHeight: number;
+  pageCapacity: number;
+  placedBlocks: PlacedBlockEntry[];
+  currentBlock: LayoutBlock;
+  contract: ResolvedStyleContract;
+}): number {
+  const { currentHeight, incomingHeight, pageCapacity, placedBlocks, currentBlock, contract } = payload;
+  if (placedBlocks.length < 2) {
+    return 0;
+  }
+
+  let bestMoveCount = 0;
+  let bestScore = scoreCostBasedBreak({
+    currentFillRatio: currentHeight / pageCapacity,
+    nextFillRatio: incomingHeight / pageCapacity,
+    keptLastBlock: placedBlocks[placedBlocks.length - 1]?.block ?? null,
+    movedCount: 0,
+    currentBlock,
+  });
+
+  const maxMoveCount = Math.min(COST_V1_MAX_TRAILING_MOVE_COUNT, placedBlocks.length - 1);
+
+  for (let moveCount = 1; moveCount <= maxMoveCount; moveCount += 1) {
+    const keepCount = placedBlocks.length - moveCount;
+    if (!canSplitPlacedBlocksAtIndex(placedBlocks, keepCount, contract)) {
+      continue;
+    }
+
+    const movedBlocks = placedBlocks.slice(keepCount);
+    const movedHeight = sumPlacedBlockHeights(movedBlocks);
+    const nextFillHeight = movedHeight + incomingHeight;
+    if (nextFillHeight > pageCapacity) {
+      continue;
+    }
+
+    const keptHeight = currentHeight - movedHeight;
+    if (keptHeight <= 0) {
+      continue;
+    }
+
+    const candidateScore = scoreCostBasedBreak({
+      currentFillRatio: keptHeight / pageCapacity,
+      nextFillRatio: nextFillHeight / pageCapacity,
+      keptLastBlock: placedBlocks[keepCount - 1]?.block ?? null,
+      movedCount: moveCount,
+      currentBlock,
+    });
+
+    if (candidateScore + COST_V1_MIN_SCORE_IMPROVEMENT < bestScore) {
+      bestScore = candidateScore;
+      bestMoveCount = moveCount;
+    }
+  }
+
+  return bestMoveCount;
 }
 
 function shouldRebalanceTrailingBlock(payload: {
@@ -588,6 +753,7 @@ export function paginateEstimatedBlocks(
 
   for (let index = 0; index < blocks.length; index += 1) {
     const block = blocks[index];
+    const nextBlock = blocks[index + 1] ?? null;
 
     if (block.type === 'pageBreak') {
       const nextIndex = index + 1;
@@ -606,10 +772,22 @@ export function paginateEstimatedBlocks(
       continue;
     }
 
+    const floatingImageFootprintHeight = estimateFloatingImageFootprintHeight(block, contract);
+    if (
+      floatingImageFootprintHeight > 0 &&
+      placedBlocks.length > 0 &&
+      currentHeight + floatingImageFootprintHeight > pageCapacity
+    ) {
+      syncPlacedBlocksToPage(currentPage, placedBlocks);
+      pages.push(currentPage);
+      currentPage = createEmptyPage(pages.length + 1, contract);
+      currentHeight = 0;
+      placedBlocks = [];
+    }
+
     const blockHeight = estimateBlockHeight(block, contract);
     const keepWithNext = getBlockKeepWithNext(block, contract);
-    const nextBlock = keepWithNext ? blocks[index + 1] : null;
-    const nextBlockHeight = nextBlock ? estimateBlockHeight(nextBlock, contract) : 0;
+    const nextBlockHeight = keepWithNext && nextBlock ? estimateBlockHeight(nextBlock, contract) : 0;
     const requiredHeight = keepWithNext ? blockHeight + nextBlockHeight : blockHeight;
 
     if (isTableBlock(block) && block.metadata.rows.length > 0 && blockHeight > pageCapacity) {
@@ -676,6 +854,35 @@ export function paginateEstimatedBlocks(
 
     let hasTriedRebalance = false;
     while (placedBlocks.length > 0 && currentHeight + requiredHeight > pageCapacity) {
+      const costBasedMoveCount = options.costBasedBreak
+        ? selectCostBasedTrailingMoveCount({
+            currentHeight,
+            incomingHeight: requiredHeight,
+            pageCapacity,
+            placedBlocks,
+            currentBlock: block,
+            contract,
+          })
+        : 0;
+
+      if (costBasedMoveCount > 0) {
+        const keepCount = placedBlocks.length - costBasedMoveCount;
+        const movedBlocks = placedBlocks.slice(keepCount);
+        const keptBlocks = placedBlocks.slice(0, keepCount);
+
+        placedBlocks = keptBlocks;
+        currentHeight = sumPlacedBlockHeights(keptBlocks);
+        syncPlacedBlocksToPage(currentPage, placedBlocks);
+        pages.push(currentPage);
+
+        currentPage = createEmptyPage(pages.length + 1, contract);
+        placedBlocks = movedBlocks;
+        currentHeight = sumPlacedBlockHeights(movedBlocks);
+        syncPlacedBlocksToPage(currentPage, placedBlocks);
+        shouldPushCurrentPage = true;
+        continue;
+      }
+
       const shouldRebalance =
         !!options.rebalanceTrailingBlock &&
         !hasTriedRebalance &&

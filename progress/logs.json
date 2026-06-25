@@ -1889,12 +1889,12 @@
       ],
       "next": "继续围绕 `PH2-06` 做缩进体系与真实交互验收；后续可继续拆分左缩进/右缩进真实接入，或转向 `PH2-07` 样式优先级整理。"
     },
-      {
-        "id": "LOG-074",
-        "date": "2026-06-23",
-        "taskIds": [
-          "PH2-06"
-        ],
+    {
+      "id": "LOG-074",
+      "date": "2026-06-23",
+      "taskIds": [
+        "PH2-06"
+      ],
       "phaseMilestone": "第二阶段 / M2",
       "step": "确认左右缩进小步边界",
       "action": "边界归档/继续实施",
@@ -3525,6 +3525,654 @@
         "progress/logs.json"
       ],
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-05B` 拆分跨列表拖拽、更完整快捷键、离散多选批量操作或更复杂多级列表规则。"
+    },
+    {
+      "id": "LOG-141",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认空文本块与分页符真实插入 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前并行小步边界切换为“空文本块与分页符真实插入 V1”：本轮只把顶栏中仍停留在占位状态的“空文本块”补成真实插入入口，并新增“分页符”真实入口；空文本块插入后自动进入画布原位编辑，分页符继续只承担强制分页语义并在画布中以可见但不可编辑的结构标记展示。本步明确不纳入便利贴、模板、图片替换、表格列宽拖拽或更完整右键系统。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 并行边界记录。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改 `Toolbar.tsx`、`AppShell.tsx`、`documentSlice.ts`、`operations.ts` 和 `CanvasPane.tsx`，接通空文本块与分页符真实插入 V1。"
+    },
+    {
+      "id": "LOG-142",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成空文本块与分页符真实插入 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-05B` 当前并行小步：顶栏“空文本块”已从占位按钮改成真实插入入口，点击后会在当前选中块之后或文档末尾插入新的空段落块，并自动进入画布原位编辑；顶栏“分页符”也已接成真实入口，点击后写入现有 `pageBreak` 块。分页符在画布中会以可见但不可编辑的结构标记展示，同时继续只承担强制分页语义；两类插入都会沿用现有 `.layout` 模型、未保存标记、分页预览与导出链路。本步未扩大到便利贴、模板、图片替换、表格列宽拖拽或更完整右键系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-05B` 拆分便利贴真实插入、更完整右键系统或其他前置画布编辑收尾小步。"
+    },
+    {
+      "id": "LOG-143",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认顶层块统一删除 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-05B` 当前并行小步切换为“顶层块统一删除 V1”：本轮只在右侧“对象属性”中补齐统一块删除入口，覆盖当前已具备真实插入或稳定选中能力的顶层块；选中列表项或表格单元格时，除保留现有局部结构操作外，还可删除其所属的整个顶层列表块或表格块；删除后自动迁移到相邻块，无相邻块时清空选中。本步明确不纳入键盘删除、右键菜单、二次确认弹窗、撤销系统或批量删除。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-05B` 并行边界记录。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修改 `operations.ts`、`documentSlice.ts`、`store/types.ts` 和 `RightPanel.tsx`，补齐统一顶层块删除链路，并在完成后执行 `typecheck`、`build`、`progress:build` 与 `progress:check`。"
+    },
+    {
+      "id": "LOG-144",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成顶层块统一删除 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-05B` 当前并行小步：右侧“对象属性”已补齐统一的“删除当前块”入口，当前覆盖图片、公式、表格、列表、段落/空文本块、分页符、目录、引用、代码块和标题；选中顶层列表项或表格单元格时，除保留现有局部结构操作外，也可直接删除其所属的整个顶层列表块或表格块。删除后会自动迁移到相邻块，无相邻块时清空选中；删除图片块时还会同步清理对应图片资源记录。引用内部子块继续沿用原有引用结构删除入口，不会误显示成整块删除。本步未扩大到键盘删除、右键菜单、二次确认弹窗、撤销系统或批量删除。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/selectors.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "后续如继续围绕块删除体验深化，可再拆分键盘删除、删除确认/撤销、右键菜单统一入口或批量删除能力。"
+    },
+    {
+      "id": "LOG-145",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-07"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认样式优先级基线 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-07` 当前小步切换为“样式优先级基线 V1”：本轮只把当前已经隐式分散在模板、局部覆盖、清除格式、预览、分页估算与导出链路中的样式优先级规则明确并收口成统一口径，优先固定 `默认样式 < 模板样式 < 局部覆盖`，并明确“清除文字格式”只回退文字级视觉覆盖，不动块级样式与模板选择。本步明确不纳入自定义模板编辑器、图片/公式/目录主题化、真实测量分页或 `PH2-12` 全链路验收。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-07` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改样式解析、画布预览、导出链路与右侧对象属性提示，统一第二阶段当前已支持样式项的优先级口径。"
+    },
+    {
+      "id": "LOG-146",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-07"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成样式优先级基线 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-07` 当前小步：新增共享样式解析工具，统一输出页面模板基线变量与块级默认文本度量，画布预览和 HTML 导出已改为消费同一套模板变量，右侧“对象属性”已拆分为样式来源与块级覆盖两行说明，并明确“清除文字格式”只回退文字级视觉覆盖不影响模板与块级样式；同时补齐冒烟验证，覆盖模板切换、局部覆盖、清除格式和 `0` 值覆盖不被误判为未设置的问题。本步未扩大到自定义模板编辑器、图片/公式/目录主题化、真实测量分页或 `PH2-12` 全链路验收。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/blockStyleResolution.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "后续如继续围绕样式系统深化，可再拆分模板编辑器、更多样式来源治理或第二阶段最终验收 `PH2-12`。"
+    },
+    {
+      "id": "LOG-147",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页代价函数 estimated-cost-v1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-09` 当前小步切换为“分页代价函数 estimated-cost-v1”：本轮在现有估算分页主链路和算法注册表基础上，新补一套可切换的 `estimated-cost-v1` 实验算法，用断点评分替代单纯的页尾回收判断，优先减少标题挂页尾、当前页过满但下一页偏空、以及明显难看的断点；算法结果继续只作用于运行时分页结果，不改变原始 `LayoutDocument`，也不引入真实测量分页或新的 `.layout` 持久化字段。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-09` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 同步展示层产物，再开始修改分页算法 ID、注册表、估算分页公共逻辑与冒烟脚本，接通 `estimated-cost-v1`。"
+    },
+    {
+      "id": "LOG-148",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页代价函数 estimated-cost-v1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-09` 当前小步：新增 `estimated-cost-v1` 分页算法插件，并接入现有算法 ID 常量、注册表、右侧“分页策略”下拉和 `.layout` 持久化链路；估算分页公共逻辑已补充断点评分能力，会在当前页溢出时比较保留断点与回收尾块后的代价，优先减少标题挂页尾、当前页过满而下一页偏空等明显难看的断点，同时保持默认算法不变。冒烟脚本已补齐算法注册、算法持久化恢复与 `estimated-cost-v1` 断点改良场景验证。本步未扩大到真实测量分页、脏区重排、逐行孤寡行精修或新的 `.layout` 字段。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithmIds.ts",
+        "src/engine/typesetting/registry.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedCost.ts",
+        "scripts/m1-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-09` 拆分脏区重排、块级真实测量或更完整孤寡行控制。"
+    },
+    {
+      "id": "LOG-149",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片文字环绕 V2 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已完成 `PH2-10` 当前小步：`左侧排布 / 右侧排布` 已从图片块自身对齐升级为最小可用的正文绕排组合，只有当图片后面紧邻普通段落且二者位于同一分页页内时才进入局部环绕；画布预览、HTML/PDF 导出和分页估算已统一消费同一套判定口径，单独图片与不满足条件的组合会自动退回普通块排版。本步未扩大到跨多个段落连续回流、列表/表格/引用/标题绕排、跨页继续环绕、多栏环绕、图片自由定位或新的图片模式字段。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run progress:build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/services/exportHtml.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "后续如继续深化图片环绕，可再拆分跨段落连续回流、跨页环绕或更复杂的对象混排能力。"
+    },
+    {
+      "id": "LOG-150",
+      "date": "2026-06-24",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格列宽列高拖拽调整 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步切换为“表格列宽列高拖拽调整 V1”：本轮只在现有表格能力上补齐画布内列宽与行高的拖拽控制，拖拽结果分别写回列宽数组与行高字段，并同步影响画布预览、HTML/PDF 导出和分页估算；本步明确不纳入合并单元格、跨页表格拆分、表格样式模板或其他复杂表格编辑。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，再开始修改表格模型、画布拖拽把手、导出与分页估算链路。"
+    },
+    {
+      "id": "LOG-151",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格列宽列高拖拽调整 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-10` 当前小步：表格模型新增列宽数组 `columnWidthsPx` 与行高字段 `rows[].heightPx`，旧文档缺字段时继续按自动尺寸兼容；画布预览中的表格已支持列宽拖拽与行高拖拽，拖拽把手仅在选中表格或单元格时显示，并沿用现有鼠标拖拽收口方式在抬手后一次性写回模型。HTML/PDF 导出与分页估算已同步消费同一套列宽和行高口径，行高只作为最小高度，不会裁切单元格内容。本步未扩大到合并单元格、跨页表格拆分、表格样式模板或其他复杂表格编辑。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/utils.ts",
+        "src/engine/document-model/index.ts",
+        "src/engine/document-model/tableLayout.ts",
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-10` 拆分合并单元格、跨页表格优化或更完整表格样式能力。"
+    },
+    {
+      "id": "LOG-152",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认块内容边界约束 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步切换为“块内容边界约束 V1”：本轮只收口代码块、表格等易溢出块的边界规则，确保用户不需要依赖横向拖拉条才能查看内容；保留现有表格列宽拖拽能力，但增加正文可用区边界与换行规则，并同步影响画布预览、HTML/PDF 导出和分页估算。本步明确不纳入代码折叠、复杂表格自适应排版、合并单元格或新的字体自适应算法。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，再开始修改代码块、表格的边界样式、宽度分配规则、导出链路和分页估算。"
+    },
+    {
+      "id": "LOG-153",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成块内容边界约束 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-10` 当前小步：代码块在画布预览、编辑态和 HTML/PDF 导出中统一改为边界内自动换行，不再依赖横向滚动条；表格在画布预览、分页估算和导出 HTML 中统一按正文可用区分配列宽，单元格补齐换行规则，列宽总和会压回页面正文区，避免表格整体拖出边界。本步未扩大到代码折叠、复杂表格自适应排版、合并单元格或新的字体自适应算法。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/styles.css",
+        "src/engine/document-model/tableLayout.ts",
+        "src/services/exportHtml.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "若后续继续拆分，可围绕更复杂表格自适应、代码块折叠或更完整块级版式约束继续推进。"
+    },
+    {
+      "id": "LOG-154",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格相邻行列拖拽修正 V1",
+      "action": "修复/验证/文档同步",
+      "result": "已按用户反馈修正表格拖拽逻辑：列分隔线拖拽现在只调整左右相邻两列，行分隔线拖拽只调整上下相邻两行，拖到最小列宽或最小行高后停止，不再动态重分配其他列行；最后一列右边线与最后一行下边线不再显示拖拽把手。列拖拽起始值已改为优先使用当前模型解析列宽，避免 DOM 测量差异造成非相邻列视觉跳动；运行时表格列宽解析也不再做全表压缩，避免预览、分页和导出偷偷改动非相邻列。本步未扩大到合并单元格、跨页表格拆分或新的表格样式系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/document-model/tableLayout.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "后续如继续深化表格能力，可再拆分合并单元格、跨页表格优化或表格样式系统。"
+    },
+    {
+      "id": "LOG-155",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-12"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 M2 链路冒烟验证 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认启动 `PH2-12` 的第一步：新增独立 `smoke:m2` 冒烟验证入口，用一条可重复执行的脚本串联 Markdown 导入、`.layout` 保存恢复、画布样式写回、分页预览、模板应用、目录页码回填、表格/图片/公式复杂块和 HTML/PDF 导出口径，先为 M2 链路建立自动化验收基线。本步明确不纳入新的 UI 功能、真实 DOM 测量分页、复杂表格能力扩展或对现有 `smoke:m1` 的重构，也不直接将 `PH2-12` 或 M2 里程碑标记为已完成。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-12` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，再开始新增 `scripts/m2-smoke.ts` 和 `smoke:m2` 命令。"
+    },
+    {
+      "id": "LOG-156",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-12"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 M2 链路冒烟验证 V1",
+      "action": "新增/验证/文档同步",
+      "result": "已完成 `PH2-12` 当前小步：新增 `scripts/m2-smoke.ts` 与 `npm run smoke:m2`，用一条自动化脚本串联验证 Markdown 导入结构化模型、`.layout` 保存恢复、模板和分页算法设置恢复、文字/段落样式覆盖、表格列宽行高和表头对齐、图片属性裁剪环绕、公式插入渲染、目录项生成与页码回填、分页结果产出以及 HTML/PDF 导出 HTML 口径。本步未扩大到新的 UI 功能、真实 DOM 测量分页、复杂表格能力扩展或对现有 `smoke:m1` 的重构；`PH2-12` 仍保持进行中，后续继续补桌面端真实操作验收。",
+      "verification": [
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。",
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "后续继续围绕 `PH2-12` 拆分桌面端真实操作验收，重点检查新建/打开 `.layout`、画布样式编辑、分页策略切换、PDF 导出保存对话框与人工视觉一致性。"
+    },
+    {
+      "id": "LOG-157",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认合并单元格 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步切换为“合并单元格 V1”：本轮只补齐相邻单元格的矩形合并能力，支持先选中一个表格单元格，再通过 Shift + 点击选中与之相邻的单元格形成连续矩形选区，并在右侧“表格结构”中提供合并入口；合并后内容汇总到左上角主单元格，其他格子隐藏，画布预览、HTML/PDF 导出和分页估算同步识别合并结果。本步明确不纳入拆分单元格、鼠标拖拽框选、非矩形/L 形选择、跨多个不相邻区域合并、复杂跨页合并表格处理或撤销系统。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，再开始修改表格模型、画布选区、右侧表格结构入口、导出与分页估算链路。"
+    },
+    {
+      "id": "LOG-158",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成合并单元格 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-10` 当前小步：表格模型新增主单元格跨度与覆盖格字段，画布支持先选中单元格后通过 Shift + 点击形成同表格内连续矩形选区，并在右侧“表格结构”中提供“合并选中单元格”入口；合并后左上角主单元格保存 `rowSpan / colSpan`，其他单元格保存 `coveredByCellId` 并在画布与导出中隐藏，原选区内非空内容会汇总到主单元格。HTML/PDF 导出已输出 `rowspan/colspan`，分页估算已按合并列宽估算主单元格内容高度，M1/M2 冒烟脚本已覆盖 store 选区、合并写回、导出一致性和分页链路不回退。本步未扩大到拆分单元格、拖拽框选、非矩形选区、复杂跨页合并表格或撤销系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，4 页，4 个目录项。`",
+        "`npm run smoke:m1` 成功，并生成 `out/m1-smoke/m1-smoke.pdf`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/tableLayout.ts",
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/services/exportHtml.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/styles.css",
+        "scripts/m1-smoke.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续如继续深化表格能力，可再拆分拆分单元格、拖拽框选、已合并单元格再次合并或跨页合并表格优化。"
+    },
+    {
+      "id": "LOG-159",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片自由拖动与标题显示开关 V1 小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步切换为“图片自由拖动与标题显示开关 V1”：图片标题默认不显示且不占用高度；选中图片后可在右侧“对象属性 / 图片属性”中勾选“显示标题”；画布图片支持鼠标拖动调整当前位置，拖动结束后把偏移量写回 `.layout` 图片块，并让画布预览和 HTML/PDF 导出消费同一套标题显示与位置偏移口径。本步明确不纳入跨页自由定位、图层顺序、旋转、吸附线、撤销重做、批量图片拖动、复杂文字环绕算法升级或 Markdown 源码反写。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，再开始修改图片模型字段、右侧图片属性面板、画布拖动交互、导出 HTML 与分页估算链路。"
+    },
+    {
+      "id": "LOG-160",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片自由拖动与标题显示开关 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-10` 当前小步：图片标题默认不显示且不占用高度；右侧\"图片属性\"新增\"显示标题\"勾选开关；画布中只有 showCaption 为 true 时才渲染 figcaption，标题文字优先使用 title，没有时用 alt 兜底；图片块支持拖动调整偏移量，拖动结束后写回 offsetX/offsetY；HTML/PDF 导出和分页估算已统一消费同一套标题显示与位置偏移口径。模型层新增 showCaption、offsetX、offsetY 字段，imageLayout.ts 统一解析并处理偏移量（允许负数），updateLayoutImageAttributes 支持新字段写回，M2 冒烟脚本已补强回归验证。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，4 页，4 个目录项。`"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/imageLayout.ts",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/services/exportHtml.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续深化图片替换、重置尺寸、资源管理器联动或其他图片编辑能力。"
+    },
+    {
+      "id": "LOG-161",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "修复图片拖动 Bug",
+      "action": "修复/验证/文档同步",
+      "result": "根据用户反馈修复了图片拖动功能的三个 Bug：\n1. 拖动后消失：将 CSS `transform` 改为 `margin` 实现偏移，避免图片在父容器内因 `transform` 超出可视区域而被裁剪。\n2. 环绕文字不生效：环绕模式（left/right）下不应用位置偏移，确保 float 浮动布局不受影响。\n3. 拖动交互生硬：鼠标进入已选中图片区域时显示 `move` 光标作为视觉提示，无需先点击再拖动。\n\n修改了 CanvasPane.tsx 的 buildImageStyle 函数和 exportHtml.ts 的 renderImageBlock 函数，统一使用 margin 实现偏移；更新了 m2-smoke.ts 冒烟测试用例，将测试图片的 wrapMode 从 'left' 改为 'block'，确保偏移样式正确生效。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，4 页，4 个目录项。`"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续深化图片替换、重置尺寸、资源管理器联动或其他图片编辑能力。"
+    },
+    {
+      "id": "LOG-162",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认导出 HTML 0 值段前段后距覆盖修复边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将本次推送前修复归属 `PH2-06`：修复 HTML/PDF 导出链路对块级样式覆盖中 `spaceBefore: 0` 与 `spaceAfter: 0` 的消费问题，确保显式 0 值不会被 truthy 判断误当成未设置。本步纳入导出样式判断修复、现有 `smoke:m1` 0 值断言回归、以及推送前 `progress:check` / `typecheck` / `smoke:m1` / `smoke:m2` 校验；本步明确不纳入新增样式 UI、模型字段、分页算法、模板系统或复杂块新功能。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-06` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后修复 `src/services/exportHtml.ts` 中块级样式 0 值判断并重新跑推送前校验。"
+    },
+    {
+      "id": "LOG-163",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片环绕最终形态小步边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-10` 当前小步切换为“图片环绕最终形态”：把现有图片环绕从 `独占一行 / 居中显示 / 左侧排布 / 右侧排布` 升级为更接近 Word 的 `嵌入型 / 四周型环绕 / 上下型环绕 / 紧密型环绕` 四类；本步纳入模型字段兼容、右侧图片属性面板、画布预览、分页估算、HTML/PDF 导出和 M2 冒烟验证；本步明确不纳入段落内字符级 inline 图片、透明像素轮廓分析、跨页自由定位、图层顺序、旋转、吸附线、撤销重做或 Markdown 源码反写。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-10` 任务卡。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "先执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，再开始修改图片环绕模型类型、右侧面板、画布渲染、分页估算、HTML/PDF 导出和 M2 冒烟验证。"
+    },
+    {
+      "id": "LOG-164",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认可扩展语法映射注册表 V1 边界",
+      "action": "边界归档/继续实施",
+      "result": "已按用户确认将 `PH2-04` 并行小步边界写回真相源：本步建立可扩展的语法映射注册表，支持将 `++text++` 和 `\\underline{}` 两种下划线语法统一映射为本项目的 `underline` TextMark；本步纳入语法映射注册表结构、remark 插件、remark.ts 注册、fromMarkdown.ts 的 underline 节点映射和冒烟验证；本步明确不纳入前端 UI 配置入口、运行时动态语法注册或语法映射的编辑/删除操作。",
+      "verification": [
+        "人工确认本步纳入、本步明确不纳入、后续归属任务已写入 `PH2-04` 并行边界记录。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始实现语法映射注册表、remark 插件、fromMarkdown.ts underline 映射，运行 typecheck / build / smoke:m2 验证。"
+    },
+    {
+      "id": "LOG-165",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成可扩展语法映射注册表 V1 实现",
+      "action": "新增/验证",
+      "result": "已按 `PH2-04` 并行边界完成可扩展语法映射注册表 V1：新增 `src/engine/parser/syntax-mappings.ts` 定义可扩展的映射结构，新增 `src/engine/parser/remark-text-marks.ts` remark 插件在解析时应用语法映射，在 `remark.ts` 中注册新插件，在 `fromMarkdown.ts` 中新增 underline 节点映射到 `{ type: 'underline' }` TextMark。核心功能已验证：`++text++` 和 `\\underline{text}` 两种下划线语法均能正确映射为 underline TextMark，支持大括号平衡解析。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m2` 成功。",
+        "独立语法映射冒烟测试全部通过。"
+      ],
+      "affectedFiles": [
+        "src/engine/parser/syntax-mappings.ts",
+        "src/engine/parser/remark-text-marks.ts",
+        "src/engine/parser/remark.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "scripts/syntax-mapping-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "前端语法映射 UI 配置可后续在 `PH2-06` 或样式系统相关任务中继续扩展；更多 LaTeX 语法支持（如 \\textbf、\\textit）可在 `syntax-mappings.ts` 的 `SYNTAX_MAPPINGS` 数组中继续扩展。"
+    },
+    {
+      "id": "LOG-166",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片环绕最终形态",
+      "action": "新增/兼容/集成/验证/文档同步",
+      "result": "已完成 `PH2-10` 当前小步：图片环绕从旧 `block / center / left / right` 收口为 `inline / square / topBottom / tight` 四种最终语义，右侧“图片属性 / 环绕”显示为中文 `嵌入型 / 四周型环绕 / 上下型环绕 / 紧密型环绕`，四周型和紧密型提供左右绕排方向；旧 `.layout` 的 `block`、`center`、`left`、`right` 会分别兼容映射到嵌入型、上下型、四周型左/右方向。画布预览、分页估算和 HTML/PDF 导出已统一使用 `resolveImageLayout` 的新解析口径，导出链路也补齐“图片 + 紧邻普通段落”的绕排组合输出。实现过程中同时补齐图片属性写回对 `wrapSide`、`showCaption`、`offsetX/offsetY` 的保留，避免切换环绕、缩放、裁剪或拖动时丢失既有图片属性。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，4 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/imageLayout.ts",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "后续如需继续贴近 Word，可在 `PH2-10` / `PH2-09` 中拆分透明像素轮廓紧密绕排、真正段落内 inline 图片、跨页自由定位和真实测量分页联动。"
+    },
+    {
+      "id": "LOG-167",
+      "date": "2026-06-25",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片环绕页面级浮动绕排返工",
+      "action": "返工/风险登记/继续实施",
+      "result": "用户验收指出上一版图片环绕仍然受块级布局限制，四周型/紧密型图片会独占纵向高度，和 Word 的文字绕排不一致。已按用户确认将 `PH2-10` 当前小步切换为页面级浮动绕排返工：嵌入型、上下型环绕继续作为普通图片块占据文档流高度；四周型环绕、紧密型环绕改为页面正文中的浮动图片对象，不再单独占据块高度，后续多个普通文本块、选项、列表等内容需要持续绕开图片，直到图片底部结束。本次已同步登记 `RISK-004`，明确上一版局部块级绕排的返工原因、影响范围和处理方式。",
+      "verification": [
+        "人工确认页面级浮动绕排返工方案。",
+        "`PH2-10` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已登记 `RISK-004`。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后返工 CanvasPane 画布预览、分页估算、HTML/PDF 导出和 M2 冒烟验证。"
     }
   ]
 }

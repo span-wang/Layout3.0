@@ -2,7 +2,10 @@ import type {
   BlockStyleOverrides,
   BlockquoteStructureAction,
   DocumentFormat,
+  ImageBlockMetadata,
+  ImageWrapSide,
   InsertListBlockKind,
+  LayoutBlock,
   ListBatchCheckedAction,
   ListBatchCheckedScope,
   ListIndentAction,
@@ -12,6 +15,7 @@ import type {
   LayoutDocument,
   ParseState,
   TableColumnAlign,
+  TableCellRangeSelection,
   TableStructureAction,
   TextMarkType,
   TextRangeSelection,
@@ -85,6 +89,7 @@ export interface DocumentSlice {
   setParseError: (message: string) => void;
   setPageLayouts: (pages: PageLayout[]) => void;
   selectLayoutNode: (nodeId: string) => void;
+  selectLayoutTableCell: (payload: { cellId: string; extendRange?: boolean }) => void;
   clearLayoutSelection: () => void;
   updateLayoutNodeText: (payload: { nodeId: string; text: string }) => void;
   replaceLayoutNodeRichText: (payload: { nodeId: string; textRuns: TextRun[] }) => void;
@@ -114,7 +119,8 @@ export interface DocumentSlice {
     cropRightPx?: number | null;
     cropBottomPx?: number | null;
     cropLeftPx?: number | null;
-    wrapMode?: 'block' | 'center' | 'left' | 'right';
+    wrapMode?: ImageBlockMetadata['wrapMode'];
+    wrapSide?: ImageWrapSide;
     insertAfterNodeId?: string | null;
   }) => string | null;
   insertLayoutTableBlock: (payload: {
@@ -130,9 +136,18 @@ export interface DocumentSlice {
     kind: InsertListBlockKind;
     insertAfterNodeId?: string | null;
   }) => string | null;
+  insertLayoutParagraphBlock: (payload: {
+    insertAfterNodeId?: string | null;
+  }) => string | null;
+  insertLayoutPageBreakBlock: (payload: {
+    insertAfterNodeId?: string | null;
+  }) => string | null;
   insertLayoutTocBlock: (payload: {
     insertAfterNodeId?: string | null;
   }) => string | null;
+  deleteLayoutTopLevelBlock: (payload: {
+    nodeId: string;
+  }) => { didDelete: boolean; selectedNodeId: string | null; deletedBlockType: LayoutBlock['type'] | null };
   updateLayoutTocMaxDepth: (payload: {
     nodeId: string;
     maxDepth: 1 | 2 | 3;
@@ -152,6 +167,19 @@ export interface DocumentSlice {
     cellId: string;
     align: TableColumnAlign;
   }) => string | null;
+  updateLayoutTableColumnWidths: (payload: {
+    cellId: string;
+    columnWidthsPx: Array<number | null>;
+  }) => string | null;
+  updateLayoutTableRowHeight: (payload: {
+    cellId: string;
+    heightPx: number | null;
+  }) => string | null;
+  mergeLayoutSelectedTableCells: () => {
+    selectedNodeId: string | null;
+    didUpdate: boolean;
+    reason: 'merged' | 'invalidSelection' | 'singleCell' | 'containsMergedCell';
+  };
   updateLayoutListStructure: (payload: {
     itemId: string;
     action: ListStructureAction;
@@ -207,7 +235,11 @@ export interface DocumentSlice {
     cropRightPx?: number | null;
     cropBottomPx?: number | null;
     cropLeftPx?: number | null;
-    wrapMode?: 'block' | 'center' | 'left' | 'right';
+    wrapMode?: ImageBlockMetadata['wrapMode'];
+    wrapSide?: ImageWrapSide;
+    showCaption?: boolean;
+    offsetX?: number | null;
+    offsetY?: number | null;
   }) => void;
   applyLayoutNodeBlockStyle: (payload: {
     nodeId: string;

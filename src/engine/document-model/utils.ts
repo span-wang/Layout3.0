@@ -124,3 +124,30 @@ export function buildLayoutListTree(items: LayoutListItem[]): LayoutListTreeNode
 
   return roots;
 }
+
+// 表格列宽先限制在一个可读的像素范围内，避免拖拽写入 0 或离谱大值导致整页布局崩掉。
+export function normalizeTableColumnWidthPx(value: number | null | undefined): number | null {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(48, Math.min(1200, Math.round(value)));
+}
+
+// 表格行高只作为最小高度，内容更多时仍会自然撑开。
+export function normalizeTableRowHeightPx(value: number | null | undefined): number | null {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(28, Math.min(1200, Math.round(value)));
+}
+
+export function normalizeTableColumnWidths(
+  columnWidthsPx: Array<number | null> | null | undefined,
+  columnCount: number,
+): Array<number | null> {
+  return Array.from({ length: Math.max(0, columnCount) }, (_, index) =>
+    normalizeTableColumnWidthPx(columnWidthsPx?.[index]),
+  );
+}

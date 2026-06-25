@@ -3,17 +3,21 @@ import {
   buildHeadingPageNumberMap,
   buildTocItems,
   getHeadingText,
+  getImageWrapClassName,
   resolveImageLayout,
   resolveImageRenderMetrics,
   resolveHangingIndentStyle,
+  isImageTextWrapMode,
   buildLayoutListTree,
   getLayoutListItemLevel,
+  resolveTableColumnWidths,
   type LayoutBlock,
   type LayoutListTreeNode,
   type LayoutListItem,
   type TextRun,
+  type TableBlockMetadata,
 } from '@/engine/document-model';
-import { renderEquationToHtml } from '@/engine/document-model/equation';
+import { renderEquationToHtml, splitInlineEquations, renderInlineEquationToHtml } from '@/engine/document-model/equation';
 import type { PageLayout } from '@/engine/typesetting/types';
 import { resolveAssetSrc } from '@/utils/filePath';
 
@@ -55,8 +59,8 @@ function buildBlockStyle(block: LayoutBlock): string {
   const declarations = [
     block.blockStyleOverrides.textAlign ? `text-align:${block.blockStyleOverrides.textAlign}` : '',
     block.blockStyleOverrides.lineHeight ? `line-height:${block.blockStyleOverrides.lineHeight}px` : '',
-    block.blockStyleOverrides.spaceBefore ? `margin-top:${block.blockStyleOverrides.spaceBefore}px` : '',
-    block.blockStyleOverrides.spaceAfter ? `margin-bottom:${block.blockStyleOverrides.spaceAfter}px` : '',
+    block.blockStyleOverrides.spaceBefore !== undefined ? `margin-top:${block.blockStyleOverrides.spaceBefore}px` : '',
+    block.blockStyleOverrides.spaceAfter !== undefined ? `margin-bottom:${block.blockStyleOverrides.spaceAfter}px` : '',
     indentStyle && indentStyle.paddingLeft > 0 ? `padding-left:${indentStyle.paddingLeft}px` : '',
     indentStyle && indentStyle.paddingRight > 0 ? `padding-right:${indentStyle.paddingRight}px` : '',
     textIndent && textIndent !== 0 ? `text-indent:${textIndent}px` : '',
@@ -67,7 +71,19 @@ function buildBlockStyle(block: LayoutBlock): string {
 }
 
 function renderInlineText(text: string): string {
-  return escapeHtml(text).replaceAll('\n', '<br />');
+  // 分割普通文本和行内公式
+  const fragments = splitInlineEquations(text);
+
+  return fragments
+    .map((fragment) => {
+      if (fragment.type === 'equation') {
+        // 行内公式：不进行 HTML 转义，直接渲染
+        return renderInlineEquationToHtml(fragment.content);
+      }
+      // 普通文本：HTML 转义 + 处理换行
+      return escapeHtml(fragment.content).replaceAll('\n', '<br />');
+    })
+    .join('');
 }
 
 function applyMarks(content: string, run: TextRun): string {
@@ -93,12 +109,36 @@ function applyMarks(content: string, run: TextRun): string {
 
 function renderTextRuns(textRuns: TextRun[]): string {
   return textRuns
-    .map((run) => `<span${buildTextRunStyle(run)}>${applyMarks(renderInlineText(run.text), run)}</span>`)
+    .map((run) => {
+      const fragments = splitInlineEquations(run.text);
+      const content = fragments
+        .map((fragment) => {
+          if (fragment.type === 'equation') {
+            // 行内公式：不应用 marks，保持数学格式
+            return renderInlineEquationToHtml(fragment.content);
+          }
+          // 普通文本：HTML 转义 + 处理换行 + 应用 marks
+          const escaped = escapeHtml(fragment.content).replaceAll('\n', '<br />');
+          return applyMarks(escaped, run);
+        })
+        .join('');
+      return `<span${buildTextRunStyle(run)}>${content}</span>`;
+    })
     .join('');
 }
 
-function buildTableCellStyle(align: 'left' | 'center' | 'right' | null | undefined): string {
-  return align ? ` style="${escapeHtml(`text-align:${align}`)}"` : '';
+function buildTableCellStyle(align: 'left' | 'center' | 'right' | null | undefined, widthPx?: number, minHeightPx?: number): string {
+  const styles: string[] = [];
+  if (align) {
+    styles.push(`text-align:${align}`);
+  }
+  if (widthPx) {
+    styles.push(`min-width:${widthPx}px`);
+  }
+  if (minHeightPx) {
+    styles.push(`min-height:${minHeightPx}px`);
+  }
+  return styles.length > 0 ? ` style="${escapeHtml(styles.join(';'))}"` : '';
 }
 
 function renderListItemContent(item: LayoutListItem): string {
@@ -172,19 +212,26 @@ function renderBlock(block: LayoutBlock): string {
         ? `<div class="equation-shell"${buildBlockStyle(block)}>${renderEquationToHtml(block.metadata.value).html}</div>`
         : '';
     case 'table':
-      return block.metadata.kind === 'table'
-        ? `<table${buildBlockStyle(block)}><tbody>${block.metadata.rows
-            .map(
-              (row) =>
-                `<tr>${row.cells
-                  .map((cell, cellIndex) => {
-                    const tagName = cell.isHeader ? 'th' : 'td';
-                    return `<${tagName}${buildTableCellStyle(block.metadata.kind === 'table' ? block.metadata.align[cellIndex] : null)}>${renderTextRuns(cell.textRuns)}</${tagName}>`;
-                  })
-                  .join('')}</tr>`,
-            )
-            .join('')}</tbody></table>`
-        : '';
+      if (block.metadata.kind !== 'table') {
+        return '';
+      }
+      const tableMeta = block.metadata as TableBlockMetadata;
+      const columnCount = tableMeta.rows[0]?.cells.length ?? 0;
+      const columnWidths = resolveTableColumnWidths(tableMeta.columnWidthsPx, columnCount, 520);
+      return `<table${buildBlockStyle(block)}><tbody>${tableMeta.rows
+          .map((row) =>
+            `<tr>${row.cells
+              .filter((cell) => !cell.coveredByCellId)
+              .map((cell, cellIndex) => {
+                const tagName = cell.isHeader ? 'th' : 'td';
+                const colSpan = cell.colSpan && cell.colSpan > 1 ? ` colspan="${cell.colSpan}"` : '';
+                const rowSpan = cell.rowSpan && cell.rowSpan > 1 ? ` rowspan="${cell.rowSpan}"` : '';
+                const widthPx = columnWidths[cellIndex];
+                return `<${tagName}${buildTableCellStyle(tableMeta.align[cellIndex] ?? null, widthPx, row.heightPx ?? undefined)}${colSpan}${rowSpan}>${renderTextRuns(cell.textRuns)}</${tagName}>`;
+              })
+              .join('')}</tr>`,
+          )
+          .join('')}</tbody></table>`;
     case 'image':
       if (block.metadata.kind !== 'image') {
         return '';
@@ -204,11 +251,37 @@ function renderImageBlock(block: LayoutBlock): string {
   }
 
   const layout = resolveImageLayout(block.metadata);
-  const wrapperStyleParts = [
-    layout.wrapMode === 'center' ? 'margin-left:auto;margin-right:auto' : '',
-    layout.wrapMode === 'left' ? 'margin-right:auto' : '',
-    layout.wrapMode === 'right' ? 'margin-left:auto' : '',
-  ].filter(Boolean);
+  const offsetX = layout.offsetX ?? 0;
+  const offsetY = layout.offsetY ?? 0;
+
+  // 预览与导出统一使用同一套图片环绕语义，旧 block/center/left/right 只在解析层兼容。
+  const wrapperStyleParts: string[] = [];
+  if (layout.wrapMode === 'topBottom') {
+    if (offsetX !== 0) {
+      const widthPx = layout.widthPx ?? 320;
+      wrapperStyleParts.push(`margin-left:calc(50% + ${offsetX}px - ${widthPx / 2}px)`);
+    } else {
+      wrapperStyleParts.push('margin-left:auto', 'margin-right:auto');
+    }
+  } else if (isImageTextWrapMode(layout.wrapMode)) {
+    wrapperStyleParts.push(`float:${layout.wrapSide}`, 'clear:none');
+    if (layout.wrapSide === 'left') {
+      wrapperStyleParts.push('margin-right:16px');
+    } else {
+      wrapperStyleParts.push('margin-left:16px');
+    }
+  } else {
+    // 嵌入型作为稳定图片块随文档流移动。
+    if (offsetX > 0) {
+      wrapperStyleParts.push(`margin-left:${offsetX}px`);
+    } else if (offsetX < 0) {
+      wrapperStyleParts.push(`margin-right:${Math.abs(offsetX)}px`);
+    }
+    if (offsetY > 0) {
+      wrapperStyleParts.push(`margin-top:${offsetY}px`);
+    }
+  }
+
   const metrics = resolveImageRenderMetrics(layout);
   const viewportStyleParts = [
     metrics.visibleWidthPx ? `width:${metrics.visibleWidthPx}px` : '',
@@ -224,11 +297,16 @@ function renderImageBlock(block: LayoutBlock): string {
       : '',
   ].filter(Boolean);
 
-  return `<figure class="image-shell image-wrap-${escapeHtml(layout.wrapMode)}"${wrapperStyleParts.length > 0 ? ` style="${escapeHtml(wrapperStyleParts.join(';'))}"` : ''}>${
+  // 只有 showCaption 为 true 时才渲染标题区域
+  const captionHtml = layout.showCaption
+    ? `<figcaption>${escapeHtml(block.metadata.title || block.metadata.alt || '')}</figcaption>`
+    : '';
+
+  return `<figure class="image-shell ${escapeHtml(getImageWrapClassName(layout))}"${wrapperStyleParts.length > 0 ? ` style="${escapeHtml(wrapperStyleParts.join(';'))}"` : ''}>${
     block.metadata.src
       ? `<span class="image-viewport"${viewportStyleParts.length > 0 ? ` style="${escapeHtml(viewportStyleParts.join(';'))}"` : ''}><img class="preview-image preview-image-fit preview-image-cropped" src="${escapeHtml(resolveAssetSrc(block.metadata.src))}" alt="${escapeHtml(block.metadata.alt || '图片')}"${block.metadata.title ? ` title="${escapeHtml(block.metadata.title)}"` : ''}${imageStyleParts.length > 0 ? ` style="${escapeHtml(imageStyleParts.join(';'))}"` : ''} /></span>`
       : '<div class="preview-image placeholder">图片占位</div>'
-  }${block.metadata.alt ? `<figcaption>${escapeHtml(block.metadata.alt)}</figcaption>` : ''}</figure>`;
+  }${captionHtml}</figure>`;
 }
 
 function getPageMetrics(page: PageLayout) {
@@ -274,30 +352,33 @@ function renderPages(pages: PageLayout[]): string {
       const titleBlock = page.blocks.find((block) => block.type === 'heading');
       const pageTitle = titleBlock ? getHeadingText(titleBlock) || '未命名文档' : '未命名文档';
       const metrics = getPageMetrics(page);
+      const bodyParts: string[] = [];
+
+      for (let index = 0; index < page.blocks.length; index += 1) {
+        const block = page.blocks[index];
+        if (block.type === 'toc' && block.metadata.kind === 'toc') {
+          const tocMetadata = block.metadata;
+          const filteredTocItems = tocItems.filter((item) => item.depth <= tocMetadata.maxDepth);
+          const entries =
+            filteredTocItems.length > 0
+              ? filteredTocItems
+                  .map(
+                    (item) =>
+                      `<div class="toc-entry-export" style="padding-left:${Math.max(0, item.depth - 1) * 16}px"><span class="toc-entry-export-text">${escapeHtml(item.text)}</span><span class="toc-entry-export-dots"></span><span class="toc-entry-export-page">${escapeHtml(String(item.pageNumber ?? '-'))}</span></div>`,
+                  )
+                  .join('')
+              : '<div class="toc-empty-state-export">当前文档还没有符合当前目录层级的标题。</div>';
+
+          bodyParts.push(`<section class="toc-block-export"${buildBlockStyle(block)}><div class="toc-block-export-title">${escapeHtml(tocMetadata.title || '目录')}</div>${entries}</section>`);
+          continue;
+        }
+
+        bodyParts.push(renderBlock(block));
+      }
 
       return `<section class="page" style="width:${metrics.pageWidthPx}px;min-height:${metrics.pageHeightPx}px;grid-template-rows:${metrics.headerHeight}px 1fr ${metrics.footerHeight}px;">
         <header class="page-header">${escapeHtml(pageTitle)}<span>${escapeHtml(page.contract.pageLabel)}</span></header>
-        <article class="page-body">${page.blocks
-          .map((block) => {
-            if (block.type === 'toc' && block.metadata.kind === 'toc') {
-              const tocMetadata = block.metadata;
-              const filteredTocItems = tocItems.filter((item) => item.depth <= tocMetadata.maxDepth);
-              const entries =
-                filteredTocItems.length > 0
-                  ? filteredTocItems
-                      .map(
-                        (item) =>
-                          `<div class="toc-entry-export" style="padding-left:${Math.max(0, item.depth - 1) * 16}px"><span class="toc-entry-export-text">${escapeHtml(item.text)}</span><span class="toc-entry-export-dots"></span><span class="toc-entry-export-page">${escapeHtml(String(item.pageNumber ?? '-'))}</span></div>`,
-                      )
-                      .join('')
-                  : '<div class="toc-empty-state-export">当前文档还没有符合当前目录层级的标题。</div>';
-
-              return `<section class="toc-block-export"${buildBlockStyle(block)}><div class="toc-block-export-title">${escapeHtml(tocMetadata.title || '目录')}</div>${entries}</section>`;
-            }
-
-            return renderBlock(block);
-          })
-          .join('')}</article>
+        <article class="page-body">${bodyParts.join('')}</article>
         <footer class="page-footer"><span>${escapeHtml(page.contract.templateLabel)}</span><span>${page.pageNumber}</span></footer>
       </section>`;
     })
@@ -316,7 +397,27 @@ export function buildExportHtml({ pages, title }: PdfExportPayload): string {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escapeHtml(title)}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.css" />
     <style>
+      /* 行内公式样式：纯行内渲染，无特殊容器，字体大小与当前文字保持一致 */
+      .inline-equation {
+        display: inline;
+        vertical-align: math;
+        line-height: normal;
+      }
+
+      .inline-equation mrow {
+        vertical-align: baseline;
+      }
+
+      .inline-equation .base {
+        vertical-align: baseline;
+      }
+
+      .inline-equation .strut {
+        display: inline-block;
+      }
+
       :root {
         color: #1f2937;
         font-family: "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -512,6 +613,16 @@ export function buildExportHtml({ pages, title }: PdfExportPayload): string {
         max-width: 100%;
         position: relative;
         overflow: visible;
+      }
+
+      .image-shell.image-wrap-topBottom {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .image-shell.image-wrap-square,
+      .image-shell.image-wrap-tight {
+        max-width: min(100%, 72%);
       }
 
       .image-viewport {

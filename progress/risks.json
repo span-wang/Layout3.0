@@ -23,6 +23,14 @@
       "description": "当前主链路仍偏纯 Markdown 解析，`ParsedBlock` 多数节点只保留纯文本，后续字体、段落、高亮等可视化编辑缺少稳定保存位置，若继续按原分页深化计划推进会扩大返工面。",
       "impactScope": "第二阶段主链路、Document Model、Parser Module、Editor Module、Style Module、Export Pipeline",
       "currentHandling": "已将第二阶段默认计划替换为“结构化文档模型优先”，并进一步收口为“Markdown 只导入一次，后续只维护 `.layout` 工程数据”；精细分页二次推进暂缓到模型与样式编辑继续稳定后再推进，具体执行依据见 `结构化文档模型V1方案.md`。"
+    },
+    {
+      "id": "RISK-004",
+      "date": "2026-06-25",
+      "type": "返工",
+      "description": "图片环绕上一版采用“图片块 + 紧邻段落”的局部绕排，仍然受块级布局限制，图片会独占纵向高度，和 Word 四周型/紧密型绕排不一致。",
+      "impactScope": "PH2-10 图片环绕、CanvasPane 画布预览、Typesetting Engine 分页估算、HTML/PDF 导出、M2 冒烟验证",
+      "currentHandling": "已按用户确认切换为页面级浮动绕排返工：四周型/紧密型图片作为同页浮动对象，不再单独累加图片块高度；后续多个正文块持续绕开图片直到图片底部。嵌入型和上下型继续保持普通图片块占高。"
     }
   ]
 }
