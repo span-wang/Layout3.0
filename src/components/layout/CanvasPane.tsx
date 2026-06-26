@@ -2372,6 +2372,7 @@ function renderBlock(
         const tableRows = block.metadata.rows;
         const tableAlign = block.metadata.align;
         const columnCount = tableRows[0]?.cells.length ?? 0;
+        const isRuntimeTableFragment = block.sourceRange === null && block.id.includes('-page-fragment-');
         const resolvedColumnWidths = resolveTableColumnWidths(
           tableResizeState?.draftTableColumnWidths?.[block.id] ?? block.metadata.columnWidthsPx,
           columnCount,
@@ -2456,7 +2457,7 @@ function renderBlock(
                                       onCommit: onCommitEdit,
                                       onCancel: onCancelEdit,
                                     })
-                                : renderTextRuns(cell.textRuns, '空单元格')}
+                                : renderTextRuns(cell.textRuns, isRuntimeTableFragment ? undefined : '空单元格')}
                             </div>
                             {shouldShowResizeHandles && cellIndex < row.cells.length - 1 && tableResizeState?.onStartTableColumnResize ? (
                               <button

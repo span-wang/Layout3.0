@@ -3,11 +3,12 @@
  *
  * 核心策略：
  * 1. 文本块按行分割，在最优分割点截断（优先在段落/句子边界分割）
- * 2. 表格按单元格行分割，不做单元格内文本行分割
- * 3. 图片超过可用高度直接翻页
- * 4. 支持单栏/双栏/三栏布局
- * 5. 不处理孤儿行和寡妇行
- * 6. 使用块高度缓存避免重复计算
+ * 2. 表格优先按行分割，普通长行可继续按单元格文本拆分
+ * 3. 列表优先按项分割，超长列表项可继续按文本片段拆分
+ * 4. 图片超过可用高度直接翻页
+ * 5. 支持单栏/双栏/三栏布局
+ * 6. 不处理孤儿行和寡妇行
+ * 7. 使用块高度缓存避免重复计算
  */
 
 import {
@@ -86,6 +87,7 @@ interface ListFragmentBuildResult {
   block: LayoutBlock;
   height: number;
   nextItemIndex: number;
+  remainingItem?: LayoutListItem;
 }
 
 interface TableRowSplitResult {
@@ -94,10 +96,17 @@ interface TableRowSplitResult {
   currentHeight: number;
 }
 
+interface ListItemSplitResult {
+  currentItem: LayoutListItem;
+  remainingItem: LayoutListItem;
+  currentHeight: number;
+}
+
 // ============== 块高度缓存 ==============
 
-// 使用 WeakMap 缓存块高度，编辑时只影响单个块
-let blockHeightCache: WeakMap<LayoutBlock, number> = new WeakMap();
+// 块高度不仅取决于块内容，也取决于当前页面宽度、模板字号、行高等样式契约。
+// 因此缓存需要按“块对象 + 样式契约签名”共同命中，避免切换页面尺寸后复用旧高度。
+let blockHeightCache: WeakMap<LayoutBlock, Map<string, number>> = new WeakMap();
 
 /**
  * 清除指定块的缓存（编辑后调用）
@@ -114,6 +123,29 @@ export function clearAllBlockHeightCache(): void {
 }
 
 // ============== 辅助函数 ==============
+
+function buildBlockHeightCacheKey(contract: ResolvedStyleContract): string {
+  const { blockStyles } = contract;
+  return JSON.stringify({
+    pageSize: contract.pageSize,
+    orientation: contract.orientation,
+    templateId: contract.templateId,
+    pageWidthPx: contract.pageWidthPx,
+    pageHeightPx: contract.pageHeightPx,
+    contentWidthPx: contract.contentWidthPx,
+    contentHeightPx: contract.contentHeightPx,
+    heading1: blockStyles.heading1,
+    heading2: blockStyles.heading2,
+    heading3: blockStyles.heading3,
+    paragraph: blockStyles.paragraph,
+    list: blockStyles.list,
+    blockquote: blockStyles.blockquote,
+    code: blockStyles.code,
+    table: blockStyles.table,
+    horizontalRule: blockStyles.horizontalRule,
+    image: blockStyles.image,
+  });
+}
 
 function isTableBlock(block: LayoutBlock): block is TableLayoutBlock {
   return block.type === 'table' && block.metadata.kind === 'table';
@@ -327,19 +359,29 @@ function estimateListItemHeight(
   contract: ResolvedStyleContract,
 ): number {
   const listStyle = resolveListBlockStyle(block, contract);
-  const widthPx = Math.max(120, contract.contentWidthPx - listStyle.indent);
   const itemText = item.textRuns.map((run) => run.text).join('');
-  const levelIndentPx =
-    Math.max(0, getLayoutListItemLevel(item) - 1) *
-    Math.max(16, listStyle.indent * 0.72);
   const lines = estimateTextLines(
     itemText,
-    Math.max(80, widthPx - levelIndentPx),
+    getListItemTextWidthPx(item, block, contract),
     getMaxFontSize(item.textRuns, listStyle.fontSize),
   );
   const gap = fragmentItemIndex === 0 ? 0 : listStyle.itemGap;
 
   return gap + lines * listStyle.lineHeight;
+}
+
+function getListItemTextWidthPx(
+  item: LayoutListItem,
+  block: ListLayoutBlock,
+  contract: ResolvedStyleContract,
+): number {
+  const listStyle = resolveListBlockStyle(block, contract);
+  const widthPx = Math.max(120, contract.contentWidthPx - listStyle.indent);
+  const levelIndentPx =
+    Math.max(0, getLayoutListItemLevel(item) - 1) *
+    Math.max(16, listStyle.indent * 0.72);
+
+  return Math.max(80, widthPx - levelIndentPx);
 }
 
 function estimateListItemsHeight(
@@ -387,6 +429,81 @@ function createListFragmentBlock(
   };
 }
 
+function createListItemTextSlice(
+  item: LayoutListItem,
+  textRuns: TextRun[],
+  suffix: string,
+): LayoutListItem {
+  return {
+    ...item,
+    id: `${item.id}-${suffix}`,
+    sourceRange: null,
+    textRuns,
+  };
+}
+
+function splitListItemToFit(payload: {
+  block: ListLayoutBlock;
+  item: LayoutListItem;
+  fragmentItemIndex: number;
+  availableHeight: number;
+  fragmentIndex: number;
+  contract: ResolvedStyleContract;
+}): ListItemSplitResult | null {
+  const { block, item, fragmentItemIndex, availableHeight, fragmentIndex, contract } = payload;
+  const listStyle = resolveListBlockStyle(block, contract);
+  const gap = fragmentItemIndex === 0 ? 0 : listStyle.itemGap;
+  const usableHeight = availableHeight - gap;
+  const maxLines = Math.floor(usableHeight / listStyle.lineHeight);
+  const itemText = item.textRuns.map((run) => run.text).join('');
+
+  if (maxLines <= 0 || itemText.length === 0) {
+    return null;
+  }
+
+  const splitOffset = computeTextSplitOffsetForLineCount(
+    itemText,
+    getListItemTextWidthPx(item, block, contract),
+    getMaxFontSize(item.textRuns, listStyle.fontSize),
+    maxLines,
+  );
+
+  if (splitOffset <= 0 || splitOffset >= itemText.length) {
+    return null;
+  }
+
+  const { currentPageRuns, remainingRuns } = splitTextRunsByPlainTextLength(
+    item.textRuns,
+    splitOffset,
+  );
+
+  if (currentPageRuns.length === 0 || remainingRuns.length === 0) {
+    return null;
+  }
+
+  const currentItem = createListItemTextSlice(
+    item,
+    currentPageRuns,
+    `split-${fragmentIndex}-current`,
+  );
+  const remainingItem = createListItemTextSlice(
+    item,
+    remainingRuns,
+    `split-${fragmentIndex}-rest`,
+  );
+  const currentHeight = estimateListItemHeight(currentItem, fragmentItemIndex, block, contract);
+
+  if (currentHeight > availableHeight) {
+    return null;
+  }
+
+  return {
+    currentItem,
+    remainingItem,
+    currentHeight,
+  };
+}
+
 function buildListFragment(payload: {
   block: ListLayoutBlock;
   startItemIndex: number;
@@ -412,8 +529,29 @@ function buildListFragment(payload: {
     const canFit = candidateHeight <= availableHeight;
     const mustForceFirstItem = isCurrentPageEmpty && fragmentItems.length === 0;
 
-    if (!canFit && !mustForceFirstItem) {
-      break;
+    if (!canFit) {
+      const splitResult = splitListItemToFit({
+        block,
+        item: block.metadata.items[nextItemIndex],
+        fragmentItemIndex: fragmentItems.length,
+        availableHeight: availableHeight - fragmentHeight,
+        fragmentIndex,
+        contract,
+      });
+
+      if (splitResult && fragmentHeight + splitResult.currentHeight <= availableHeight) {
+        fragmentItems.push(splitResult.currentItem);
+        return {
+          block: createListFragmentBlock(block, fragmentItems, startItemIndex, fragmentIndex),
+          height: fragmentHeight + splitResult.currentHeight,
+          nextItemIndex,
+          remainingItem: splitResult.remainingItem,
+        };
+      }
+
+      if (!mustForceFirstItem) {
+        break;
+      }
     }
 
     fragmentItems.push(block.metadata.items[nextItemIndex]);
@@ -893,12 +1031,18 @@ function getCachedBlockHeight(
   block: LayoutBlock,
   contract: ResolvedStyleContract,
 ): number {
-  if (blockHeightCache.has(block)) {
-    return blockHeightCache.get(block)!;
+  const cacheKey = buildBlockHeightCacheKey(contract);
+  const contractCache = blockHeightCache.get(block);
+  if (contractCache?.has(cacheKey)) {
+    return contractCache.get(cacheKey)!;
   }
 
   const height = estimateBlockHeight(block, contract);
-  blockHeightCache.set(block, height);
+  if (contractCache) {
+    contractCache.set(cacheKey, height);
+  } else {
+    blockHeightCache.set(block, new Map([[cacheKey, height]]));
+  }
   return height;
 }
 
@@ -1224,7 +1368,8 @@ function hasRemainingContent(blocks: LayoutBlock[], startIndex: number): boolean
  *
  * 特点：
  * - 文本块按行分割，在最优分割点截断
- * - 表格按行分割
+ * - 表格优先按行分割，普通长行可继续按单元格文本拆分
+ * - 列表优先按项分割，超长列表项可继续按文本片段拆分
  * - 图片超过可用高度直接翻页
  * - 不处理孤儿行和寡妇行
  * - 使用块高度缓存提升性能
@@ -1286,95 +1431,86 @@ export function paginateMaxFillBlocks(
     // 计算当前块高度
     const blockHeight = getCachedBlockHeight(block, contract);
 
-    // 处理表格块（按行分割）
+    // 处理表格块：整表放不下当前页时，优先把能容纳的表格行留在当前页。
     if (isTableBlock(block) && block.metadata.rows.length > 0) {
-      if (blockHeight > pageCapacity) {
-        // 表格整体超过一页，需要按行分割
-        let tableBlock = block;
-        let rowHeights = tableBlock.metadata.rows.map((row, rowIndex) =>
-          estimateTableRowHeight(tableBlock, row, rowIndex, contract),
-        );
-        let startRowIndex = 0;
-        let fragmentIndex = 1;
+      if (blockHeight <= pageCapacity - currentHeight) {
+        // 表格可以完整放入当前页时，不生成运行时片段，保留原始块结构。
+        placedBlocks.push({ block, height: blockHeight });
+        currentHeight += blockHeight;
+        shouldPushCurrentPage = true;
+        continue;
+      }
 
-        while (startRowIndex < tableBlock.metadata.rows.length) {
-          const fragment = buildTableFragment({
-            block: tableBlock,
-            startRowIndex,
-            availableHeight: pageCapacity - currentHeight,
-            fragmentIndex,
-            isCurrentPageEmpty: placedBlocks.length === 0,
-            rowHeights,
-            contract,
-          });
+      let tableBlock = block;
+      let rowHeights = tableBlock.metadata.rows.map((row, rowIndex) =>
+        estimateTableRowHeight(tableBlock, row, rowIndex, contract),
+      );
+      let startRowIndex = 0;
+      let fragmentIndex = 1;
 
-          if (!fragment) {
-            if (placedBlocks.length === 0) {
-              // 强制容纳（理论上不应该发生）
-              currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
-              const fallbackHeight = estimateTableBlockHeight(tableBlock, contract);
-              placedBlocks.push({ block: tableBlock, height: fallbackHeight });
-              currentHeight += fallbackHeight;
-              startRowIndex = tableBlock.metadata.rows.length;
-              shouldPushCurrentPage = true;
-              break;
-            }
+      while (startRowIndex < tableBlock.metadata.rows.length) {
+        const fragment = buildTableFragment({
+          block: tableBlock,
+          startRowIndex,
+          availableHeight: pageCapacity - currentHeight,
+          fragmentIndex,
+          isCurrentPageEmpty: placedBlocks.length === 0,
+          rowHeights,
+          contract,
+        });
 
-            // 开启新页面继续处理表格
-            syncPlacedBlocksToPage(currentPage, placedBlocks);
-            pages.push(currentPage);
-            currentPage = createEmptyPage(pages.length + 1, contract);
-            currentHeight = 0;
-            placedBlocks = [];
-            continue;
+        if (!fragment) {
+          if (placedBlocks.length === 0) {
+            // 极端数据兜底：空页仍无法生成片段时，强制放入并给出超高内容提示，避免分页死循环。
+            currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
+            const fallbackHeight = estimateTableBlockHeight(tableBlock, contract);
+            placedBlocks.push({ block: tableBlock, height: fallbackHeight });
+            currentHeight += fallbackHeight;
+            startRowIndex = tableBlock.metadata.rows.length;
+            shouldPushCurrentPage = true;
+            break;
           }
 
-          placedBlocks.push({ block: fragment.block, height: fragment.height });
-          currentHeight += fragment.height;
-          if (fragment.remainingRow) {
-            tableBlock = {
-              ...tableBlock,
-              metadata: {
-                ...tableBlock.metadata,
-                rows: tableBlock.metadata.rows.map((row, rowIndex) =>
-                  rowIndex === fragment.nextRowIndex ? fragment.remainingRow! : row,
-                ),
-              },
-            };
-            rowHeights = tableBlock.metadata.rows.map((row, rowIndex) =>
-              estimateTableRowHeight(tableBlock, row, rowIndex, contract),
-            );
-          }
-          startRowIndex = fragment.nextRowIndex;
-          fragmentIndex += 1;
-          shouldPushCurrentPage = true;
-
-          // 表格片段结束，开启新页面
-          if (startRowIndex < tableBlock.metadata.rows.length) {
-            syncPlacedBlocksToPage(currentPage, placedBlocks);
-            pages.push(currentPage);
-            currentPage = createEmptyPage(pages.length + 1, contract);
-            currentHeight = 0;
-            placedBlocks = [];
-          }
+          // 当前页剩余空间连表头/首行都放不下时，先结束当前页，再在新页继续拆表格。
+          syncPlacedBlocksToPage(currentPage, placedBlocks);
+          pages.push(currentPage);
+          currentPage = createEmptyPage(pages.length + 1, contract);
+          currentHeight = 0;
+          placedBlocks = [];
+          continue;
         }
-      } else if (currentHeight + blockHeight > pageCapacity) {
-        // 表格不能放入当前页
-        syncPlacedBlocksToPage(currentPage, placedBlocks);
-        pages.push(currentPage);
-        currentPage = createEmptyPage(pages.length + 1, contract);
-        currentHeight = 0;
-        placedBlocks = [];
 
-        // 放入表格（整体）
-        placedBlocks.push({ block, height: blockHeight });
-        currentHeight += blockHeight;
+        if (fragment.height > pageCapacity) {
+          currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
+        }
+
+        placedBlocks.push({ block: fragment.block, height: fragment.height });
+        currentHeight += fragment.height;
+        if (fragment.remainingRow) {
+          tableBlock = {
+            ...tableBlock,
+            metadata: {
+              ...tableBlock.metadata,
+              rows: tableBlock.metadata.rows.map((row, rowIndex) =>
+                rowIndex === fragment.nextRowIndex ? fragment.remainingRow! : row,
+              ),
+            },
+          };
+          rowHeights = tableBlock.metadata.rows.map((row, rowIndex) =>
+            estimateTableRowHeight(tableBlock, row, rowIndex, contract),
+          );
+        }
+        startRowIndex = fragment.nextRowIndex;
+        fragmentIndex += 1;
         shouldPushCurrentPage = true;
-      } else {
-        // 表格可以放入当前页
-        placedBlocks.push({ block, height: blockHeight });
-        currentHeight += blockHeight;
-        shouldPushCurrentPage = true;
+
+        if (startRowIndex < tableBlock.metadata.rows.length) {
+          syncPlacedBlocksToPage(currentPage, placedBlocks);
+          pages.push(currentPage);
+          currentPage = createEmptyPage(pages.length + 1, contract);
+          currentHeight = 0;
+          placedBlocks = [];
+        }
       }
       continue;
     }
@@ -1388,12 +1524,13 @@ export function paginateMaxFillBlocks(
         continue;
       }
 
+      let listBlock = block;
       let startItemIndex = 0;
       let fragmentIndex = 1;
 
-      while (startItemIndex < block.metadata.items.length) {
+      while (startItemIndex < listBlock.metadata.items.length) {
         const fragment = buildListFragment({
-          block,
+          block: listBlock,
           startItemIndex,
           availableHeight: pageCapacity - currentHeight,
           fragmentIndex,
@@ -1405,9 +1542,9 @@ export function paginateMaxFillBlocks(
           if (placedBlocks.length === 0) {
             // 理论上空页至少会强制容纳一个列表项；这里兜底避免异常数据卡住分页。
             currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
-            placedBlocks.push({ block, height: blockHeight });
+            placedBlocks.push({ block: listBlock, height: blockHeight });
             currentHeight += blockHeight;
-            startItemIndex = block.metadata.items.length;
+            startItemIndex = listBlock.metadata.items.length;
             shouldPushCurrentPage = true;
             break;
           }
@@ -1426,11 +1563,23 @@ export function paginateMaxFillBlocks(
 
         placedBlocks.push({ block: fragment.block, height: fragment.height });
         currentHeight += fragment.height;
+        if (fragment.remainingItem) {
+          // 超长列表项拆分后，剩余文字替换回当前项位置，让下一页继续按同一列表顺序处理。
+          listBlock = {
+            ...listBlock,
+            metadata: {
+              ...listBlock.metadata,
+              items: listBlock.metadata.items.map((item, itemIndex) =>
+                itemIndex === fragment.nextItemIndex ? fragment.remainingItem! : item,
+              ),
+            },
+          };
+        }
         startItemIndex = fragment.nextItemIndex;
         fragmentIndex += 1;
         shouldPushCurrentPage = true;
 
-        if (startItemIndex < block.metadata.items.length) {
+        if (startItemIndex < listBlock.metadata.items.length) {
           syncPlacedBlocksToPage(currentPage, placedBlocks);
           pages.push(currentPage);
           currentPage = createEmptyPage(pages.length + 1, contract);
@@ -1582,6 +1731,6 @@ import type { PaginationAlgorithmDefinition } from '../types';
 export const estimatedMaxFillPaginationAlgorithm: PaginationAlgorithmDefinition = {
   id: MAX_FILL_PAGINATION_ALGORITHM_ID,
   label: '分页测试算法1',
-  description: '页面利用最大化：文本按行分割，表格按行分割，图片超高达直接翻页。支持单栏/双栏/三栏布局，不处理孤儿行和寡妇行。',
+  description: '页面利用最大化：文本按行分割，表格优先按行分割，列表优先按项分割，普通长行和超长列表项可继续按文本片段拆分。支持单栏/双栏/三栏布局，不处理孤儿行和寡妇行。',
   paginate: (context) => paginateMaxFillBlocks(context),
 };

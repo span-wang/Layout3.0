@@ -29,6 +29,7 @@ import {
   MAX_FILL_PAGINATION_ALGORITHM_ID,
   paginateBlocks,
 } from '../src/engine/typesetting/index.ts';
+import { clearAllBlockHeightCache } from '../src/engine/typesetting/algorithms/estimatedMaxFill.ts';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -438,6 +439,90 @@ async function main(): Promise<void> {
     'M2 冒烟失败：分页测试算法1分割片段的 metadata.text 没有同步更新',
   );
 
+  const maxFillCacheText = '这是一段用于验证分页测试算法1高度缓存契约隔离的长文本。'.repeat(18);
+  const maxFillCacheBlock: LayoutBlock = {
+    id: 'm2-max-fill-cache-contract-block',
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-cache-contract-run',
+        text: maxFillCacheText,
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: maxFillCacheText,
+    },
+  };
+  const maxFillCacheNextBlock: LayoutBlock = {
+    id: 'm2-max-fill-cache-contract-next-block',
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-cache-contract-next-run',
+        text: '后续段落',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: '后续段落',
+    },
+  };
+  const wideMaxFillContract = {
+    ...resolveStyleContract(defaultStyleSettings),
+    contentWidthPx: 2000,
+    contentHeightPx: 2000,
+  };
+  const narrowMaxFillContract = {
+    ...resolveStyleContract(defaultStyleSettings),
+    contentWidthPx: 80,
+    contentHeightPx: 48,
+  };
+  clearAllBlockHeightCache();
+  paginateBlocks([maxFillCacheBlock], wideMaxFillContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  const maxFillCachePagesAfterContractChange = paginateBlocks(
+    [maxFillCacheBlock, maxFillCacheNextBlock],
+    narrowMaxFillContract,
+    {
+      algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+    },
+  );
+  const cacheContractFirstPageIds = maxFillCachePagesAfterContractChange[0]?.blocks.map((block) => block.id) ?? [];
+  assert(
+    maxFillCachePagesAfterContractChange.length > 1 &&
+      cacheContractFirstPageIds.length === 1 &&
+      !cacheContractFirstPageIds.includes(maxFillCacheNextBlock.id),
+    'M2 冒烟失败：分页测试算法1高度缓存没有按样式契约隔离，页面宽度变化后复用了旧块高',
+  );
+
   const maxFillHeadingBlock: LayoutBlock = {
     id: 'm2-max-fill-heading-before-list',
     type: 'heading',
@@ -540,6 +625,392 @@ async function main(): Promise<void> {
       preservedStyledItem.textRuns[0]?.marks.some((mark) => mark.type === 'bold') &&
       preservedTaskItem?.checked === true,
     'M2 冒烟失败：分页测试算法1列表拆分后没有保留列表项样式或任务勾选状态',
+  );
+
+  const longListItemText = '这是一个需要在列表项内部跨页拆分的长文本片段。'.repeat(26);
+  const maxFillLongListItemBlock: LayoutBlock = {
+    id: 'm2-max-fill-long-list-item',
+    type: 'list',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'list',
+      ordered: true,
+      start: 3,
+      spread: false,
+      items: [
+        {
+          id: 'm2-max-fill-long-list-item-1',
+          sourceRange: null,
+          textRuns: [
+            {
+              id: 'm2-max-fill-long-list-item-run-1',
+              text: longListItemText,
+              sourceRange: null,
+              marks: [{ type: 'underline' }],
+              charStyleRef: null,
+              styleOverrides: { backgroundColor: '#fef3c7' },
+              annotations: [],
+            },
+          ],
+          level: 2,
+          checked: true,
+        },
+        {
+          id: 'm2-max-fill-long-list-item-2',
+          sourceRange: null,
+          textRuns: [
+            {
+              id: 'm2-max-fill-long-list-item-run-2',
+              text: '后续短列表项',
+              sourceRange: null,
+              marks: [],
+              charStyleRef: null,
+              styleOverrides: {},
+              annotations: [],
+            },
+          ],
+          level: 1,
+          checked: null,
+        },
+      ],
+    },
+  };
+  const maxFillLongListItemPages = paginateBlocks([maxFillLongListItemBlock], tinyListContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  const longListItemFragments = maxFillLongListItemPages
+    .flatMap((page) => page.blocks)
+    .filter((block) => block.type === 'list' && block.metadata.kind === 'list');
+  const longListItemPieces = longListItemFragments
+    .flatMap((block) => (block.metadata.kind === 'list' ? block.metadata.items : []))
+    .filter((item) => item.id.startsWith('m2-max-fill-long-list-item-1'));
+  const longListItemTextAfterSplit = longListItemPieces
+    .flatMap((item) => item.textRuns)
+    .map((run) => run.text)
+    .join('');
+  assert(
+    longListItemFragments.length > 1 &&
+      longListItemPieces.length > 1 &&
+      longListItemTextAfterSplit === longListItemText,
+    'M2 冒烟失败：分页测试算法1没有按列表项内部文本拆分超长列表项，或拆分后内容顺序不正确',
+  );
+  assert(
+    longListItemPieces.every(
+      (item) =>
+        item.checked === true &&
+        item.level === 2 &&
+        item.textRuns.every(
+          (run) =>
+            run.styleOverrides.backgroundColor === '#fef3c7' &&
+            run.marks.some((mark) => mark.type === 'underline'),
+        ),
+    ),
+    'M2 冒烟失败：分页测试算法1列表项内部拆分后没有保留样式、层级或任务勾选状态',
+  );
+  assert(
+    longListItemFragments.every(
+      (block) => block.metadata.kind === 'list' && block.metadata.start !== null && block.metadata.start >= 3,
+    ),
+    'M2 冒烟失败：分页测试算法1列表项内部拆分后有序列表起始编号异常',
+  );
+
+  const maxFillTableIntroBlock: LayoutBlock = {
+    id: 'm2-max-fill-table-intro',
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-table-intro-run',
+        text: '表格前说明\n表格前说明',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: '表格前说明\n表格前说明',
+    },
+  };
+  const maxFillMediumTableBlock: LayoutBlock = {
+    id: 'm2-max-fill-medium-table',
+    type: 'table',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'table',
+      align: [null, null],
+      columnWidthsPx: [260, 260],
+      rows: [
+        {
+          id: 'm2-max-fill-medium-table-header',
+          sourceRange: null,
+          heightPx: null,
+          cells: [
+            {
+              id: 'm2-max-fill-medium-table-header-cell-1',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'm2-max-fill-medium-table-header-cell-1-run',
+                  text: '列 A',
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: true,
+            },
+            {
+              id: 'm2-max-fill-medium-table-header-cell-2',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'm2-max-fill-medium-table-header-cell-2-run',
+                  text: '列 B',
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: true,
+            },
+          ],
+        },
+        ...Array.from({ length: 3 }, (_, rowIndex) => ({
+          id: `m2-max-fill-medium-table-row-${rowIndex + 1}`,
+          sourceRange: null,
+          heightPx: null,
+          cells: [
+            {
+              id: `m2-max-fill-medium-table-row-${rowIndex + 1}-cell-1`,
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: `m2-max-fill-medium-table-row-${rowIndex + 1}-cell-1-run`,
+                  text: `第 ${rowIndex + 1} 行 A`,
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: false,
+            },
+            {
+              id: `m2-max-fill-medium-table-row-${rowIndex + 1}-cell-2`,
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: `m2-max-fill-medium-table-row-${rowIndex + 1}-cell-2-run`,
+                  text: `第 ${rowIndex + 1} 行 B`,
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: false,
+            },
+          ],
+        })),
+      ],
+    },
+  };
+  const tinyTableContract = {
+    ...resolveStyleContract(defaultStyleSettings),
+    contentHeightPx: 150,
+    contentWidthPx: 520,
+  };
+  const maxFillMediumTablePages = paginateBlocks(
+    [maxFillTableIntroBlock, maxFillMediumTableBlock],
+    tinyTableContract,
+    {
+      algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+    },
+  );
+  const firstPageMediumTable = maxFillMediumTablePages[0]?.blocks.find(
+    (block) => block.type === 'table' && block.metadata.kind === 'table',
+  );
+  const mediumTableFragments = maxFillMediumTablePages
+    .flatMap((page) => page.blocks)
+    .filter((block) => block.type === 'table' && block.metadata.kind === 'table');
+  const mediumTableRealRowIds = mediumTableFragments.flatMap((block) =>
+    block.metadata.kind === 'table'
+      ? block.metadata.rows
+          .map((row) => row.id)
+          .filter((rowId) => !rowId.includes('repeat-header'))
+          .map((rowId) => rowId.replace(/-fragment-\d+$/, ''))
+      : [],
+  );
+  assert(
+    firstPageMediumTable &&
+      firstPageMediumTable.metadata.kind === 'table' &&
+      firstPageMediumTable.metadata.rows.length > 1,
+    'M2 冒烟失败：分页测试算法1没有把页尾中等表格的可容纳行留在当前页',
+  );
+  assert(
+    mediumTableFragments.length > 1 &&
+      mediumTableRealRowIds.join('|') ===
+        maxFillMediumTableBlock.metadata.rows.map((row) => row.id).join('|'),
+    'M2 冒烟失败：分页测试算法1中等表格按行拆分后行顺序不正确',
+  );
+
+  const longTableCellText =
+    '这是一个需要跨页拆分的长表格单元格内容。'.repeat(24);
+  const maxFillLongRowTableBlock: LayoutBlock = {
+    id: 'm2-max-fill-long-row-table',
+    type: 'table',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'table',
+      align: [null, null],
+      columnWidthsPx: [260, 260],
+      rows: [
+        {
+          id: 'm2-max-fill-long-row-header',
+          sourceRange: null,
+          heightPx: null,
+          cells: [
+            {
+              id: 'm2-max-fill-long-row-header-cell-1',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'm2-max-fill-long-row-header-cell-1-run',
+                  text: '说明',
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: true,
+            },
+            {
+              id: 'm2-max-fill-long-row-header-cell-2',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'm2-max-fill-long-row-header-cell-2-run',
+                  text: '备注',
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: true,
+            },
+          ],
+        },
+        {
+          id: 'm2-max-fill-long-row',
+          sourceRange: null,
+          heightPx: null,
+          cells: [
+            {
+              id: 'm2-max-fill-long-row-cell-1',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'm2-max-fill-long-row-cell-1-run',
+                  text: longTableCellText,
+                  sourceRange: null,
+                  marks: [{ type: 'bold' }],
+                  charStyleRef: null,
+                  styleOverrides: { color: '#16a34a' },
+                  annotations: [],
+                },
+              ],
+              isHeader: false,
+            },
+            {
+              id: 'm2-max-fill-long-row-cell-2',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'm2-max-fill-long-row-cell-2-run',
+                  text: '短备注',
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: false,
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const maxFillLongRowPages = paginateBlocks([maxFillLongRowTableBlock], tinyTableContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  const longRowFragments = maxFillLongRowPages
+    .flatMap((page) => page.blocks)
+    .filter((block) => block.type === 'table' && block.metadata.kind === 'table');
+  const longRowCellRuns = longRowFragments.flatMap((block) =>
+    block.metadata.kind === 'table'
+      ? block.metadata.rows
+          .filter((row) => row.id.includes('m2-max-fill-long-row-split'))
+          .flatMap((row) => row.cells[0]?.textRuns ?? [])
+      : [],
+  );
+  const longRowCellTextAfterSplit = longRowCellRuns.map((run) => run.text).join('');
+  assert(
+    longRowFragments.length > 1 && longRowCellTextAfterSplit === longTableCellText,
+    'M2 冒烟失败：分页测试算法1长表格行按单元格拆分后内容顺序不正确',
+  );
+  assert(
+    longRowCellRuns.every(
+      (run) =>
+        run.styleOverrides.color === '#16a34a' &&
+        run.marks.some((mark) => mark.type === 'bold'),
+    ),
+    'M2 冒烟失败：分页测试算法1长表格行拆分后没有保留单元格 TextRun 样式',
   );
 
   const wrappedImageHtml = buildExportHtml({

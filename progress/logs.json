@@ -4265,6 +4265,138 @@
         "progress/logs.json"
       ],
       "next": "继续在 `PH2-09` 后续小步中推进合并单元格跨页、真实测量分页、表格行内复杂内容拆分和更接近 Word 的表格分页细节。"
+    },
+    {
+      "id": "LOG-172",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1表格分页审核缺陷修复边界",
+      "action": "功能审核/边界确认/准备修复",
+      "result": "已按功能审核结果将 `PH2-09` 当前小步切换为“分页测试算法1表格分页审核缺陷修复”：本轮重点修复表格整体能放入空白页但放不进当前页剩余空间时仍整表跳页的问题，补齐表格分页冒烟验证，并同步处理算法说明过期和续页空单元格占位问题。本步明确不纳入合并单元格跨页拆分、真实 DOM 测量、表格行内图片拆分或默认分页算法替换。",
+      "verification": [
+        "人工完成表格分页功能审核并确认缺陷清单。",
+        "`PH2-09` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修复 `max-fill-v1` 表格分页逻辑，补充 `smoke:m2` 表格分页回归验证，并执行 typecheck、smoke:m2、build、progress:build、progress:check。"
+    },
+    {
+      "id": "LOG-173",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1表格分页审核缺陷修复",
+      "action": "修复/优化/验证/文档同步",
+      "result": "已完成分页测试算法1表格分页审核缺陷修复：`max-fill-v1` 现在只要表格放不进当前页剩余空间，就会进入统一的表格片段构建逻辑，优先把当前页能容纳的表头和普通行留下，剩余行续到下一页；普通长行仍可继续按单元格 TextRun 文本拆分。已修正算法注释和右侧算法说明，避免继续描述为“不做单元格内文本行分割”；画布预览对运行时续页表格片段不再给空文本单元格显示“空单元格”占位。`smoke:m2` 已补充中等表格页尾按行拆分和长表格行单元格文本拆分回归验证。",
+      "verification": [
+        "临时复现 `段落 + 中等表格` 页尾场景：修复后第一页包含段落、表头和前两行表格，第二页重复表头并续剩余行。",
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续如继续深化表格分页，可再拆分合并单元格跨页、真实测量分页和更接近 Word 的表格分页细节。"
+    },
+    {
+      "id": "LOG-174",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1高度缓存契约隔离修复边界",
+      "action": "功能审核/边界确认/准备修复",
+      "result": "已按审核结果和用户确认将 `PH2-09` 当前小步切换为“分页测试算法1高度缓存契约隔离”：本轮重点修复 `max-fill-v1` 块高度缓存只按块对象缓存、没有区分样式契约的问题，避免同一块对象在页面尺寸、正文宽度、模板、字号、行高或表格样式变化后复用旧高度，导致分页刷新不准确。本步明确不纳入真实 DOM 测量、合并单元格跨页、孤儿行寡妇行或默认分页算法替换。",
+      "verification": [
+        "人工完成分页测试算法1缓存逻辑审核并确认缺陷清单。",
+        "`PH2-09` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "开始修复 `max-fill-v1` 块高度缓存逻辑，补充 `smoke:m2` 缓存契约回归验证，并执行 typecheck、smoke:m2、build、progress:build、progress:check。"
+    },
+    {
+      "id": "LOG-175",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1高度缓存契约隔离修复",
+      "action": "修复/优化/验证/文档同步",
+      "result": "已完成分页测试算法1高度缓存契约隔离修复：`max-fill-v1` 的块高度缓存已从 `WeakMap<块, 高度>` 调整为 `WeakMap<块, Map<样式契约签名, 高度>>`，缓存签名覆盖页面正文宽高、页面尺寸、模板以及段落、标题、列表、代码、表格、图片等关键样式参数。这样同一块对象在切换页面尺寸、模板、字号、行高或表格样式后会重新计算块高，不再复用旧分页高度。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。",
+        "`smoke:m2` 已新增缓存契约回归：同一块对象先按宽页面分页，再切窄页面分页，第一页不会错误包含后续段落。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续继续在 `PH2-09` 拆分真实测量分页、孤儿行寡妇行和合并单元格跨页等深化工作。"
+    },
+    {
+      "id": "LOG-176",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1列表项内部长文本跨页 V1 边界",
+      "action": "边界确认/准备实现",
+      "result": "已按用户确认将 `PH2-09` 当前小步切换为“分页测试算法1列表项内部长文本跨页 V1”：本轮重点修复单个列表项文本很长时仍按整项翻页的问题，让当前页可容纳的列表项文本片段先留在当前页，剩余文本续到下一页同一列表项，并保留 TextRun 样式、任务勾选状态、层级字段和有序列表续编号。本步明确不纳入多级列表视觉精修、孤儿行寡妇行、真实 DOM 测量、默认分页算法替换或 `.layout` 结构变更。",
+      "verification": [
+        "用户已确认本步开发方案。",
+        "`PH2-09` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后实现 `max-fill-v1` 列表项内部长文本拆分并补充 `smoke:m2` 回归验证。"
+    },
+    {
+      "id": "LOG-177",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1列表项内部长文本跨页 V1",
+      "action": "修复/优化/验证/文档同步",
+      "result": "已完成 `max-fill-v1` 的列表项内部长文本跨页：列表块放不进当前页时仍优先按列表项拆分；若单个列表项过长且当前页还有可用高度，会按 `TextRun` 字符区间切出当前页可容纳的列表项片段，剩余文本替换回同一列表项位置并续到下一页继续分页。拆分片段会保留 TextRun 样式、任务勾选状态和层级字段；有序列表片段继续按当前列表项位置计算起始编号。分页算法说明已同步更新，`smoke:m2` 已补充超长列表项回归验证。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续继续在 `PH2-09` 拆分孤儿行寡妇行控制、真实测量分页、脏区重排和多级列表更精细跨页。"
     }
   ]
 }
