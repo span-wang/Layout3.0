@@ -1,9 +1,10 @@
 import type { PaginationAlgorithmId } from '@/engine/style/types';
-import { DEFAULT_PAGINATION_ALGORITHM_ID } from './algorithmIds';
+import { DEFAULT_PAGINATION_ALGORITHM_ID, MAX_FILL_PAGINATION_ALGORITHM_ID } from './algorithmIds';
 import { estimatedCostPaginationAlgorithm } from './algorithms/estimatedCost';
 import { estimatedGreedyBalancedPaginationAlgorithm } from './algorithms/estimatedGreedyBalanced';
 import { estimatedGreedyBalancedV2PaginationAlgorithm } from './algorithms/estimatedGreedyBalancedV2';
 import { estimatedGreedyPaginationAlgorithm } from './algorithms/estimatedGreedy';
+import { estimatedMaxFillPaginationAlgorithm, paginateMaxFillBlocks } from './algorithms/estimatedMaxFill';
 import type { PaginationAlgorithmDefinition } from './types';
 
 const paginationAlgorithms = new Map<PaginationAlgorithmId, PaginationAlgorithmDefinition>();
@@ -14,6 +15,7 @@ function seedBuiltinPaginationAlgorithms(): void {
     estimatedGreedyBalancedPaginationAlgorithm,
     estimatedGreedyBalancedV2PaginationAlgorithm,
     estimatedCostPaginationAlgorithm,
+    estimatedMaxFillPaginationAlgorithm,
   ].forEach((algorithm) => {
     paginationAlgorithms.set(algorithm.id, algorithm);
   });
@@ -31,6 +33,9 @@ export function registerPaginationAlgorithm(
 
   paginationAlgorithms.set(algorithm.id, algorithm);
 }
+
+// 导出分页测试算法1的分页函数供外部使用
+export { paginateMaxFillBlocks };
 
 export function listPaginationAlgorithms(): PaginationAlgorithmDefinition[] {
   return Array.from(paginationAlgorithms.values());

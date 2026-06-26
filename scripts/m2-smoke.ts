@@ -26,6 +26,7 @@ import { resolveStyleContract } from '../src/engine/style/resolveContract.ts';
 import { buildExportHtml } from '../src/services/exportHtml.ts';
 import {
   ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
+  MAX_FILL_PAGINATION_ALGORITHM_ID,
   paginateBlocks,
 } from '../src/engine/typesetting/index.ts';
 
@@ -351,6 +352,195 @@ async function main(): Promise<void> {
   for (const fragment of expectedHtmlFragments) {
     assert(html.includes(fragment), `M2 冒烟失败：导出 HTML 缺少关键片段 ${fragment}`);
   }
+
+  const maxFillTextBlock: LayoutBlock = {
+    id: 'm2-max-fill-rich-paragraph',
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-run-1',
+        text: '第一页红色文字\n',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: { color: '#dc2626' },
+        annotations: [],
+      },
+      {
+        id: 'm2-max-fill-run-2',
+        text: '第二页高亮文字\n',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: { highlightColor: '#fef3c7' },
+        annotations: [],
+      },
+      {
+        id: 'm2-max-fill-run-3',
+        text: '第三页加粗文字\n',
+        sourceRange: null,
+        marks: [{ type: 'bold' }],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+      {
+        id: 'm2-max-fill-run-4',
+        text: '第四页普通文字',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: '第一页红色文字\n第二页高亮文字\n第三页加粗文字\n第四页普通文字',
+    },
+  };
+  const tinyMaxFillContract = {
+    ...resolveStyleContract(defaultStyleSettings),
+    contentHeightPx: 24,
+  };
+  const maxFillPages = paginateBlocks([maxFillTextBlock], tinyMaxFillContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  const maxFillTexts = maxFillPages.flatMap((page) =>
+    page.blocks.map((block) => block.textRuns.map((run) => run.text).join('')),
+  );
+  assert(
+    maxFillTexts.join('') === maxFillTextBlock.metadata.text,
+    'M2 冒烟失败：分页测试算法1文本分割后内容顺序不正确',
+  );
+  assert(
+    maxFillPages.length === 4 && maxFillTexts[1] === '第二页高亮文字\n',
+    `M2 冒烟失败：分页测试算法1剩余文本没有紧跟原块继续分页，实际页数 ${maxFillPages.length}`,
+  );
+  assert(
+    maxFillPages[0]?.blocks[0]?.textRuns[0]?.styleOverrides.color === '#dc2626' &&
+      maxFillPages[1]?.blocks[0]?.textRuns[0]?.styleOverrides.highlightColor === '#fef3c7' &&
+      maxFillPages[2]?.blocks[0]?.textRuns[0]?.marks.some((mark) => mark.type === 'bold'),
+    'M2 冒烟失败：分页测试算法1文本分割后没有保留 TextRun 样式',
+  );
+  assert(
+    maxFillPages.every((page) =>
+      page.blocks.every((block) => block.textRuns.map((run) => run.text).join('') === block.metadata.text),
+    ),
+    'M2 冒烟失败：分页测试算法1分割片段的 metadata.text 没有同步更新',
+  );
+
+  const maxFillHeadingBlock: LayoutBlock = {
+    id: 'm2-max-fill-heading-before-list',
+    type: 'heading',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {},
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-heading-run',
+        text: '二、衔接句型',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'heading',
+      depth: 2,
+      text: '二、衔接句型',
+    },
+  };
+  const maxFillListBlock: LayoutBlock = {
+    id: 'm2-max-fill-long-list',
+    type: 'list',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {},
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'list',
+      ordered: true,
+      start: 1,
+      spread: false,
+      items: Array.from({ length: 10 }, (_, itemIndex) => ({
+        id: `m2-max-fill-list-item-${itemIndex + 1}`,
+        sourceRange: null,
+        textRuns: [
+          {
+            id: `m2-max-fill-list-run-${itemIndex + 1}`,
+            text: `${itemIndex + 1}. A case in point is ... 示例内容`,
+            sourceRange: null,
+            marks: itemIndex === 1 ? [{ type: 'bold' as const }] : [],
+            charStyleRef: null,
+            styleOverrides: itemIndex === 1 ? { color: '#2563eb' } : {},
+            annotations: [],
+          },
+        ],
+        level: itemIndex === 2 ? 2 : 1,
+        checked: itemIndex === 3 ? true : null,
+      })),
+    },
+  };
+  const tinyListContract = {
+    ...resolveStyleContract(defaultStyleSettings),
+    contentHeightPx: 120,
+  };
+  const maxFillListPages = paginateBlocks([maxFillHeadingBlock, maxFillListBlock], tinyListContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  const maxFillListFragments = maxFillListPages
+    .flatMap((page) => page.blocks)
+    .filter((block) => block.type === 'list' && block.metadata.kind === 'list');
+  const firstPageListFragment = maxFillListPages[0]?.blocks.find(
+    (block) => block.type === 'list' && block.metadata.kind === 'list',
+  );
+  const splitListItemIds = maxFillListFragments.flatMap((block) =>
+    block.metadata.kind === 'list' ? block.metadata.items.map((item) => item.id) : [],
+  );
+  assert(
+    firstPageListFragment &&
+      firstPageListFragment.metadata.kind === 'list' &&
+      firstPageListFragment.metadata.items.length > 0,
+    'M2 冒烟失败：分页测试算法1没有把长列表的首个片段放到标题同页，仍可能产生大空白',
+  );
+  assert(
+    maxFillListFragments.length > 1 &&
+      splitListItemIds.join('|') === maxFillListBlock.metadata.items.map((item) => item.id).join('|'),
+    'M2 冒烟失败：分页测试算法1列表按项拆分后顺序不正确',
+  );
+  let expectedListStart = maxFillListBlock.metadata.start ?? 1;
+  for (const fragment of maxFillListFragments) {
+    assert(
+      fragment.metadata.kind === 'list' && fragment.metadata.start === expectedListStart,
+      'M2 冒烟失败：分页测试算法1有序列表跨页后起始编号不正确',
+    );
+    expectedListStart += fragment.metadata.items.length;
+  }
+  const preservedStyledItem = maxFillListFragments
+    .flatMap((block) => (block.metadata.kind === 'list' ? block.metadata.items : []))
+    .find((item) => item.id === 'm2-max-fill-list-item-2');
+  const preservedTaskItem = maxFillListFragments
+    .flatMap((block) => (block.metadata.kind === 'list' ? block.metadata.items : []))
+    .find((item) => item.id === 'm2-max-fill-list-item-4');
+  assert(
+    preservedStyledItem?.textRuns[0]?.styleOverrides.color === '#2563eb' &&
+      preservedStyledItem.textRuns[0]?.marks.some((mark) => mark.type === 'bold') &&
+      preservedTaskItem?.checked === true,
+    'M2 冒烟失败：分页测试算法1列表拆分后没有保留列表项样式或任务勾选状态',
+  );
 
   const wrappedImageHtml = buildExportHtml({
     pages: paginateBlocks([imageWithOffset, styledParagraph], resolveStyleContract(defaultStyleSettings)),

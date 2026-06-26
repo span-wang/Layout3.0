@@ -4173,6 +4173,98 @@
         "progress/logs.json"
       ],
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后返工 CanvasPane 画布预览、分页估算、HTML/PDF 导出和 M2 冒烟验证。"
+    },
+    {
+      "id": "LOG-168",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "优化分页测试算法1文本分割逻辑",
+      "action": "新增/优化/验证",
+      "result": "修复了分页测试算法1的白屏问题：统一了 `computeOptimalTextSplit` 与 `estimateTextLines` 的行数计算逻辑，两者现在都使用 `estimateTextLines` 来计算每行行数，确保字符宽度因子处理一致；简化了分割后剩余块的插入逻辑，让函数返回当前页文本和剩余文本两部分，避免重复计算和逻辑混乱；本步已通过 typecheck、build 和 smoke:m2 冒烟验证。",
+      "verification": [
+        "`npm run build` 成功",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "继续测试分页效果，如果仍有分割不准确问题，继续优化 `computeOptimalTextSplit` 的边界处理逻辑。"
+    },
+    {
+      "id": "LOG-169",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "优化分页测试算法1文本分割顺序与格式保留",
+      "action": "修复/优化/验证/文档同步",
+      "result": "已完成分页测试算法1的文本分割稳定性优化：剩余文本块现在会立即插回当前块之后继续分页，避免长段落剩余内容跑到文档末尾或在换页后被整块塞入下一页；分割片段按原始 TextRun 字符区间切片，保留文字颜色、高亮、加粗等格式，并同步片段 `metadata.text`，避免标题/段落展示继续读取旧完整文本；同时清理了 `max-fill` 调试输出，减少分页时的控制台刷屏。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "继续在 `PH2-09` 后续小步中推进孤儿行/寡妇行控制、真实测量分页、表格复杂跨页和更精细的分页质量优化。"
+    },
+    {
+      "id": "LOG-170",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "修复分页测试算法1列表整块翻页导致的大空白",
+      "action": "修复/优化/验证/文档同步",
+      "result": "已定位并修复截图中的大空白原因：分页测试算法1原本只拆文本块和表格块，列表块仍按整块处理，导致标题可以放入当前页而后续长有序列表被整体推到下一页。现在 `max-fill-v1` 会按列表项拆分列表块，当前页能容纳几项就先放几项，剩余项紧跟下一页继续分页；有序列表跨页后会按原始 `start` 续编号，并保留列表项 TextRun 样式、任务勾选状态和层级字段。",
+      "verification": [
+        "人工复现 `标题 + 10 条有序列表` 场景：修复前第一页只有标题，修复后第一页包含标题和首个列表片段。",
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "继续在 `PH2-09` 后续小步中推进列表项内部长文本跨页、多级列表更精细跨页、孤儿行/寡妇行控制和真实测量分页。"
+    },
+    {
+      "id": "LOG-171",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "修复分页测试算法1表格行整行翻页导致的大空白",
+      "action": "修复/优化/验证/文档同步",
+      "result": "已定位并修复截图中的表格分页问题：分页测试算法1原本只按整行拆表格，当下一行高度超过当前页剩余空间时会把整行推到下一页，造成当前页大面积空白。现在 `max-fill-v1` 会在普通表格行放不下但当前页仍有可用高度时，按单元格 TextRun 字符区间切出当前页可容纳的文字片段，剩余文字续到下一页同一行；表头重复继续保留，单元格 TextRun 样式也会随片段保留。",
+      "verification": [
+        "人工复现 `长表格行` 场景：修复前第一页只到上一行，修复后第一页包含长行的拆分片段，下一页继续剩余单元格文字。",
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "继续在 `PH2-09` 后续小步中推进合并单元格跨页、真实测量分页、表格行内复杂内容拆分和更接近 Word 的表格分页细节。"
     }
   ]
 }
