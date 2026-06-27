@@ -2,7 +2,7 @@
  * AI Slice - 管理 AI 面板状态
  */
 
-import type { AiConfig, AiPanelTab, AiCheckResult } from '@/types/ai';
+import type { AiConfig, AiPanelTab, AiCheckResult, AiGenerationRecord } from '@/types/ai';
 
 export interface AiSlice {
   // 配置状态
@@ -17,6 +17,9 @@ export interface AiSlice {
   isGenerating: boolean;
   generatedContent: string;
   generateError: string | null;
+  aiGenerationRecords: AiGenerationRecord[];
+  aiGenerationRecordFilePath: string | null;
+  aiGenerationRecordsError: string | null;
 
   // 优化状态
   isOptimizing: boolean;
@@ -43,6 +46,11 @@ export interface AiSlice {
   setGenerateError: (error: string | null) => void;
   finishGenerating: () => void;
   clearGeneratedContent: () => void;
+  setAiGenerationRecordFile: (payload: {
+    recordFilePath: string;
+    records: AiGenerationRecord[];
+  }) => void;
+  setAiGenerationRecordsError: (error: string | null) => void;
 
   // 优化 actions
   startOptimizing: () => void;
@@ -116,6 +124,9 @@ export const createAiSlice = (
     isGenerating: false,
     generatedContent: '',
     generateError: null,
+    aiGenerationRecords: [],
+    aiGenerationRecordFilePath: null,
+    aiGenerationRecordsError: null,
 
     // 优化状态
     isOptimizing: false,
@@ -160,6 +171,16 @@ export const createAiSlice = (
     finishGenerating: () => set({ isGenerating: false }),
 
     clearGeneratedContent: () => set({ generatedContent: '', generateError: null }),
+
+    setAiGenerationRecordFile: (payload) =>
+      set({
+        aiGenerationRecordFilePath: payload.recordFilePath,
+        aiGenerationRecords: payload.records,
+        aiGenerationRecordsError: null,
+      }),
+
+    setAiGenerationRecordsError: (error: string | null) =>
+      set({ aiGenerationRecordsError: error }),
 
     // 优化 actions
     startOptimizing: () =>

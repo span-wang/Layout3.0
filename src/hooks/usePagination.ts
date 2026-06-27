@@ -1,5 +1,9 @@
 import { useEffect } from 'react';
-import { MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID, paginateBlocks } from '@/engine/typesetting';
+import {
+  MAX_FILL_PAGINATION_ALGORITHM_ID,
+  MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID,
+  paginateBlocks,
+} from '@/engine/typesetting';
 import type { ResolvedStyleContract } from '@/engine/style/types';
 import { useAppStore } from '@/store';
 
@@ -22,7 +26,8 @@ export function usePagination(
     }
 
     const shouldUseMeasuredHeights =
-      paginationAlgorithmId === MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID;
+      paginationAlgorithmId === MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID ||
+      paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID;
     const nextPages = paginateBlocks(layoutBlocks, resolvedStyleContract, {
       algorithmId: paginationAlgorithmId,
       styles: layoutStyles ?? undefined,

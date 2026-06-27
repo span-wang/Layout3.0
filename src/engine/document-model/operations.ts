@@ -105,6 +105,7 @@ export interface InsertTocBlockResult {
 
 export interface InsertParagraphBlockPayload {
   insertAfterNodeId?: string | null;
+  text?: string;
 }
 
 export interface InsertParagraphBlockResult {
@@ -496,8 +497,9 @@ function createInsertedTocBlock(blocks: LayoutBlock[]): LayoutBlock {
   };
 }
 
-function createInsertedParagraphBlock(blocks: LayoutBlock[]): LayoutBlock {
-  const blockId = createInsertedBlockId(blocks, 'paragraph', '空文本块');
+function createInsertedParagraphBlock(blocks: LayoutBlock[], text = ''): LayoutBlock {
+  const normalizedText = text.replace(/\r\n?/g, '\n');
+  const blockId = createInsertedBlockId(blocks, 'paragraph', normalizedText || '空文本块');
 
   return {
     id: blockId,
@@ -505,12 +507,12 @@ function createInsertedParagraphBlock(blocks: LayoutBlock[]): LayoutBlock {
     sourceRange: null,
     blockStyleRef: 'paragraph',
     blockStyleOverrides: {},
-    // 空文本块先不制造假文字，后续由用户直接在画布原位编辑中输入真实内容。
-    textRuns: [],
+    // 空文本块先不制造假文字；AI 插入等有初始内容的场景则生成完整 TextRun。
+    textRuns: createReplacementTextRuns(blockId, normalizedText, []),
     pagination: {},
     metadata: {
       kind: 'paragraph',
-      text: '',
+      text: normalizedText,
     },
   };
 }
@@ -940,7 +942,7 @@ export function insertParagraphBlockAfterNode(
   blocks: LayoutBlock[],
   payload: InsertParagraphBlockPayload,
 ): InsertParagraphBlockResult {
-  const paragraphBlock = createInsertedParagraphBlock(blocks);
+  const paragraphBlock = createInsertedParagraphBlock(blocks, payload.text);
   const insertAfterIndex = getBlockIndexForNodeId(blocks, payload.insertAfterNodeId);
   const insertIndex = insertAfterIndex >= 0 ? insertAfterIndex + 1 : blocks.length;
   const nextBlocks = [

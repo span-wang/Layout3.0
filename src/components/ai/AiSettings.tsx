@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 import { useAppStore } from '@/store';
 import type { AiConfig, AiProvider } from '@/types/ai';
 import { PROVIDER_LABELS, PROVIDER_DEFAULT_MODELS } from '@/types/ai';
+import { aiService } from '@/services/AiService';
+import type { ModelInfo } from '@/services/AiService';
 
 export function AiSettings(): JSX.Element {
   const aiConfig = useAppStore((state) => state.aiConfig);
@@ -20,17 +22,22 @@ export function AiSettings(): JSX.Element {
   const [temperature, setTemperature] = useState(aiConfig?.temperature ?? 0.7);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  // 模型列表相关状态
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
+
   // 当 provider 变化时，更新默认 baseUrl 和 model
   useEffect(() => {
     if (provider === 'openai') {
       if (!baseUrl || baseUrl === 'https://api.anthropic.com' || baseUrl === 'https://自定义') {
-        setBaseUrl('https://api.openai.com');
+        setBaseUrl('https://api.openai.com/v1');
       }
       if (!model || model.startsWith('claude')) {
         setModel(PROVIDER_DEFAULT_MODELS.openai);
       }
     } else if (provider === 'anthropic') {
-      if (!baseUrl || baseUrl === 'https://api.openai.com' || baseUrl === 'https://自定义') {
+      if (!baseUrl || baseUrl === 'https://api.openai.com/v1' || baseUrl === 'https://自定义') {
         setBaseUrl('https://api.anthropic.com');
       }
       if (!model || model.startsWith('gpt')) {
@@ -38,6 +45,41 @@ export function AiSettings(): JSX.Element {
       }
     }
   }, [provider]);
+
+  // 拉取模型列表
+  const handleFetchModels = async () => {
+    if (!apiKey.trim()) {
+      setModelsError('请先填写 API Key');
+      return;
+    }
+
+    setIsLoadingModels(true);
+    setModelsError(null);
+
+    try {
+      // 临时配置 AI 服务（使用当前表单的值）
+      const tempConfig: AiConfig = {
+        provider,
+        apiKey: apiKey.trim(),
+        baseUrl: baseUrl.trim() || getDefaultBaseUrl(provider),
+        model: model.trim() || 'gpt-4o',
+        temperature,
+      };
+
+      aiService.configure(tempConfig);
+      const modelList = await aiService.listModels();
+      setModels(modelList);
+
+      if (modelList.length > 0 && !modelList.find((m) => m.id === model)) {
+        setModel(modelList[0].id);
+      }
+    } catch (error) {
+      setModelsError(error instanceof Error ? error.message : '获取模型列表失败');
+      setModels([]);
+    } finally {
+      setIsLoadingModels(false);
+    }
+  };
 
   const handleSave = () => {
     if (!apiKey.trim()) {
@@ -61,7 +103,6 @@ export function AiSettings(): JSX.Element {
     setAiConfig(config);
     setSaveStatus('success');
 
-    // 3秒后清除成功状态
     setTimeout(() => {
       setSaveStatus('idle');
     }, 3000);
@@ -73,79 +114,31 @@ export function AiSettings(): JSX.Element {
     setBaseUrl('');
     setModel('');
     setTemperature(0.7);
+    setModels([]);
     setSaveStatus('idle');
   };
 
   const handleTestConnection = async () => {
-    // 简单的连接测试
     if (!apiKey.trim()) {
       alert('请先填写 API Key');
       return;
     }
 
     try {
-      // 根据 provider 构造测试请求
-      const testBaseUrl = baseUrl.trim() || getDefaultBaseUrl(provider);
-      let testEndpoint = '';
-
-      if (provider === 'openai') {
-        testEndpoint = `${testBaseUrl.replace(/\/$/, '')}/chat/completions`;
-      } else if (provider === 'anthropic') {
-        testEndpoint = `${testBaseUrl.replace(/\/$/, '')}/v1/messages`;
-      } else {
-        testEndpoint = `${testBaseUrl.replace(/\/$/, '')}/chat/completions`;
-      }
-
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+      const tempConfig: AiConfig = {
+        provider,
+        apiKey: apiKey.trim(),
+        baseUrl: baseUrl.trim() || getDefaultBaseUrl(provider),
+        model: model.trim() || PROVIDER_DEFAULT_MODELS[provider] || 'gpt-4o',
+        temperature,
       };
 
-      if (provider === 'openai' || provider === 'custom') {
-        headers['Authorization'] = `Bearer ${apiKey.trim()}`;
-      } else if (provider === 'anthropic') {
-        headers['x-api-key'] = apiKey.trim();
-        headers['anthropic-version'] = '2023-06-01';
-      }
-
-      // 发送一个最小的测试请求
-      let testBody: Record<string, unknown> = {
-        model: model.trim(),
-        messages: [{ role: 'user', content: 'hi' }],
-        max_tokens: 5,
-      };
-
-      if (provider === 'anthropic') {
-        testBody = {
-          model: model.trim(),
-          messages: [{ role: 'user', content: 'hi' }],
-          max_tokens: 5,
-        };
-      }
-
-      const response = await fetch(testEndpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(testBody),
-      });
-
-      if (response.ok) {
-        alert('连接成功！AI 服务配置正确。');
-      } else {
-        const errorText = await response.text();
-        let errorMsg = `连接失败: ${response.status} ${response.statusText}`;
-        try {
-          const errorJson = JSON.parse(errorText);
-          if (errorJson.error?.message) {
-            errorMsg += `\n${errorJson.error.message}`;
-          }
-        } catch {
-          errorMsg += `\n${errorText.slice(0, 200)}`;
-        }
-        alert(errorMsg);
-      }
+      aiService.configure(tempConfig);
+      await aiService.testConnection();
+      alert('连接成功！AI 服务配置正确。');
     } catch (error) {
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        alert('连接失败：网络错误。\n\n可能原因：\n1. CORS 跨域限制\n2. API 地址不可达\n3. 网络连接问题\n\n对于 OpenAI API，可能需要配置代理服务器。');
+      if (error instanceof TypeError && error.message.toLowerCase().includes('fetch')) {
+        alert('连接失败：主进程无法访问 AI 服务。\n\n请检查 Base URL、网络连接、API Key 和模型名称是否正确。');
       } else {
         alert(`连接失败：${error instanceof Error ? error.message : '未知错误'}`);
       }
@@ -164,7 +157,10 @@ export function AiSettings(): JSX.Element {
               id="ai-provider"
               className="ai-select"
               value={provider}
-              onChange={(e) => setProvider(e.target.value as AiProvider)}
+              onChange={(e) => {
+                setProvider(e.target.value as AiProvider);
+                setModels([]);
+              }}
             >
               {(Object.keys(PROVIDER_LABELS) as AiProvider[]).map((p) => (
                 <option key={p} value={p}>
@@ -187,7 +183,7 @@ export function AiSettings(): JSX.Element {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
             />
-            <p className="ai-hint">您的 API Key 将安全保存在本地浏览器中</p>
+            <p className="ai-hint">API Key 会保存在本机 localStorage 中，不会写入 .layout 文件</p>
           </div>
 
           <div className="ai-form-group">
@@ -200,7 +196,7 @@ export function AiSettings(): JSX.Element {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
             />
-            <p className="ai-hint">用于 API 请求的端点地址，支持自定义代理</p>
+            <p className="ai-hint">用于 API 请求的端点地址</p>
           </div>
 
           <div className="ai-form-group">
@@ -208,15 +204,47 @@ export function AiSettings(): JSX.Element {
               模型
               <span className="ai-required">*</span>
             </label>
-            <input
-              id="ai-model"
-              type="text"
-              className="ai-input"
-              placeholder={getModelPlaceholder(provider)}
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-            />
-            <p className="ai-hint">输入要使用的模型名称</p>
+            <div className="ai-model-select-row">
+              <select
+                id="ai-model"
+                className="ai-select ai-model-select"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                disabled={models.length === 0}
+              >
+                {models.length === 0 ? (
+                  <option value="">手动输入模型</option>
+                ) : (
+                  models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))
+                )}
+              </select>
+              <button
+                type="button"
+                className="ai-button ai-button-small"
+                onClick={handleFetchModels}
+                disabled={isLoadingModels || !apiKey.trim()}
+                title="从 API 获取可用模型列表"
+              >
+                {isLoadingModels ? '加载中...' : '拉取模型'}
+              </button>
+            </div>
+            {models.length === 0 ? (
+              <input
+                type="text"
+                className="ai-input ai-model-input"
+                placeholder={getModelPlaceholder(provider)}
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+              />
+            ) : null}
+            {modelsError && <p className="ai-hint ai-error-hint">{modelsError}</p>}
+            {models.length > 0 && (
+              <p className="ai-hint">已加载 {models.length} 个模型，可从下拉选择</p>
+            )}
           </div>
 
           <div className="ai-form-group">
@@ -296,7 +324,7 @@ export function AiSettings(): JSX.Element {
           <div className="ai-provider-card">
             <h5>自定义</h5>
             <p>使用支持 OpenAI 兼容 API 的第三方服务或本地模型。</p>
-            <p>可以配置代理服务器地址或本地部署的模型服务。</p>
+            <p>可以配置第三方转发服务或本地部署模型的 Base URL。</p>
           </div>
         </div>
       </div>
@@ -322,7 +350,7 @@ function getDefaultBaseUrlPlaceholder(provider: AiProvider): string {
     case 'anthropic':
       return 'https://api.anthropic.com';
     case 'custom':
-      return 'https://your-proxy-server.com/v1';
+      return 'https://your-api-server.com/v1';
   }
 }
 

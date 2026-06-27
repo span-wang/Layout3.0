@@ -14,7 +14,7 @@ export interface AiConfig {
   provider: AiProvider;
   /** API Key */
   apiKey: string;
-  /** 自定义端点（如代理服务器地址） */
+  /** API 端点（Base URL） */
   baseUrl: string;
   /** 模型名称 */
   model: string;
@@ -41,6 +41,47 @@ export interface GenerateOptions {
   subject?: string;
   /** 内容长度 */
   length?: 'short' | 'medium' | 'long';
+}
+
+/**
+ * AI 生成记录
+ * 记录正文落在工作区文件中，前端 store 只保存当前展示所需的列表。
+ */
+export interface AiGenerationRecord {
+  /** 记录 ID */
+  id: string;
+  /** 生成类型 */
+  type: GenerateType;
+  /** 生成类型中文名 */
+  typeLabel: string;
+  /** 生成主题 */
+  topic: string;
+  /** 年级（可选） */
+  grade?: string;
+  /** 科目（可选） */
+  subject?: string;
+  /** 内容长度 */
+  length?: 'short' | 'medium' | 'long';
+  /** 内容长度中文名 */
+  lengthLabel?: string;
+  /** 本次使用的 Provider，仅记录名称，不记录密钥 */
+  provider?: AiProvider;
+  /** 本次使用的模型名称 */
+  model?: string;
+  /** 完整生成内容 */
+  content: string;
+  /** 创建时间 ISO 字符串 */
+  createdAt: string;
+}
+
+/**
+ * AI 生成记录文件读取结果
+ */
+export interface AiGenerationRecordFileResult {
+  /** 记录文件完整路径 */
+  recordFilePath: string;
+  /** 生成记录列表 */
+  records: AiGenerationRecord[];
 }
 
 /**

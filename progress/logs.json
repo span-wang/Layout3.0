@@ -5143,6 +5143,394 @@
         "src/components/ai/AiGenerateTab.tsx"
       ],
       "next": "用户可通过「设置」Tab 配置并测试 AI 服务连接。如需进一步改进，可考虑：1) 添加代理配置选项；2) 支持配置第三方转发服务（如 API Proxy）。"
+    },
+    {
+      "id": "LOG-209",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-14",
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1字体字号回归修复边界",
+      "action": "方案确认/风险登记/准备修复",
+      "result": "用户已确认按 `PH2-14` 的并行修复小步处理字体字号批量应用后的分页测试算法1回归：本步纳入算法1消费隐藏 DOM 顶层块高、补齐大字号有效行高安全口径、补充 `smoke:m2` 回归验证；本步明确不纳入分页引擎重写、真实行级 DOM 分页、孤寡行和复杂表格跨页深化。",
+      "verification": [
+        "用户已确认修复方案。",
+        "`PH2-14` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-007` 已登记字体字号导致的页尾裁切分页回归风险。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "开始实现分页测试算法1字体字号回归修复，并运行 `typecheck`、`smoke:m2`、`progress:build` 与 `progress:check`。"
+    },
+    {
+      "id": "LOG-210",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "实现模型列表自动拉取功能",
+      "action": "功能增强",
+      "result": "1) 在 AiService 中新增 listModels() 方法，支持从 OpenAI API 自动获取可用模型列表，Anthropic 使用固定模型列表；2) 在 AiSettings 中新增「拉取模型」按钮，点击后自动获取模型列表并显示在下拉框中供选择；3) 新增代理 URL 配置字段（proxyUrl），用于解决 CORS 跨域问题；4) 模型选择改为下拉框与手动输入两种方式并存。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "功能已集成，可在设置页面点击「拉取模型」按钮获取可用模型列表。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/services/AiService.ts",
+        "src/components/ai/AiSettings.tsx",
+        "src/styles.css"
+      ],
+      "next": "用户可尝试配置正确的第三方中转服务（如 SiliconFlow、OpenRouter 等），或使用代理 URL 解决 CORS 问题。"
+    },
+    {
+      "id": "LOG-211",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-14",
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1字体字号回归修复",
+      "action": "修复/验证/文档同步",
+      "result": "已完成字体字号批量应用后的分页测试算法1页尾裁切修复：新增统一有效行高口径，当局部或批量字号超过模板基线时，预览、导出、默认估算分页和分页测试算法1都会使用安全行高；画布隐藏 DOM 测量缓存已纳入 `LayoutDocument.styles.textStyles` 签名，字体字号规则变化后会重新测量；`max-fill-v1` 会优先消费已测得的顶层块高，避免按旧估算把后续文字塞进页脚区域。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，新增覆盖大字号有效行高拆页与分页测试算法1消费实测块高。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/quickTextStyle.ts",
+        "src/engine/style/blockStyleResolution.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/hooks/usePagination.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "progress/config.json"
+      ],
+      "next": "刷新应用后使用分页测试算法1重新检查字体字号调整后的页尾；更完整的真实行级分页、孤寡行与复杂跨页仍按 `PH2-09` 后续深化。"
+    },
+    {
+      "id": "LOG-212",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "实现 CORS 代理自动降级功能",
+      "action": "功能增强",
+      "result": "1) AiService 新增 fetchWithProxy() 方法，使用 allorigins.win 代理绕过 CORS；2) 流式生成和非流式生成都会自动检测 CORS 错误并降级使用代理；3) 测试连接功能支持一键代理测试，检测到 CORS 时会询问是否使用代理；4) 模型选择新增代理配置说明。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "功能已集成，生成时遇到 CORS 会自动尝试代理。"
+      ],
+      "affectedFiles": [
+        "src/services/AiService.ts",
+        "src/components/ai/AiSettings.tsx"
+      ],
+      "next": "用户可重新测试 AI 连接，连接失败时会自动尝试使用 allorigins.win 代理。"
+    },
+    {
+      "id": "LOG-213",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI 功能代码审核修复边界",
+      "action": "方案确认/风险登记/准备修复",
+      "result": "用户已确认按 `PH3-01` 的返工小步修复 AI 功能代码审核发现的问题：本步纳入结构化文档写回契约、请求取消、代理请求统一、Anthropic 流式解析、AI 检查内容转换、占位按钮状态和 API Key 本地保存提示；本步明确不纳入主进程密钥加密、完整选区替换、悬浮润色入口、AI 自动修复建议落地、官方 SDK 接入以及非 AI 功能调整。",
+      "verification": [
+        "用户已确认执行修复方案。",
+        "`PH3-01` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-008` 已登记 AI 功能代码审核缺陷风险。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后开始修复 AI 服务与 AI 面板交互代码。"
+    },
+    {
+      "id": "LOG-214",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI 功能代码审核修复",
+      "action": "修复/验证/文档同步",
+      "result": "已完成 AI 功能代码审核修复：1) `AiService` 统一模型拉取、测试连接、生成、优化和检查的请求入口，并按用户填写的代理 URL 构造请求，不再自动套用公共代理；2) 流式解析补齐 Anthropic `delta.text`，并处理流尾缓冲；3) 生成、优化、检查 Tab 均接入 `AbortController`，停止按钮会真实中断请求；4) AI 生成内容插入改为通过 `appendLayoutParagraphBlock` 写入完整 `LayoutDocument` / `TextRun` 结构，进入撤销栈并标记未保存；5) AI 检查前的文档转换已带出标题、段落、代码、表格、图片 alt、公式、列表和引用内容；6) 暂未实现的「替换选中文本」「应用建议」入口已改为禁用并标注待接入；7) API Key 设置说明已改为本机 localStorage 保存，不再承诺安全加密。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "静态检查确认已移除自动公共代理降级和替换选中文本的空 `console.log`。"
+      ],
+      "affectedFiles": [
+        "src/services/AiService.ts",
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/components/ai/AiOptimizeTab.tsx",
+        "src/components/ai/AiCheckTab.tsx",
+        "src/components/ai/AiSettings.tsx",
+        "src/engine/document-model/operations.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/store/types.ts",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "后续可在 `PH3-01` 增强或单独体验任务中继续实现完整选区替换、AI 自动修复建议落地、悬浮润色入口和密钥加密存储。"
+    },
+    {
+      "id": "LOG-215",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI 主进程请求收口并删除代理边界",
+      "action": "方案确认/风险登记/准备修复",
+      "result": "用户已确认修正 AI 请求链路：本步纳入新增 Electron 主进程 AI 请求 IPC、让模型拉取/测试连接/生成/优化/检查统一通过主进程请求、删除前端代理 URL 配置和 `AiConfig.proxyUrl`、修正 `failed to fetch` 相关提示，并保留停止按钮取消请求语义；本步明确不纳入密钥加密、官方 SDK、自建云端代理、命令面板、悬浮润色入口和非 AI 功能调整。",
+      "verification": [
+        "用户已确认执行方案。",
+        "`PH3-01` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-009` 已登记前端/公开代理方案导致的 AI 请求返工风险。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现主进程 AI 请求 IPC 并删除代理配置。"
+    },
+    {
+      "id": "LOG-216",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI 主进程请求收口并删除代理",
+      "action": "修复/验证/文档同步",
+      "result": "已完成 AI 请求链路收口：新增 `electron/main/ai-handlers.ts`，通过 `ai:request` 由 Electron 主进程发起真实 HTTP 请求并返回状态码、响应头和响应文本；preload 暴露 `requestAi` 与 `cancelAiRequest`；`AiService` 的模型拉取、测试连接、生成、优化和检查统一通过主进程请求，继续保留 OpenAI/自定义 `Authorization: Bearer ...` 与 Anthropic `x-api-key` 请求头规则；AI 设置页已删除代理 URL 输入，`AiConfig.proxyUrl` 已移除，网络错误提示不再引导用户配置前端代理。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "静态搜索确认 `src` 和 `electron` 中已无 `proxyUrl`、`allorigins`、`fetchWithProxy`、`代理 URL` 残留。"
+      ],
+      "affectedFiles": [
+        "electron/main/ai-handlers.ts",
+        "electron/main/ipc-handlers.ts",
+        "electron/preload/index.ts",
+        "src/services/AiService.ts",
+        "src/components/ai/AiSettings.tsx",
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/types/ai.ts",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "刷新或重启应用后在 AI 设置页重新测试连接；若仍失败，应根据返回的 API 状态码、Base URL、模型名和 API Key 继续排查。"
+    },
+    {
+      "id": "LOG-217",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI HTML 响应诊断修复边界",
+      "action": "方案确认/准备修复",
+      "result": "用户反馈测试连接时出现 `Unexpected token '<', \"<!doctype \"... is not valid JSON`。本步纳入：在 `AiService` 解析模型列表、测试连接、非流式生成和流式生成响应前识别 HTML 响应，改成中文诊断提示并带出实际请求端点；本步明确不纳入重新引入代理、改请求头规则、官方 SDK 接入或新增网络配置项。",
+      "verification": [
+        "用户已要求继续修复。",
+        "`PH3-01` 已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后修复 `AiService` 的响应格式诊断并验证。"
+    },
+    {
+      "id": "LOG-218",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI HTML 响应诊断修复",
+      "action": "修复/验证/文档同步",
+      "result": "已修复 AI 响应解析提示：`AiService` 新增响应类型诊断与安全 JSON 解析，在模型拉取、测试连接和非流式生成拿到 HTML 或非 JSON 响应时，不再显示 `Unexpected token '<'`，而是提示“AI 服务返回的是网页内容，不是 API 响应”，并带出实际请求地址、响应类型和 Base URL 检查建议；流式生成也会在拿到 HTML 页面时提前给出同类诊断。",
+      "verification": [
+        "`npm run typecheck` 成功。"
+      ],
+      "affectedFiles": [
+        "src/services/AiService.ts",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build`、`npm run progress:check` 和 `npm run build` 完成收尾验证；用户可重新测试连接，根据新的中文提示修正 Base URL。"
+    },
+    {
+      "id": "LOG-219",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI Markdown 结构化插入修复边界",
+      "action": "方案确认/准备修复",
+      "result": "用户反馈 AI 生成内容插入后仍显示 Markdown 源码字符，没有走结构化解析。本步纳入：新增 AI Markdown 片段结构化插入能力，复用 `createLayoutDocumentFromMarkdown` 解析标题、段落、表格、列表、公式等块，插入当前选中节点之后并进入撤销栈；改造 AI 生成 Tab 的“插入当前文档”入口；补充冒烟验证。本步明确不纳入：优化 Tab 选区替换、AI 提示词或请求链路调整、源码快照反写、复杂嵌套结构增强和全局 ID 治理。",
+      "verification": [
+        "用户已确认本步修复方案和范围。",
+        "`PH3-01` 已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后实现 AI Markdown 结构化插入并验证。"
+    },
+    {
+      "id": "LOG-220",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI Markdown 结构化插入修复",
+      "action": "修复/验证/文档同步",
+      "result": "已修复 AI 生成内容插入链路：新增 `insertLayoutMarkdownBlocks`，AI 生成结果插入时会先复用 `createLayoutDocumentFromMarkdown` 解析为结构化块，再插入当前选中节点之后；插入片段会重写块、列表项、表格单元格、文本 run 与图片资源 ID，避免和既有文档 ID 冲突；插入后进入撤销栈、标记未保存、刷新文档 meta 并选中新插入的首个块。`AiGenerateTab` 的“插入当前文档”已改为调用结构化插入方法，并在解析失败时显示中文提示。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`git diff --check` 成功。",
+        "聚焦 `tsx` 验证成功：模拟 AI Markdown 插入后得到 `heading / paragraph / table / equation / list` 结构化块，且插在选中块之后、进入撤销栈并标记未保存。",
+        "`npm run smoke:m1` 仍被既有样式优先级校验挡住：`导出 HTML 没有注入模板基线变量`，失败点早于本次新增 AI 插入验证，未作为本步修复范围处理。"
+      ],
+      "affectedFiles": [
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/ai/AiGenerateTab.tsx",
+        "scripts/m1-smoke.ts",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "用户可重新生成一段 Markdown 内容并点击“插入当前文档”，确认画布中显示结构化标题、正文、表格、公式和列表；后续若需要优化选区替换或插入前结构预览，继续归入 PH3-01 增强或 PH3-07 验收增强。"
+    },
+    {
+      "id": "LOG-221",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI 生成记录本地文件存储边界",
+      "action": "方案确认/准备实现",
+      "result": "用户确认新增 AI 生成记录，并要求记录资源直接存入本地文件夹，前端只负责展示，不占用 app 缓存。本步纳入：AI 生成成功后把生成参数、生成时间和完整生成内容写入工作区 `AI生成记录/records.json`；左侧菜单新增“AI生成记录”入口，用于查看、恢复到当前生成结果、插入当前文档、删除单条和清空全部；本步明确不纳入云同步、写入 `.layout`、localStorage 持久化正文、搜索标签和优化/检查历史。",
+      "verification": [
+        "用户已确认本地文件夹存储方案和范围。",
+        "`PH3-01` 已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后实现 AI 生成记录 IPC、前端服务、左侧菜单展示和生成完成自动落盘。"
+    },
+    {
+      "id": "LOG-222",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-12"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认桌面端输入响应修复边界",
+      "action": "方案确认/风险登记/准备修复",
+      "result": "用户确认问题不是 AI 单个面板，而是所有输入框都有较长等待。本步纳入：排查并修复全局输入响应问题，优先把右侧属性面板中适合延迟提交的文本、数字和公式源码输入改为本地草稿，失焦或按 Enter 后再写回 `LayoutDocument`，避免每个字符触发撤销栈、分页重算和隐藏测量层；本步明确不纳入分页算法重写、硬件性能判断、AI 请求链路调整和整套 UI 重构。",
+      "verification": [
+        "用户已确认执行方案。",
+        "`PH2-12` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-010` 已登记桌面端输入等待缺陷风险。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后开始实现输入本地草稿与确认提交修复。"
+    },
+    {
+      "id": "LOG-223",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI 生成记录本地文件存储",
+      "action": "新增/验证/文档同步",
+      "result": "已完成 AI 生成记录落盘与复用：新增 `AI生成记录/records.json` 本地文件读写 IPC，记录文件位于当前工作区，未打开用户工作区时使用默认工作区；AI 生成成功后自动追加记录，保存生成类型、主题、年级、科目、长度、Provider、模型、时间和完整正文；左侧菜单新增“AI生成记录”入口，可查看记录列表和详情、刷新记录、恢复到 AI 生成结果区、按现有 Markdown 结构化插入当前文档、删除单条和清空全部。前端只保存当前展示状态，不使用 localStorage 持久化生成正文。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`git diff --check` 成功，仅输出仓库既有 CRLF 换行提示。",
+        "`npm run progress:build` 已生成展示层文档。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "electron/main/ai-record-handlers.ts",
+        "electron/main/ipc-handlers.ts",
+        "electron/preload/index.ts",
+        "src/types/ai.ts",
+        "src/types/workspace.ts",
+        "src/services/AiGenerationRecordService.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/components/ai/AiGenerationRecordsPanel.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "用户可完成一次 AI 生成后，在工作区 `AI生成记录/records.json` 查看落盘内容，并通过左侧“AI生成记录”复用历史结果；后续若需要搜索、标签、收藏、导出或优化/检查历史，继续归入 PH3-07 或单独 AI 体验增强任务。"
+    },
+    {
+      "id": "LOG-224",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-12"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成桌面端输入响应修复 V1",
+      "action": "修复/验证/文档同步",
+      "result": "已完成桌面端输入响应首轮修复：1) 画布富文本原位编辑输入时只更新本地草稿，失焦提交时才按需调用 `onCommitNodeRichText` 写回模型，避免每个字符触发撤销栈、分页重算和隐藏测量层；2) 右侧图片路径、替代文本、标题、宽高、裁剪值和公式源码改为本地输入，失焦或回车确认后再写回 `LayoutDocument`；3) `CanvasPane` 增加 `memo` 隔离，减少左侧搜索、AI 设置等无关输入导致的画布重渲染。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项。",
+        "`npm run build` 成功。",
+        "`git diff --check` 成功，仅输出仓库既有 CRLF 换行提示。",
+        "静态搜索确认已移除画布富文本每字写回模型、右侧图片/公式属性每字写模型的重路径。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "用户在桌面端重新测试画布原位编辑、右侧图片属性、公式源码、左侧搜索和 AI 设置输入响应；若仍有明显等待，再单独拆 `CanvasPane` 渲染隔离深化或隐藏测量层降频任务。"
     }
   ]
 }

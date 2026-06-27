@@ -1149,6 +1149,109 @@ async function main(): Promise<void> {
     `M2 冒烟失败：分页测试算法1没有按视觉行边界拆分，第一页实际为“${visualLineTexts[0] ?? ''}”`,
   );
 
+  const maxFillLargeFontText = '大字号第一页\n大字号第二页';
+  const maxFillLargeFontBlock: LayoutBlock = {
+    id: 'm2-max-fill-large-font-paragraph',
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-large-font-run',
+        text: maxFillLargeFontText,
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: { fontSize: 36 },
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: maxFillLargeFontText,
+    },
+  };
+  const largeFontContract = {
+    ...resolveStyleContract(defaultStyleSettings),
+    contentHeightPx: 72,
+  };
+  const largeFontPages = paginateBlocks([maxFillLargeFontBlock], largeFontContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  const largeFontTexts = largeFontPages.flatMap((page) =>
+    page.blocks.map((block) => block.textRuns.map((run) => run.text).join('')),
+  );
+  assert(
+    largeFontPages.length === 2 && largeFontTexts[0] === '大字号第一页\n',
+    `M2 冒烟失败：分页测试算法1没有按大字号有效行高拆页，实际页数 ${largeFontPages.length}`,
+  );
+
+  const measuredHeightBlockA: LayoutBlock = {
+    id: 'm2-max-fill-measured-height-a',
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-measured-height-a-run',
+        text: '实测高度段落',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: '实测高度段落',
+    },
+  };
+  const measuredHeightBlockB: LayoutBlock = {
+    ...measuredHeightBlockA,
+    id: 'm2-max-fill-measured-height-b',
+    textRuns: [
+      {
+        ...measuredHeightBlockA.textRuns[0],
+        id: 'm2-max-fill-measured-height-b-run',
+        text: '后续段落',
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: '后续段落',
+    },
+  };
+  const measuredHeightPages = paginateBlocks(
+    [measuredHeightBlockA, measuredHeightBlockB],
+    {
+      ...resolveStyleContract(defaultStyleSettings),
+      contentHeightPx: 100,
+    },
+    {
+      algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+      measuredBlockHeights: {
+        [measuredHeightBlockA.id]: 84,
+      },
+    },
+  );
+  assert(
+    measuredHeightPages.length === 2,
+    `M2 冒烟失败：分页测试算法1没有消费实测块高，实际页数 ${measuredHeightPages.length}`,
+  );
+
   // 验证混排文本（中文+英文+数字）使用字符级精确流式布局，不再按平均宽度估算
   const flowMixedText = '项目编号PROJ-2026-001，负责人张三负责预算审核，金额CNY150000.00元整备注信息。'.repeat(6);
   const mixedTextBlock: LayoutBlock = {

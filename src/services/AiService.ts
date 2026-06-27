@@ -13,6 +13,23 @@ import type {
 } from '@/types/ai';
 
 /**
+ * 模型信息
+ */
+export interface ModelInfo {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface AiMainProcessRequestResult {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  body: string;
+}
+
+/**
  * API 响应格式（兼容 OpenAI 和 Anthropic 流式格式）
  */
 interface MessageContent {
@@ -21,13 +38,46 @@ interface MessageContent {
 }
 
 interface StreamChunk {
+  type?: string;
   choices?: Array<{
     delta?: {
       content?: string;
     };
     finish_reason?: string;
   }>;
+  delta?: {
+    type?: string;
+    text?: string;
+  };
   content?: Array<MessageContent>;
+  completion?: string;
+}
+
+function getResponseContentType(response: AiMainProcessRequestResult): string {
+  return response.headers['content-type'] ?? response.headers['Content-Type'] ?? '';
+}
+
+function createUnexpectedResponseError(endpoint: string, response: AiMainProcessRequestResult): Error {
+  const bodyPreview = response.body.trim().slice(0, 160);
+  const contentType = getResponseContentType(response) || '未知类型';
+
+  if (bodyPreview.toLowerCase().startsWith('<!doctype') || bodyPreview.toLowerCase().startsWith('<html')) {
+    return new Error(
+      `AI 服务返回的是网页内容，不是 API 响应。\n\n实际请求地址：${endpoint}\n响应类型：${contentType}\n\n请检查 Base URL 是否填成了官网、控制台地址或服务首页。OpenAI 通常应为 https://api.openai.com/v1；OpenAI 兼容服务通常应以 /v1 结尾。`
+    );
+  }
+
+  return new Error(
+    `AI 服务返回了无法解析的响应。\n\n实际请求地址：${endpoint}\n响应类型：${contentType}\n响应片段：${bodyPreview || '空响应'}`
+  );
+}
+
+function parseJsonResponse<T>(endpoint: string, response: AiMainProcessRequestResult): T {
+  try {
+    return JSON.parse(response.body) as T;
+  } catch {
+    throw createUnexpectedResponseError(endpoint, response);
+  }
 }
 
 /**
@@ -68,6 +118,86 @@ export class AiService {
    */
   clearConfig(): void {
     this.config = null;
+  }
+
+  /**
+   * 获取可用模型列表
+   * @param signal abort 信号
+   */
+  async listModels(signal?: AbortSignal): Promise<ModelInfo[]> {
+    if (!this.config) {
+      throw new Error('请先配置 AI 服务');
+    }
+
+    const baseUrl = this.config.baseUrl.replace(/\/$/, '');
+
+    switch (this.config.provider) {
+      case 'openai': {
+        // OpenAI 使用 /models 端点
+        const endpoint = `${baseUrl}/models`;
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${this.config.apiKey}`,
+        };
+
+        const response = await this.requestApi(endpoint, {
+          method: 'GET',
+          headers,
+          signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`获取模型列表失败: ${response.status} ${response.statusText}`);
+        }
+
+        const data = parseJsonResponse<{ data?: Array<{ id: string }> }>(endpoint, response);
+        return (data.data || []).map((m) => ({
+          id: m.id,
+          name: m.id,
+        }));
+      }
+
+      case 'anthropic': {
+        // Anthropic 的模型列表是固定的
+        return [
+          { id: 'claude-opus-4-5-20251120', name: 'Claude Opus 4' },
+          { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
+          { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+          { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
+          { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' },
+          { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet' },
+          { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku' },
+        ];
+      }
+
+      case 'custom': {
+        // 自定义 Provider 尝试获取模型列表，如果失败则返回空
+        try {
+          const endpoint = `${baseUrl}/models`;
+          const headers: Record<string, string> = {
+            Authorization: `Bearer ${this.config.apiKey}`,
+          };
+
+          const response = await this.requestApi(endpoint, {
+            method: 'GET',
+            headers,
+            signal,
+          });
+
+          if (response.ok) {
+            const data = parseJsonResponse<{ data?: Array<{ id: string }> }>(endpoint, response);
+            return (data.data || []).map((m) => ({
+              id: m.id,
+              name: m.id,
+            }));
+          }
+        } catch {
+          // 忽略错误
+        }
+
+        // 如果获取失败，返回提示
+        throw new Error('此 API 不支持自动获取模型列表，请手动输入模型名称');
+      }
+    }
   }
 
   /**
@@ -161,8 +291,51 @@ export class AiService {
       case 'anthropic':
         return `${baseUrl}/v1/messages`;
       case 'custom':
-        // 自定义 provider 默认使用 chat/completions 端点
         return `${baseUrl}/chat/completions`;
+    }
+  }
+
+  /**
+   * 所有 AI 请求统一从主进程发出，避免 renderer 的浏览器 CORS 限制。
+   */
+  private async requestApi(
+    endpoint: string,
+    options: {
+      method: string;
+      headers: Record<string, string>;
+      body?: string;
+      signal?: AbortSignal;
+    }
+  ): Promise<AiMainProcessRequestResult> {
+    if (!window.layoutAPI?.requestAi) {
+      throw new Error('AI 请求通道不可用，请重启应用后再试');
+    }
+
+    const requestId = `ai-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const cancelMainRequest = () => {
+      void window.layoutAPI.cancelAiRequest?.(requestId);
+    };
+
+    if (options.signal?.aborted) {
+      throw new DOMException('请求已取消', 'AbortError');
+    }
+
+    options.signal?.addEventListener('abort', cancelMainRequest, { once: true });
+    try {
+      return await window.layoutAPI.requestAi({
+        requestId,
+        url: endpoint,
+        method: options.method,
+        headers: options.headers,
+        body: options.body,
+      });
+    } catch (error) {
+      if (options.signal?.aborted) {
+        throw new DOMException('请求已取消', 'AbortError');
+      }
+      throw error;
+    } finally {
+      options.signal?.removeEventListener('abort', cancelMainRequest);
     }
   }
 
@@ -178,10 +351,13 @@ export class AiService {
       }
       try {
         const parsed = JSON.parse(data) as StreamChunk;
-        const content = parsed.choices?.[0]?.delta?.content;
-        if (content) {
-          return content;
-        }
+        return (
+          parsed.choices?.[0]?.delta?.content ??
+          parsed.delta?.text ??
+          parsed.content?.find((item) => item.type === 'text_delta' || item.type === 'text')?.text ??
+          parsed.completion ??
+          null
+        );
       } catch {
         // 忽略解析错误
       }
@@ -269,6 +445,13 @@ ${content}`;
   }
 
   /**
+   * 发送最小请求验证当前配置是否可用。
+   */
+  async testConnection(signal?: AbortSignal): Promise<void> {
+    await this.generateNonStream('你只需要返回 OK。', '请回复 OK', signal);
+  }
+
+  /**
    * 非流式生成（用于检查等功能）
    */
   private async generateNonStream(
@@ -279,26 +462,23 @@ ${content}`;
     const endpoint = this.getEndpoint();
     const headers = this.buildHeaders();
     const body = this.buildRequestBody(systemPrompt, userMessage);
+    const requestBody = JSON.stringify({ ...body, stream: false });
 
-    // 非流式请求
-    const nonStreamBody = { ...body, stream: false };
-
-    const response = await fetch(endpoint, {
+    const response = await this.requestApi(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify(nonStreamBody),
+      body: requestBody,
       signal,
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API 请求失败: ${response.status} ${response.statusText}\n${errorText}`);
+      throw new Error(`API 请求失败: ${response.status} ${response.statusText}\n${response.body}`);
     }
 
-    const data = await response.json() as {
+    const data = parseJsonResponse<{
       choices?: Array<{ message?: { content?: string } }>;
       content?: Array<{ text?: string }>;
-    };
+    }>(endpoint, response);
 
     // 解析响应（兼容 OpenAI 和 Anthropic）
     if (data.choices?.[0]?.message?.content) {
@@ -323,45 +503,44 @@ ${content}`;
     const endpoint = this.getEndpoint();
     const headers = this.buildHeaders();
     const body = this.buildRequestBody(systemPrompt, userMessage);
+    const requestBody = JSON.stringify(body);
 
-    const response = await fetch(endpoint, {
+    const response = await this.requestApi(endpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify(body),
+      body: requestBody,
       signal,
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`API 请求失败: ${response.status} ${response.statusText}\n${errorText}`);
+      throw new Error(`API 请求失败: ${response.status} ${response.statusText}\n${response.body}`);
     }
-
-    if (!response.body) {
-      throw new Error('响应体为空');
+    const trimmedBody = response.body.trim();
+    if (trimmedBody.toLowerCase().startsWith('<!doctype') || trimmedBody.toLowerCase().startsWith('<html')) {
+      throw createUnexpectedResponseError(endpoint, response);
     }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
     let fullContent = '';
+    let bufferedText = response.body;
+    const lines = bufferedText.split(/\r?\n/);
+    bufferedText = lines.pop() ?? '';
 
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          const content = this.parseStreamChunk(line);
-          if (content) {
-            fullContent += content;
-            onChunk(fullContent);
-          }
+    // 主进程 IPC 当前返回完整响应文本；这里按 SSE 行格式解析，并模拟分批写回 UI。
+    for (const line of lines) {
+      const content = this.parseStreamChunk(line);
+      if (content) {
+        fullContent += content;
+        onChunk(fullContent);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        if (signal?.aborted) {
+          throw new DOMException('请求已取消', 'AbortError');
         }
       }
-    } finally {
-      reader.releaseLock();
+    }
+
+    const tailContent = this.parseStreamChunk(bufferedText);
+    if (tailContent) {
+      fullContent += tailContent;
+      onChunk(fullContent);
     }
 
     return fullContent;

@@ -7,6 +7,8 @@ import {
   updateBlockquoteStructureByNode,
   clearTextFormattingInTextRuns,
   createEmptyLayoutDocument,
+  createLayoutDocumentFromMarkdown,
+  createStableHash,
   deleteTopLevelBlockById,
   getLayoutBlockPlainText,
   insertEquationBlockAfterNode,
@@ -762,6 +764,228 @@ function replaceBlockquoteStructureByNode(
   return { blocks: nextBlocks, didUpdate, selectedNodeId };
 }
 
+function findDirectInsertIndexForNodeId(blocks: LayoutBlock[], nodeId: string | null | undefined): number {
+  if (!nodeId) {
+    return -1;
+  }
+
+  return blocks.findIndex((block) => {
+    if (block.id === nodeId) {
+      return true;
+    }
+
+    if (block.type === 'list' && block.metadata.kind === 'list') {
+      return block.metadata.items.some((item) => item.id === nodeId);
+    }
+
+    if (block.type === 'table' && block.metadata.kind === 'table') {
+      return block.metadata.rows.some((row) => row.cells.some((cell) => cell.id === nodeId));
+    }
+
+    return false;
+  });
+}
+
+function collectBlockIds(blocks: LayoutBlock[], ids = new Set<string>()): Set<string> {
+  for (const block of blocks) {
+    ids.add(block.id);
+
+    block.textRuns.forEach((run) => ids.add(run.id));
+
+    if (block.type === 'list' && block.metadata.kind === 'list') {
+      block.metadata.items.forEach((item) => {
+        ids.add(item.id);
+        item.textRuns.forEach((run) => ids.add(run.id));
+      });
+    }
+
+    if (block.type === 'table' && block.metadata.kind === 'table') {
+      block.metadata.rows.forEach((row) => {
+        ids.add(row.id);
+        row.cells.forEach((cell) => {
+          ids.add(cell.id);
+          cell.textRuns.forEach((run) => ids.add(run.id));
+        });
+      });
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      collectBlockIds(block.metadata.blocks, ids);
+    }
+  }
+
+  return ids;
+}
+
+function createUniqueInsertedId(originalId: string, prefix: string, usedIds: Set<string>): string {
+  let candidate = `${prefix}-${originalId}`;
+  let index = 2;
+
+  while (usedIds.has(candidate)) {
+    candidate = `${prefix}-${index}-${originalId}`;
+    index += 1;
+  }
+
+  usedIds.add(candidate);
+  return candidate;
+}
+
+function remapTextRunsForInsertedMarkdown(
+  textRuns: TextRun[],
+  prefix: string,
+  usedIds: Set<string>,
+): TextRun[] {
+  return textRuns.map((run) => ({
+    ...run,
+    id: createUniqueInsertedId(run.id, prefix, usedIds),
+    // AI 插入片段来自临时 Markdown，不再保留相对源码范围，避免误导后续编辑定位。
+    sourceRange: null,
+  }));
+}
+
+function remapInsertedMarkdownBlock(
+  block: LayoutBlock,
+  prefix: string,
+  usedIds: Set<string>,
+  idMap: Map<string, string>,
+): LayoutBlock {
+  const nextBlockId = createUniqueInsertedId(block.id, prefix, usedIds);
+  idMap.set(block.id, nextBlockId);
+  const nextTextRuns = remapTextRunsForInsertedMarkdown(block.textRuns, prefix, usedIds);
+
+  if (block.type === 'list' && block.metadata.kind === 'list') {
+    return {
+      ...block,
+      id: nextBlockId,
+      sourceRange: null,
+      textRuns: nextTextRuns,
+      metadata: {
+        ...block.metadata,
+        items: block.metadata.items.map((item) => {
+          const nextItemId = createUniqueInsertedId(item.id, prefix, usedIds);
+          idMap.set(item.id, nextItemId);
+
+          return {
+            ...item,
+            id: nextItemId,
+            sourceRange: null,
+            textRuns: remapTextRunsForInsertedMarkdown(item.textRuns, prefix, usedIds),
+          };
+        }),
+      },
+    };
+  }
+
+  if (block.type === 'table' && block.metadata.kind === 'table') {
+    const nextRows = block.metadata.rows.map((row) => {
+      const nextRowId = createUniqueInsertedId(row.id, prefix, usedIds);
+      idMap.set(row.id, nextRowId);
+
+      return {
+        ...row,
+        id: nextRowId,
+        sourceRange: null,
+        cells: row.cells.map((cell) => {
+          const nextCellId = createUniqueInsertedId(cell.id, prefix, usedIds);
+          idMap.set(cell.id, nextCellId);
+
+          return {
+            ...cell,
+            id: nextCellId,
+            sourceRange: null,
+            textRuns: remapTextRunsForInsertedMarkdown(cell.textRuns, prefix, usedIds),
+          };
+        }),
+      };
+    });
+
+    return {
+      ...block,
+      id: nextBlockId,
+      sourceRange: null,
+      textRuns: nextTextRuns,
+      metadata: {
+        ...block.metadata,
+        rows: nextRows.map((row) => ({
+          ...row,
+          cells: row.cells.map((cell) => ({
+            ...cell,
+            coveredByCellId: cell.coveredByCellId
+              ? idMap.get(cell.coveredByCellId) ?? cell.coveredByCellId
+              : cell.coveredByCellId,
+          })),
+        })),
+      },
+    };
+  }
+
+  if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+    return {
+      ...block,
+      id: nextBlockId,
+      sourceRange: null,
+      textRuns: nextTextRuns,
+      metadata: {
+        ...block.metadata,
+        blocks: block.metadata.blocks.map((nestedBlock) =>
+          remapInsertedMarkdownBlock(nestedBlock, prefix, usedIds, idMap),
+        ),
+      },
+    };
+  }
+
+  return {
+    ...block,
+    id: nextBlockId,
+    sourceRange: null,
+    textRuns: nextTextRuns,
+  };
+}
+
+function remapInsertedMarkdownResources(
+  resources: LayoutResource[],
+  prefix: string,
+  usedIds: Set<string>,
+  idMap: Map<string, string>,
+): LayoutResource[] {
+  return resources.map((resource) => {
+    const nextResourceId = createUniqueInsertedId(resource.id, prefix, usedIds);
+
+    if (resource.type === 'image') {
+      return {
+        ...resource,
+        id: nextResourceId,
+        blockId: idMap.get(resource.blockId) ?? resource.blockId,
+      };
+    }
+
+    return {
+      ...resource,
+      id: nextResourceId,
+    };
+  });
+}
+
+function remapInsertedMarkdownFragment(
+  blocks: LayoutBlock[],
+  resources: LayoutResource[],
+  existingBlocks: LayoutBlock[],
+  existingResources: LayoutResource[],
+  markdown: string,
+): { blocks: LayoutBlock[]; resources: LayoutResource[] } {
+  const prefix = `ai-${createStableHash(`${Date.now()}-${markdown}`).slice(0, 8)}`;
+  const usedIds = collectBlockIds(existingBlocks);
+  existingResources.forEach((resource) => usedIds.add(resource.id));
+  const idMap = new Map<string, string>();
+  const nextBlocks = blocks.map((block) => remapInsertedMarkdownBlock(block, prefix, usedIds, idMap));
+  const nextResources = remapInsertedMarkdownResources(resources, prefix, usedIds, idMap);
+
+  return {
+    blocks: nextBlocks,
+    resources: nextResources,
+  };
+}
+
 function getFirstHeadingTitle(blocks: LayoutBlock[]): string | null {
   for (const block of blocks) {
     if (block.type === 'heading' && block.metadata.kind === 'heading') {
@@ -941,7 +1165,7 @@ function applyDocumentMutation(
 
 const initialLayoutDocument = createEmptyLayoutDocument({ title: starterTitle, source: starterMarkdown });
 
-export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
+export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
   documentEpoch: 0,
   title: starterTitle,
   filePath: null,
@@ -1058,6 +1282,100 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       state.documentHistoryFuture = [];
       state.parseError = null;
     }),
+  appendLayoutParagraphBlock: ({ text }) => {
+    let insertedBlockId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument || !text.trim()) {
+        return;
+      }
+
+      const result = insertParagraphBlockAfterNode(state.layoutDocument.blocks, {
+        insertAfterNodeId: null,
+        text,
+      });
+
+      pushDocumentHistory(state);
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+      insertedBlockId = result.insertedBlockId;
+    });
+
+    return insertedBlockId;
+  },
+  insertLayoutMarkdownBlocks: async ({ markdown, insertAfterNodeId }) => {
+    const normalizedMarkdown = markdown.trim();
+    if (!normalizedMarkdown) {
+      return null;
+    }
+
+    const syntaxMappingConfig = get().layoutDocument?.meta.syntaxMappingConfig;
+    const parsedDocument = await createLayoutDocumentFromMarkdown(normalizedMarkdown, syntaxMappingConfig);
+    if (parsedDocument.blocks.length === 0) {
+      return null;
+    }
+
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const insertTargetNodeId =
+        insertAfterNodeId !== undefined
+          ? insertAfterNodeId
+          : state.layoutDocument.viewState.selectedNodeId;
+      const remappedFragment = remapInsertedMarkdownFragment(
+        parsedDocument.blocks,
+        parsedDocument.resources,
+        state.layoutDocument.blocks,
+        state.layoutDocument.resources,
+        normalizedMarkdown,
+      );
+
+      if (remappedFragment.blocks.length === 0) {
+        return;
+      }
+
+      const insertAfterIndex = findDirectInsertIndexForNodeId(
+        state.layoutDocument.blocks,
+        insertTargetNodeId,
+      );
+      const insertIndex =
+        insertAfterIndex >= 0 ? insertAfterIndex + 1 : state.layoutDocument.blocks.length;
+      const nextBlocks = [
+        ...state.layoutDocument.blocks.slice(0, insertIndex),
+        ...remappedFragment.blocks,
+        ...state.layoutDocument.blocks.slice(insertIndex),
+      ];
+
+      selectedNodeId = remappedFragment.blocks[0]?.id ?? null;
+      pushDocumentHistory(state);
+      state.layoutDocument.blocks = nextBlocks;
+      state.layoutDocument.resources = [
+        ...state.layoutDocument.resources,
+        ...remappedFragment.resources,
+      ];
+      state.layoutDocument.title = getFirstHeadingTitle(nextBlocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, nextBlocks);
+      state.layoutDocument.viewState.selectedNodeId = selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
   setParseError: (message) =>
     set((state) => {
       state.parseState = 'error';

@@ -93,6 +93,11 @@ export interface DocumentSlice {
   setSource: (nextSource: string) => void;
   setParseState: (nextState: ParseState) => void;
   setLayoutDocument: (document: LayoutDocument) => void;
+  appendLayoutParagraphBlock: (payload: { text: string }) => string | null;
+  insertLayoutMarkdownBlocks: (payload: {
+    markdown: string;
+    insertAfterNodeId?: string | null;
+  }) => Promise<string | null>;
   setParseError: (message: string) => void;
   setPageLayouts: (pages: PageLayout[]) => void;
   selectLayoutNode: (nodeId: string) => void;

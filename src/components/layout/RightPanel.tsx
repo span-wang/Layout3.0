@@ -1191,28 +1191,59 @@ function renderObjectPropertiesPanel(
             <label>
               图片路径
               <input
+                key={`image-src-${selectedNodeInfo.nodeId}-${selectedImageMetadata.src}`}
                 className="style-text-input"
                 type="text"
-                value={selectedImageMetadata.src}
-                onChange={(event) => commitImageMetadata({ src: event.target.value })}
+                defaultValue={selectedImageMetadata.src}
+                onBlur={(event) => {
+                  if (event.currentTarget.value !== selectedImageMetadata.src) {
+                    commitImageMetadata({ src: event.currentTarget.value });
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.currentTarget.blur();
+                  }
+                }}
               />
             </label>
             <label>
               替代文本
               <input
+                key={`image-alt-${selectedNodeInfo.nodeId}-${selectedImageMetadata.alt}`}
                 className="style-text-input"
                 type="text"
-                value={selectedImageMetadata.alt}
-                onChange={(event) => commitImageMetadata({ alt: event.target.value })}
+                defaultValue={selectedImageMetadata.alt}
+                onBlur={(event) => {
+                  if (event.currentTarget.value !== selectedImageMetadata.alt) {
+                    commitImageMetadata({ alt: event.currentTarget.value });
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.currentTarget.blur();
+                  }
+                }}
               />
             </label>
             <label>
               标题
               <input
+                key={`image-title-${selectedNodeInfo.nodeId}-${selectedImageMetadata.title ?? ''}`}
                 className="style-text-input"
                 type="text"
-                value={selectedImageMetadata.title ?? ''}
-                onChange={(event) => commitImageMetadata({ title: event.target.value === '' ? null : event.target.value })}
+                defaultValue={selectedImageMetadata.title ?? ''}
+                onBlur={(event) => {
+                  const nextTitle = event.currentTarget.value === '' ? null : event.currentTarget.value;
+                  if (nextTitle !== selectedImageMetadata.title) {
+                    commitImageMetadata({ title: nextTitle });
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.currentTarget.blur();
+                  }
+                }}
               />
             </label>
             <div className="image-property-group">
@@ -1222,11 +1253,17 @@ function renderObjectPropertiesPanel(
                   宽度
                   <div className="number-input-shell">
                     <input
+                      key={`image-width-${selectedNodeInfo.nodeId}-${selectedImageLayout?.widthPx ?? ''}`}
                       type="number"
                       min={0}
                       step={1}
-                      value={selectedImageLayout?.widthPx ?? ''}
-                      onChange={(event) => handleImageDimensionChange('widthPx', event.target.value)}
+                      defaultValue={selectedImageLayout?.widthPx ?? ''}
+                      onBlur={(event) => handleImageDimensionChange('widthPx', event.currentTarget.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
                     />
                     <span>px</span>
                   </div>
@@ -1235,11 +1272,17 @@ function renderObjectPropertiesPanel(
                   高度
                   <div className="number-input-shell">
                     <input
+                      key={`image-height-${selectedNodeInfo.nodeId}-${selectedImageLayout?.heightPx ?? ''}`}
                       type="number"
                       min={0}
                       step={1}
-                      value={selectedImageLayout?.heightPx ?? ''}
-                      onChange={(event) => handleImageDimensionChange('heightPx', event.target.value)}
+                      defaultValue={selectedImageLayout?.heightPx ?? ''}
+                      onBlur={(event) => handleImageDimensionChange('heightPx', event.currentTarget.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
                     />
                     <span>px</span>
                   </div>
@@ -1263,11 +1306,17 @@ function renderObjectPropertiesPanel(
                   上
                   <div className="number-input-shell">
                     <input
+                      key={`image-crop-top-${selectedNodeInfo.nodeId}-${selectedImageLayout?.cropTopPx ?? 0}`}
                       type="number"
                       min={0}
                       step={1}
-                      value={selectedImageLayout?.cropTopPx ?? 0}
-                      onChange={(event) => handleImageFieldChange('cropTopPx', event.target.value)}
+                      defaultValue={selectedImageLayout?.cropTopPx ?? 0}
+                      onBlur={(event) => handleImageFieldChange('cropTopPx', event.currentTarget.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
                     />
                     <span>px</span>
                   </div>
@@ -1276,11 +1325,17 @@ function renderObjectPropertiesPanel(
                   右
                   <div className="number-input-shell">
                     <input
+                      key={`image-crop-right-${selectedNodeInfo.nodeId}-${selectedImageLayout?.cropRightPx ?? 0}`}
                       type="number"
                       min={0}
                       step={1}
-                      value={selectedImageLayout?.cropRightPx ?? 0}
-                      onChange={(event) => handleImageFieldChange('cropRightPx', event.target.value)}
+                      defaultValue={selectedImageLayout?.cropRightPx ?? 0}
+                      onBlur={(event) => handleImageFieldChange('cropRightPx', event.currentTarget.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
                     />
                     <span>px</span>
                   </div>
@@ -1289,11 +1344,17 @@ function renderObjectPropertiesPanel(
                   下
                   <div className="number-input-shell">
                     <input
+                      key={`image-crop-bottom-${selectedNodeInfo.nodeId}-${selectedImageLayout?.cropBottomPx ?? 0}`}
                       type="number"
                       min={0}
                       step={1}
-                      value={selectedImageLayout?.cropBottomPx ?? 0}
-                      onChange={(event) => handleImageFieldChange('cropBottomPx', event.target.value)}
+                      defaultValue={selectedImageLayout?.cropBottomPx ?? 0}
+                      onBlur={(event) => handleImageFieldChange('cropBottomPx', event.currentTarget.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
                     />
                     <span>px</span>
                   </div>
@@ -1302,11 +1363,17 @@ function renderObjectPropertiesPanel(
                   左
                   <div className="number-input-shell">
                     <input
+                      key={`image-crop-left-${selectedNodeInfo.nodeId}-${selectedImageLayout?.cropLeftPx ?? 0}`}
                       type="number"
                       min={0}
                       step={1}
-                      value={selectedImageLayout?.cropLeftPx ?? 0}
-                      onChange={(event) => handleImageFieldChange('cropLeftPx', event.target.value)}
+                      defaultValue={selectedImageLayout?.cropLeftPx ?? 0}
+                      onBlur={(event) => handleImageFieldChange('cropLeftPx', event.currentTarget.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
                     />
                     <span>px</span>
                   </div>
@@ -1803,15 +1870,23 @@ function renderObjectPropertiesPanel(
             <label>
               公式源码
               <textarea
+                key={`equation-source-${selectedNodeInfo.nodeId}-${selectedEquationMetadata.value}`}
                 className="style-text-input equation-source-input"
-                value={selectedEquationMetadata.value}
+                defaultValue={selectedEquationMetadata.value}
                 rows={4}
-                onChange={(event) =>
-                  updateLayoutNodeText({
-                    nodeId: selectedNodeInfo.nodeId,
-                    text: event.target.value,
-                  })
-                }
+                onBlur={(event) => {
+                  if (event.currentTarget.value !== selectedEquationMetadata.value) {
+                    updateLayoutNodeText({
+                      nodeId: selectedNodeInfo.nodeId,
+                      text: event.currentTarget.value,
+                    });
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                    event.currentTarget.blur();
+                  }
+                }}
               />
             </label>
           </div>

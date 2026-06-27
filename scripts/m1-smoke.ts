@@ -1221,6 +1221,76 @@ async function main(): Promise<void> {
     throw new Error('图片渲染验证失败：本地图片路径没有转换为自定义资源协议');
   }
 
+  useAppStore.getState().loadDocument({
+    title: canvasNodeEditDocument.title,
+    filePath: null,
+    source: canvasNodeEditDocument.source,
+    documentFormat: 'layout',
+    layoutDocument: canvasNodeEditDocument,
+  });
+  useAppStore.getState().selectLayoutNode(editableImage.id);
+  const aiMarkdownInsertedNodeId = await useAppStore.getState().insertLayoutMarkdownBlocks({
+    markdown: [
+      '# AI 生成标题',
+      '',
+      '这是一段 AI 生成的正文，包含 **加粗** 内容。',
+      '',
+      '| 名称 | 数值 |',
+      '| --- | --- |',
+      '| 甲 | 1 |',
+      '',
+      '$$',
+      'x^2 + 1 = 0',
+      '$$',
+      '',
+      '- 第一项',
+      '- 第二项',
+    ].join('\n'),
+  });
+  const aiMarkdownDocument = useAppStore.getState().layoutDocument;
+  const originalSelectedIndex =
+    aiMarkdownDocument?.blocks.findIndex((block) => block.id === editableImage.id) ?? -1;
+  const aiInsertedIndex =
+    aiMarkdownDocument?.blocks.findIndex((block) => block.id === aiMarkdownInsertedNodeId) ?? -1;
+  const aiInsertedBlocks = aiMarkdownDocument?.blocks.slice(aiInsertedIndex, aiInsertedIndex + 5) ?? [];
+
+  if (!aiMarkdownInsertedNodeId || aiInsertedIndex !== originalSelectedIndex + 1) {
+    throw new Error('AI Markdown 插入验证失败：结构化内容没有插入到当前选中块之后');
+  }
+
+  if (
+    aiInsertedBlocks[0]?.type !== 'heading' ||
+    !aiInsertedBlocks.some((block) => block.type === 'table') ||
+    !aiInsertedBlocks.some((block) => block.type === 'equation') ||
+    !aiInsertedBlocks.some((block) => block.type === 'list')
+  ) {
+    throw new Error('AI Markdown 插入验证失败：标题、表格、公式或列表没有进入结构化块');
+  }
+
+  if (
+    aiInsertedBlocks.length === 1 &&
+    aiInsertedBlocks[0]?.type === 'paragraph' &&
+    getLayoutBlockPlainText(aiInsertedBlocks[0]).includes('| --- |')
+  ) {
+    throw new Error('AI Markdown 插入验证失败：Markdown 源码仍被当作单个普通段落写入');
+  }
+
+  if (
+    aiMarkdownDocument?.viewState.selectedNodeId !== aiMarkdownInsertedNodeId ||
+    useAppStore.getState().documentHistoryPast.length === 0 ||
+    !useAppStore.getState().isDirty
+  ) {
+    throw new Error('AI Markdown 插入验证失败：插入后没有正确更新选中态、撤销栈或未保存状态');
+  }
+
+  useAppStore.getState().loadDocument({
+    title: canvasNodeEditDocument.title,
+    filePath: null,
+    source: canvasNodeEditDocument.source,
+    documentFormat: 'layout',
+    layoutDocument: canvasNodeEditDocument,
+  });
+
   const directTableInsertResult = insertTableBlockAfterNode(insertedImageDocument?.blocks ?? [], {
     rowCount: 3,
     columnCount: 3,

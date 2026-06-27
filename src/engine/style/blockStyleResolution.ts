@@ -1,4 +1,14 @@
-import type { LayoutBlock } from '@/engine/document-model';
+import {
+  isCoveredTableCell,
+  type LayoutBlock,
+  type LayoutStyleSheet,
+} from '@/engine/document-model';
+import {
+  getEffectiveListItemMaxFontSize,
+  getEffectiveTableCellMaxFontSize,
+  getEffectiveTextRunsMaxFontSize,
+  resolveEffectiveTextLineHeight,
+} from './quickTextStyle';
 import type { ResolvedStyleContract } from './types';
 
 export interface BlockDefaultTextMetrics {
@@ -114,6 +124,79 @@ export function resolveBlockDefaultTextMetrics(
     lineHeight: contract.blockStyles.paragraph.lineHeight,
     spaceBefore: contract.blockStyles.paragraph.marginTop,
     spaceAfter: contract.blockStyles.paragraph.marginBottom,
+  };
+}
+
+export function resolveBlockEffectiveTextMetrics(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet | null,
+): BlockDefaultTextMetrics {
+  const defaultMetrics = resolveBlockDefaultTextMetrics(block, contract);
+  let effectiveFontSize = defaultMetrics.fontSize;
+
+  if (
+    (block.type === 'heading' ||
+      block.type === 'paragraph' ||
+      block.type === 'code') &&
+    block.textRuns.length > 0
+  ) {
+    effectiveFontSize = getEffectiveTextRunsMaxFontSize({
+      textRuns: block.textRuns,
+      block,
+      styles,
+      fallback: defaultMetrics.fontSize,
+    });
+  }
+
+  if (block.type === 'list' && block.metadata.kind === 'list') {
+    effectiveFontSize = block.metadata.items.reduce(
+      (maxFontSize, item) =>
+        Math.max(
+          maxFontSize,
+          getEffectiveListItemMaxFontSize({
+            item,
+            block,
+            styles,
+            fallback: defaultMetrics.fontSize,
+          }),
+        ),
+      defaultMetrics.fontSize,
+    );
+  }
+
+  if (block.type === 'table' && block.metadata.kind === 'table') {
+    effectiveFontSize = block.metadata.rows.reduce(
+      (maxRowFontSize, row) =>
+        Math.max(
+          maxRowFontSize,
+          row.cells.reduce((maxCellFontSize, cell) => {
+            if (isCoveredTableCell(cell)) {
+              return maxCellFontSize;
+            }
+
+            return Math.max(
+              maxCellFontSize,
+              getEffectiveTableCellMaxFontSize({
+                cell,
+                block,
+                styles,
+                fallback: defaultMetrics.fontSize,
+              }),
+            );
+          }, defaultMetrics.fontSize),
+        ),
+      defaultMetrics.fontSize,
+    );
+  }
+
+  return {
+    ...defaultMetrics,
+    lineHeight: resolveEffectiveTextLineHeight({
+      fontSize: effectiveFontSize,
+      baseFontSize: defaultMetrics.fontSize,
+      baseLineHeight: block.blockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight,
+    }),
   };
 }
 

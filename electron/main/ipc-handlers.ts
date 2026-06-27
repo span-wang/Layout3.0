@@ -15,8 +15,12 @@ import {
   selectImageFile,
 } from './file-handlers';
 import { exportPdf } from './pdf-handlers';
+import { registerAiHandlers } from './ai-handlers';
+import { registerAiRecordHandlers } from './ai-record-handlers';
 
 export function registerIpcHandlers(): void {
+  registerAiHandlers();
+  registerAiRecordHandlers();
   ipcMain.handle('app:getVersion', () => app.getVersion());
   ipcMain.handle('file:getDefaultWorkspace', () => getDefaultWorkspace());
   ipcMain.handle('file:open', () => openDocument());

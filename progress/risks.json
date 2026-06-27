@@ -47,6 +47,38 @@
       "description": "多行段落在原位富文本编辑态应用文字/字体格式时，选区偏移统计没有稳定计入 `<br>` 对应的换行字符，可能导致末尾若干字没有进入格式应用范围，并在模型中形成未格式化的独立 `TextRun/span`。",
       "impactScope": "PH2-06 文本与段落局部样式编辑、CanvasPane 富文本编辑器、顶部快捷格式工具栏、右侧对象属性文字样式、`.layout` 样式写回",
       "currentHandling": "已完成修复：`CanvasPane.tsx` 中选区点查找和偏移测量已统一把 `<br>` 与块级换行按 1 个字符计入，和 `TextRun` 的 `\\n` 口径一致；`smoke:m2` 已补充多行段落完整选区尾部格式回归验证。"
+    },
+    {
+      "id": "RISK-007",
+      "date": "2026-06-27",
+      "type": "缺陷",
+      "description": "字体字号批量应用后，分页测试算法1仍可能按旧估算行高和未测量块高把过多文字放入当前页，画布正文区底部因 `overflow: hidden` 被下边距或页脚裁掉。",
+      "impactScope": "PH2-14 字体字号批量快捷应用、PH2-09 分页算法、CanvasPane 画布预览、Typesetting Engine 分页估算、M2 冒烟验证",
+      "currentHandling": "已完成最小修复：隐藏 DOM 测量缓存已纳入字体字号样式签名，分页测试算法1会优先消费已测得的顶层块高；大字号文本已通过有效行高安全口径参与预览、导出和分页估算，并由 `smoke:m2` 回归验证覆盖。更完整的真实行级分页继续归属 `PH2-09`。"
+    },
+    {
+      "id": "RISK-008",
+      "date": "2026-06-27",
+      "type": "缺陷",
+      "description": "AI 基础结构代码审核发现生成内容写回模型字段不完整、停止按钮未取消网络请求、代理配置未统一生效、Anthropic 流式响应未解析、检查前文档内容转换失真，以及部分按钮为可见空功能。",
+      "impactScope": "PH3-01 AI 面板基础结构、AiService、AI 生成/优化/检查 Tab、LayoutDocument 写回、M4 AI 就绪验收",
+      "currentHandling": "已完成修复：AI 生成内容通过完整 LayoutDocument/TextRun 契约写入并进入撤销栈；生成、优化、检查已接入 AbortController；请求统一走 AiService 代理 URL 规则；Anthropic 流式响应已支持 `delta.text`；检查前文档转换已带出表格、图片 alt 与列表项；暂未落地按钮已改为禁用提示；API Key 文案已改为本机 localStorage 保存说明。"
+    },
+    {
+      "id": "RISK-009",
+      "date": "2026-06-27",
+      "type": "返工",
+      "description": "AI 请求继续从 renderer 直接发起时仍会受浏览器 CORS 限制影响，前端代理或公开代理方案也难以可靠转发 `Authorization` / `x-api-key` 等鉴权头，用户实际配置后仍可能出现 `failed to fetch`。",
+      "impactScope": "PH3-01 AI 请求链路、AiService、AiSettings、Electron preload / main IPC、M4 AI 就绪验收",
+      "currentHandling": "已完成修复：AI HTTP 请求已迁移到 Electron 主进程 IPC 执行，renderer 只负责构造业务请求和读取返回结果；AI 设置页已删除代理 URL，AiConfig 已删除 proxyUrl 字段，主进程支持按 requestId 取消正在执行的请求。"
+    },
+    {
+      "id": "RISK-010",
+      "date": "2026-06-27",
+      "type": "缺陷",
+      "description": "桌面端多个输入框存在明显输入等待，部分右侧属性输入每个字符都会写回 `LayoutDocument`，进而触发撤销栈、分页重算和隐藏测量层，导致普通输入也被重模型更新拖慢。",
+      "impactScope": "PH2-12 桌面端真实操作验收、RightPanel 属性输入、CanvasPane 画布预览、Typesetting Engine 分页刷新、用户连续输入体验",
+      "currentHandling": "已完成首轮修复：画布富文本编辑和右侧图片/公式属性输入已改为本地草稿或非受控输入，确认后再写回模型；`CanvasPane` 已增加记忆化隔离。若仍存在全局卡顿，再另拆画布渲染隔离深化或隐藏测量层降频任务。"
     }
   ]
 }

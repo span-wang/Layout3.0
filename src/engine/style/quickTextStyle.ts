@@ -34,6 +34,35 @@ export interface QuickTextStylePatch {
   fontSize?: number;
 }
 
+// 当局部或批量字号超过模板基线时，固定行高会让字形挤出行盒，页尾最容易被裁掉。
+// 这里统一给预览、导出和分页估算一个最低安全比例，避免各处各自猜行高。
+export const MIN_EFFECTIVE_TEXT_LINE_HEIGHT_RATIO = 1.35;
+
+export function resolveEffectiveTextLineHeight(payload: {
+  fontSize: number;
+  baseFontSize: number;
+  baseLineHeight: number;
+}): number {
+  const safeBaseLineHeight = Number.isFinite(payload.baseLineHeight)
+    ? Math.max(1, payload.baseLineHeight)
+    : 1;
+  const safeBaseFontSize = Number.isFinite(payload.baseFontSize)
+    ? Math.max(1, payload.baseFontSize)
+    : 1;
+  const safeFontSize = Number.isFinite(payload.fontSize)
+    ? Math.max(1, payload.fontSize)
+    : safeBaseFontSize;
+
+  if (safeFontSize <= safeBaseFontSize) {
+    return safeBaseLineHeight;
+  }
+
+  return Math.max(
+    safeBaseLineHeight,
+    Math.ceil(safeFontSize * MIN_EFFECTIVE_TEXT_LINE_HEIGHT_RATIO),
+  );
+}
+
 function isQuickTextStylePatchEmpty(patch: QuickTextStylePatch): boolean {
   return patch.fontFamily === undefined && patch.fontSize === undefined;
 }

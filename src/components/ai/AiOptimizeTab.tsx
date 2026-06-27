@@ -3,7 +3,7 @@
  * 支持润色、改写、总结、扩写、降低难度，提高正式度
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAppStore } from '@/store';
 import { aiService } from '@/services/AiService';
 import type { OptimizeOptions, OptimizeMode } from '@/types/ai';
@@ -22,6 +22,7 @@ export function AiOptimizeTab(): JSX.Element {
 
   const [selectedText, setSelectedText] = useState('');
   const [optimizeMode, setOptimizeMode] = useState<OptimizeMode>('polish');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleOptimize = async () => {
     if (!isAiConfigured) {
@@ -47,9 +48,12 @@ export function AiOptimizeTab(): JSX.Element {
         mode: optimizeMode,
       };
 
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
       await aiService.optimize(options, (content) => {
         updateOptimizedContent(content);
-      });
+      }, abortController.signal);
 
       finishOptimizing();
     } catch (error) {
@@ -59,13 +63,13 @@ export function AiOptimizeTab(): JSX.Element {
         setOptimizeError(error instanceof Error ? error.message : '优化失败');
       }
       finishOptimizing();
+    } finally {
+      abortControllerRef.current = null;
     }
   };
 
-  const handleReplaceSelection = () => {
-    if (!optimizedContent.trim()) return;
-    // 将优化后的内容替换选中的文本
-    console.log('替换选中文本:', optimizedContent);
+  const handleStopOptimize = () => {
+    abortControllerRef.current?.abort();
   };
 
   const handleClear = () => {
@@ -112,7 +116,7 @@ export function AiOptimizeTab(): JSX.Element {
 
       <div className="ai-section">
         {isOptimizing ? (
-          <button type="button" className="ai-button ai-button-stop" onClick={() => finishOptimizing()}>
+          <button type="button" className="ai-button ai-button-stop" onClick={handleStopOptimize}>
             停止优化
           </button>
         ) : (
@@ -129,8 +133,8 @@ export function AiOptimizeTab(): JSX.Element {
             <pre className="ai-result-content">{optimizedContent}</pre>
           </div>
           <div className="ai-result-actions">
-            <button type="button" className="ai-button ai-button-primary" onClick={handleReplaceSelection}>
-              替换选中文本
+            <button type="button" className="ai-button ai-button-primary" disabled title="后续会接入画布选区替换">
+              替换选中文本（待接入）
             </button>
             <button type="button" className="ai-button" onClick={handleClear}>
               清空

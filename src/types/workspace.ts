@@ -1,6 +1,6 @@
 import type { TextRangeSelection, TextRun } from '@/engine/document-model';
 
-export type LeftPanelTab = '文件' | '大纲' | '搜索' | '资源';
+export type LeftPanelTab = '文件' | '大纲' | '搜索' | '资源' | 'AI生成记录';
 
 export type WorkspaceViewMode = 'source' | 'split' | 'preview';
 

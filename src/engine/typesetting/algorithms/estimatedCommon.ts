@@ -19,6 +19,7 @@ import {
   getEffectiveListItemMaxFontSize,
   getEffectiveTableCellMaxFontSize,
   getEffectiveTextRunsMaxFontSize,
+  resolveEffectiveTextLineHeight,
 } from '@/engine/style/quickTextStyle';
 import { estimateTextLines } from '../textMetrics';
 import { buildTocFragment, estimateTocBlockHeight } from '../tocLayout';
@@ -69,15 +70,22 @@ function resolveTextBlockStyle(
   baseStyle: TextBlockStyleRule,
   styles?: LayoutStyleSheet,
 ): TextBlockStyleRule {
+  const fontSize = getEffectiveTextRunsMaxFontSize({
+    textRuns: block.textRuns,
+    block,
+    styles,
+    fallback: baseStyle.fontSize,
+  });
+  const baseLineHeight = block.blockStyleOverrides.lineHeight ?? baseStyle.lineHeight;
+
   return {
     ...baseStyle,
-    fontSize: getEffectiveTextRunsMaxFontSize({
-      textRuns: block.textRuns,
-      block,
-      styles,
-      fallback: baseStyle.fontSize,
+    fontSize,
+    lineHeight: resolveEffectiveTextLineHeight({
+      fontSize,
+      baseFontSize: baseStyle.fontSize,
+      baseLineHeight,
     }),
-    lineHeight: block.blockStyleOverrides.lineHeight ?? baseStyle.lineHeight,
     marginTop: block.blockStyleOverrides.spaceBefore ?? baseStyle.marginTop,
     marginBottom: block.blockStyleOverrides.spaceAfter ?? baseStyle.marginBottom,
   };
@@ -145,8 +153,18 @@ function estimateTableRowHeight(
         fallback: contract.blockStyles.paragraph.fontSize,
       }),
     );
-    const lineHeight =
-      block.blockStyleOverrides.lineHeight ?? contract.blockStyles.paragraph.lineHeight;
+    const fontSize = getEffectiveTableCellMaxFontSize({
+      cell,
+      block,
+      styles,
+      fallback: contract.blockStyles.paragraph.fontSize,
+    });
+    const lineHeight = resolveEffectiveTextLineHeight({
+      fontSize,
+      baseFontSize: contract.blockStyles.paragraph.fontSize,
+      baseLineHeight:
+        block.blockStyleOverrides.lineHeight ?? contract.blockStyles.paragraph.lineHeight,
+    });
 
     return Math.max(
       maxHeight,
@@ -427,18 +445,24 @@ function estimateBlockHeight(
           ? block.metadata.items.reduce((total, item, index) => {
               const itemText = item.textRuns.map((run) => run.text).join('');
               const levelIndentPx = Math.max(0, getLayoutListItemLevel(item) - 1) * Math.max(16, contract.blockStyles.list.indent * 0.72);
+              const fontSize = getEffectiveListItemMaxFontSize({
+                item,
+                block,
+                styles,
+                fallback: contract.blockStyles.list.fontSize,
+              });
+              const lineHeight = resolveEffectiveTextLineHeight({
+                fontSize,
+                baseFontSize: contract.blockStyles.list.fontSize,
+                baseLineHeight: listStyle.lineHeight,
+              });
               const lines = estimateTextLines(
                 itemText,
                 Math.max(80, widthPx - levelIndentPx),
-                getEffectiveListItemMaxFontSize({
-                  item,
-                  block,
-                  styles,
-                  fallback: contract.blockStyles.list.fontSize,
-                }),
+                fontSize,
               );
               const gap = index === 0 ? 0 : contract.blockStyles.list.itemGap;
-              return total + gap + lines * listStyle.lineHeight;
+              return total + gap + lines * lineHeight;
             }, 0)
           : 0;
       return listStyle.marginTop + itemHeights + listStyle.marginBottom;
@@ -457,15 +481,21 @@ function estimateBlockHeight(
         contract.blockStyles.blockquote.marginBottom
       );
     case 'code': {
+      const codeFontSize = getEffectiveTextRunsMaxFontSize({
+        textRuns: block.textRuns,
+        block,
+        styles,
+        fallback: contract.blockStyles.code.fontSize,
+      });
       const codeStyle = {
         ...contract.blockStyles.code,
-        fontSize: getEffectiveTextRunsMaxFontSize({
-          textRuns: block.textRuns,
-          block,
-          styles,
-          fallback: contract.blockStyles.code.fontSize,
+        fontSize: codeFontSize,
+        lineHeight: resolveEffectiveTextLineHeight({
+          fontSize: codeFontSize,
+          baseFontSize: contract.blockStyles.code.fontSize,
+          baseLineHeight:
+            block.blockStyleOverrides.lineHeight ?? contract.blockStyles.code.lineHeight,
         }),
-        lineHeight: block.blockStyleOverrides.lineHeight ?? contract.blockStyles.code.lineHeight,
         marginTop: block.blockStyleOverrides.spaceBefore ?? contract.blockStyles.code.marginTop,
         marginBottom: block.blockStyleOverrides.spaceAfter ?? contract.blockStyles.code.marginBottom,
       };

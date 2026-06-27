@@ -1,4 +1,5 @@
 import {
+  memo,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -59,7 +60,11 @@ import {
   isTableCellInRangeSelection,
   resolveTableColumnWidths,
 } from '@/engine/document-model/tableLayout';
-import { buildPageStyleVariables } from '@/engine/style/blockStyleResolution';
+import {
+  buildPageStyleVariables,
+  resolveBlockDefaultTextMetrics,
+  resolveBlockEffectiveTextMetrics,
+} from '@/engine/style/blockStyleResolution';
 import {
   resolveQuickTextStyleForBlock,
   resolveQuickTextStyleForRun,
@@ -358,11 +363,15 @@ function buildTextRunStyle(run: TextRun, inheritedStyle: TextStyleOverrides = {}
   };
 }
 
-function buildMeasurementStyleSignature(contract: ResolvedStyleContract): string {
+function buildMeasurementStyleSignature(
+  contract: ResolvedStyleContract,
+  styles: LayoutStyleSheet,
+): string {
   return JSON.stringify({
     contentWidthPx: contract.contentWidthPx,
     blockStyles: contract.blockStyles,
     templateId: contract.templateId,
+    textStyles: styles.textStyles,
   });
 }
 
@@ -377,16 +386,18 @@ function buildBlockMeasurementSignature(block: LayoutBlock, styleSignature: stri
   })}`;
 }
 
-function buildBlockStyle(block: LayoutBlock): CSSProperties {
+function buildBlockStyle(block: LayoutBlock, effectiveLineHeight?: number): CSSProperties {
   const supportsBlockIndent = block.type === 'heading' || block.type === 'paragraph';
   const indentStyle = supportsBlockIndent ? resolveHangingIndentStyle(block.blockStyleOverrides) : null;
   const textIndent = indentStyle ? indentStyle.textIndent : block.blockStyleOverrides.firstLineIndent;
 
   return {
     textAlign: block.blockStyleOverrides.textAlign,
-    lineHeight: block.blockStyleOverrides.lineHeight !== undefined
-      ? `${block.blockStyleOverrides.lineHeight}px`
-      : undefined,
+    lineHeight: effectiveLineHeight !== undefined
+      ? `${effectiveLineHeight}px`
+      : block.blockStyleOverrides.lineHeight !== undefined
+        ? `${block.blockStyleOverrides.lineHeight}px`
+        : undefined,
     marginTop: block.blockStyleOverrides.spaceBefore !== undefined
       ? `${block.blockStyleOverrides.spaceBefore}px`
       : undefined,
@@ -400,6 +411,27 @@ function buildBlockStyle(block: LayoutBlock): CSSProperties {
       : undefined,
     backgroundColor: block.blockStyleOverrides.backgroundColor,
   };
+}
+
+function resolveBlockLineHeightStyle(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract | undefined,
+  styles?: LayoutStyleSheet,
+): number | undefined {
+  if (!contract) {
+    return block.blockStyleOverrides.lineHeight;
+  }
+
+  const defaultMetrics = resolveBlockDefaultTextMetrics(block, contract);
+  const effectiveMetrics = resolveBlockEffectiveTextMetrics(block, contract, styles);
+  const renderedBaseLineHeight = block.blockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight;
+
+  // 只有字号导致行高必须变大时才写内联行高；普通块继续走 CSS 模板变量。
+  if (effectiveMetrics.lineHeight > renderedBaseLineHeight) {
+    return effectiveMetrics.lineHeight;
+  }
+
+  return block.blockStyleOverrides.lineHeight;
 }
 
 function buildImageStyle(block: LayoutBlock): CSSProperties | undefined {
@@ -2286,6 +2318,12 @@ function renderBlock(
   imageTextWrapBundle = false,
 ): JSX.Element | null {
   const inheritedTextStyle = resolveQuickTextStyleForBlock(block, documentStyles);
+  const effectiveLineHeight = resolveBlockLineHeightStyle(
+    block,
+    tableResizeState?.pageContract,
+    documentStyles,
+  );
+  const blockStyle = buildBlockStyle(block, effectiveLineHeight);
   const isEditing = editingNodeId === block.id;
   const getSelectableBlockProps = (className = '') =>
     createSelectableBlockProps(
@@ -2353,7 +2391,7 @@ function renderBlock(
           <h1
             key={`${block.id}-${index}`}
             {...getSelectableBlockProps()}
-            style={buildBlockStyle(block)}
+            style={blockStyle}
           >
             {content}
           </h1>
@@ -2365,7 +2403,7 @@ function renderBlock(
           <h2
             key={`${block.id}-${index}`}
             {...getSelectableBlockProps()}
-            style={buildBlockStyle(block)}
+            style={blockStyle}
           >
             {content}
           </h2>
@@ -2377,7 +2415,7 @@ function renderBlock(
           <h4
             key={`${block.id}-${index}`}
             {...getSelectableBlockProps()}
-            style={buildBlockStyle(block)}
+            style={blockStyle}
           >
             {content}
           </h4>
@@ -2388,7 +2426,7 @@ function renderBlock(
         <h3
           key={`${block.id}-${index}`}
           {...getSelectableBlockProps()}
-          style={buildBlockStyle(block)}
+          style={blockStyle}
         >
           {content}
         </h3>
@@ -2439,7 +2477,7 @@ function renderBlock(
         <p
           key={`${block.id}-${index}`}
           {...getSelectableBlockProps()}
-          style={buildBlockStyle(block)}
+          style={blockStyle}
         >
           {isEditing
             ? isRichTextCanvasEditorKind(editingKind ?? 'paragraph')
@@ -2480,7 +2518,7 @@ function renderBlock(
           key={`list-${block.id}-${index}`}
           {...getSelectableBlockProps()}
           start={block.metadata.ordered ? block.metadata.start ?? 1 : undefined}
-          style={buildBlockStyle(block)}
+          style={blockStyle}
         >
           {renderListTreeNodes({
             block,
@@ -2512,7 +2550,7 @@ function renderBlock(
         <blockquote
           key={`blockquote-${block.id}-${index}`}
           {...getSelectableBlockProps('quote-block')}
-          style={buildBlockStyle(block)}
+          style={blockStyle}
         >
           {block.metadata.blocks.map((item, childIndex) =>
             renderBlock(
@@ -2561,7 +2599,7 @@ function renderBlock(
         <pre
           key={`code-${block.id}-${index}`}
           {...getSelectableBlockProps('code-block')}
-          style={buildBlockStyle(block)}
+          style={blockStyle}
         >
           <code>
             {isEditing
@@ -2615,7 +2653,7 @@ function renderBlock(
             key={`table-${block.id}-${index}`}
             {...getSelectableBlockProps('table-shell')}
           >
-            <table className="preview-table" style={buildBlockStyle(block)}>
+            <table className="preview-table" style={blockStyle}>
               <colgroup>
                 {resolvedColumnWidths.map((width, columnIndex) => (
                   <col key={`${block.id}-col-${columnIndex + 1}`} style={{ width: `${width}px` }} />
@@ -2935,7 +2973,7 @@ function createPageDisplayStyles(
   };
 }
 
-export function CanvasPane({
+function CanvasPaneComponent({
   documentTitle,
   documentBlockCount,
   documentBlocks,
@@ -3105,7 +3143,10 @@ export function CanvasPane({
     }
 
     const measurementLayer = measurementLayerRef.current;
-    const styleSignature = buildMeasurementStyleSignature(resolvedStyleContract);
+    const styleSignature = buildMeasurementStyleSignature(
+      resolvedStyleContract,
+      documentStyles,
+    );
     const nextCache: Record<string, BlockMeasurementCacheEntry> = {};
     const nextHeights: Record<string, number> = {};
 
@@ -3142,7 +3183,7 @@ export function CanvasPane({
 
     blockMeasurementCacheRef.current = nextCache;
     onMeasuredBlockHeightsChange(nextHeights);
-  }, [documentBlocks, onMeasuredBlockHeightsChange, resolvedStyleContract]);
+  }, [documentBlocks, documentStyles, onMeasuredBlockHeightsChange, resolvedStyleContract]);
 
   useLayoutEffect(() => {
     const canvasPane = canvasPaneRef.current;
@@ -3770,7 +3811,7 @@ export function CanvasPane({
     if (currentSerialized !== draftSerialized) {
       setEditingDraftTextRuns(currentRuns);
     }
-  }, [documentBlocks, editingDraftTextRuns, editingNodeId, isEditingRichText]);
+  }, [documentBlocks, editingNodeId, isEditingRichText]);
 
   useLayoutEffect(() => {
     if (!shouldShowFloatingToolbar) {
@@ -4248,14 +4289,15 @@ export function CanvasPane({
     });
 
     if (nextDraftTextRuns && isRichTextCanvasEditorKind(editingKind ?? 'paragraph')) {
-      if (pendingSelectionNodeId) {
-        onSelectNode(pendingSelectionNodeId);
+      const currentRuns = findEditableNodeTextRunsInBlocks(documentBlocks, nodeId);
+      // 富文本输入先留在本地草稿，失焦时再一次性写回模型，避免每个字都触发分页和隐藏测量层。
+      if (!currentRuns || !areTextRunsVisuallyEqual(currentRuns, nextDraftTextRuns)) {
+        onCommitNodeRichText(nodeId, nextDraftTextRuns);
       }
-      restoreCanvasScrollSnapshotSoon(canvasPane, scrollSnapshot);
-      return;
+    } else {
+      onCommitNodeText(nodeId, nextText);
     }
 
-    onCommitNodeText(nodeId, nextText);
     if (pendingSelectionNodeId) {
       onSelectNode(pendingSelectionNodeId);
     }
@@ -4266,9 +4308,6 @@ export function CanvasPane({
     const canvasPane = canvasPaneRef.current;
     const scrollSnapshot = createCanvasScrollSnapshot(canvasPane);
     setEditingDraftTextRuns(textRuns);
-    if (editingNodeId) {
-      onCommitNodeRichText(editingNodeId, textRuns);
-    }
     restoreCanvasScrollSnapshotSoon(canvasPane, scrollSnapshot);
   };
 
@@ -4794,3 +4833,5 @@ export function CanvasPane({
     </section>
   );
 }
+
+export const CanvasPane = memo(CanvasPaneComponent);

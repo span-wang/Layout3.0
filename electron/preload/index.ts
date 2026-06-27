@@ -7,6 +7,42 @@ interface LayoutDirectoryEntry {
   children?: LayoutDirectoryEntry[];
 }
 
+interface AiRequestPayload {
+  requestId: string;
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  body?: string;
+}
+
+interface AiRequestResult {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  body: string;
+}
+
+interface AiGenerationRecord {
+  id: string;
+  type: 'lecture' | 'summary' | 'exercise' | 'exam';
+  typeLabel: string;
+  topic: string;
+  grade?: string;
+  subject?: string;
+  length?: 'short' | 'medium' | 'long';
+  lengthLabel?: string;
+  provider?: 'openai' | 'anthropic' | 'custom';
+  model?: string;
+  content: string;
+  createdAt: string;
+}
+
+interface AiGenerationRecordFileResult {
+  recordFilePath: string;
+  records: AiGenerationRecord[];
+}
+
 const layoutAPI = {
   getAppVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
   getDefaultWorkspace: (): Promise<{
@@ -68,6 +104,24 @@ const layoutAPI = {
   }): Promise<{ filePath: string }> => ipcRenderer.invoke('file:save', payload),
   exportPdf: (payload: { html: string; title: string }): Promise<{ filePath: string }> =>
     ipcRenderer.invoke('file:exportPdf', payload),
+  requestAi: (payload: AiRequestPayload): Promise<AiRequestResult> =>
+    ipcRenderer.invoke('ai:request', payload),
+  cancelAiRequest: (requestId: string): Promise<boolean> =>
+    ipcRenderer.invoke('ai:cancelRequest', requestId),
+  listAiGenerationRecords: (payload: {
+    workspaceRootPath: string | null;
+  }): Promise<AiGenerationRecordFileResult> => ipcRenderer.invoke('aiRecords:list', payload),
+  addAiGenerationRecord: (payload: {
+    workspaceRootPath: string | null;
+    record: Omit<AiGenerationRecord, 'id' | 'createdAt'> & Partial<Pick<AiGenerationRecord, 'id' | 'createdAt'>>;
+  }): Promise<AiGenerationRecordFileResult> => ipcRenderer.invoke('aiRecords:add', payload),
+  deleteAiGenerationRecord: (payload: {
+    workspaceRootPath: string | null;
+    recordId: string;
+  }): Promise<AiGenerationRecordFileResult> => ipcRenderer.invoke('aiRecords:delete', payload),
+  clearAiGenerationRecords: (payload: {
+    workspaceRootPath: string | null;
+  }): Promise<AiGenerationRecordFileResult> => ipcRenderer.invoke('aiRecords:clear', payload),
 };
 
 contextBridge.exposeInMainWorld('layoutAPI', layoutAPI);

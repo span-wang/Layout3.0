@@ -3,9 +3,10 @@
  * 支持生成讲义、知识点总结、练习题、试卷初稿
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAppStore } from '@/store';
 import { aiService } from '@/services/AiService';
+import { addAiGenerationRecord } from '@/services/AiGenerationRecordService';
 import type { GenerateOptions, GenerateType } from '@/types/ai';
 import { GENERATE_TYPE_LABELS, LENGTH_LABELS } from '@/types/ai';
 
@@ -18,15 +19,19 @@ export function AiGenerateTab(): JSX.Element {
   const setGenerateError = useAppStore((state) => state.setGenerateError);
   const finishGenerating = useAppStore((state) => state.finishGenerating);
   const clearGeneratedContent = useAppStore((state) => state.clearGeneratedContent);
-  const setLayoutDocument = useAppStore((state) => state.setLayoutDocument);
-  const layoutDocument = useAppStore((state) => state.layoutDocument);
+  const insertLayoutMarkdownBlocks = useAppStore((state) => state.insertLayoutMarkdownBlocks);
   const isAiConfigured = useAppStore((state) => state.isAiConfigured);
+  const workspaceRootPath = useAppStore((state) => state.workspaceRootPath);
+  const currentDirectoryPath = useAppStore((state) => state.currentDirectoryPath);
+  const setAiGenerationRecordFile = useAppStore((state) => state.setAiGenerationRecordFile);
+  const setAiGenerationRecordsError = useAppStore((state) => state.setAiGenerationRecordsError);
 
   const [generateType, setGenerateType] = useState<GenerateType>('lecture');
   const [topic, setTopic] = useState('');
   const [grade, setGrade] = useState('');
   const [subject, setSubject] = useState('');
   const [length, setLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleGenerate = async () => {
     if (!isAiConfigured) {
@@ -47,6 +52,7 @@ export function AiGenerateTab(): JSX.Element {
       }
 
       startGenerating();
+      setAiGenerationRecordsError(null);
 
       const options: GenerateOptions = {
         type: generateType,
@@ -56,50 +62,72 @@ export function AiGenerateTab(): JSX.Element {
         length,
       };
 
-      await aiService.generate(options, (content) => {
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      const finalContent = await aiService.generate(options, (content) => {
         updateGeneratedContent(content);
-      });
+      }, abortController.signal);
+
+      if (finalContent.trim()) {
+        try {
+          // 生成完成后把结果写入用户工作区文件，前端只刷新展示列表。
+          const recordFile = await addAiGenerationRecord({
+            workspaceRootPath: workspaceRootPath ?? currentDirectoryPath,
+            record: {
+              type: options.type,
+              typeLabel: GENERATE_TYPE_LABELS[options.type],
+              topic: options.topic,
+              grade: options.grade,
+              subject: options.subject,
+              length: options.length,
+              lengthLabel: LENGTH_LABELS[options.length || 'medium'],
+              provider: config?.provider,
+              model: config?.model,
+              content: finalContent,
+            },
+          });
+          setAiGenerationRecordFile(recordFile);
+        } catch (recordError) {
+          setAiGenerationRecordsError(
+            recordError instanceof Error ? recordError.message : 'AI 生成记录保存失败',
+          );
+        }
+      }
 
       finishGenerating();
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         setGenerateError('生成已取消');
       } else if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
-        setGenerateError('网络错误：无法连接到 AI 服务。\n\n可能原因：\n1. CORS 跨域限制\n2. API 地址不可达\n3. 网络连接问题\n\n提示：对于 OpenAI API，可能需要配置代理或使用第三方转发服务。');
+        setGenerateError('网络错误：主进程无法连接到 AI 服务。\n\n请检查 Base URL、API Key、模型名称和本机网络连接。');
       } else {
         setGenerateError(error instanceof Error ? error.message : '生成失败');
       }
       finishGenerating();
+    } finally {
+      abortControllerRef.current = null;
     }
   };
 
-  const handleInsertToDocument = () => {
-    if (!layoutDocument || !generatedContent.trim()) return;
+  const handleStopGenerate = () => {
+    abortControllerRef.current?.abort();
+  };
 
-    // 将生成的内容追加到文档末尾作为新段落
-    const newBlockId = `ai-gen-${Date.now()}`;
+  const handleInsertToDocument = async () => {
+    if (!generatedContent.trim()) return;
 
-    // 创建新块，使用 any 避免复杂的类型问题
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const newBlock: any = {
-      id: newBlockId,
-      type: 'paragraph',
-      metadata: {},
-      textRuns: [
-        {
-          text: generatedContent,
-          marks: [],
-          styleOverrides: {},
-        },
-      ],
-    };
+    try {
+      const insertedBlockId = await insertLayoutMarkdownBlocks({ markdown: generatedContent });
+      if (!insertedBlockId) {
+        setGenerateError('插入失败：AI 内容没有解析出可插入的文档结构');
+        return;
+      }
 
-    setLayoutDocument({
-      ...layoutDocument,
-      blocks: [...layoutDocument.blocks, newBlock],
-    });
-
-    clearGeneratedContent();
+      clearGeneratedContent();
+    } catch (error) {
+      setGenerateError(error instanceof Error ? error.message : '插入失败：无法解析 AI 生成内容');
+    }
   };
 
   const handleClear = () => {
@@ -195,7 +223,7 @@ export function AiGenerateTab(): JSX.Element {
 
       <div className="ai-section">
         {isGenerating ? (
-          <button type="button" className="ai-button ai-button-stop" onClick={() => finishGenerating()}>
+          <button type="button" className="ai-button ai-button-stop" onClick={handleStopGenerate}>
             停止生成
           </button>
         ) : (

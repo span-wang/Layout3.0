@@ -28,6 +28,11 @@ import {
   resolveQuickTextStyleForBlock,
   resolveQuickTextStyleForRun,
 } from '@/engine/style/quickTextStyle';
+import {
+  resolveBlockDefaultTextMetrics,
+  resolveBlockEffectiveTextMetrics,
+} from '@/engine/style/blockStyleResolution';
+import type { ResolvedStyleContract } from '@/engine/style/types';
 import { resolveAssetSrc } from '@/utils/filePath';
 
 export interface PdfExportPayload {
@@ -64,13 +69,39 @@ function buildTextRunStyle(run: TextRun, inheritedStyle = {}): string {
   return declarations.length > 0 ? ` style="${escapeHtml(declarations.join(';'))}"` : '';
 }
 
-function buildBlockStyle(block: LayoutBlock): string {
+function resolveBlockLineHeightStyle(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract | undefined,
+  styles?: LayoutStyleSheet,
+): number | undefined {
+  if (!contract) {
+    return block.blockStyleOverrides.lineHeight;
+  }
+
+  const defaultMetrics = resolveBlockDefaultTextMetrics(block, contract);
+  const effectiveMetrics = resolveBlockEffectiveTextMetrics(block, contract, styles);
+  const renderedBaseLineHeight = block.blockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight;
+
+  // 导出和画布共用同一条安全线高规则，避免大字号在 PDF 页底被裁掉。
+  if (effectiveMetrics.lineHeight > renderedBaseLineHeight) {
+    return effectiveMetrics.lineHeight;
+  }
+
+  return block.blockStyleOverrides.lineHeight;
+}
+
+function buildBlockStyle(
+  block: LayoutBlock,
+  styles?: LayoutStyleSheet,
+  contract?: ResolvedStyleContract,
+): string {
   const supportsBlockIndent = block.type === 'heading' || block.type === 'paragraph';
   const indentStyle = supportsBlockIndent ? resolveHangingIndentStyle(block.blockStyleOverrides) : null;
   const textIndent = indentStyle ? indentStyle.textIndent : block.blockStyleOverrides.firstLineIndent;
+  const lineHeight = resolveBlockLineHeightStyle(block, contract, styles);
   const declarations = [
     block.blockStyleOverrides.textAlign ? `text-align:${block.blockStyleOverrides.textAlign}` : '',
-    block.blockStyleOverrides.lineHeight ? `line-height:${block.blockStyleOverrides.lineHeight}px` : '',
+    lineHeight ? `line-height:${lineHeight}px` : '',
     block.blockStyleOverrides.spaceBefore !== undefined ? `margin-top:${block.blockStyleOverrides.spaceBefore}px` : '',
     block.blockStyleOverrides.spaceAfter !== undefined ? `margin-bottom:${block.blockStyleOverrides.spaceAfter}px` : '',
     indentStyle && indentStyle.paddingLeft > 0 ? `padding-left:${indentStyle.paddingLeft}px` : '',
@@ -183,7 +214,11 @@ function renderListTreeNodes(
   return `<${tagName}${startAttribute}>${childrenHtml}</${tagName}>`;
 }
 
-function renderBlock(block: LayoutBlock, styles?: LayoutStyleSheet): string {
+function renderBlock(
+  block: LayoutBlock,
+  styles?: LayoutStyleSheet,
+  contract?: ResolvedStyleContract,
+): string {
   const inheritedStyle = resolveQuickTextStyleForBlock(block, styles);
   switch (block.type) {
     case 'pageBreak':
@@ -197,12 +232,12 @@ function renderBlock(block: LayoutBlock, styles?: LayoutStyleSheet): string {
             : block.metadata.kind === 'heading' && block.metadata.depth === 3
               ? 'h3'
               : 'h4';
-      return `<${tagName}${buildBlockStyle(block)}>${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
+      return `<${tagName}${buildBlockStyle(block, styles, contract)}>${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
     }
     case 'toc':
       return '';
     case 'paragraph':
-      return `<p${buildBlockStyle(block)}>${renderTextRuns(block.textRuns, inheritedStyle)}</p>`;
+      return `<p${buildBlockStyle(block, styles, contract)}>${renderTextRuns(block.textRuns, inheritedStyle)}</p>`;
     case 'list': {
       if (block.metadata.kind !== 'list') {
         return '';
@@ -214,17 +249,17 @@ function renderBlock(block: LayoutBlock, styles?: LayoutStyleSheet): string {
         inheritedStyle,
         true,
       );
-      return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockStyle(block)}>`);
+      return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockStyle(block, styles, contract)}>`);
     }
     case 'blockquote':
       return block.metadata.kind === 'blockquote'
-        ? `<blockquote>${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles)).join('')}</blockquote>`
+        ? `<blockquote>${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract)).join('')}</blockquote>`
         : '';
     case 'code':
-      return `<pre${buildBlockStyle(block)}><code>${renderTextRuns(block.textRuns, inheritedStyle)}</code></pre>`;
+      return `<pre${buildBlockStyle(block, styles, contract)}><code>${renderTextRuns(block.textRuns, inheritedStyle)}</code></pre>`;
     case 'equation':
       return block.metadata.kind === 'equation'
-        ? `<div class="equation-shell"${buildBlockStyle(block)}>${renderEquationToHtml(block.metadata.value).html}</div>`
+        ? `<div class="equation-shell"${buildBlockStyle(block, styles, contract)}>${renderEquationToHtml(block.metadata.value).html}</div>`
         : '';
     case 'table':
       if (block.metadata.kind !== 'table') {
@@ -233,7 +268,7 @@ function renderBlock(block: LayoutBlock, styles?: LayoutStyleSheet): string {
       const tableMeta = block.metadata as TableBlockMetadata;
       const columnCount = tableMeta.rows[0]?.cells.length ?? 0;
       const columnWidths = resolveTableColumnWidths(tableMeta.columnWidthsPx, columnCount, 520);
-      return `<table${buildBlockStyle(block)}><tbody>${tableMeta.rows
+      return `<table${buildBlockStyle(block, styles, contract)}><tbody>${tableMeta.rows
           .map((row) =>
             `<tr>${row.cells
               .filter((cell) => !cell.coveredByCellId)
@@ -383,11 +418,11 @@ function renderPages(pages: PageLayout[], styles?: LayoutStyleSheet): string {
                   .join('')
               : '<div class="toc-empty-state-export">当前文档还没有符合当前目录层级的标题。</div>';
 
-          bodyParts.push(`<section class="toc-block-export"${buildBlockStyle(block)}><div class="toc-block-export-title">${escapeHtml(getTocBlockDisplayTitle(block))}</div>${entries}</section>`);
+          bodyParts.push(`<section class="toc-block-export"${buildBlockStyle(block, styles, page.contract)}><div class="toc-block-export-title">${escapeHtml(getTocBlockDisplayTitle(block))}</div>${entries}</section>`);
           continue;
         }
 
-        bodyParts.push(renderBlock(block, styles));
+        bodyParts.push(renderBlock(block, styles, page.contract));
       }
 
       return `<section class="page" style="width:${metrics.pageWidthPx}px;min-height:${metrics.pageHeightPx}px;grid-template-rows:${metrics.headerHeight}px 1fr ${metrics.footerHeight}px;">

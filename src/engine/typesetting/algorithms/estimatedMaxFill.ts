@@ -44,6 +44,7 @@ import {
   getEffectiveListItemMaxFontSize,
   getEffectiveTableCellMaxFontSize,
   getEffectiveTextRunsMaxFontSize,
+  resolveEffectiveTextLineHeight,
 } from '@/engine/style/quickTextStyle';
 import { estimateTextLines, computeTextSplitOffsetForLineCount } from '../textMetrics';
 import { buildTocFragment, estimateTocBlockHeight } from '../tocLayout';
@@ -173,15 +174,22 @@ function resolveTextBlockStyle(
   baseStyle: TextBlockStyleRule,
   styles?: LayoutStyleSheet,
 ): TextBlockStyleRule {
+  const fontSize = getEffectiveTextRunsMaxFontSize({
+    textRuns: block.textRuns,
+    block,
+    styles,
+    fallback: baseStyle.fontSize,
+  });
+  const baseLineHeight = block.blockStyleOverrides.lineHeight ?? baseStyle.lineHeight;
+
   return {
     ...baseStyle,
-    fontSize: getEffectiveTextRunsMaxFontSize({
-      textRuns: block.textRuns,
-      block,
-      styles,
-      fallback: baseStyle.fontSize,
+    fontSize,
+    lineHeight: resolveEffectiveTextLineHeight({
+      fontSize,
+      baseFontSize: baseStyle.fontSize,
+      baseLineHeight,
     }),
-    lineHeight: block.blockStyleOverrides.lineHeight ?? baseStyle.lineHeight,
     marginTop: block.blockStyleOverrides.spaceBefore ?? baseStyle.marginTop,
     marginBottom: block.blockStyleOverrides.spaceAfter ?? baseStyle.marginBottom,
   };
@@ -370,19 +378,25 @@ function estimateListItemHeight(
 ): number {
   const listStyle = resolveListBlockStyle(block, contract);
   const itemText = item.textRuns.map((run) => run.text).join('');
+  const fontSize = getEffectiveListItemMaxFontSize({
+    item,
+    block,
+    styles,
+    fallback: listStyle.fontSize,
+  });
+  const lineHeight = resolveEffectiveTextLineHeight({
+    fontSize,
+    baseFontSize: contract.blockStyles.list.fontSize,
+    baseLineHeight: listStyle.lineHeight,
+  });
   const lines = estimateTextLines(
     itemText,
     getListItemTextWidthPx(item, block, contract),
-    getEffectiveListItemMaxFontSize({
-      item,
-      block,
-      styles,
-      fallback: listStyle.fontSize,
-    }),
+    fontSize,
   );
   const gap = fragmentItemIndex === 0 ? 0 : listStyle.itemGap;
 
-  return gap + lines * listStyle.lineHeight;
+  return gap + lines * lineHeight;
 }
 
 function getListItemTextWidthPx(
@@ -472,8 +486,19 @@ function splitListItemToFit(payload: {
   const listStyle = resolveListBlockStyle(block, contract);
   const gap = fragmentItemIndex === 0 ? 0 : listStyle.itemGap;
   const usableHeight = availableHeight - gap;
-  const maxLines = Math.floor(usableHeight / listStyle.lineHeight);
   const itemText = item.textRuns.map((run) => run.text).join('');
+  const fontSize = getEffectiveListItemMaxFontSize({
+    item,
+    block,
+    styles,
+    fallback: listStyle.fontSize,
+  });
+  const lineHeight = resolveEffectiveTextLineHeight({
+    fontSize,
+    baseFontSize: contract.blockStyles.list.fontSize,
+    baseLineHeight: listStyle.lineHeight,
+  });
+  const maxLines = Math.floor(usableHeight / lineHeight);
 
   if (maxLines <= 0 || itemText.length === 0) {
     return null;
@@ -482,12 +507,7 @@ function splitListItemToFit(payload: {
   const splitOffset = computeTextSplitOffsetForLineCount(
     itemText,
     getListItemTextWidthPx(item, block, contract),
-    getEffectiveListItemMaxFontSize({
-      item,
-      block,
-      styles,
-      fallback: listStyle.fontSize,
-    }),
+    fontSize,
     maxLines,
   );
 
@@ -610,6 +630,52 @@ function getTableLineHeight(block: TableLayoutBlock, contract: ResolvedStyleCont
   return block.blockStyleOverrides.lineHeight ?? contract.blockStyles.paragraph.lineHeight;
 }
 
+function getTableCellEffectiveFontSize(
+  cell: LayoutTableCell,
+  block: TableLayoutBlock,
+  styles: LayoutStyleSheet | undefined,
+  contract: ResolvedStyleContract,
+): number {
+  return getEffectiveTableCellMaxFontSize({
+    cell,
+    block,
+    styles,
+    fallback: contract.blockStyles.paragraph.fontSize,
+  });
+}
+
+function getTableCellEffectiveLineHeight(
+  cell: LayoutTableCell,
+  block: TableLayoutBlock,
+  styles: LayoutStyleSheet | undefined,
+  contract: ResolvedStyleContract,
+): number {
+  const fontSize = getTableCellEffectiveFontSize(cell, block, styles, contract);
+  return resolveEffectiveTextLineHeight({
+    fontSize,
+    baseFontSize: contract.blockStyles.paragraph.fontSize,
+    baseLineHeight: getTableLineHeight(block, contract),
+  });
+}
+
+function getTableRowEffectiveLineHeight(
+  row: LayoutTableRow,
+  block: TableLayoutBlock,
+  styles: LayoutStyleSheet | undefined,
+  contract: ResolvedStyleContract,
+): number {
+  return row.cells.reduce((maxLineHeight, cell) => {
+    if (isCoveredTableCell(cell)) {
+      return maxLineHeight;
+    }
+
+    return Math.max(
+      maxLineHeight,
+      getTableCellEffectiveLineHeight(cell, block, styles, contract),
+    );
+  }, getTableLineHeight(block, contract));
+}
+
 function getTableCellTextWidthPx(
   block: TableLayoutBlock,
   row: LayoutTableRow,
@@ -649,17 +715,13 @@ function estimateTableRowHeight(
 
     const cellIndex = row.cells.indexOf(cell);
     const cellWidthPx = getTableCellTextWidthPx(block, row, cellIndex, contract);
+    const fontSize = getTableCellEffectiveFontSize(cell, block, styles, contract);
     const lines = estimateTextLines(
       cell.textRuns.map((run) => run.text).join(''),
       cellWidthPx,
-      getEffectiveTableCellMaxFontSize({
-        cell,
-        block,
-        styles,
-        fallback: contract.blockStyles.paragraph.fontSize,
-      }),
+      fontSize,
     );
-    const lineHeight = getTableLineHeight(block, contract);
+    const lineHeight = getTableCellEffectiveLineHeight(cell, block, styles, contract);
 
     return Math.max(
       maxHeight,
@@ -715,7 +777,7 @@ function splitTableRowToFit(payload: {
     return null;
   }
 
-  const lineHeight = getTableLineHeight(block, contract);
+  const lineHeight = getTableRowEffectiveLineHeight(row, block, styles, contract);
   const maxLines = Math.floor(
     (availableHeight - contract.blockStyles.table.cellPaddingY * 2) / lineHeight,
   );
@@ -733,12 +795,7 @@ function splitTableRowToFit(payload: {
     const splitOffset = computeTextSplitOffsetForLineCount(
       cellText,
       getTableCellTextWidthPx(block, row, cellIndex, contract),
-      getEffectiveTableCellMaxFontSize({
-        cell,
-        block,
-        styles,
-        fallback: contract.blockStyles.paragraph.fontSize,
-      }),
+      getTableCellEffectiveFontSize(cell, block, styles, contract),
       maxLines,
     );
     const { currentPageRuns, remainingRuns } = splitTextRunsByPlainTextLength(cell.textRuns, splitOffset);
@@ -1043,6 +1100,22 @@ function getCachedBlockHeight(
   return height;
 }
 
+function getMeasuredTopLevelBlockHeight(
+  block: LayoutBlock,
+  measuredBlockHeights: Record<string, number> | undefined,
+): number | null {
+  const measuredHeight = measuredBlockHeights?.[block.id];
+  if (
+    measuredHeight === undefined ||
+    !Number.isFinite(measuredHeight) ||
+    measuredHeight <= 0
+  ) {
+    return null;
+  }
+
+  return measuredHeight;
+}
+
 /**
  * 估算块高度（主函数）
  */
@@ -1108,16 +1181,21 @@ function estimateBlockHeight(
         contract.blockStyles.blockquote.marginBottom
       );
     case 'code': {
+      const codeFontSize = getEffectiveTextRunsMaxFontSize({
+        textRuns: block.textRuns,
+        block,
+        styles,
+        fallback: contract.blockStyles.code.fontSize,
+      });
       const codeStyle = {
         ...contract.blockStyles.code,
-        fontSize: getEffectiveTextRunsMaxFontSize({
-          textRuns: block.textRuns,
-          block,
-          styles,
-          fallback: contract.blockStyles.code.fontSize,
+        fontSize: codeFontSize,
+        lineHeight: resolveEffectiveTextLineHeight({
+          fontSize: codeFontSize,
+          baseFontSize: contract.blockStyles.code.fontSize,
+          baseLineHeight:
+            block.blockStyleOverrides.lineHeight ?? contract.blockStyles.code.lineHeight,
         }),
-        lineHeight:
-          block.blockStyleOverrides.lineHeight ?? contract.blockStyles.code.lineHeight,
         marginTop:
           block.blockStyleOverrides.spaceBefore ?? contract.blockStyles.code.marginTop,
         marginBottom:
@@ -1401,7 +1479,7 @@ function hasRemainingContent(blocks: LayoutBlock[], startIndex: number): boolean
 export function paginateMaxFillBlocks(
   context: PaginationAlgorithmContext,
 ): PageLayout[] {
-  const { blocks: originalBlocks, contract, styles } = context;
+  const { blocks: originalBlocks, contract, styles, measuredBlockHeights } = context;
 
   if (originalBlocks.length === 0) {
     return [createEmptyPage(1, contract)];
@@ -1455,9 +1533,13 @@ export function paginateMaxFillBlocks(
 
     // 计算当前块高度
     // 目录高度取决于整篇文档标题数量，不能只按块对象缓存，否则标题变化后会复用旧高度。
-    const blockHeight = block.type === 'toc'
-      ? estimateBlockHeight(block, contract, tocItems, styles)
-      : getCachedBlockHeight(block, contract, tocItems, styles);
+    const measuredBlockHeight = block.type === 'toc'
+      ? null
+      : getMeasuredTopLevelBlockHeight(block, measuredBlockHeights);
+    const blockHeight = measuredBlockHeight ??
+      (block.type === 'toc'
+        ? estimateBlockHeight(block, contract, tocItems, styles)
+        : getCachedBlockHeight(block, contract, tocItems, styles));
 
     if (block.type === 'toc' && block.metadata.kind === 'toc' && blockHeight > pageCapacity - currentHeight) {
       const maxDepth = block.metadata.maxDepth;

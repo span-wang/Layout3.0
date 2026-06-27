@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  clearAiGenerationRecords,
+  deleteAiGenerationRecord,
+  listAiGenerationRecords,
+} from '@/services/AiGenerationRecordService';
+import {
   applyPageNumbersToTocItems,
   buildHeadingPageNumberMap,
   buildTocItems,
@@ -9,6 +14,7 @@ import { getDirectoryDisplayName } from '@/services/FileService';
 import { usePagination } from '@/hooks/usePagination';
 import { useResolvedStyleContract } from '@/hooks/useResolvedStyleContract';
 import { useAppStore } from '@/store';
+import type { AiGenerationRecord } from '@/types/ai';
 import type { CanvasTextSelectionState, WorkspaceDirectoryEntry } from '@/types/workspace';
 import { CanvasPane } from './CanvasPane';
 import { EditorPane } from './EditorPane';
@@ -37,6 +43,7 @@ export function AppShell(): JSX.Element {
   });
 
   const filePath = useAppStore((state) => state.filePath);
+  const workspaceRootPath = useAppStore((state) => state.workspaceRootPath);
   const currentDirectoryPath = useAppStore((state) => state.currentDirectoryPath);
   const directoryEntries = useAppStore((state) => state.directoryEntries);
   const recentFiles = useAppStore((state) => state.recentlyOpenedFiles);
@@ -53,6 +60,13 @@ export function AppShell(): JSX.Element {
   const setActiveRightPanelTab = useAppStore((state) => state.setActiveRightPanelTab);
   const setActiveAiTab = useAppStore((state) => state.setActiveAiTab);
   const openAiPanel = useAppStore((state) => state.openAiPanel);
+  const updateGeneratedContent = useAppStore((state) => state.updateGeneratedContent);
+  const setGenerateError = useAppStore((state) => state.setGenerateError);
+  const aiGenerationRecords = useAppStore((state) => state.aiGenerationRecords);
+  const aiGenerationRecordFilePath = useAppStore((state) => state.aiGenerationRecordFilePath);
+  const aiGenerationRecordsError = useAppStore((state) => state.aiGenerationRecordsError);
+  const setAiGenerationRecordFile = useAppStore((state) => state.setAiGenerationRecordFile);
+  const setAiGenerationRecordsError = useAppStore((state) => state.setAiGenerationRecordsError);
   const parseState = useAppStore((state) => state.parseState);
   const layoutDocument = useAppStore((state) => state.layoutDocument);
   const parseError = useAppStore((state) => state.parseError);
@@ -63,6 +77,7 @@ export function AppShell(): JSX.Element {
   const clearLayoutSelection = useAppStore((state) => state.clearLayoutSelection);
   const updateLayoutNodeText = useAppStore((state) => state.updateLayoutNodeText);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
+  const insertLayoutMarkdownBlocks = useAppStore((state) => state.insertLayoutMarkdownBlocks);
   const mergeLayoutSelectedBlocks = useAppStore((state) => state.mergeLayoutSelectedBlocks);
   const undoLayoutDocument = useAppStore((state) => state.undoLayoutDocument);
   const redoLayoutDocument = useAppStore((state) => state.redoLayoutDocument);
@@ -237,6 +252,100 @@ export function AppShell(): JSX.Element {
     },
     [selectLayoutNode, setActiveRightPanelTab],
   );
+
+  const handleRefreshAiGenerationRecords = useCallback(async () => {
+    try {
+      const recordFile = await listAiGenerationRecords(workspaceRootPath ?? currentDirectoryPath);
+      setAiGenerationRecordFile(recordFile);
+    } catch (error) {
+      setAiGenerationRecordsError(error instanceof Error ? error.message : 'AI 生成记录读取失败');
+    }
+  }, [currentDirectoryPath, setAiGenerationRecordFile, setAiGenerationRecordsError, workspaceRootPath]);
+
+  useEffect(() => {
+    void handleRefreshAiGenerationRecords();
+  }, [handleRefreshAiGenerationRecords]);
+
+  const handleRestoreAiGenerationRecord = useCallback(
+    (record: AiGenerationRecord) => {
+      updateGeneratedContent(record.content);
+      setGenerateError(null);
+      if (!isRightPanelOpen) {
+        toggleRightPanel();
+      }
+      setActiveRightPanelTab('AI助手');
+      setActiveAiTab('generate');
+      openAiPanel();
+      showMessage('已将 AI 生成记录恢复到结果区');
+    },
+    [
+      isRightPanelOpen,
+      openAiPanel,
+      setActiveAiTab,
+      setActiveRightPanelTab,
+      setGenerateError,
+      showMessage,
+      toggleRightPanel,
+      updateGeneratedContent,
+    ],
+  );
+
+  const handleInsertAiGenerationRecord = useCallback(
+    async (record: AiGenerationRecord) => {
+      try {
+        const insertedBlockId = await insertLayoutMarkdownBlocks({ markdown: record.content });
+        if (!insertedBlockId) {
+          showMessage('插入失败：AI 生成记录没有解析出可插入的文档结构');
+          return;
+        }
+
+        showMessage('已插入 AI 生成记录内容');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '插入 AI 生成记录失败';
+        showMessage(`插入失败：${message}`);
+      }
+    },
+    [insertLayoutMarkdownBlocks, showMessage],
+  );
+
+  const handleDeleteAiGenerationRecord = useCallback(
+    async (recordId: string) => {
+      try {
+        const recordFile = await deleteAiGenerationRecord(workspaceRootPath ?? currentDirectoryPath, recordId);
+        setAiGenerationRecordFile(recordFile);
+        showMessage('已删除 AI 生成记录');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '删除 AI 生成记录失败';
+        setAiGenerationRecordsError(message);
+        showMessage(`删除失败：${message}`);
+      }
+    },
+    [
+      currentDirectoryPath,
+      setAiGenerationRecordFile,
+      setAiGenerationRecordsError,
+      showMessage,
+      workspaceRootPath,
+    ],
+  );
+
+  const handleClearAiGenerationRecords = useCallback(async () => {
+    try {
+      const recordFile = await clearAiGenerationRecords(workspaceRootPath ?? currentDirectoryPath);
+      setAiGenerationRecordFile(recordFile);
+      showMessage('已清空 AI 生成记录');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '清空 AI 生成记录失败';
+      setAiGenerationRecordsError(message);
+      showMessage(`清空失败：${message}`);
+    }
+  }, [
+    currentDirectoryPath,
+    setAiGenerationRecordFile,
+    setAiGenerationRecordsError,
+    showMessage,
+    workspaceRootPath,
+  ]);
 
   const handleCommitLayoutNodeText = useCallback(
     (nodeId: string, text: string) => {
@@ -441,6 +550,14 @@ export function AppShell(): JSX.Element {
             onDeleteEntry={handleDeleteEntry}
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
+            aiGenerationRecords={aiGenerationRecords}
+            aiGenerationRecordFilePath={aiGenerationRecordFilePath}
+            aiGenerationRecordsError={aiGenerationRecordsError}
+            onRefreshAiGenerationRecords={handleRefreshAiGenerationRecords}
+            onRestoreAiGenerationRecord={handleRestoreAiGenerationRecord}
+            onInsertAiGenerationRecord={handleInsertAiGenerationRecord}
+            onDeleteAiGenerationRecord={handleDeleteAiGenerationRecord}
+            onClearAiGenerationRecords={handleClearAiGenerationRecords}
             dragSource={dragSource}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}

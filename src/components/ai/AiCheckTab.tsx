@@ -3,7 +3,9 @@
  * 支持检查文档排版问题：标题层级、段落长度、图片说明、表格宽度、分页美观
  */
 
+import { useRef } from 'react';
 import { useAppStore } from '@/store';
+import type { LayoutBlock, LayoutListItem, LayoutTableCell } from '@/engine/document-model';
 import { aiService } from '@/services/AiService';
 import { SEVERITY_LABELS } from '@/types/ai';
 import type { AiCheckResultItem } from '@/types/ai';
@@ -17,7 +19,7 @@ function layoutDocumentToMarkdown(doc: NonNullable<ReturnType<typeof useAppStore
   for (const block of doc.blocks) {
     switch (block.type) {
       case 'heading': {
-        const level = (block.metadata as { level?: number }).level ?? 1;
+        const level = block.metadata.kind === 'heading' ? block.metadata.depth : 1;
         const prefix = '#'.repeat(level);
         const headingText = extractTextFromBlock(block);
         lines.push(`${prefix} ${headingText}`);
@@ -33,38 +35,48 @@ function layoutDocumentToMarkdown(doc: NonNullable<ReturnType<typeof useAppStore
       }
 
       case 'code': {
-        const codeText = (block.metadata as { value?: string }).value ?? '';
-        const lang = (block.metadata as { lang?: string }).lang ?? '';
+        const codeText = block.metadata.kind === 'code' ? block.metadata.value : '';
+        const lang = block.metadata.kind === 'code' ? block.metadata.language ?? '' : '';
         lines.push(`\`\`\`${lang}\n${codeText}\n\`\`\``);
         break;
       }
 
-      case 'table':
-        lines.push('[表格]');
+      case 'table': {
+        if (block.metadata.kind === 'table') {
+          lines.push(tableBlockToMarkdown(block));
+        }
         break;
+      }
 
-      case 'image':
-        lines.push('[图片]');
+      case 'image': {
+        if (block.metadata.kind === 'image') {
+          const title = block.metadata.title ? ` "${block.metadata.title}"` : '';
+          lines.push(`![${block.metadata.alt}](${block.metadata.src}${title})`);
+        }
         break;
+      }
 
       case 'equation': {
-        const equationValue = (block.metadata as { value?: string }).value ?? '';
+        const equationValue = block.metadata.kind === 'equation' ? block.metadata.value : '';
         lines.push('$$\n' + equationValue + '\n$$');
         break;
       }
 
       case 'list': {
-        const metadata = block.metadata as { items?: Array<{ text?: string }>; ordered?: boolean };
-        const items = metadata.items ?? [];
-        for (const item of items) {
-          const bullet = metadata.ordered ? '1.' : '-';
-          lines.push(`${bullet} ${item.text ?? ''}`);
+        if (block.metadata.kind === 'list') {
+          lines.push(listItemsToMarkdown(block.metadata.items, block.metadata.ordered));
         }
         break;
       }
 
       case 'blockquote': {
-        lines.push('> ' + extractTextFromBlock(block));
+        if (block.metadata.kind === 'blockquote') {
+          const quoteText = block.metadata.blocks
+            .map((childBlock) => extractTextFromBlock(childBlock))
+            .filter(Boolean)
+            .join('\n\n');
+          lines.push(quoteText.split('\n').map((line) => `> ${line}`).join('\n'));
+        }
         break;
       }
 
@@ -84,6 +96,44 @@ function extractTextFromBlock(block: { textRuns?: Array<{ text: string }> }): st
   return block.textRuns.map((run) => run.text).join('');
 }
 
+function escapeTableCellText(text: string): string {
+  return text.replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+}
+
+function tableBlockToMarkdown(block: LayoutBlock): string {
+  if (block.metadata.kind !== 'table') {
+    return '';
+  }
+
+  const rows = block.metadata.rows;
+  if (rows.length === 0) {
+    return '';
+  }
+
+  const columnCount = Math.max(...rows.map((row) => row.cells.length), 1);
+  const renderRow = (cells: LayoutTableCell[]): string => {
+    const values = Array.from({ length: columnCount }, (_, index) =>
+      escapeTableCellText(extractTextFromBlock(cells[index] ?? {}))
+    );
+    return `| ${values.join(' | ')} |`;
+  };
+
+  const header = renderRow(rows[0].cells);
+  const separator = `| ${Array.from({ length: columnCount }, () => '---').join(' | ')} |`;
+  const body = rows.slice(1).map((row) => renderRow(row.cells));
+  return [header, separator, ...body].join('\n');
+}
+
+function listItemsToMarkdown(items: LayoutListItem[], ordered: boolean): string {
+  return items
+    .map((item, index) => {
+      const indent = '  '.repeat(Math.max(0, (item.level ?? 1) - 1));
+      const marker = ordered ? `${index + 1}.` : item.checked === null ? '-' : `- [${item.checked ? 'x' : ' '}]`;
+      return `${indent}${marker} ${extractTextFromBlock(item)}`;
+    })
+    .join('\n');
+}
+
 export function AiCheckTab(): JSX.Element {
   const isChecking = useAppStore((state) => state.isChecking);
   const checkResult = useAppStore((state) => state.checkResult);
@@ -98,6 +148,7 @@ export function AiCheckTab(): JSX.Element {
   const clearCheckResult = useAppStore((state) => state.clearCheckResult);
   const isAiConfigured = useAppStore((state) => state.isAiConfigured);
   const layoutDocument = useAppStore((state) => state.layoutDocument);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleCheck = async () => {
     if (!isAiConfigured) {
@@ -120,8 +171,10 @@ export function AiCheckTab(): JSX.Element {
 
       // 将文档内容转换为 Markdown 文本
       const content = layoutDocumentToMarkdown(layoutDocument);
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
-      const result = await aiService.checkDocument(content);
+      const result = await aiService.checkDocument(content, abortController.signal);
 
       setCheckResult(result);
       finishChecking();
@@ -132,7 +185,13 @@ export function AiCheckTab(): JSX.Element {
         setCheckError(error instanceof Error ? error.message : '检查失败');
       }
       finishChecking();
+    } finally {
+      abortControllerRef.current = null;
     }
+  };
+
+  const handleStopCheck = () => {
+    abortControllerRef.current?.abort();
   };
 
   const handleIgnore = (itemId: string) => {
@@ -174,7 +233,7 @@ export function AiCheckTab(): JSX.Element {
 
       <div className="ai-section">
         {isChecking ? (
-          <button type="button" className="ai-button ai-button-stop" onClick={() => finishChecking()}>
+          <button type="button" className="ai-button ai-button-stop" onClick={handleStopCheck}>
             停止检查
           </button>
         ) : (
@@ -283,8 +342,8 @@ function CheckResultItemComponent({
       <p className="ai-check-suggestion">{item.suggestion}</p>
       <div className="ai-check-item-actions">
         {item.autoFixable && (
-          <button type="button" className="ai-button ai-button-small ai-button-primary">
-            应用建议
+          <button type="button" className="ai-button ai-button-small ai-button-primary" disabled title="后续会接入自动修复写回">
+            应用建议（待接入）
           </button>
         )}
         {isIgnored ? (

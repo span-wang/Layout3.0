@@ -10,14 +10,17 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
+  History,
   Images,
   ListTree,
   Search,
   X,
 } from 'lucide-react';
+import { AiGenerationRecordsPanel } from '@/components/ai/AiGenerationRecordsPanel';
 import { ContextMenu, type ContextMenuEntry } from '@/components/common/ContextMenu';
 import { emptyFolderHints, outlineTips, resourceHints, searchHints } from '@/constants/workspace';
 import type { TocItem } from '@/engine/document-model';
+import type { AiGenerationRecord } from '@/types/ai';
 import type {
   LeftPanelTab,
   RecentFileEntry,
@@ -35,6 +38,7 @@ const leftPanelRailItems: Array<{
   { tab: '大纲', icon: ListTree, description: '文档大纲' },
   { tab: '搜索', icon: Search, description: '内容搜索' },
   { tab: '资源', icon: Images, description: '资源素材' },
+  { tab: 'AI生成记录', icon: History, description: 'AI生成记录' },
 ];
 
 interface LeftPanelProps {
@@ -58,6 +62,14 @@ interface LeftPanelProps {
   onDeleteEntry: (entry: WorkspaceDirectoryEntry) => void;
   searchQuery: string;
   onSearchQueryChange: (q: string) => void;
+  aiGenerationRecords: AiGenerationRecord[];
+  aiGenerationRecordFilePath: string | null;
+  aiGenerationRecordsError: string | null;
+  onRefreshAiGenerationRecords: () => Promise<void>;
+  onRestoreAiGenerationRecord: (record: AiGenerationRecord) => void;
+  onInsertAiGenerationRecord: (record: AiGenerationRecord) => Promise<void>;
+  onDeleteAiGenerationRecord: (recordId: string) => Promise<void>;
+  onClearAiGenerationRecords: () => Promise<void>;
   dragSource: string | null;
   onDragStart: (e: React.DragEvent, entry: WorkspaceDirectoryEntry) => void;
   onDragEnd: () => void;
@@ -516,6 +528,14 @@ function renderPanelContent(
   onContextMenu: (e: React.MouseEvent, entry: WorkspaceDirectoryEntry) => void,
   searchQuery: string,
   onSearchQueryChange: (q: string) => void,
+  aiGenerationRecords: AiGenerationRecord[],
+  aiGenerationRecordFilePath: string | null,
+  aiGenerationRecordsError: string | null,
+  onRefreshAiGenerationRecords: () => Promise<void>,
+  onRestoreAiGenerationRecord: (record: AiGenerationRecord) => void,
+  onInsertAiGenerationRecord: (record: AiGenerationRecord) => Promise<void>,
+  onDeleteAiGenerationRecord: (recordId: string) => Promise<void>,
+  onClearAiGenerationRecords: () => Promise<void>,
   dragSource: string | null,
   onDragStart: (e: React.DragEvent, entry: WorkspaceDirectoryEntry) => void,
   onDragEnd: () => void,
@@ -709,6 +729,20 @@ function renderPanelContent(
         </div>
       );
 
+    case 'AI生成记录':
+      return (
+        <AiGenerationRecordsPanel
+          records={aiGenerationRecords}
+          recordFilePath={aiGenerationRecordFilePath}
+          error={aiGenerationRecordsError}
+          onRefresh={onRefreshAiGenerationRecords}
+          onRestore={onRestoreAiGenerationRecord}
+          onInsert={onInsertAiGenerationRecord}
+          onDelete={onDeleteAiGenerationRecord}
+          onClear={onClearAiGenerationRecords}
+        />
+      );
+
     default:
       return <></>;
   }
@@ -759,6 +793,14 @@ export function LeftPanel({
   onDeleteEntry,
   searchQuery,
   onSearchQueryChange,
+  aiGenerationRecords,
+  aiGenerationRecordFilePath,
+  aiGenerationRecordsError,
+  onRefreshAiGenerationRecords,
+  onRestoreAiGenerationRecord,
+  onInsertAiGenerationRecord,
+  onDeleteAiGenerationRecord,
+  onClearAiGenerationRecords,
   dragSource,
   onDragStart,
   onDragEnd,
@@ -856,6 +898,14 @@ export function LeftPanel({
             handleContextMenu,
             searchQuery,
             onSearchQueryChange,
+            aiGenerationRecords,
+            aiGenerationRecordFilePath,
+            aiGenerationRecordsError,
+            onRefreshAiGenerationRecords,
+            onRestoreAiGenerationRecord,
+            onInsertAiGenerationRecord,
+            onDeleteAiGenerationRecord,
+            onClearAiGenerationRecords,
             dragSource,
             onDragStart,
             onDragEnd,
