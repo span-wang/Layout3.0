@@ -17,6 +17,7 @@ const layoutAPI = {
   openFileAtPath: (filePath: string): Promise<{ filePath: string; content: string }> =>
     ipcRenderer.invoke('file:openAtPath', filePath),
   selectImageFile: (): Promise<{ filePath: string }> => ipcRenderer.invoke('file:selectImage'),
+  importFontFile: (): Promise<{ filePath: string; fileName: string }> => ipcRenderer.invoke('file:importFont'),
   openFolder: (): Promise<{
     directoryPath: string;
     entries: LayoutDirectoryEntry[];

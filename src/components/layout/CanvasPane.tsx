@@ -12,7 +12,7 @@ import {
   type RefObject,
 } from 'react';
 import { formulaTemplateGroups } from '@/constants/formulaTemplates';
-import { Bold, Eraser, Highlighter, Italic, Strikethrough, Underline, X } from 'lucide-react';
+import { Bold, Combine, Eraser, Highlighter, Italic, Strikethrough, Underline, X } from 'lucide-react';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import {
   applyTextRunPatchToTextRuns,
@@ -21,10 +21,14 @@ import {
   getHeadingText,
   getLayoutBlockPlainText,
   getLayoutListItemLevel,
+  getTocBlockDisplayTitle,
   getTextContentFromRuns,
+  getVisibleTocItemsForBlock,
   isEditableLayoutTextBlock,
   toggleTextMarkInTextRuns,
   type LayoutBlock,
+  type LayoutStyleSheet,
+  type LayoutResource,
   type LayoutListTreeNode,
   type LayoutListItem,
   type LayoutTableCell,
@@ -35,8 +39,10 @@ import {
   type TextMarkType,
   type TextRangeSelection,
   type TextRun,
+  type TocItem,
   type TextStyleOverrides,
 } from '@/engine/document-model';
+import { buildFontFaceCss } from '@/engine/document-model/fontResources';
 import { renderEquationToHtml, splitInlineEquations, renderInlineEquationToHtml } from '@/engine/document-model/equation';
 import {
   resolveImageLayout,
@@ -54,6 +60,10 @@ import {
   resolveTableColumnWidths,
 } from '@/engine/document-model/tableLayout';
 import { buildPageStyleVariables } from '@/engine/style/blockStyleResolution';
+import {
+  resolveQuickTextStyleForBlock,
+  resolveQuickTextStyleForRun,
+} from '@/engine/style/quickTextStyle';
 import type { ResolvedStyleContract } from '@/engine/style/types';
 import type { PageLayout } from '@/engine/typesetting/types';
 import { useAppStore } from '@/store';
@@ -67,28 +77,40 @@ interface CanvasPaneProps {
   documentTitle: string;
   documentBlockCount: number;
   documentBlocks: LayoutBlock[];
+  documentResources: LayoutResource[];
+  documentStyles: LayoutStyleSheet;
   pageLayouts: PageLayout[];
   parseError: string | null;
   parseState: ParseState;
   resolvedStyleContract: ResolvedStyleContract;
   selectedNodeId: string | null;
+  selectedBlockIds: string[];
   onSelectNode: (nodeId: string) => void;
+  onSelectBlock: (blockId: string, extendRange: boolean) => void;
   onSelectTableCell: (cellId: string, extendRange: boolean) => void;
   onClearSelection: () => void;
+  onMergeSelectedBlocks: () => void;
   onCommitNodeText: (nodeId: string, text: string) => void;
   onCommitNodeRichText: (nodeId: string, textRuns: TextRun[]) => void;
   onTextSelectionChange: (state: CanvasTextSelectionState) => void;
-  tocItems?: Array<{ id: string; depth: number; text: string; pageNumber?: number }>;
+  tocItems?: TocItem[];
   onNavigateToNode?: (nodeId: string) => void;
   requestedStartEditingNodeId?: string | null;
   onConsumeRequestedStartEditingNode?: (nodeId: string) => void;
   requestedScrollToNodeId?: string | null;
   onConsumeRequestedScrollToNode?: (nodeId: string) => void;
   isCondensed?: boolean;
+  onMeasuredBlockHeightsChange?: (heights: Record<string, number>) => void;
+}
+
+interface BlockMeasurementCacheEntry {
+  signature: string;
+  heightPx: number;
 }
 
 interface RenderListTreeOptions {
   block: LayoutBlock;
+  documentStyles: LayoutStyleSheet | null | undefined;
   nodes: LayoutListTreeNode[];
   selectedNodeId: string | null;
   editingNodeId: string | null;
@@ -324,15 +346,35 @@ function getSharedFloatingTextStyleValue(
   return isShared ? firstValue : undefined;
 }
 
-function buildTextRunStyle(run: TextRun): CSSProperties {
+function buildTextRunStyle(run: TextRun, inheritedStyle: TextStyleOverrides = {}): CSSProperties {
+  const resolvedStyle = resolveQuickTextStyleForRun(run, inheritedStyle);
   return {
-    color: run.styleOverrides.color,
-    backgroundColor: run.styleOverrides.highlightColor ?? run.styleOverrides.backgroundColor,
+    color: resolvedStyle.color,
+    backgroundColor: resolvedStyle.highlightColor ?? resolvedStyle.backgroundColor,
     fontStyle: run.marks.some((mark) => mark.type === 'italic') ? 'italic' : undefined,
-    fontFamily: run.styleOverrides.fontFamily,
-    fontSize: run.styleOverrides.fontSize ? `${run.styleOverrides.fontSize}px` : undefined,
-    letterSpacing: run.styleOverrides.letterSpacing ? `${run.styleOverrides.letterSpacing}px` : undefined,
+    fontFamily: resolvedStyle.fontFamily,
+    fontSize: resolvedStyle.fontSize ? `${resolvedStyle.fontSize}px` : undefined,
+    letterSpacing: resolvedStyle.letterSpacing ? `${resolvedStyle.letterSpacing}px` : undefined,
   };
+}
+
+function buildMeasurementStyleSignature(contract: ResolvedStyleContract): string {
+  return JSON.stringify({
+    contentWidthPx: contract.contentWidthPx,
+    blockStyles: contract.blockStyles,
+    templateId: contract.templateId,
+  });
+}
+
+function buildBlockMeasurementSignature(block: LayoutBlock, styleSignature: string): string {
+  return `${styleSignature}:${JSON.stringify({
+    id: block.id,
+    type: block.type,
+    textRuns: block.textRuns,
+    metadata: block.metadata,
+    blockStyleOverrides: block.blockStyleOverrides,
+    pagination: block.pagination,
+  })}`;
 }
 
 function buildBlockStyle(block: LayoutBlock): CSSProperties {
@@ -751,7 +793,11 @@ function applyMarks(content: ReactNode, run: TextRun, keyPrefix: string): ReactN
   }, content);
 }
 
-function renderTextRuns(textRuns: TextRun[], emptyLabel?: string): ReactNode[] {
+function renderTextRuns(
+  textRuns: TextRun[],
+  emptyLabel?: string,
+  inheritedStyle: TextStyleOverrides = {},
+): ReactNode[] {
   if (textRuns.length === 0 && emptyLabel) {
     return [
       <span className="empty-text-placeholder" key="empty-text-placeholder">
@@ -761,7 +807,7 @@ function renderTextRuns(textRuns: TextRun[], emptyLabel?: string): ReactNode[] {
   }
 
   return textRuns.map((run) => (
-    <span key={run.id} style={buildTextRunStyle(run)}>
+    <span key={run.id} style={buildTextRunStyle(run, inheritedStyle)}>
       {applyMarks(renderInlineText(run.text, run.id), run, run.id)}
     </span>
   ));
@@ -838,6 +884,7 @@ function buildListItemClassName(item: LayoutListItem): string {
 
 function renderListTreeNodes({
   block,
+  documentStyles,
   nodes,
   selectedNodeId,
   editingNodeId,
@@ -858,6 +905,7 @@ function renderListTreeNodes({
   onListItemContextMenu,
 }: RenderListTreeOptions): ReactNode[] {
   const ListTag = block.metadata.kind === 'list' && block.metadata.ordered ? 'ol' : 'ul';
+  const inheritedTextStyle = resolveQuickTextStyleForBlock(block, documentStyles);
 
   return nodes.map((node) => {
     const item = node.item;
@@ -908,12 +956,13 @@ function renderListTreeNodes({
                     onCommit: onCommitEdit,
                     onCancel: onCancelEdit,
                   })
-              : renderTextRuns(item.textRuns, '空列表项')}
+              : renderTextRuns(item.textRuns, '空列表项', inheritedTextStyle)}
           </span>
         </span>
         {node.children.length > 0 ? (
           <ListTag>{renderListTreeNodes({
             block,
+            documentStyles,
             nodes: node.children,
             selectedNodeId,
             editingNodeId,
@@ -1012,8 +1061,24 @@ function createSelectableBlockProps(
   onPrepareSelectNode: (nodeId: string) => void,
   onStartEditing: (node: EditableCanvasNode) => void,
   className = '',
+  selectedBlockIds: string[] = [],
+  onSelectBlock?: (blockId: string, extendRange: boolean) => void,
 ) {
-  const classNames = ['selectable-layout-block', className, block.id === selectedNodeId ? 'selected' : '']
+  const isBlockRangeSelected = selectedBlockIds.includes(block.id);
+  const selectBlockOrNode = (extendRange: boolean) => {
+    if (onSelectBlock) {
+      onSelectBlock(block.id, extendRange);
+      return;
+    }
+
+    onSelectNode(block.id);
+  };
+  const classNames = [
+    'selectable-layout-block',
+    className,
+    block.id === selectedNodeId ? 'selected' : '',
+    isBlockRangeSelected ? 'block-range-selected' : '',
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -1025,7 +1090,7 @@ function createSelectableBlockProps(
       onPrepareSelectNode(block.id);
       if (event.detail >= 2) {
         event.preventDefault();
-        onSelectNode(block.id);
+        selectBlockOrNode(false);
         const editableNode = getEditableBlockNode(block);
         // 第二次按下鼠标时就进入编辑态，避免缩放画布中 dblclick 事件偶发漏触发。
         if (editableNode) {
@@ -1035,11 +1100,15 @@ function createSelectableBlockProps(
     },
     onClick: (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
-      onSelectNode(block.id);
+      if (event.detail >= 2) {
+        return;
+      }
+
+      selectBlockOrNode(event.shiftKey);
     },
     onDoubleClick: (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
-      onSelectNode(block.id);
+      selectBlockOrNode(false);
       const editableNode = getEditableBlockNode(block);
       if (editableNode) {
         onStartEditing(editableNode);
@@ -1051,19 +1120,37 @@ function createSelectableBlockProps(
 function createSelectableEquationBlockProps({
   block,
   selectedNodeId,
+  selectedBlockIds = [],
   editingNodeId,
   onSelectNode,
+  onSelectBlock,
   onPrepareSelectNode,
   onStartEditing,
 }: {
   block: LayoutBlock;
   selectedNodeId: string | null;
+  selectedBlockIds?: string[];
   editingNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
+  onSelectBlock?: (blockId: string, extendRange: boolean) => void;
   onPrepareSelectNode: (nodeId: string) => void;
   onStartEditing: (node: EditableCanvasNode) => void;
 }) {
-  const classNames = ['selectable-layout-block', 'equation-shell', block.id === selectedNodeId ? 'selected' : '']
+  const isBlockRangeSelected = selectedBlockIds.includes(block.id);
+  const selectBlockOrNode = (extendRange: boolean) => {
+    if (onSelectBlock) {
+      onSelectBlock(block.id, extendRange);
+      return;
+    }
+
+    onSelectNode(block.id);
+  };
+  const classNames = [
+    'selectable-layout-block',
+    'equation-shell',
+    block.id === selectedNodeId ? 'selected' : '',
+    isBlockRangeSelected ? 'block-range-selected' : '',
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -1076,8 +1163,8 @@ function createSelectableEquationBlockProps({
     },
     onClick: (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
-      onSelectNode(block.id);
-      if (editingNodeId === block.id) {
+      selectBlockOrNode(event.shiftKey);
+      if (event.shiftKey || editingNodeId === block.id) {
         return;
       }
 
@@ -1496,26 +1583,93 @@ function areTextRunsVisuallyEqual(left: TextRun[], right: TextRun[]): boolean {
   return getVisualTextRunSignature(left) === getVisualTextRunSignature(right);
 }
 
-function findSelectionPoint(root: HTMLElement, targetOffset: number): { node: Node; offset: number } {
-  let traversed = 0;
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let currentNode = walker.nextNode();
+function isBlockBreakElement(element: HTMLElement, root: HTMLElement): boolean {
+  const tagName = element.tagName.toLowerCase();
+  return (tagName === 'div' || tagName === 'p') && element !== root;
+}
 
-  while (currentNode) {
-    const nodeText = currentNode.textContent ?? '';
-    const nextTraversed = traversed + nodeText.length;
-    if (targetOffset <= nextTraversed) {
-      return {
-        node: currentNode,
-        offset: Math.max(0, Math.min(nodeText.length, targetOffset - traversed)),
-      };
-    }
-
-    traversed = nextTraversed;
-    currentNode = walker.nextNode();
+// 富文本编辑器把 TextRun 里的 \n 渲染成 <br>，选区换算时也必须把 <br> 当成 1 个字符。
+function getRichNodeTextLength(node: Node, root: HTMLElement): number {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent?.replace(/\u00A0/g, ' ').length ?? 0;
   }
 
-  return {
+  if (!(node instanceof HTMLElement)) {
+    return 0;
+  }
+
+  if (node.tagName.toLowerCase() === 'br') {
+    return 1;
+  }
+
+  const childLength = Array.from(node.childNodes).reduce(
+    (total, childNode) => total + getRichNodeTextLength(childNode, root),
+    0,
+  );
+  return childLength + (isBlockBreakElement(node, root) ? 1 : 0);
+}
+
+function findSelectionPoint(root: HTMLElement, targetOffset: number): { node: Node; offset: number } {
+  let traversed = 0;
+
+  const walk = (parent: Node): { node: Node; offset: number } | null => {
+    const childNodes = Array.from(parent.childNodes);
+
+    for (let index = 0; index < childNodes.length; index += 1) {
+      const childNode = childNodes[index];
+
+      if (childNode.nodeType === Node.TEXT_NODE) {
+        const nodeText = childNode.textContent?.replace(/\u00A0/g, ' ') ?? '';
+        const nextTraversed = traversed + nodeText.length;
+        if (targetOffset <= nextTraversed) {
+          return {
+            node: childNode,
+            offset: Math.max(0, Math.min(nodeText.length, targetOffset - traversed)),
+          };
+        }
+
+        traversed = nextTraversed;
+        continue;
+      }
+
+      if (!(childNode instanceof HTMLElement)) {
+        continue;
+      }
+
+      const tagName = childNode.tagName.toLowerCase();
+      if (tagName === 'br') {
+        if (targetOffset <= traversed) {
+          return { node: parent, offset: index };
+        }
+
+        const nextTraversed = traversed + 1;
+        if (targetOffset <= nextTraversed) {
+          return { node: parent, offset: index + 1 };
+        }
+
+        traversed = nextTraversed;
+        continue;
+      }
+
+      const nestedPoint = walk(childNode);
+      if (nestedPoint) {
+        return nestedPoint;
+      }
+
+      if (isBlockBreakElement(childNode, root)) {
+        const nextTraversed = traversed + 1;
+        if (targetOffset <= nextTraversed) {
+          return { node: parent, offset: index + 1 };
+        }
+
+        traversed = nextTraversed;
+      }
+    }
+
+    return null;
+  };
+
+  return walk(root) ?? {
     node: root,
     offset: root.childNodes.length,
   };
@@ -1544,13 +1698,53 @@ function restoreRichSelection(root: HTMLElement, selection: TextRangeSelection |
 }
 
 function measureSelectionOffset(root: HTMLElement, targetNode: Node, targetOffset: number): number {
-  const range = document.createRange();
-  range.setStart(root, 0);
-  range.setEnd(targetNode, targetOffset);
-  const fragment = range.cloneContents();
-  const container = document.createElement('div');
-  container.appendChild(fragment);
-  return container.innerText.replace(/\r\n/g, '\n').length;
+  let traversed = 0;
+  let isDone = false;
+
+  const walk = (node: Node) => {
+    if (isDone) {
+      return;
+    }
+
+    if (node === targetNode) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const nodeText = node.textContent?.replace(/\u00A0/g, ' ') ?? '';
+        traversed += Math.max(0, Math.min(nodeText.length, targetOffset));
+        isDone = true;
+        return;
+      }
+
+      if (node instanceof HTMLElement) {
+        const childNodes = Array.from(node.childNodes).slice(0, targetOffset);
+        traversed += childNodes.reduce((total, childNode) => total + getRichNodeTextLength(childNode, root), 0);
+        isDone = true;
+      }
+      return;
+    }
+
+    if (node.nodeType === Node.TEXT_NODE) {
+      traversed += node.textContent?.replace(/\u00A0/g, ' ').length ?? 0;
+      return;
+    }
+
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+
+    if (node.tagName.toLowerCase() === 'br') {
+      traversed += 1;
+      return;
+    }
+
+    Array.from(node.childNodes).forEach((childNode) => walk(childNode));
+
+    if (!isDone && isBlockBreakElement(node, root)) {
+      traversed += 1;
+    }
+  };
+
+  walk(root);
+  return traversed;
 }
 
 function getRichSelection(root: HTMLElement): TextRangeSelection | null {
@@ -1592,6 +1786,10 @@ function getRichSelectionClientRect(root: HTMLElement): DOMRect | null {
 
   const clientRects = range.getClientRects();
   return clientRects.length > 0 ? clientRects[0] : null;
+}
+
+function escapeDataAttributeValue(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 function RichTextCanvasEditor({
@@ -2038,7 +2236,9 @@ function renderBlock(
   block: LayoutBlock,
   index: number,
   selectedNodeId: string | null,
+  selectedBlockIds: string[] = [],
   onSelectNode: (nodeId: string) => void,
+  onSelectBlock: ((blockId: string, extendRange: boolean) => void) | undefined,
   onSelectTableCell: (cellId: string, extendRange: boolean) => void,
   onPrepareSelectNode: (nodeId: string) => void,
   editingNodeId: string | null,
@@ -2055,7 +2255,7 @@ function renderBlock(
   onEditDraftTextRunsChange: (textRuns: TextRun[]) => void,
   onCommitEdit: () => void,
   onCancelEdit: () => void,
-  tocItems: Array<{ id: string; depth: number; text: string; pageNumber?: number }>,
+  tocItems: TocItem[],
   onNavigateToNode?: (nodeId: string) => void,
   draftImageSizes?: Record<string, { widthPx: number | null; heightPx: number | null }>,
   draftImageCrops?: Record<string, ImageDraftCrop>,
@@ -2080,25 +2280,39 @@ function renderBlock(
   ) => void,
   tableResizeState?: TableResizeRenderState,
   tableSelection?: TableCellRangeSelection | null,
+  documentStyles?: LayoutStyleSheet,
   onListItemContextMenu?: (event: MouseEvent<HTMLElement>, itemId: string) => void,
   pageScale?: number,
   imageTextWrapBundle = false,
 ): JSX.Element | null {
+  const inheritedTextStyle = resolveQuickTextStyleForBlock(block, documentStyles);
   const isEditing = editingNodeId === block.id;
+  const getSelectableBlockProps = (className = '') =>
+    createSelectableBlockProps(
+      block,
+      selectedNodeId,
+      onSelectNode,
+      onPrepareSelectNode,
+      onStartEditing,
+      className,
+      selectedBlockIds,
+      onSelectBlock,
+    );
+  const selectCurrentBlockOrNode = (extendRange: boolean) => {
+    if (onSelectBlock) {
+      onSelectBlock(block.id, extendRange);
+      return;
+    }
+
+    onSelectNode(block.id);
+  };
 
   switch (block.type) {
     case 'pageBreak':
       return (
         <div
           key={`page-break-${block.id}-${index}`}
-          {...createSelectableBlockProps(
-            block,
-            selectedNodeId,
-            onSelectNode,
-            onPrepareSelectNode,
-            onStartEditing,
-            'page-break-marker',
-          )}
+          {...getSelectableBlockProps('page-break-marker')}
           aria-label="分页符"
         >
           <span className="page-break-marker-line" aria-hidden="true" />
@@ -2132,13 +2346,13 @@ function renderBlock(
               onCommit: onCommitEdit,
               onCancel: onCancelEdit,
             })
-        : renderTextRuns(block.textRuns, '空标题');
+        : renderTextRuns(block.textRuns, '空标题', inheritedTextStyle);
 
       if (depth === 1) {
         return (
           <h1
             key={`${block.id}-${index}`}
-            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing)}
+            {...getSelectableBlockProps()}
             style={buildBlockStyle(block)}
           >
             {content}
@@ -2150,7 +2364,7 @@ function renderBlock(
         return (
           <h2
             key={`${block.id}-${index}`}
-            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing)}
+            {...getSelectableBlockProps()}
             style={buildBlockStyle(block)}
           >
             {content}
@@ -2158,10 +2372,22 @@ function renderBlock(
         );
       }
 
+      if (depth === 4) {
+        return (
+          <h4
+            key={`${block.id}-${index}`}
+            {...getSelectableBlockProps()}
+            style={buildBlockStyle(block)}
+          >
+            {content}
+          </h4>
+        );
+      }
+
       return (
         <h3
           key={`${block.id}-${index}`}
-          {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing)}
+          {...getSelectableBlockProps()}
           style={buildBlockStyle(block)}
         >
           {content}
@@ -2174,19 +2400,18 @@ function renderBlock(
       }
 
       {
-        const tocMetadata = block.metadata;
-        const filteredTocItems = tocItems.filter((item) => item.depth <= tocMetadata.maxDepth);
+        const visibleTocItems = getVisibleTocItemsForBlock(block, tocItems);
 
         return (
           <section
             key={`toc-${block.id}-${index}`}
-            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing)}
+            {...getSelectableBlockProps()}
             className="toc-block"
           >
-            <div className="toc-block-title">{tocMetadata.title || '目录'}</div>
-            {filteredTocItems.length > 0 ? (
+            <div className="toc-block-title">{getTocBlockDisplayTitle(block)}</div>
+            {visibleTocItems.length > 0 ? (
               <div className="toc-block-list">
-                {filteredTocItems.map((item) => (
+                {visibleTocItems.map((item) => (
                   <button
                     key={`toc-entry-${block.id}-${item.id}`}
                     type="button"
@@ -2213,7 +2438,7 @@ function renderBlock(
       return (
         <p
           key={`${block.id}-${index}`}
-          {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing)}
+          {...getSelectableBlockProps()}
           style={buildBlockStyle(block)}
         >
           {isEditing
@@ -2240,7 +2465,7 @@ function renderBlock(
                   onCommit: onCommitEdit,
                   onCancel: onCancelEdit,
                 })
-            : renderTextRuns(block.textRuns, '空文本块')}
+            : renderTextRuns(block.textRuns, '空文本块', inheritedTextStyle)}
         </p>
       );
     case 'list': {
@@ -2253,12 +2478,13 @@ function renderBlock(
       return (
         <ListTag
           key={`list-${block.id}-${index}`}
-          {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing)}
+          {...getSelectableBlockProps()}
           start={block.metadata.ordered ? block.metadata.start ?? 1 : undefined}
           style={buildBlockStyle(block)}
         >
           {renderListTreeNodes({
             block,
+            documentStyles,
             nodes: listTree,
             selectedNodeId,
             editingNodeId,
@@ -2285,7 +2511,7 @@ function renderBlock(
       return block.metadata.kind === 'blockquote' ? (
         <blockquote
           key={`blockquote-${block.id}-${index}`}
-          {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'quote-block')}
+          {...getSelectableBlockProps('quote-block')}
           style={buildBlockStyle(block)}
         >
           {block.metadata.blocks.map((item, childIndex) =>
@@ -2293,7 +2519,9 @@ function renderBlock(
               item,
               childIndex,
               selectedNodeId,
+              [],
               onSelectNode,
+              undefined,
               onSelectTableCell,
               onPrepareSelectNode,
               editingNodeId,
@@ -2322,6 +2550,7 @@ function renderBlock(
               onStartImageDrag,
               tableResizeState,
               tableSelection,
+              documentStyles,
               onListItemContextMenu,
             ),
           )}
@@ -2331,7 +2560,7 @@ function renderBlock(
       return (
         <pre
           key={`code-${block.id}-${index}`}
-          {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'code-block')}
+          {...getSelectableBlockProps('code-block')}
           style={buildBlockStyle(block)}
         >
           <code>
@@ -2359,7 +2588,7 @@ function renderBlock(
                     onCommit: onCommitEdit,
                     onCancel: onCancelEdit,
                   })
-              : renderTextRuns(block.textRuns, '空代码块')}
+              : renderTextRuns(block.textRuns, '空代码块', inheritedTextStyle)}
           </code>
         </pre>
       );
@@ -2384,7 +2613,7 @@ function renderBlock(
         return (
           <div
             key={`table-${block.id}-${index}`}
-            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'table-shell')}
+            {...getSelectableBlockProps('table-shell')}
           >
             <table className="preview-table" style={buildBlockStyle(block)}>
               <colgroup>
@@ -2457,7 +2686,11 @@ function renderBlock(
                                       onCommit: onCommitEdit,
                                       onCancel: onCancelEdit,
                                     })
-                                : renderTextRuns(cell.textRuns, isRuntimeTableFragment ? undefined : '空单元格')}
+                                : renderTextRuns(
+                                    cell.textRuns,
+                                    isRuntimeTableFragment ? undefined : '空单元格',
+                                    inheritedTextStyle,
+                                  )}
                             </div>
                             {shouldShowResizeHandles && cellIndex < row.cells.length - 1 && tableResizeState?.onStartTableColumnResize ? (
                               <button
@@ -2535,7 +2768,7 @@ function renderBlock(
         return (
           <figure
             key={`image-${block.id}-${index}`}
-            {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, buildImageShellClassName(block, selectedNodeId))}
+            {...getSelectableBlockProps(buildImageShellClassName(block, selectedNodeId))}
             style={buildImageStyle(block)}
           >
             {block.metadata.src ? (
@@ -2546,10 +2779,14 @@ function renderBlock(
                   data-page-scale={pageScale ?? 1}
                   style={buildImageViewportStyle(imageLayout, measuredVisibleSize)}
                   onMouseDown={(event) => {
+                    if (event.shiftKey) {
+                      return;
+                    }
+
                     // 选中图片并开始拖动
                     if (onStartImageDrag) {
                       // 先选中图片
-                      onSelectNode(block.id);
+                      selectCurrentBlockOrNode(false);
                       // 开始拖动
                       onStartImageDrag(event, block, pageScale ?? 1);
                     }
@@ -2641,8 +2878,10 @@ function renderBlock(
           {...createSelectableEquationBlockProps({
             block,
             selectedNodeId,
+            selectedBlockIds,
             editingNodeId: activeEquationEditorNodeId,
             onSelectNode,
+            onSelectBlock,
             onPrepareSelectNode,
             onStartEditing,
           })}
@@ -2657,7 +2896,7 @@ function renderBlock(
       return (
         <hr
           key={`rule-${block.id}-${index}`}
-          {...createSelectableBlockProps(block, selectedNodeId, onSelectNode, onPrepareSelectNode, onStartEditing, 'preview-rule')}
+          {...getSelectableBlockProps('preview-rule')}
         />
       );
     default:
@@ -2700,14 +2939,19 @@ export function CanvasPane({
   documentTitle,
   documentBlockCount,
   documentBlocks,
+  documentResources,
+  documentStyles,
   pageLayouts,
   parseError,
   parseState,
   resolvedStyleContract,
   selectedNodeId,
+  selectedBlockIds,
   onSelectNode,
+  onSelectBlock,
   onSelectTableCell,
   onClearSelection,
+  onMergeSelectedBlocks,
   onCommitNodeText,
   onCommitNodeRichText,
   onTextSelectionChange,
@@ -2718,7 +2962,9 @@ export function CanvasPane({
   requestedScrollToNodeId = null,
   onConsumeRequestedScrollToNode,
   isCondensed = false,
+  onMeasuredBlockHeightsChange,
 }: CanvasPaneProps): JSX.Element {
+  const fontFaceCss = buildFontFaceCss(documentResources);
   const updateLayoutImageAttributes = useAppStore((state) => state.updateLayoutImageAttributes);
   const tableSelection = useAppStore((state) => state.layoutDocument?.viewState.tableSelection ?? null);
   const updateLayoutTableColumnWidths = useAppStore((state) => state.updateLayoutTableColumnWidths);
@@ -2744,14 +2990,18 @@ export function CanvasPane({
   const [measuredImageVisibleSizes, setMeasuredImageVisibleSizes] = useState<Record<string, ImageMeasuredVisibleSize>>({});
   const [imageMeasureEpoch, setImageMeasureEpoch] = useState(0);
   const [floatingToolbarPosition, setFloatingToolbarPosition] = useState<FloatingToolbarPosition | null>(null);
+  const [blockToolbarPosition, setBlockToolbarPosition] = useState<FloatingToolbarPosition | null>(null);
   const [pageStackWidth, setPageStackWidth] = useState<number | null>(null);
   const [listItemContextMenu, setListItemContextMenu] = useState<ListItemContextMenuState | null>(null);
   const canvasPaneRef = useRef<HTMLDivElement>(null);
   const pageStackRef = useRef<HTMLDivElement>(null);
+  const measurementLayerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const richEditorRef = useRef<HTMLDivElement | null>(null);
   const floatingToolbarRef = useRef<HTMLDivElement | null>(null);
+  const blockToolbarRef = useRef<HTMLDivElement | null>(null);
   const pendingScrollSnapshotRef = useRef<CanvasScrollSnapshot | null>(null);
+  const blockMeasurementCacheRef = useRef<Record<string, BlockMeasurementCacheEntry>>({});
   const pendingSelectionAfterCommitRef = useRef<string | null>(null);
   const activeImageResizeRef = useRef<ActiveImageResize | null>(null);
   const activeImageCropRef = useRef<ActiveImageCrop | null>(null);
@@ -2774,6 +3024,7 @@ export function CanvasPane({
     isEditingRichText &&
     !!floatingToolbarTextRuns &&
     hasNonCollapsedSelection(editingSelection);
+  const shouldShowBlockSelectionToolbar = selectedBlockIds.length >= 2 && !shouldShowFloatingToolbar;
   const currentFloatingTextColor =
     floatingToolbarTextRuns && shouldShowFloatingToolbar
       ? getSharedFloatingTextStyleValue(floatingToolbarTextRuns, editingSelection, 'color')
@@ -2782,6 +3033,12 @@ export function CanvasPane({
     floatingToolbarTextRuns && shouldShowFloatingToolbar
       ? getSharedFloatingTextStyleValue(floatingToolbarTextRuns, editingSelection, 'highlightColor')
       : undefined;
+  const measurementPageStyle = {
+    ...buildPageStyleVariables(resolvedStyleContract),
+    '--page-padding-left': '0px',
+    '--page-padding-right': '0px',
+    width: `${resolvedStyleContract.contentWidthPx}px`,
+  } as CSSProperties;
 
   useLayoutEffect(() => {
     const pageStack = pageStackRef.current;
@@ -2841,6 +3098,51 @@ export function CanvasPane({
   useEffect(() => {
     draftImageOffsetsRef.current = draftImageOffsets;
   }, [draftImageOffsets]);
+
+  useLayoutEffect(() => {
+    if (!onMeasuredBlockHeightsChange) {
+      return;
+    }
+
+    const measurementLayer = measurementLayerRef.current;
+    const styleSignature = buildMeasurementStyleSignature(resolvedStyleContract);
+    const nextCache: Record<string, BlockMeasurementCacheEntry> = {};
+    const nextHeights: Record<string, number> = {};
+
+    documentBlocks.forEach((block) => {
+      const signature = buildBlockMeasurementSignature(block, styleSignature);
+      const cachedEntry = blockMeasurementCacheRef.current[block.id];
+
+      if (cachedEntry?.signature === signature) {
+        nextCache[block.id] = cachedEntry;
+        nextHeights[block.id] = cachedEntry.heightPx;
+      }
+    });
+
+    if (measurementLayer) {
+      const measuredElements = measurementLayer.querySelectorAll<HTMLElement>('[data-measure-block-id]');
+      measuredElements.forEach((element) => {
+        const blockId = element.dataset.measureBlockId;
+        if (!blockId) {
+          return;
+        }
+
+        const block = documentBlocks.find((item) => item.id === blockId);
+        if (!block) {
+          return;
+        }
+
+        const signature = buildBlockMeasurementSignature(block, styleSignature);
+        const rect = element.getBoundingClientRect();
+        const heightPx = Math.max(0, Math.ceil(rect.height));
+        nextCache[blockId] = { signature, heightPx };
+        nextHeights[blockId] = heightPx;
+      });
+    }
+
+    blockMeasurementCacheRef.current = nextCache;
+    onMeasuredBlockHeightsChange(nextHeights);
+  }, [documentBlocks, onMeasuredBlockHeightsChange, resolvedStyleContract]);
 
   useLayoutEffect(() => {
     const canvasPane = canvasPaneRef.current;
@@ -3535,6 +3837,88 @@ export function CanvasPane({
     };
   }, [documentBlocks, editingDraftTextRuns, editingNodeId, editingSelection, isEditingRichText, shouldShowFloatingToolbar]);
 
+  useLayoutEffect(() => {
+    if (!shouldShowBlockSelectionToolbar) {
+      setBlockToolbarPosition(null);
+      return;
+    }
+
+    const toolbar = blockToolbarRef.current;
+    const canvasPane = canvasPaneRef.current;
+    if (!toolbar || !canvasPane) {
+      return;
+    }
+
+    let frameId = 0;
+
+    const updateToolbarPosition = () => {
+      const selectedElements = selectedBlockIds
+        .map((blockId) =>
+          canvasPane.querySelector<HTMLElement>(`[data-layout-node-id="${escapeDataAttributeValue(blockId)}"]`),
+        )
+        .filter((element): element is HTMLElement => !!element && !element.closest('.page-measurement-layer'));
+
+      if (selectedElements.length === 0) {
+        setBlockToolbarPosition(null);
+        return;
+      }
+
+      const selectedRects = selectedElements.map((element) => element.getBoundingClientRect());
+      const rangeRect = selectedRects.reduce(
+        (acc, rect) => ({
+          left: Math.min(acc.left, rect.left),
+          right: Math.max(acc.right, rect.right),
+          top: Math.min(acc.top, rect.top),
+          bottom: Math.max(acc.bottom, rect.bottom),
+        }),
+        {
+          left: selectedRects[0].left,
+          right: selectedRects[0].right,
+          top: selectedRects[0].top,
+          bottom: selectedRects[0].bottom,
+        },
+      );
+      const toolbarRect = toolbar.getBoundingClientRect();
+      const margin = 12;
+      const gap = 10;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const clampedLeft = Math.max(
+        margin,
+        Math.min(
+          viewportWidth - toolbarRect.width - margin,
+          rangeRect.left + (rangeRect.right - rangeRect.left) / 2 - toolbarRect.width / 2,
+        ),
+      );
+      const topAbove = rangeRect.top - toolbarRect.height - gap;
+      const shouldPlaceBelow = topAbove < margin;
+      const nextTop = shouldPlaceBelow
+        ? Math.min(viewportHeight - toolbarRect.height - margin, rangeRect.bottom + gap)
+        : topAbove;
+
+      setBlockToolbarPosition({
+        left: clampedLeft,
+        top: nextTop,
+        placement: shouldPlaceBelow ? 'below' : 'above',
+      });
+    };
+
+    const scheduleToolbarPosition = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(updateToolbarPosition);
+    };
+
+    scheduleToolbarPosition();
+    canvasPane.addEventListener('scroll', scheduleToolbarPosition, { passive: true });
+    window.addEventListener('resize', scheduleToolbarPosition);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      canvasPane.removeEventListener('scroll', scheduleToolbarPosition);
+      window.removeEventListener('resize', scheduleToolbarPosition);
+    };
+  }, [pageLayouts, selectedBlockIds, shouldShowBlockSelectionToolbar]);
+
   const prepareSelectingNode = (nodeId: string) => {
     if (activeImageResize && nodeId !== activeImageResize.nodeId) {
       return;
@@ -4083,6 +4467,7 @@ export function CanvasPane({
         </div>
       </div>
       <div className="canvas-pane-body">
+        {fontFaceCss ? <style>{fontFaceCss}</style> : null}
         {activeEquationEditor ? (
           <EquationEditorOverlay
             nodeId={activeEquationEditor.nodeId}
@@ -4192,6 +4577,45 @@ export function CanvasPane({
             </button>
           </div>
         ) : null}
+        {shouldShowBlockSelectionToolbar ? (
+          <div
+            ref={blockToolbarRef}
+            className={
+              blockToolbarPosition?.placement === 'below'
+                ? 'floating-format-toolbar floating-format-toolbar-below block-selection-toolbar'
+                : 'floating-format-toolbar block-selection-toolbar'
+            }
+            style={
+              blockToolbarPosition
+                ? {
+                    left: `${blockToolbarPosition.left}px`,
+                    top: `${blockToolbarPosition.top}px`,
+                  }
+                : {
+                    left: '-9999px',
+                    top: '-9999px',
+                    visibility: 'hidden',
+                  }
+            }
+            onMouseDown={handleFloatingToolbarMouseDown}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="format-clear-button block-selection-merge-button"
+              title="合并选中块"
+              aria-label="合并选中块"
+              onMouseDown={handleFloatingToolbarMouseDown}
+              onClick={(event) => {
+                event.stopPropagation();
+                onMergeSelectedBlocks();
+              }}
+            >
+              <Combine size={15} />
+              <span>合并</span>
+            </button>
+          </div>
+        ) : null}
         <div ref={canvasPaneRef} className="canvas-pane-scroll">
           {parseState === 'error' && parseError ? (
             <div className="canvas-state canvas-state-error">{parseError}</div>
@@ -4240,7 +4664,9 @@ export function CanvasPane({
                               block,
                               page.pageNumber * 1000 + index,
                               selectedNodeId,
+                              selectedBlockIds,
                               onSelectNode,
+                              onSelectBlock,
                               onSelectTableCell,
                               prepareSelectingNode,
                               editingNodeId,
@@ -4275,6 +4701,7 @@ export function CanvasPane({
                                 onStartTableRowResize: handleStartTableRowResize,
                               },
                               tableSelection,
+                              documentStyles,
                               (event, itemId) => {
                                 event.preventDefault();
                                 event.stopPropagation();
@@ -4301,6 +4728,66 @@ export function CanvasPane({
                 </div>
               );
             })}
+          </div>
+          <div
+            ref={measurementLayerRef}
+            className="page-measurement-layer"
+            aria-hidden="true"
+            style={measurementPageStyle}
+          >
+            <article className="page-body page-body-measurement">
+              {documentBlocks.map((block, index) => (
+                <div
+                  key={`measure-${block.id}`}
+                  data-measure-block-id={block.id}
+                  className="measurement-block"
+                >
+                  {renderBlock(
+                    block,
+                    900000 + index,
+                    null,
+                    [],
+                    () => undefined,
+                    undefined,
+                    () => undefined,
+                    () => undefined,
+                    null,
+                    null,
+                    null,
+                    '',
+                    null,
+                    null,
+                    () => undefined,
+                    editorRef,
+                    richEditorRef,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    tocItems,
+                    undefined,
+                    {},
+                    {},
+                    measuredImageVisibleSizes,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    {},
+                    () => undefined,
+                    {
+                      pageContract: resolvedStyleContract,
+                      draftTableColumnWidths: {},
+                      draftTableRowHeights: {},
+                    },
+                    null,
+                    documentStyles,
+                    () => undefined,
+                    1,
+                  )}
+                </div>
+              ))}
+            </article>
           </div>
         </div>
       </div>

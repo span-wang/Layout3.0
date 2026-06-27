@@ -1,4 +1,5 @@
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
+import { copyFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { BrowserWindow, app, dialog } from 'electron';
 import { isPathWithin, isVisibleWorkspaceFilePath } from '../../src/utils/filePath';
@@ -55,6 +56,11 @@ export interface DeleteEntryPayload {
   targetPath: string;
 }
 
+export interface ImportedFontResult {
+  filePath: string;
+  fileName: string;
+}
+
 function getOwnerWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? undefined;
 }
@@ -71,6 +77,12 @@ function getOpenImageFilters() {
   return [
     { name: '图片文件', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'] },
     { name: '所有文件', extensions: ['*'] },
+  ];
+}
+
+function getOpenFontFilters() {
+  return [
+    { name: '字体文件', extensions: ['ttf', 'otf', 'woff', 'woff2'] },
   ];
 }
 
@@ -199,8 +211,32 @@ async function createUniqueFilePath(
   }
 }
 
+async function copyUniqueFilePath(sourcePath: string, directoryPath: string, preferredName: string): Promise<string> {
+  let index = 0;
+
+  while (true) {
+    const candidatePath = path.join(directoryPath, buildUniqueEntryName(preferredName, index));
+
+    try {
+      await copyFile(sourcePath, candidatePath, fsConstants.COPYFILE_EXCL);
+      return candidatePath;
+    } catch (error) {
+      if (isEntryCollision(error)) {
+        index += 1;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+}
+
 function getDefaultWorkspacePath(): string {
   return path.join(app.getPath('documents'), 'LAYOUT3.0', '默认工作区');
+}
+
+function getDefaultFontAssetsPath(): string {
+  return path.join(getDefaultWorkspacePath(), '字体资源');
 }
 
 async function listDirectoryEntries(directoryPath: string, allowFailure = false): Promise<DirectoryEntryResult[]> {
@@ -324,6 +360,38 @@ export async function selectImageFile(): Promise<{ filePath: string }> {
 
     return {
       filePath: result.filePaths[0],
+    };
+  });
+}
+
+export async function importFontFile(): Promise<ImportedFontResult> {
+  return withFsError(async () => {
+    const ownerWindow = getOwnerWindow();
+    const result = ownerWindow
+      ? await dialog.showOpenDialog(ownerWindow, {
+          title: '导入字体',
+          properties: ['openFile'],
+          filters: getOpenFontFilters(),
+        })
+      : await dialog.showOpenDialog({
+          title: '导入字体',
+          properties: ['openFile'],
+          filters: getOpenFontFilters(),
+        });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      throw new Error('已取消导入字体');
+    }
+
+    const [sourcePath] = result.filePaths;
+    const fontDirectoryPath = getDefaultFontAssetsPath();
+    await mkdir(fontDirectoryPath, { recursive: true });
+    const fileName = path.basename(sourcePath);
+    const filePath = await copyUniqueFilePath(sourcePath, fontDirectoryPath, fileName);
+
+    return {
+      filePath,
+      fileName: path.basename(filePath),
     };
   });
 }

@@ -291,12 +291,50 @@ function collectTocItems(blocks: LayoutBlock[]): TocItem[] {
   });
 }
 
+export function buildTocItemsFromBlocks(blocks: LayoutBlock[]): TocItem[] {
+  return collectTocItems(blocks);
+}
+
 export function buildTocItems(document: LayoutDocument | null): TocItem[] {
   if (!document) {
     return [];
   }
 
-  return collectTocItems(document.blocks);
+  return buildTocItemsFromBlocks(document.blocks);
+}
+
+export function getDepthFilteredTocItemsForBlock(block: LayoutBlock, tocItems: TocItem[]): TocItem[] {
+  if (block.type !== 'toc' || block.metadata.kind !== 'toc') {
+    return [];
+  }
+
+  const maxDepth = block.metadata.maxDepth;
+  return tocItems.filter((item) => item.depth <= maxDepth);
+}
+
+export function getVisibleTocItemsForBlock(block: LayoutBlock, tocItems: TocItem[]): TocItem[] {
+  const filteredItems = getDepthFilteredTocItemsForBlock(block, tocItems);
+  if (block.type !== 'toc' || block.metadata.kind !== 'toc') {
+    return filteredItems;
+  }
+
+  const runtimeSlice = block.metadata.runtimeSlice;
+  if (!runtimeSlice) {
+    return filteredItems;
+  }
+
+  return filteredItems.slice(runtimeSlice.startIndex, runtimeSlice.endIndex);
+}
+
+export function getTocBlockDisplayTitle(block: LayoutBlock): string {
+  if (block.type !== 'toc' || block.metadata.kind !== 'toc') {
+    return '目录';
+  }
+
+  const baseTitle = block.metadata.title || '目录';
+  return block.metadata.runtimeSlice && block.metadata.runtimeSlice.fragmentIndex > 1
+    ? `${baseTitle}（续）`
+    : baseTitle;
 }
 
 export function buildHeadingPageNumberMap(pageLayouts: PageLayout[]): Record<string, number> {

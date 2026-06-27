@@ -8,13 +8,59 @@
       "title": "AI 面板三 Tab 基础结构",
       "priority": "P2",
       "moduleIds": [
-        "ai-service"
+        "ai-service",
+        "ui-components"
       ],
       "milestoneIds": [
         "M4"
       ],
-      "status": "未开始",
-      "acceptance": "生成、优化、检查入口完整。"
+      "status": "已完成",
+      "acceptance": "生成、优化、检查入口完整，AI服务可配置、能调用、能流式输出。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "进行中：AI 面板基础结构实现",
+        "confirmedOn": "2026-06-27",
+        "summary": "本步开始实现AI面板基础结构：支持OpenAI/Anthropic/自定义Provider配置、流式内容生成、文本优化和文档排版检查功能。AI面板位于右侧面板Tab，集成到AppShell并可切换显示。",
+        "inScope": [
+          "创建 AI 类型定义（src/types/ai.ts）",
+          "实现 AiService 核心服务（src/services/AiService.ts）：支持 OpenAI/Anthropic/自定义 Provider 配置、流式生成/优化、检查文档",
+          "创建 AI Store 状态管理（src/store/slices/aiSlice.ts）",
+          "实现 AI 面板 UI 组件（src/components/ai/）：AiPanel.tsx（Tab管理）、AiGenerateTab.tsx、AiOptimizeTab.tsx、AiCheckTab.tsx、AiSettings.tsx",
+          "集成到 AppShell：在右侧面板添加 AI Tab，工具栏添加 AI 按钮",
+          "运行 typecheck、build 验证"
+        ],
+        "interactionRules": [
+          "界面文案、按钮、提示和说明使用中文",
+          "AI 面板位于右侧面板 Tab 内，支持 [生成] [优化] [检查] [设置] 四个 Tab 切换",
+          "配置变更后下次调用时生效",
+          "流式输出时实时显示生成内容",
+          "检查结果按页面分组显示"
+        ],
+        "writebackRules": [
+          "AI 配置写入本地存储（localStorage），不写入 .layout 文件",
+          "生成/优化内容写入 LayoutDocument.blocks",
+          "本步不反写 Markdown 源码快照"
+        ],
+        "consistencyRules": [
+          "实现过程中继续保持中文文案与中文注释",
+          "AI 服务复用现有文档模型结构，不新建独立存储格式",
+          "本步只做 AI 基础结构，不顺手扩展命令面板、悬浮菜单或首次引导"
+        ],
+        "outOfScope": [
+          "选中文本后悬浮菜单的润色入口",
+          "AI 生成内容的 Markdown 源码注释标记",
+          "完整的错误处理与重试机制",
+          "AI 使用统计",
+          "命令面板集成（PH3-02）",
+          "首次使用引导（PH3-05）"
+        ],
+        "deferredTo": [
+          "悬浮菜单润色入口：后续归属 PH3-01 增强或单独体验任务",
+          "AI 安全机制（确认预览、撤销栈标记）：后续归属 PH3-01 或安全治理任务",
+          "命令面板集成：后续归属 PH3-02",
+          "首次使用引导：后续归属 PH3-05"
+        ]
+      }
     },
     {
       "id": "PH3-02",

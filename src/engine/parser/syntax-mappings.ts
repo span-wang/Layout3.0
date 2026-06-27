@@ -1,4 +1,5 @@
 import type { Root, Text, PhrasingContent } from 'mdast';
+import type { TextMarkType } from '@/engine/document-model';
 
 /**
  * 语法映射类型定义
@@ -10,7 +11,7 @@ export interface SyntaxMapping {
   /** 正则表达式，用于匹配文本中的语法模式 */
   pattern: RegExp;
   /** 映射后的 mark 类型 */
-  markType: 'underline' | 'bold' | 'italic' | 'strike';
+  markType: TextMarkType;
 }
 
 /**

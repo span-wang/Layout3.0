@@ -5,5 +5,7 @@ export * from './selectors';
 export * from './projectFile';
 export * from './equation';
 export * from './imageLayout';
+export * from './fontResources';
 export * from './tableLayout';
 export * from './utils';
+export * from './syntaxMappingConfig';

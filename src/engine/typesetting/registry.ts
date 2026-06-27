@@ -5,6 +5,7 @@ import { estimatedGreedyBalancedPaginationAlgorithm } from './algorithms/estimat
 import { estimatedGreedyBalancedV2PaginationAlgorithm } from './algorithms/estimatedGreedyBalancedV2';
 import { estimatedGreedyPaginationAlgorithm } from './algorithms/estimatedGreedy';
 import { estimatedMaxFillPaginationAlgorithm, paginateMaxFillBlocks } from './algorithms/estimatedMaxFill';
+import { measuredBlockCachePaginationAlgorithm } from './algorithms/measuredBlockCache';
 import type { PaginationAlgorithmDefinition } from './types';
 
 const paginationAlgorithms = new Map<PaginationAlgorithmId, PaginationAlgorithmDefinition>();
@@ -16,6 +17,7 @@ function seedBuiltinPaginationAlgorithms(): void {
     estimatedGreedyBalancedV2PaginationAlgorithm,
     estimatedCostPaginationAlgorithm,
     estimatedMaxFillPaginationAlgorithm,
+    measuredBlockCachePaginationAlgorithm,
   ].forEach((algorithm) => {
     paginationAlgorithms.set(algorithm.id, algorithm);
   });

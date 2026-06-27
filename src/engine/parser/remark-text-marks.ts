@@ -262,53 +262,59 @@ function processTextNode(node: Text, mappings: SyntaxMapping[]): PhrasingContent
 
 /**
  * remark 插件：处理文本中的特殊语法标记
+ *
+ * @param mappings 可选的语法映射列表，如果不提供则使用默认的 SYNTAX_MAPPINGS
  */
-export const remarkTextMarks: Plugin<void[], Root> = () => {
-  return (tree: Root) => {
-    interface TextNodeReplacement {
-      parent: PhrasingContent;
-      index: number;
-      newNodes: PhrasingContent[];
-    }
+export function remarkTextMarks(mappings?: SyntaxMapping[]): () => (tree: Root) => void {
+  const activeMappings = mappings ?? SYNTAX_MAPPINGS;
 
-    const replacements: TextNodeReplacement[] = [];
-
-    visit(tree, 'text', (node: Text, index, parent) => {
-      if (index === null || !parent) {
-        return;
+  return () => {
+    return (tree: Root) => {
+      interface TextNodeReplacement {
+        parent: PhrasingContent;
+        index: number;
+        newNodes: PhrasingContent[];
       }
 
-      const parentNode = parent as unknown as { children?: PhrasingContent[]; type?: string };
+      const replacements: TextNodeReplacement[] = [];
 
-      if (node.type !== 'text') {
-        return;
+      visit(tree, 'text', (node: Text, index, parent) => {
+        if (index === null || !parent) {
+          return;
+        }
+
+        const parentNode = parent as unknown as { children?: PhrasingContent[]; type?: string };
+
+        if (node.type !== 'text') {
+          return;
+        }
+
+        const newNodes = processTextNode(node, activeMappings);
+
+        // 如果没有变化，跳过
+        if (newNodes.length === 1 && (newNodes[0] as Text).type === 'text' && (newNodes[0] as Text).value === node.value) {
+          return;
+        }
+
+        if ('children' in parentNode && Array.isArray(parentNode.children)) {
+          replacements.push({
+            parent: parentNode as PhrasingContent,
+            index: index as number,
+            newNodes,
+          });
+          return SKIP;
+        }
+      });
+
+      // 执行替换
+      replacements.sort((a, b) => b.index - a.index);
+
+      for (const replacement of replacements) {
+        const parentNode = replacement.parent;
+        if ('children' in parentNode && Array.isArray(parentNode.children)) {
+          parentNode.children.splice(replacement.index, 1, ...replacement.newNodes);
+        }
       }
-
-      const newNodes = processTextNode(node, SYNTAX_MAPPINGS);
-
-      // 如果没有变化，跳过
-      if (newNodes.length === 1 && (newNodes[0] as Text).type === 'text' && (newNodes[0] as Text).value === node.value) {
-        return;
-      }
-
-      if ('children' in parentNode && Array.isArray(parentNode.children)) {
-        replacements.push({
-          parent: parentNode as PhrasingContent,
-          index: index as number,
-          newNodes,
-        });
-        return SKIP;
-      }
-    });
-
-    // 执行替换
-    replacements.sort((a, b) => b.index - a.index);
-
-    for (const replacement of replacements) {
-      const parentNode = replacement.parent;
-      if ('children' in parentNode && Array.isArray(parentNode.children)) {
-        parentNode.children.splice(replacement.index, 1, ...replacement.newNodes);
-      }
-    }
+    };
   };
-};
+}

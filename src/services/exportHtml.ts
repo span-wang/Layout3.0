@@ -4,6 +4,8 @@ import {
   buildTocItems,
   getHeadingText,
   getImageWrapClassName,
+  getTocBlockDisplayTitle,
+  getVisibleTocItemsForBlock,
   resolveImageLayout,
   resolveImageRenderMetrics,
   resolveHangingIndentStyle,
@@ -12,6 +14,8 @@ import {
   getLayoutListItemLevel,
   resolveTableColumnWidths,
   type LayoutBlock,
+  type LayoutStyleSheet,
+  type LayoutResource,
   type LayoutListTreeNode,
   type LayoutListItem,
   type TextRun,
@@ -19,11 +23,18 @@ import {
 } from '@/engine/document-model';
 import { renderEquationToHtml, splitInlineEquations, renderInlineEquationToHtml } from '@/engine/document-model/equation';
 import type { PageLayout } from '@/engine/typesetting/types';
+import { buildFontFaceCss } from '@/engine/document-model/fontResources';
+import {
+  resolveQuickTextStyleForBlock,
+  resolveQuickTextStyleForRun,
+} from '@/engine/style/quickTextStyle';
 import { resolveAssetSrc } from '@/utils/filePath';
 
 export interface PdfExportPayload {
   pages: PageLayout[];
   title: string;
+  resources?: LayoutResource[];
+  styles?: LayoutStyleSheet;
 }
 
 function escapeHtml(value: string): string {
@@ -35,18 +46,19 @@ function escapeHtml(value: string): string {
     .replaceAll("'", '&#39;');
 }
 
-function buildTextRunStyle(run: TextRun): string {
+function buildTextRunStyle(run: TextRun, inheritedStyle = {}): string {
+  const resolvedStyle = resolveQuickTextStyleForRun(run, inheritedStyle);
   const declarations = [
-    run.styleOverrides.color ? `color:${run.styleOverrides.color}` : '',
-    run.styleOverrides.highlightColor
-      ? `background-color:${run.styleOverrides.highlightColor}`
-      : run.styleOverrides.backgroundColor
-        ? `background-color:${run.styleOverrides.backgroundColor}`
+    resolvedStyle.color ? `color:${resolvedStyle.color}` : '',
+    resolvedStyle.highlightColor
+      ? `background-color:${resolvedStyle.highlightColor}`
+      : resolvedStyle.backgroundColor
+        ? `background-color:${resolvedStyle.backgroundColor}`
         : '',
     run.marks.some((mark) => mark.type === 'italic') ? `font-style:italic` : '',
-    run.styleOverrides.fontFamily ? `font-family:${run.styleOverrides.fontFamily}` : '',
-    run.styleOverrides.fontSize ? `font-size:${run.styleOverrides.fontSize}px` : '',
-    run.styleOverrides.letterSpacing ? `letter-spacing:${run.styleOverrides.letterSpacing}px` : '',
+    resolvedStyle.fontFamily ? `font-family:${resolvedStyle.fontFamily}` : '',
+    resolvedStyle.fontSize ? `font-size:${resolvedStyle.fontSize}px` : '',
+    resolvedStyle.letterSpacing ? `letter-spacing:${resolvedStyle.letterSpacing}px` : '',
   ].filter(Boolean);
 
   return declarations.length > 0 ? ` style="${escapeHtml(declarations.join(';'))}"` : '';
@@ -107,7 +119,7 @@ function applyMarks(content: string, run: TextRun): string {
   }, content);
 }
 
-function renderTextRuns(textRuns: TextRun[]): string {
+function renderTextRuns(textRuns: TextRun[], inheritedStyle = {}): string {
   return textRuns
     .map((run) => {
       const fragments = splitInlineEquations(run.text);
@@ -122,7 +134,7 @@ function renderTextRuns(textRuns: TextRun[]): string {
           return applyMarks(escaped, run);
         })
         .join('');
-      return `<span${buildTextRunStyle(run)}>${content}</span>`;
+      return `<span${buildTextRunStyle(run, inheritedStyle)}>${content}</span>`;
     })
     .join('');
 }
@@ -141,19 +153,20 @@ function buildTableCellStyle(align: 'left' | 'center' | 'right' | null | undefin
   return styles.length > 0 ? ` style="${escapeHtml(styles.join(';'))}"` : '';
 }
 
-function renderListItemContent(item: LayoutListItem): string {
+function renderListItemContent(item: LayoutListItem, inheritedStyle = {}): string {
   const listItemClass = item.checked === null ? '' : ' class="task-list-item"';
   const checkedMark =
     item.checked === null
       ? ''
       : `<span class="task-list-checkbox">${item.checked ? '☑' : '☐'}</span>`;
-  return `<li${listItemClass} data-list-level="${getLayoutListItemLevel(item)}">${checkedMark}${renderTextRuns(item.textRuns)}`;
+  return `<li${listItemClass} data-list-level="${getLayoutListItemLevel(item)}">${checkedMark}${renderTextRuns(item.textRuns, inheritedStyle)}`;
 }
 
 function renderListTreeNodes(
   nodes: LayoutListTreeNode[],
   ordered: boolean,
   start: number | null,
+  inheritedStyle = {},
   isRoot = false,
 ): string {
   const tagName = ordered ? 'ol' : 'ul';
@@ -161,16 +174,17 @@ function renderListTreeNodes(
   const childrenHtml = nodes
     .map((node) => {
       const nestedListHtml = node.children.length > 0
-        ? renderListTreeNodes(node.children, ordered, null)
+        ? renderListTreeNodes(node.children, ordered, null, inheritedStyle)
         : '';
-      return `${renderListItemContent(node.item)}${nestedListHtml}</li>`;
+      return `${renderListItemContent(node.item, inheritedStyle)}${nestedListHtml}</li>`;
     })
     .join('');
 
   return `<${tagName}${startAttribute}>${childrenHtml}</${tagName}>`;
 }
 
-function renderBlock(block: LayoutBlock): string {
+function renderBlock(block: LayoutBlock, styles?: LayoutStyleSheet): string {
+  const inheritedStyle = resolveQuickTextStyleForBlock(block, styles);
   switch (block.type) {
     case 'pageBreak':
       return '';
@@ -183,12 +197,12 @@ function renderBlock(block: LayoutBlock): string {
             : block.metadata.kind === 'heading' && block.metadata.depth === 3
               ? 'h3'
               : 'h4';
-      return `<${tagName}${buildBlockStyle(block)}>${renderTextRuns(block.textRuns)}</${tagName}>`;
+      return `<${tagName}${buildBlockStyle(block)}>${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
     }
     case 'toc':
       return '';
     case 'paragraph':
-      return `<p${buildBlockStyle(block)}>${renderTextRuns(block.textRuns)}</p>`;
+      return `<p${buildBlockStyle(block)}>${renderTextRuns(block.textRuns, inheritedStyle)}</p>`;
     case 'list': {
       if (block.metadata.kind !== 'list') {
         return '';
@@ -197,16 +211,17 @@ function renderBlock(block: LayoutBlock): string {
         buildLayoutListTree(block.metadata.items),
         block.metadata.ordered,
         block.metadata.start,
+        inheritedStyle,
         true,
       );
       return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockStyle(block)}>`);
     }
     case 'blockquote':
       return block.metadata.kind === 'blockquote'
-        ? `<blockquote>${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock)).join('')}</blockquote>`
+        ? `<blockquote>${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles)).join('')}</blockquote>`
         : '';
     case 'code':
-      return `<pre${buildBlockStyle(block)}><code>${renderTextRuns(block.textRuns)}</code></pre>`;
+      return `<pre${buildBlockStyle(block)}><code>${renderTextRuns(block.textRuns, inheritedStyle)}</code></pre>`;
     case 'equation':
       return block.metadata.kind === 'equation'
         ? `<div class="equation-shell"${buildBlockStyle(block)}>${renderEquationToHtml(block.metadata.value).html}</div>`
@@ -227,7 +242,7 @@ function renderBlock(block: LayoutBlock): string {
                 const colSpan = cell.colSpan && cell.colSpan > 1 ? ` colspan="${cell.colSpan}"` : '';
                 const rowSpan = cell.rowSpan && cell.rowSpan > 1 ? ` rowspan="${cell.rowSpan}"` : '';
                 const widthPx = columnWidths[cellIndex];
-                return `<${tagName}${buildTableCellStyle(tableMeta.align[cellIndex] ?? null, widthPx, row.heightPx ?? undefined)}${colSpan}${rowSpan}>${renderTextRuns(cell.textRuns)}</${tagName}>`;
+                return `<${tagName}${buildTableCellStyle(tableMeta.align[cellIndex] ?? null, widthPx, row.heightPx ?? undefined)}${colSpan}${rowSpan}>${renderTextRuns(cell.textRuns, inheritedStyle)}</${tagName}>`;
               })
               .join('')}</tr>`,
           )
@@ -323,7 +338,7 @@ function getPageMetrics(page: PageLayout) {
   };
 }
 
-function renderPages(pages: PageLayout[]): string {
+function renderPages(pages: PageLayout[], styles?: LayoutStyleSheet): string {
   const allBlocks = pages.flatMap((page) => page.blocks);
   const tocItems = applyPageNumbersToTocItems(
     buildTocItems({
@@ -357,11 +372,10 @@ function renderPages(pages: PageLayout[]): string {
       for (let index = 0; index < page.blocks.length; index += 1) {
         const block = page.blocks[index];
         if (block.type === 'toc' && block.metadata.kind === 'toc') {
-          const tocMetadata = block.metadata;
-          const filteredTocItems = tocItems.filter((item) => item.depth <= tocMetadata.maxDepth);
+          const visibleTocItems = getVisibleTocItemsForBlock(block, tocItems);
           const entries =
-            filteredTocItems.length > 0
-              ? filteredTocItems
+            visibleTocItems.length > 0
+              ? visibleTocItems
                   .map(
                     (item) =>
                       `<div class="toc-entry-export" style="padding-left:${Math.max(0, item.depth - 1) * 16}px"><span class="toc-entry-export-text">${escapeHtml(item.text)}</span><span class="toc-entry-export-dots"></span><span class="toc-entry-export-page">${escapeHtml(String(item.pageNumber ?? '-'))}</span></div>`,
@@ -369,11 +383,11 @@ function renderPages(pages: PageLayout[]): string {
                   .join('')
               : '<div class="toc-empty-state-export">当前文档还没有符合当前目录层级的标题。</div>';
 
-          bodyParts.push(`<section class="toc-block-export"${buildBlockStyle(block)}><div class="toc-block-export-title">${escapeHtml(tocMetadata.title || '目录')}</div>${entries}</section>`);
+          bodyParts.push(`<section class="toc-block-export"${buildBlockStyle(block)}><div class="toc-block-export-title">${escapeHtml(getTocBlockDisplayTitle(block))}</div>${entries}</section>`);
           continue;
         }
 
-        bodyParts.push(renderBlock(block));
+        bodyParts.push(renderBlock(block, styles));
       }
 
       return `<section class="page" style="width:${metrics.pageWidthPx}px;min-height:${metrics.pageHeightPx}px;grid-template-rows:${metrics.headerHeight}px 1fr ${metrics.footerHeight}px;">
@@ -385,11 +399,12 @@ function renderPages(pages: PageLayout[]): string {
     .join('');
 }
 
-export function buildExportHtml({ pages, title }: PdfExportPayload): string {
+export function buildExportHtml({ pages, title, resources, styles }: PdfExportPayload): string {
   const firstPage = pages[0];
   const pageSizeRule = firstPage
     ? `${firstPage.contract.pageWidthMm}mm ${firstPage.contract.pageHeightMm}mm`
     : '210mm 297mm';
+  const fontFaceCss = buildFontFaceCss(resources);
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -399,6 +414,8 @@ export function buildExportHtml({ pages, title }: PdfExportPayload): string {
     <title>${escapeHtml(title)}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.17.0/dist/katex.min.css" />
     <style>
+      ${fontFaceCss}
+
       /* 行内公式样式：纯行内渲染，无特殊容器，字体大小与当前文字保持一致 */
       .inline-equation {
         display: inline;
@@ -691,7 +708,7 @@ export function buildExportHtml({ pages, title }: PdfExportPayload): string {
     </style>
   </head>
   <body>
-    <div class="export-shell">${renderPages(pages)}</div>
+    <div class="export-shell">${renderPages(pages, styles)}</div>
   </body>
 </html>`;
 }

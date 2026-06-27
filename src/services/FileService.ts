@@ -4,7 +4,9 @@ import {
   createLayoutDocumentFromMarkdown,
   parseLayoutProjectFile,
   serializeLayoutProjectFile,
+  createFontResourceFromImportedFile,
   type DocumentFormat,
+  type LayoutFontResource,
   type LayoutDocument,
 } from '@/engine/document-model';
 import { defaultStyleSettings } from '@/engine/style/presets';
@@ -43,6 +45,7 @@ type LayoutApiMethodName =
   | 'openFile'
   | 'openFileAtPath'
   | 'selectImageFile'
+  | 'importFontFile'
   | 'openFolder'
   | 'readDirectory'
   | 'createFolder'
@@ -139,6 +142,12 @@ export async function selectLocalImageFile(): Promise<string> {
   const selectImageFile = requireLayoutApiMethod('selectImageFile');
   const result = await selectImageFile();
   return result.filePath;
+}
+
+export async function importLocalFontFile(): Promise<LayoutFontResource> {
+  const importFontFile = requireLayoutApiMethod('importFontFile');
+  const result = await importFontFile();
+  return createFontResourceFromImportedFile(result);
 }
 
 async function resolveLayoutDocumentForSave(payload: {

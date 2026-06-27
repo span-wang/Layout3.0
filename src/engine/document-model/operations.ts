@@ -1,5 +1,6 @@
 import type {
   BlockStyleOverrides,
+  BlockRangeSelection,
   LayoutBlock,
   LayoutResource,
   LayoutListItem,
@@ -124,6 +125,22 @@ export interface DeleteTopLevelBlockResult {
   blocks: LayoutBlock[];
   selectedNodeId: string | null;
   didUpdate: boolean;
+}
+
+export type BlockMergeReason =
+  | 'merged'
+  | 'invalidSelection'
+  | 'notEnoughBlocks'
+  | 'nonContiguous'
+  | 'unsupportedBlockType'
+  | 'mixedBlockTypes';
+
+export interface BlockMergeResult {
+  blocks: LayoutBlock[];
+  selectedNodeId: string | null;
+  didUpdate: boolean;
+  reason: BlockMergeReason;
+  mergedCount: number;
 }
 
 export type ListStructureAction =
@@ -978,6 +995,156 @@ export function deleteTopLevelBlockById(
     // 删除后优先选中后一个相邻块，没有后项时回退到前一个相邻块。
     selectedNodeId: nextSelectedBlock?.id ?? null,
     didUpdate: true,
+  };
+}
+
+export function buildBlockRangeSelection(
+  blocks: LayoutBlock[],
+  anchorBlockId: string,
+  focusBlockId: string,
+): BlockRangeSelection | null {
+  const anchorIndex = blocks.findIndex((block) => block.id === anchorBlockId);
+  const focusIndex = blocks.findIndex((block) => block.id === focusBlockId);
+  if (anchorIndex < 0 || focusIndex < 0) {
+    return null;
+  }
+
+  const startIndex = Math.min(anchorIndex, focusIndex);
+  const endIndex = Math.max(anchorIndex, focusIndex);
+
+  return {
+    anchorBlockId,
+    focusBlockId,
+    blockIds: blocks.slice(startIndex, endIndex + 1).map((block) => block.id),
+  };
+}
+
+function isMergeableTextBlock(block: LayoutBlock): boolean {
+  return block.type === 'paragraph' || block.type === 'heading' || block.type === 'code';
+}
+
+function createBlockMergeSeparatorRun(blockId: string, index: number): TextRun {
+  return {
+    id: `${blockId}-merge-break-${index + 1}`,
+    text: '\n',
+    sourceRange: null,
+    marks: [],
+    charStyleRef: null,
+    styleOverrides: {},
+    annotations: [],
+  };
+}
+
+function buildMergedBlockTextRuns(targetBlockId: string, blocksToMerge: LayoutBlock[]): TextRun[] {
+  const mergedRuns: TextRun[] = [];
+
+  blocksToMerge.forEach((block, blockIndex) => {
+    if (blockIndex > 0) {
+      mergedRuns.push(createBlockMergeSeparatorRun(targetBlockId, mergedRuns.length));
+    }
+
+    block.textRuns.forEach((run) => {
+      mergedRuns.push({
+        ...run,
+        sourceRange: null,
+      });
+    });
+  });
+
+  return rebuildRunIds(targetBlockId, mergeAdjacentTextRuns(mergedRuns));
+}
+
+function updateMergedTextBlockMetadata(block: LayoutBlock, textRuns: TextRun[]): LayoutBlock {
+  const text = getTextContentFromRuns(textRuns);
+
+  if (block.type === 'paragraph' && block.metadata.kind === 'paragraph') {
+    return {
+      ...block,
+      sourceRange: null,
+      textRuns,
+      metadata: {
+        ...block.metadata,
+        text,
+      },
+    };
+  }
+
+  if (block.type === 'heading' && block.metadata.kind === 'heading') {
+    return {
+      ...block,
+      sourceRange: null,
+      textRuns,
+      metadata: {
+        ...block.metadata,
+        text,
+      },
+    };
+  }
+
+  if (block.type === 'code' && block.metadata.kind === 'code') {
+    return {
+      ...block,
+      sourceRange: null,
+      textRuns,
+      metadata: {
+        ...block.metadata,
+        value: text,
+      },
+    };
+  }
+
+  return block;
+}
+
+export function mergeTopLevelTextBlocksByIds(
+  blocks: LayoutBlock[],
+  blockIds: string[],
+): BlockMergeResult {
+  const uniqueBlockIds = Array.from(new Set(blockIds));
+  if (uniqueBlockIds.length < 2) {
+    return { blocks, selectedNodeId: null, didUpdate: false, reason: 'notEnoughBlocks', mergedCount: 0 };
+  }
+
+  const selectedEntries = uniqueBlockIds
+    .map((blockId) => {
+      const index = blocks.findIndex((block) => block.id === blockId);
+      return index >= 0 ? { index, block: blocks[index] } : null;
+    })
+    .filter((entry): entry is { index: number; block: LayoutBlock } => !!entry)
+    .sort((left, right) => left.index - right.index);
+
+  if (selectedEntries.length !== uniqueBlockIds.length) {
+    return { blocks, selectedNodeId: null, didUpdate: false, reason: 'invalidSelection', mergedCount: 0 };
+  }
+
+  const firstIndex = selectedEntries[0].index;
+  const isContiguous = selectedEntries.every((entry, index) => entry.index === firstIndex + index);
+  if (!isContiguous) {
+    return { blocks, selectedNodeId: null, didUpdate: false, reason: 'nonContiguous', mergedCount: 0 };
+  }
+
+  if (!selectedEntries.every((entry) => isMergeableTextBlock(entry.block))) {
+    return { blocks, selectedNodeId: null, didUpdate: false, reason: 'unsupportedBlockType', mergedCount: 0 };
+  }
+
+  const targetBlock = selectedEntries[0].block;
+  if (!selectedEntries.every((entry) => entry.block.type === targetBlock.type)) {
+    return { blocks, selectedNodeId: null, didUpdate: false, reason: 'mixedBlockTypes', mergedCount: 0 };
+  }
+
+  const mergedRuns = buildMergedBlockTextRuns(targetBlock.id, selectedEntries.map((entry) => entry.block));
+  const mergedBlock = updateMergedTextBlockMetadata(targetBlock, mergedRuns);
+  const removedBlockIds = new Set(selectedEntries.slice(1).map((entry) => entry.block.id));
+  const nextBlocks = blocks
+    .map((block) => (block.id === targetBlock.id ? mergedBlock : block))
+    .filter((block) => !removedBlockIds.has(block.id));
+
+  return {
+    blocks: nextBlocks,
+    selectedNodeId: mergedBlock.id,
+    didUpdate: true,
+    reason: 'merged',
+    mergedCount: selectedEntries.length,
   };
 }
 

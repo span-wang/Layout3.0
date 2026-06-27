@@ -2,17 +2,26 @@ import {
   getHeadingText,
   getLayoutListItemLevel,
   getLayoutBlockPlainText,
+  buildTocItemsFromBlocks,
   getTableCellColSpan,
   isCoveredTableCell,
   resolveTableColumnWidths,
   resolveTableRowHeightPx,
   type LayoutBlock,
+  type LayoutStyleSheet,
+  type TocItem,
   type LayoutTableRow,
   type TableBlockMetadata,
 } from '@/engine/document-model';
 import { estimateImageVisibleHeightPx, isImageTextWrapMode, resolveHangingIndentLineWidths, resolveImageLayout } from '@/engine/document-model';
 import type { ResolvedStyleContract, TextBlockStyleRule } from '@/engine/style/types';
+import {
+  getEffectiveListItemMaxFontSize,
+  getEffectiveTableCellMaxFontSize,
+  getEffectiveTextRunsMaxFontSize,
+} from '@/engine/style/quickTextStyle';
 import { estimateTextLines } from '../textMetrics';
+import { buildTocFragment, estimateTocBlockHeight } from '../tocLayout';
 import type {
   LayoutWarning,
   PageLayout,
@@ -55,17 +64,19 @@ const COST_V1_MIN_SCORE_IMPROVEMENT = 0.08;
 const COST_V1_LAST_HEADING_PENALTY = 0.45;
 const COST_V1_LAST_TOC_PENALTY = 0.28;
 
-function getMaxFontSize(textRuns: Array<{ styleOverrides: { fontSize?: number } }>, fallback: number): number {
-  return textRuns.reduce((max, run) => Math.max(max, run.styleOverrides.fontSize ?? fallback), fallback);
-}
-
 function resolveTextBlockStyle(
   block: LayoutBlock,
   baseStyle: TextBlockStyleRule,
+  styles?: LayoutStyleSheet,
 ): TextBlockStyleRule {
   return {
     ...baseStyle,
-    fontSize: getMaxFontSize(block.textRuns, baseStyle.fontSize),
+    fontSize: getEffectiveTextRunsMaxFontSize({
+      textRuns: block.textRuns,
+      block,
+      styles,
+      fallback: baseStyle.fontSize,
+    }),
     lineHeight: block.blockStyleOverrides.lineHeight ?? baseStyle.lineHeight,
     marginTop: block.blockStyleOverrides.spaceBefore ?? baseStyle.marginTop,
     marginBottom: block.blockStyleOverrides.spaceAfter ?? baseStyle.marginBottom,
@@ -101,6 +112,7 @@ function estimateTableRowHeight(
   row: LayoutTableRow,
   rowIndex: number,
   contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
 ): number {
   const contentWidthPx = contract.contentWidthPx;
   const columnWidths = resolveTableColumnWidths(
@@ -126,7 +138,12 @@ function estimateTableRowHeight(
     const lines = estimateTextLines(
       cell.textRuns.map((run) => run.text).join(''),
       cellWidthPx,
-      getMaxFontSize(cell.textRuns, contract.blockStyles.paragraph.fontSize),
+      getEffectiveTableCellMaxFontSize({
+        cell,
+        block,
+        styles,
+        fallback: contract.blockStyles.paragraph.fontSize,
+      }),
     );
     const lineHeight =
       block.blockStyleOverrides.lineHeight ?? contract.blockStyles.paragraph.lineHeight;
@@ -143,11 +160,15 @@ function estimateTableRowHeight(
   return Math.max(resolveTableRowHeightPx(row, fallbackHeight), estimatedRowHeight);
 }
 
-function estimateTableBlockHeight(block: TableLayoutBlock, contract: ResolvedStyleContract): number {
+function estimateTableBlockHeight(
+  block: TableLayoutBlock,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+): number {
   return (
     getTableMarginTop(block, contract) +
     block.metadata.rows.reduce(
-      (total, row, rowIndex) => total + estimateTableRowHeight(block, row, rowIndex, contract),
+      (total, row, rowIndex) => total + estimateTableRowHeight(block, row, rowIndex, contract, styles),
       0,
     ) +
     getTableMarginBottom(block, contract)
@@ -205,8 +226,9 @@ function buildTableFragment(payload: {
   isCurrentPageEmpty: boolean;
   rowHeights: number[];
   contract: ResolvedStyleContract;
+  styles?: LayoutStyleSheet;
 }): TableFragmentBuildResult | null {
-  const { block, startRowIndex, availableHeight, fragmentIndex, isCurrentPageEmpty, rowHeights, contract } = payload;
+  const { block, startRowIndex, availableHeight, fragmentIndex, isCurrentPageEmpty, rowHeights, contract, styles } = payload;
   const rows = block.metadata.rows;
   const repeatedHeaderRow = getRepeatedTableHeaderRow(block);
   const fragmentRows: TableFragmentRow[] = [];
@@ -221,11 +243,12 @@ function buildTableFragment(payload: {
       originalRowIndex: 0,
       isRepeatedHeader: true,
     });
-    fragmentHeight += rowHeights[0] ?? estimateTableRowHeight(block, repeatedHeaderRow, 0, contract);
+    fragmentHeight += rowHeights[0] ?? estimateTableRowHeight(block, repeatedHeaderRow, 0, contract, styles);
   }
 
   while (nextRowIndex < rows.length) {
-    const rowHeight = rowHeights[nextRowIndex] ?? estimateTableRowHeight(block, rows[nextRowIndex], nextRowIndex, contract);
+    const rowHeight =
+      rowHeights[nextRowIndex] ?? estimateTableRowHeight(block, rows[nextRowIndex], nextRowIndex, contract, styles);
     const candidateHeight = fragmentHeight + rowHeight;
     const canFit = candidateHeight <= availableHeight;
     const mustForceFirstRealRow = isCurrentPageEmpty && realRowCount === 0;
@@ -257,7 +280,8 @@ function buildTableFragment(payload: {
     }
 
     const nextBodyRow = rows[nextRowIndex];
-    const nextBodyRowHeight = rowHeights[nextRowIndex] ?? estimateTableRowHeight(block, nextBodyRow, nextRowIndex, contract);
+    const nextBodyRowHeight =
+      rowHeights[nextRowIndex] ?? estimateTableRowHeight(block, nextBodyRow, nextRowIndex, contract, styles);
     fragmentRows.push({
       row: nextBodyRow,
       originalRowIndex: nextRowIndex,
@@ -349,14 +373,19 @@ function createOversizedWarnings(block: LayoutBlock, pageNumber: number): Layout
   ];
 }
 
-function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract): number {
+function estimateBlockHeight(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+  tocItems: TocItem[],
+  styles?: LayoutStyleSheet,
+): number {
   const contentWidthPx = contract.contentWidthPx;
 
   switch (block.type) {
     case 'pageBreak':
       return 0;
     case 'toc':
-      return 220;
+      return estimateTocBlockHeight(block, tocItems, contract);
     case 'heading': {
       const lineWidths = resolveHangingIndentLineWidths(contentWidthPx, block.blockStyleOverrides);
       // 标题同时受左右缩进、首行缩进与悬挂缩进影响，宽度先统一收窄再估算。
@@ -370,6 +399,7 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
             : block.metadata.kind === 'heading' && block.metadata.depth === 2
               ? contract.blockStyles.heading2
               : contract.blockStyles.heading3,
+          styles,
         ),
         lineWidths.firstLineWidthPx,
       );
@@ -380,7 +410,7 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
       return estimateTextBlockHeight(
         getLayoutBlockPlainText(block),
         lineWidths.followingLineWidthPx,
-        resolveTextBlockStyle(block, contract.blockStyles.paragraph),
+        resolveTextBlockStyle(block, contract.blockStyles.paragraph, styles),
         lineWidths.firstLineWidthPx,
       );
     }
@@ -400,7 +430,12 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
               const lines = estimateTextLines(
                 itemText,
                 Math.max(80, widthPx - levelIndentPx),
-                getMaxFontSize(item.textRuns, contract.blockStyles.list.fontSize),
+                getEffectiveListItemMaxFontSize({
+                  item,
+                  block,
+                  styles,
+                  fallback: contract.blockStyles.list.fontSize,
+                }),
               );
               const gap = index === 0 ? 0 : contract.blockStyles.list.itemGap;
               return total + gap + lines * listStyle.lineHeight;
@@ -414,7 +449,8 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
         16 +
         (block.metadata.kind === 'blockquote'
           ? block.metadata.blocks.reduce(
-              (total, nestedBlock) => total + estimateBlockHeight(nestedBlock, contract) * BLOCKQUOTE_NESTED_BLOCK_HEIGHT_RATIO,
+              (total, nestedBlock) =>
+                total + estimateBlockHeight(nestedBlock, contract, tocItems, styles) * BLOCKQUOTE_NESTED_BLOCK_HEIGHT_RATIO,
               0,
             )
           : 0) +
@@ -423,7 +459,12 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
     case 'code': {
       const codeStyle = {
         ...contract.blockStyles.code,
-        fontSize: getMaxFontSize(block.textRuns, contract.blockStyles.code.fontSize),
+        fontSize: getEffectiveTextRunsMaxFontSize({
+          textRuns: block.textRuns,
+          block,
+          styles,
+          fallback: contract.blockStyles.code.fontSize,
+        }),
         lineHeight: block.blockStyleOverrides.lineHeight ?? contract.blockStyles.code.lineHeight,
         marginTop: block.blockStyleOverrides.spaceBefore ?? contract.blockStyles.code.marginTop,
         marginBottom: block.blockStyleOverrides.spaceAfter ?? contract.blockStyles.code.marginBottom,
@@ -449,7 +490,7 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
         return 0;
       }
 
-      return estimateTableBlockHeight(block, contract);
+      return estimateTableBlockHeight(block, contract, styles);
     case 'image':
       return estimateImageBlockHeight(block, contract);
     case 'horizontalRule':
@@ -461,6 +502,22 @@ function estimateBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract
     default:
       return 48;
   }
+}
+
+function resolveBlockHeight(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+  tocItems: TocItem[],
+  styles?: LayoutStyleSheet,
+  measuredBlockHeights?: Record<string, number>,
+): number {
+  // 隐藏 DOM 测量完成后，分页优先使用真实块高；首次渲染或未测到的块继续走估算兜底。
+  const measuredHeight = measuredBlockHeights?.[block.id];
+  if (typeof measuredHeight === 'number' && Number.isFinite(measuredHeight) && measuredHeight >= 0) {
+    return measuredHeight;
+  }
+
+  return estimateBlockHeight(block, contract, tocItems, styles);
 }
 
 function estimateImageBlockHeight(block: LayoutBlock, contract: ResolvedStyleContract): number {
@@ -739,12 +796,13 @@ export function paginateEstimatedBlocks(
   context: PaginationAlgorithmContext,
   options: EstimatedPaginationOptions = {},
 ): PageLayout[] {
-  const { blocks, contract } = context;
+  const { blocks, contract, styles, measuredBlockHeights } = context;
   if (blocks.length === 0) {
     return [createEmptyPage(1, contract)];
   }
 
   const pageCapacity = contract.contentHeightPx;
+  const tocItems = buildTocItemsFromBlocks(blocks);
   const pages: PageLayout[] = [];
   let currentPage = createEmptyPage(1, contract);
   let currentHeight = 0;
@@ -785,14 +843,72 @@ export function paginateEstimatedBlocks(
       placedBlocks = [];
     }
 
-    const blockHeight = estimateBlockHeight(block, contract);
+    const blockHeight = resolveBlockHeight(block, contract, tocItems, styles, measuredBlockHeights);
     const keepWithNext = getBlockKeepWithNext(block, contract);
-    const nextBlockHeight = keepWithNext && nextBlock ? estimateBlockHeight(nextBlock, contract) : 0;
+    const nextBlockHeight = keepWithNext && nextBlock
+      ? resolveBlockHeight(nextBlock, contract, tocItems, styles, measuredBlockHeights)
+      : 0;
     const requiredHeight = keepWithNext ? blockHeight + nextBlockHeight : blockHeight;
+
+    if (block.type === 'toc' && block.metadata.kind === 'toc' && blockHeight > pageCapacity - currentHeight) {
+      const maxDepth = block.metadata.maxDepth;
+      const totalFilteredTocItems = tocItems.filter((item) => item.depth <= maxDepth).length;
+      let startItemIndex = 0;
+      let fragmentIndex = 1;
+
+      while (startItemIndex < Math.max(1, totalFilteredTocItems)) {
+        const fragment = buildTocFragment({
+          block,
+          allTocItems: tocItems,
+          startItemIndex,
+          availableHeight: pageCapacity - currentHeight,
+          fragmentIndex,
+          isCurrentPageEmpty: placedBlocks.length === 0,
+          contract,
+        });
+
+        if (!fragment) {
+          if (placedBlocks.length === 0) {
+            addOversizedWarningsIfNeeded(currentPage, placedBlocks, block, blockHeight, pageCapacity);
+            placedBlocks.push({ block, height: blockHeight });
+            currentHeight += blockHeight;
+            shouldPushCurrentPage = true;
+            break;
+          }
+
+          syncPlacedBlocksToPage(currentPage, placedBlocks);
+          pages.push(currentPage);
+          currentPage = createEmptyPage(pages.length + 1, contract);
+          currentHeight = 0;
+          placedBlocks = [];
+          continue;
+        }
+
+        addOversizedWarningsIfNeeded(currentPage, placedBlocks, fragment.block, fragment.height, pageCapacity);
+        placedBlocks.push({ block: fragment.block, height: fragment.height });
+        currentHeight += fragment.height;
+        startItemIndex = fragment.nextItemIndex;
+        fragmentIndex += 1;
+        shouldPushCurrentPage = true;
+
+        const totalTocItems = fragment.block.metadata.kind === 'toc'
+          ? fragment.block.metadata.runtimeSlice?.totalItems ?? 0
+          : 0;
+        if (startItemIndex < totalTocItems) {
+          syncPlacedBlocksToPage(currentPage, placedBlocks);
+          pages.push(currentPage);
+          currentPage = createEmptyPage(pages.length + 1, contract);
+          currentHeight = 0;
+          placedBlocks = [];
+        }
+      }
+
+      continue;
+    }
 
     if (isTableBlock(block) && block.metadata.rows.length > 0 && blockHeight > pageCapacity) {
       const rowHeights = block.metadata.rows.map((row, rowIndex) =>
-        estimateTableRowHeight(block, row, rowIndex, contract),
+        estimateTableRowHeight(block, row, rowIndex, contract, styles),
       );
       let startRowIndex = 0;
       let fragmentIndex = 1;
@@ -806,6 +922,7 @@ export function paginateEstimatedBlocks(
           isCurrentPageEmpty: placedBlocks.length === 0,
           rowHeights,
           contract,
+          styles,
         });
 
         if (!fragment) {

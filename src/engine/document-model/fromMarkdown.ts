@@ -700,8 +700,11 @@ export function createEmptyLayoutDocument(payload: {
   };
 }
 
-export async function createLayoutDocumentFromMarkdown(source: string): Promise<LayoutDocument> {
-  const processor = createRemarkProcessor();
+export async function createLayoutDocumentFromMarkdown(
+  source: string,
+  syntaxMappingConfig?: LayoutDocument['meta']['syntaxMappingConfig'],
+): Promise<LayoutDocument> {
+  const processor = createRemarkProcessor(syntaxMappingConfig);
   const tree = processor.parse(source) as Root;
   // 运行已注册的插件（如 remarkTextMarks 语法映射插件）
   await processor.run(tree, source);
@@ -743,6 +746,7 @@ export async function createLayoutDocumentFromMarkdown(source: string): Promise<
       characterCount: countCharacters(source),
       blockCount: blocks.length,
       updatedAt: new Date().toISOString(),
+      syntaxMappingConfig,
     },
   };
 }

@@ -13,6 +13,10 @@ const visibleWorkspaceExtensions = new Set([
   '.gif',
   '.webp',
   '.svg',
+  '.ttf',
+  '.otf',
+  '.woff',
+  '.woff2',
 ]);
 
 function normalizeSeparators(filePath: string): string {

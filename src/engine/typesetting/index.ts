@@ -17,5 +17,7 @@ export function paginateBlocks(
   return algorithm.paginate({
     blocks,
     contract,
+    styles: options.styles,
+    measuredBlockHeights: options.measuredBlockHeights,
   });
 }

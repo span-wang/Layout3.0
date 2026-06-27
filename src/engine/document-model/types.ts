@@ -136,6 +136,13 @@ export interface TocBlockMetadata {
   kind: 'toc';
   title: string;
   maxDepth: 1 | 2 | 3;
+  // 运行时目录片段只存在于分页结果，用来表示当前页显示过滤后目录项的哪一段；不会写回 .layout 原文档。
+  runtimeSlice?: {
+    startIndex: number;
+    endIndex: number;
+    fragmentIndex: number;
+    totalItems: number;
+  };
 }
 
 export interface ListBlockMetadata {
@@ -231,7 +238,7 @@ export interface LayoutBlock {
   metadata: LayoutBlockMetadata;
 }
 
-export interface LayoutResource {
+export interface LayoutImageResource {
   id: string;
   type: 'image';
   src: string;
@@ -239,6 +246,21 @@ export interface LayoutResource {
   title: string | null;
   blockId: string;
 }
+
+export type LayoutFontFormat = 'truetype' | 'opentype' | 'woff' | 'woff2';
+
+export interface LayoutFontResource {
+  id: string;
+  type: 'font';
+  src: string;
+  displayName: string;
+  fontFamily: string;
+  format: LayoutFontFormat;
+  originalFileName: string;
+  importedAt: string;
+}
+
+export type LayoutResource = LayoutImageResource | LayoutFontResource;
 
 export interface LayoutStyleSheet {
   blockStyles: Record<string, BlockStyleOverrides>;
@@ -257,6 +279,13 @@ export interface LayoutViewState {
   zoom: number;
   selectedNodeId: string | null;
   tableSelection?: TableCellRangeSelection | null;
+  blockSelection?: BlockRangeSelection | null;
+}
+
+export interface BlockRangeSelection {
+  anchorBlockId: string;
+  focusBlockId: string;
+  blockIds: string[];
 }
 
 export interface TableCellRangeSelection {
@@ -276,6 +305,29 @@ export interface LayoutDocumentMeta {
   characterCount: number;
   blockCount: number;
   updatedAt: string;
+  /** 语法映射配置（可选，不存在时使用默认配置） */
+  syntaxMappingConfig?: {
+    version: '1.0.0';
+    textMarkMappings: Array<{
+      id: string;
+      name: string;
+      enabled: boolean;
+      pattern: string;
+      markType: TextMarkType;
+      description?: string;
+      priority?: number;
+    }>;
+    blockCommandMappings: Array<{
+      id: string;
+      name: string;
+      enabled: boolean;
+      command: string;
+      targetBlockType: 'blockquote' | 'code' | 'paragraph';
+      metadata?: Record<string, unknown>;
+      description?: string;
+      priority?: number;
+    }>;
+  };
 }
 
 export interface LayoutDocument {

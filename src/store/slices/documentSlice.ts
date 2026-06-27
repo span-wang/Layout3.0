@@ -2,6 +2,7 @@ import { starterMarkdown, starterTitle } from '@/constants/workspace';
 import {
   applyTextRunPatchToTextRuns,
   applyBlockStyleOverridesToBlock,
+  buildBlockRangeSelection,
   convertListItemTaskStateByItem,
   updateBlockquoteStructureByNode,
   clearTextFormattingInTextRuns,
@@ -30,15 +31,21 @@ import {
   updateTableRowHeightByCell,
   updateTableStructureByCell,
   mergeTableCellsByRange,
+  mergeTopLevelTextBlocksByIds,
   updateLayoutBlockText as updateLayoutBlockTextModel,
   updateLayoutImageAttributes as updateLayoutImageAttributesModel,
   updateLayoutListItemText,
   updateLayoutTableCellText,
 } from '@/engine/document-model';
+import { mergeFontResource } from '@/engine/document-model/fontResources';
+import { applyQuickTextStyleToStyleSheet } from '@/engine/style/quickTextStyle';
 import type {
   BlockStyleOverrides,
   BlockquoteStructureAction,
+  BlockMergeReason,
   LayoutBlock,
+  LayoutDocument,
+  LayoutFontResource,
   LayoutResource,
   ListBatchCheckedAction,
   ListBatchCheckedScope,
@@ -827,7 +834,7 @@ function syncImageResource(
 ): LayoutResource[] {
   let hasMatchedResource = false;
   const nextResources = resources.map((resource) => {
-    if (resource.blockId !== nodeId) {
+    if (resource.type !== 'image' || resource.blockId !== nodeId) {
       return resource;
     }
 
@@ -862,7 +869,37 @@ function removeImageResourcesByBlockId(
   resources: LayoutResource[],
   blockId: string,
 ): LayoutResource[] {
-  return resources.filter((resource) => resource.blockId !== blockId);
+  return resources.filter((resource) => resource.type !== 'image' || resource.blockId !== blockId);
+}
+
+const documentHistoryLimit = 50;
+
+function cloneLayoutDocumentSnapshot(document: LayoutDocument): LayoutDocument {
+  // LayoutDocument 目前是纯 JSON 结构，用 JSON 克隆可以避免历史快照被后续 immer 修改串联污染。
+  return JSON.parse(JSON.stringify(document)) as LayoutDocument;
+}
+
+function pushDocumentHistory(state: DocumentSlice): void {
+  if (!state.layoutDocument) {
+    return;
+  }
+
+  state.documentHistoryPast.push(cloneLayoutDocumentSnapshot(state.layoutDocument));
+  if (state.documentHistoryPast.length > documentHistoryLimit) {
+    state.documentHistoryPast.shift();
+  }
+  // 新操作发生后，旧的重做链路不再成立。
+  state.documentHistoryFuture = [];
+}
+
+function restoreLayoutDocumentSnapshot(state: DocumentSlice, document: LayoutDocument): void {
+  state.layoutDocument = cloneLayoutDocumentSnapshot(document);
+  state.title = state.layoutDocument.title;
+  state.source = state.layoutDocument.source;
+  state.parseState = 'ready';
+  state.parseError = null;
+  state.pageLayouts = [];
+  state.isDirty = true;
 }
 
 function refreshDocumentMeta(state: DocumentSlice, blocks: LayoutBlock[]): void {
@@ -882,6 +919,7 @@ function applyDocumentMutation(
     return;
   }
 
+  pushDocumentHistory(state);
   state.layoutDocument.blocks = result.blocks;
   const imageResourceSnapshot = getImageResourceSnapshotForNodeId(result.blocks, nodeId);
   if (imageResourceSnapshot !== null) {
@@ -895,6 +933,7 @@ function applyDocumentMutation(
   refreshDocumentMeta(state, result.blocks);
   state.layoutDocument.viewState.selectedNodeId = nodeId;
   state.layoutDocument.viewState.tableSelection = null;
+  state.layoutDocument.viewState.blockSelection = null;
   state.isDirty = true;
   state.parseState = 'ready';
   state.parseError = null;
@@ -915,6 +954,8 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
   source: starterMarkdown,
   parseState: 'ready',
   layoutDocument: initialLayoutDocument,
+  documentHistoryPast: [],
+  documentHistoryFuture: [],
   parseError: null,
   pageLayouts: [],
   resetDocument: () =>
@@ -930,6 +971,8 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       state.source = starterMarkdown;
       state.parseState = 'ready';
       state.layoutDocument = createEmptyLayoutDocument({ title: starterTitle, source: starterMarkdown });
+      state.documentHistoryPast = [];
+      state.documentHistoryFuture = [];
       state.parseError = null;
       state.pageLayouts = [];
     }),
@@ -943,6 +986,8 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       state.source = source;
       state.parseState = 'ready';
       state.layoutDocument = layoutDocument;
+      state.documentHistoryPast = [];
+      state.documentHistoryFuture = [];
       state.parseError = null;
       state.pageLayouts = [];
     }),
@@ -956,6 +1001,8 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       state.source = source;
       state.parseState = 'ready';
       state.layoutDocument = layoutDocument;
+      state.documentHistoryPast = [];
+      state.documentHistoryFuture = [];
       state.parseError = null;
       state.pageLayouts = [];
     }),
@@ -1007,6 +1054,8 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
     set((state) => {
       state.parseState = 'ready';
       state.layoutDocument = document;
+      state.documentHistoryPast = [];
+      state.documentHistoryFuture = [];
       state.parseError = null;
     }),
   setParseError: (message) =>
@@ -1028,6 +1077,26 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
 
       state.layoutDocument.viewState.selectedNodeId = nodeId;
       state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
+    }),
+  selectLayoutBlock: ({ blockId, extendRange }) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const currentBlockSelection = state.layoutDocument.viewState.blockSelection ?? null;
+      const anchorBlockId = extendRange
+        ? currentBlockSelection?.anchorBlockId ?? state.layoutDocument.viewState.selectedNodeId ?? blockId
+        : blockId;
+      const nextBlockSelection = extendRange
+        ? buildBlockRangeSelection(state.layoutDocument.blocks, anchorBlockId, blockId)
+        : null;
+
+      state.layoutDocument.viewState.selectedNodeId = blockId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection =
+        nextBlockSelection && nextBlockSelection.blockIds.length > 1 ? nextBlockSelection : null;
     }),
   selectLayoutTableCell: ({ cellId, extendRange }) =>
     set((state) => {
@@ -1039,6 +1108,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       if (!tableBlock) {
         state.layoutDocument.viewState.selectedNodeId = cellId;
         state.layoutDocument.viewState.tableSelection = null;
+        state.layoutDocument.viewState.blockSelection = null;
         return;
       }
 
@@ -1051,6 +1121,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
 
       state.layoutDocument.viewState.selectedNodeId = cellId;
       state.layoutDocument.viewState.tableSelection = nextSelection;
+      state.layoutDocument.viewState.blockSelection = null;
     }),
   clearLayoutSelection: () =>
     set((state) => {
@@ -1060,7 +1131,48 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
 
       state.layoutDocument.viewState.selectedNodeId = null;
       state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
     }),
+  undoLayoutDocument: () => {
+    let didUndo = false;
+
+    set((state) => {
+      if (!state.layoutDocument || state.documentHistoryPast.length === 0) {
+        return;
+      }
+
+      const previousDocument = state.documentHistoryPast.pop();
+      if (!previousDocument) {
+        return;
+      }
+
+      state.documentHistoryFuture.push(cloneLayoutDocumentSnapshot(state.layoutDocument));
+      restoreLayoutDocumentSnapshot(state, previousDocument);
+      didUndo = true;
+    });
+
+    return didUndo;
+  },
+  redoLayoutDocument: () => {
+    let didRedo = false;
+
+    set((state) => {
+      if (!state.layoutDocument || state.documentHistoryFuture.length === 0) {
+        return;
+      }
+
+      const nextDocument = state.documentHistoryFuture.pop();
+      if (!nextDocument) {
+        return;
+      }
+
+      state.documentHistoryPast.push(cloneLayoutDocumentSnapshot(state.layoutDocument));
+      restoreLayoutDocumentSnapshot(state, nextDocument);
+      didRedo = true;
+    });
+
+    return didRedo;
+  },
   updateLayoutNodeText: ({ nodeId, text }) =>
     set((state) => {
       if (!state.layoutDocument) {
@@ -1114,6 +1226,20 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       );
       applyDocumentMutation(state, nodeId, result);
     }),
+  importLayoutFontResource: (fontResource: LayoutFontResource) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      // 字体导入只改变文档资源，不改正文块；仍然进入历史栈，便于用户撤销刚导入的字体。
+      pushDocumentHistory(state);
+      state.layoutDocument.resources = mergeFontResource(state.layoutDocument.resources, fontResource);
+      state.layoutDocument.meta.updatedAt = new Date().toISOString();
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    }),
   insertLayoutImageBlock: ({
     src,
     alt,
@@ -1159,11 +1285,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       );
 
       insertedBlockId = result.insertedBlockId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.resources = result.resources;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1186,11 +1314,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       });
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       // 默认选中新表格的第一个单元格，让用户插入后能顺手进入单元格编辑。
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1212,11 +1342,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       });
 
       insertedBlockId = result.insertedBlockId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       // 默认选中新公式块，方便用户直接进入公式编辑。
       state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1238,11 +1370,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       });
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       // 默认选中新列表的第一个列表项，让用户插入后能直接进入列表项编辑。
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1263,11 +1397,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       });
 
       insertedBlockId = result.insertedBlockId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       // 新空文本块插入后直接选中，方便上层立即请求进入原位编辑。
       state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1288,11 +1424,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       });
 
       insertedBlockId = result.insertedBlockId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       // 分页符不进入编辑态，但插入后仍保持选中，方便用户确认位置。
       state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1313,10 +1451,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       });
 
       insertedBlockId = result.insertedBlockId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1363,6 +1503,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       didDelete = true;
       selectedNodeId = result.selectedNodeId;
       deletedBlockType = targetBlock.type;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       if (targetBlock.type === 'image') {
         state.layoutDocument.resources = removeImageResourcesByBlockId(
@@ -1373,6 +1514,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1455,11 +1597,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
       state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1483,11 +1627,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
       state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1511,11 +1657,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
       state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1539,11 +1687,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
       state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1567,10 +1717,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1617,11 +1769,13 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
 
       didUpdate = true;
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = replaced.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(replaced.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, replaced.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
       state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1631,6 +1785,51 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       selectedNodeId,
       didUpdate,
       reason,
+    };
+  },
+  mergeLayoutSelectedBlocks: () => {
+    let selectedNodeId: string | null = null;
+    let didUpdate = false;
+    let mergedCount = 0;
+    let reason: BlockMergeReason = 'invalidSelection';
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const selection = state.layoutDocument.viewState.blockSelection;
+      if (!selection || selection.blockIds.length < 2) {
+        reason = 'notEnoughBlocks';
+        return;
+      }
+
+      const result = mergeTopLevelTextBlocksByIds(state.layoutDocument.blocks, selection.blockIds);
+      reason = result.reason;
+      mergedCount = result.mergedCount;
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      didUpdate = true;
+      selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return {
+      selectedNodeId,
+      didUpdate,
+      reason,
+      mergedCount,
     };
   },
   updateLayoutListStructure: ({ itemId, action }) => {
@@ -1647,10 +1846,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1674,10 +1875,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1701,10 +1904,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1728,10 +1933,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1755,10 +1962,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1782,10 +1991,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1809,10 +2020,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1836,10 +2049,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1870,10 +2085,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1903,10 +2120,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
       }
 
       selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
       state.layoutDocument.blocks = result.blocks;
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
       state.parseState = 'ready';
       state.parseError = null;
@@ -1970,5 +2189,27 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set) => ({
         applyBlockStyleOverridesToBlock(block, blockStyleOverrides),
       );
       applyDocumentMutation(state, nodeId, result);
+    }),
+  applyLayoutQuickTextStyle: ({ scope, styleOverrides }) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const nextStyles = applyQuickTextStyleToStyleSheet(
+        state.layoutDocument.styles,
+        scope,
+        styleOverrides,
+      );
+      if (nextStyles === state.layoutDocument.styles) {
+        return;
+      }
+
+      pushDocumentHistory(state);
+      state.layoutDocument.styles = nextStyles;
+      state.layoutDocument.meta.updatedAt = new Date().toISOString();
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
     }),
 });

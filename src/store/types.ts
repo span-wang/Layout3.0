@@ -13,6 +13,7 @@ import type {
   ListTaskConversionAction,
   ListStructureAction,
   LayoutDocument,
+  LayoutFontResource,
   ParseState,
   TableColumnAlign,
   TableCellRangeSelection,
@@ -34,6 +35,7 @@ import type {
   StyleSettings,
   TemplateId,
 } from '@/engine/style/types';
+import type { QuickTextStylePatch, QuickTextStyleScope } from '@/engine/style/quickTextStyle';
 import type { PageLayout } from '@/engine/typesetting/types';
 import type { StateCreator } from 'zustand';
 import type {
@@ -43,6 +45,9 @@ import type {
   WorkspaceDirectoryEntry,
   WorkspaceViewMode,
 } from '@/types/workspace';
+import type { AiSlice } from '@/store/slices/aiSlice';
+
+export type AppStore = DocumentSlice & UISlice & StyleSlice & AiSlice;
 
 export interface DocumentSlice {
   documentEpoch: number;
@@ -57,6 +62,8 @@ export interface DocumentSlice {
   recentlyOpenedFiles: RecentFileEntry[];
   parseState: ParseState;
   layoutDocument: LayoutDocument | null;
+  documentHistoryPast: LayoutDocument[];
+  documentHistoryFuture: LayoutDocument[];
   parseError: string | null;
   pageLayouts: PageLayout[];
   resetDocument: () => void;
@@ -89,8 +96,11 @@ export interface DocumentSlice {
   setParseError: (message: string) => void;
   setPageLayouts: (pages: PageLayout[]) => void;
   selectLayoutNode: (nodeId: string) => void;
+  selectLayoutBlock: (payload: { blockId: string; extendRange?: boolean }) => void;
   selectLayoutTableCell: (payload: { cellId: string; extendRange?: boolean }) => void;
   clearLayoutSelection: () => void;
+  undoLayoutDocument: () => boolean;
+  redoLayoutDocument: () => boolean;
   updateLayoutNodeText: (payload: { nodeId: string; text: string }) => void;
   replaceLayoutNodeRichText: (payload: { nodeId: string; textRuns: TextRun[] }) => void;
   toggleLayoutNodeTextMark: (payload: {
@@ -107,6 +117,7 @@ export interface DocumentSlice {
     nodeId: string;
     selection: TextRangeSelection | null;
   }) => void;
+  importLayoutFontResource: (fontResource: LayoutFontResource) => void;
   insertLayoutImageBlock: (payload: {
     src: string;
     alt: string;
@@ -180,6 +191,12 @@ export interface DocumentSlice {
     didUpdate: boolean;
     reason: 'merged' | 'invalidSelection' | 'singleCell' | 'containsMergedCell';
   };
+  mergeLayoutSelectedBlocks: () => {
+    selectedNodeId: string | null;
+    didUpdate: boolean;
+    reason: 'merged' | 'invalidSelection' | 'notEnoughBlocks' | 'nonContiguous' | 'unsupportedBlockType' | 'mixedBlockTypes';
+    mergedCount: number;
+  };
   updateLayoutListStructure: (payload: {
     itemId: string;
     action: ListStructureAction;
@@ -245,6 +262,10 @@ export interface DocumentSlice {
     nodeId: string;
     blockStyleOverrides: BlockStyleOverrides;
   }) => void;
+  applyLayoutQuickTextStyle: (payload: {
+    scope: QuickTextStyleScope;
+    styleOverrides: QuickTextStylePatch;
+  }) => void;
 }
 
 export interface UISlice {
@@ -282,7 +303,5 @@ export interface StyleSlice {
   setPaginationAlgorithmId: (algorithmId: PaginationAlgorithmId) => void;
   setPaginationBehaviorOption: (option: PaginationBehaviorOption, value: boolean) => void;
 }
-
-export type AppStore = DocumentSlice & UISlice & StyleSlice;
 
 export type StoreSlice<T> = StateCreator<AppStore, [['zustand/immer', never]], [], T>;

@@ -11,6 +11,7 @@ import {
   type BlockquoteStructureAction,
   type ListStructureAction,
   type LayoutBlock,
+  type LayoutResource,
   type SourceRange,
   type SelectedBlockquoteContext,
   type SelectedLayoutNodeInfo,
@@ -29,6 +30,7 @@ import {
   type ImageWrapMode,
   type ImageWrapSide,
 } from '@/engine/document-model';
+import { buildFontFamilyGroupsWithImportedFonts } from '@/engine/document-model/fontResources';
 import { isImageTextWrapMode, resolveImageLayout } from '@/engine/document-model/imageLayout';
 import { renderEquationToHtml } from '@/engine/document-model/equation';
 import {
@@ -55,6 +57,8 @@ import { useResolvedStyleContract } from '@/hooks/useResolvedStyleContract';
 import { useAppStore } from '@/store';
 import type { CanvasTextSelectionState, PageSettingsTab, WorkspaceViewMode } from '@/types/workspace';
 import { getBlockStyleControlSupportByBlockType } from './objectStyleSupport';
+import { SyntaxMappingPanel } from '@/components/settings/SyntaxMappingPanel';
+import { AiPanel } from '@/components/ai/AiPanel';
 
 interface RightPanelProps {
   currentPageCount: number;
@@ -65,7 +69,7 @@ interface RightPanelProps {
   canvasTextSelection: CanvasTextSelectionState;
 }
 
-type RightMainTab = '对象属性' | '页面设置';
+type RightMainTab = '对象属性' | '页面设置' | '语法映射' | 'AI助手';
 
 const rightMainTabs: Array<{
   id: RightMainTab;
@@ -81,6 +85,16 @@ const rightMainTabs: Array<{
     id: '页面设置',
     label: '页面设置',
     description: '控制页面规格、边距与模板',
+  },
+  {
+    id: '语法映射',
+    label: '语法映射',
+    description: '配置文本标记与块级指令映射',
+  },
+  {
+    id: 'AI助手',
+    label: 'AI助手',
+    description: 'AI 生成、优化与检查',
   },
 ];
 
@@ -511,6 +525,7 @@ function renderObjectPropertiesPanel(
   selectedTopLevelBlock: LayoutBlock | null,
   selectedNodeId: string | null,
   canvasTextSelection: CanvasTextSelectionState,
+  layoutResources: LayoutResource[],
   resolvedStyleContract: ReturnType<typeof useResolvedStyleContract>,
   toggleLayoutNodeTextMark: (payload: {
     nodeId: string;
@@ -664,6 +679,10 @@ function renderObjectPropertiesPanel(
   const currentFontFamily =
     (getSharedTextStyleValue(selectedNodeInfo.textRuns, activeSelection, 'fontFamily') as string | undefined) ??
     fontFamilyPlaceholderValue;
+  const fontFamilyGroups = buildFontFamilyGroupsWithImportedFonts(
+    textFontFamilyGroups,
+    layoutResources,
+  );
   const currentColor =
     (getSharedTextStyleValue(selectedNodeInfo.textRuns, activeSelection, 'color') as string | undefined) ??
     defaultTextColor;
@@ -2891,6 +2910,7 @@ export function RightPanel({
             selectedTopLevelBlock,
             selectedNodeId,
             canvasTextSelection,
+            layoutDocument?.resources ?? [],
             resolvedStyleContract,
             toggleLayoutNodeTextMark,
             applyLayoutNodeTextStyle,
@@ -2928,6 +2948,22 @@ export function RightPanel({
             setTopLevelBlockFeedback,
             syncEditingTextBeforeStyleAction,
           )}
+        </div>
+      );
+    }
+
+    if (activeRightPanelTab === '语法映射') {
+      return (
+        <div className="right-panel-detail">
+          <SyntaxMappingPanel />
+        </div>
+      );
+    }
+
+    if (activeRightPanelTab === 'AI助手') {
+      return (
+        <div className="right-panel-detail">
+          <AiPanel />
         </div>
       );
     }

@@ -4397,6 +4397,752 @@
         "progress/logs.json"
       ],
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续继续在 `PH2-09` 拆分孤儿行寡妇行控制、真实测量分页、脏区重排和多级列表更精细跨页。"
+    },
+    {
+      "id": "LOG-178",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认隐藏 DOM 块级真实测量与脏区缓存 V1 边界",
+      "action": "边界确认/准备实现",
+      "result": "已按用户要求将 `PH2-09` 当前小步切换为“隐藏 DOM 块级真实测量与脏区缓存 V1”：本轮新增隐藏测量层、测量高度输入通道和 `measured-block-cache-v1` 分页算法，优先使用真实块高并以块内容签名与样式契约签名复用测量缓存；脏区 V1 只做到块级重新测量，分页结果仍允许整体重算。本步明确不纳入行级真实测量、完整孤儿行寡妇行、页面前缀复用型脏区重排、导出前 Chromium 对照或 `.layout` 结构变更。",
+      "verification": [
+        "用户已确认继续推进隐藏 DOM 真实测量与脏区重排。",
+        "`PH2-09` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后实现测量高度通道、算法注册、隐藏测量层、块级缓存和 M2 冒烟验证。"
+    },
+    {
+      "id": "LOG-179",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成隐藏 DOM 块级真实测量与脏区缓存 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-09` 的隐藏 DOM 块级真实测量与脏区缓存 V1：分页类型和统一入口已支持传入 `measuredBlockHeights`；新增 `measured-block-cache-v1` 算法并注册到右侧分页算法列表；公共估算分页主流程会优先使用真实测量高度，未测到时回退估算高度。`CanvasPane` 已新增不可见测量层，按当前页面正文宽度渲染顶层块并读取真实高度；测量缓存以块 ID、块内容签名和样式契约签名复用未变化块，变化块会重新测量。`smoke:m2` 已补充算法注册、测量高度优先和测量高度变化影响分页的回归验证。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/index.ts",
+        "src/engine/typesetting/algorithmIds.ts",
+        "src/engine/typesetting/registry.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/measuredBlockCache.ts",
+        "src/hooks/usePagination.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续在 `PH2-09` 拆分行级真实测量、孤儿行寡妇行控制、页面前缀复用型脏区重排或导出终态高保真对照。"
+    },
+    {
+      "id": "LOG-180",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认文本与段落样式能力收尾验收 V1 边界",
+      "action": "边界确认/准备验收",
+      "result": "已按用户明确要求停止继续分页算法开发，并将当前下一步切回 `PH2-06` 文本与段落局部样式编辑收尾验收。本步重点补强 `smoke:m2` 对字体、字号、文字颜色、高亮、加粗、斜体、下划线、删除线、段落对齐、缩进、行高和段前段后距的模型写回、`.layout` 保存恢复、画布预览与 HTML/PDF 导出口径验证；如发现缺口，只在 `PH2-06` 样式链路内做最小修复，验收通过后再将 `PH2-06` 标记为已完成。",
+      "verification": [
+        "用户已确认不再继续分页算法开发。",
+        "`PH2-06` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后补强 `smoke:m2` 的样式验收并修复发现的 `PH2-06` 范围内缺口。"
+    },
+    {
+      "id": "LOG-181",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成文本与段落样式能力收尾验收 V1",
+      "action": "验证/文档同步",
+      "result": "已完成 `PH2-06` 文本与段落样式能力收尾验收：`smoke:m2` 已补强字体、字号、文字颜色、高亮、加粗、斜体、下划线、删除线、段落对齐、左右缩进、首行缩进、悬挂缩进、行高、段前距和段后距的覆盖；验证这些样式可写入 `LayoutDocument`、随 `.layout` 工程保存恢复，并被画布预览同源样式口径与 HTML/PDF 导出链路消费。本轮验收未暴露新的产品代码缺口，因此只补强冒烟脚本并将 `PH2-06` 标记为已完成。",
+      "verification": [
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "scripts/m2-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "后续继续避开分页算法；可优先从 `PH2-10` 的图片、表格、公式可视化编辑收尾，或 `PH2-11` 的目录、大纲与页码回填收尾中选择下一步。"
+    },
+    {
+      "id": "LOG-182",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "暂缓后续分页算法开发",
+      "action": "范围调整/风险登记",
+      "result": "已按用户明确要求将后续分页算法开发暂缓：`PH2-09` 状态从 `进行中` 调整为 `暂缓`，并新增 `RISK-005` 记录本次范围调整。后续当前执行看板默认不再把分页算法作为下一步推荐；除非用户重新确认恢复分页方向，否则优先推进图片、表格、公式、目录或 M2 桌面验收等非分页任务。",
+      "verification": [
+        "用户已明确要求不要再做分页算法。",
+        "`PH2-09` 任务卡状态已调整为 `暂缓`。",
+        "`progress/risks.json` 已新增 `RISK-005`。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续优先从 `PH2-10`、`PH2-11` 或 `PH2-12` 中选择非分页下一步。"
+    },
+    {
+      "id": "LOG-183",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格、图片、公式可视化编辑收尾验收 V1 边界",
+      "action": "边界确认/准备验收",
+      "result": "已按用户确认将 `PH2-10` 当前小步切换为“表格、图片、公式可视化编辑收尾验收 V1”：本轮不再开启新的大功能，重点补强 `smoke:m2` 对表格、图片、公式三类复杂对象的模型写回、`.layout` 保存恢复、画布预览与 HTML/PDF 导出口径验收；若发现 `PH2-10` 范围内的小缺口，只做最小修复，验收通过后再将 `PH2-10` 标记为已完成。本步明确不纳入 `PH2-09` 分页算法、真实 DOM 测量、表格跨页算法、公式编号、真正段落内 inline 图片或 `.layout` 顶层结构变更。",
+      "verification": [
+        "用户已确认本步开发方案。",
+        "`PH2-10` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后补强 `smoke:m2` 的 `PH2-10` 收尾验收并修复发现的小缺口。"
+    },
+    {
+      "id": "LOG-184",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格、图片、公式可视化编辑收尾验收 V1",
+      "action": "验证/文档同步",
+      "result": "已完成 `PH2-10` 收尾验收：`smoke:m2` 已补强表格、图片、公式三类复杂对象的验收，覆盖表格增删行列、表头行、列对齐、列宽、行高、合并单元格、图片路径/替代文本/标题/显示说明/宽高/裁剪/环绕/左右方向/位置偏移、块级公式源码写回、成功渲染、错误降级、行内公式渲染，以及这些对象随 `.layout` 工程保存恢复、画布预览和 HTML/PDF 导出链路消费。本轮验收未暴露新的产品代码缺口，因此只补强冒烟脚本，并将 `PH2-10` 标记为已完成。",
+      "verification": [
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "scripts/m2-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "后续继续避开暂缓的 `PH2-09` 分页算法；可优先推进 `PH2-11` 目录、大纲与页码回填收尾，或进入 `PH2-12` M2 桌面链路验收。"
+    },
+    {
+      "id": "LOG-185",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认目录块跨页分页 V1 边界",
+      "action": "边界确认/准备实现",
+      "result": "已按用户确认将 `PH2-11` 当前小步切换为“目录块跨页分页 V1”：本轮只补正文目录块自身的运行时跨页拆分与渲染，让目录项根据页内可用高度拆成多个目录片段，并保持页码回填、点击跳转、画布预览和 HTML/PDF 导出口径一致；本步明确不纳入目录样式模板、页码格式系统、真实 DOM 测量分页、孤寡行或 `PH2-09` 分页算法重写。",
+      "verification": [
+        "用户已确认本步开发方案。",
+        "`PH2-11` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后实现目录块运行时跨页片段与长目录回归验证。"
+    },
+    {
+      "id": "LOG-186",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-11"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成目录块跨页分页 V1",
+      "action": "修复/集成/验证/文档同步",
+      "result": "已完成正文目录块跨页分页 V1：目录块高度改为按当前文档标题数量、层级筛选和目录项文字换行估算；当目录项超过当前页可用高度时，会生成只存在于运行时分页结果中的目录片段，并用 `runtimeSlice` 标记当前片段显示的目录项范围，续页标题显示为“目录（续）”。画布预览、目录项页码回填、点击跳转和 HTML/PDF 导出已统一通过可见目录片段渲染；本步不新增 `.layout` 顶层字段，也不把运行时片段写回原始文档模型。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`；脚本已新增 18 个标题的小页面长目录回归，断言目录拆成多个运行时片段、目录项顺序完整、导出 HTML 片段数与分页片段一致并包含“目录（续）”。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/selectors.ts",
+        "src/engine/typesetting/tocLayout.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "scripts/m2-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续围绕 `PH2-11` 拆分目录样式模板、页眉页脚页码或更完整目录工作流。"
+    },
+    {
+      "id": "LOG-187",
+      "date": "2026-06-26",
+      "taskIds": [
+        "GOV-008"
+      ],
+      "phaseMilestone": "第二阶段 / M2 / 项目治理",
+      "step": "确认 AppShell 壳层职责解耦 V1 边界",
+      "action": "边界确认/准备重构",
+      "result": "已按用户确认新增 `GOV-008` 并写入本步边界：本轮只把 `AppShell` 中的文件流命令和画布插入命令拆入独立 hook，让 `AppShell` 回到页面装配、面板状态、选区状态和 props 传递；本步明确不纳入 UI 视觉重设计、Zustand store 切片重组、命令面板、撤销重做、Electron IPC 或 `.layout` 文件格式改动。",
+      "verification": [
+        "用户已确认本步开发方案。",
+        "`GOV-008` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后抽出 `useWorkspaceFileCommands` 与 `useCanvasInsertCommands` 并运行类型检查。"
+    },
+    {
+      "id": "LOG-188",
+      "date": "2026-06-26",
+      "taskIds": [
+        "GOV-008"
+      ],
+      "phaseMilestone": "第二阶段 / M2 / 项目治理",
+      "step": "完成 AppShell 壳层职责解耦 V1",
+      "action": "重构/验证/文档同步",
+      "result": "已完成 `AppShell` 壳层职责解耦 V1：新增 `useWorkspaceFileCommands` 承接新建、打开、保存、另存为、打开文件夹、目录刷新、最近文件、草稿恢复/自动保存和 PDF 导出命令；新增 `useCanvasInsertCommands` 承接图片、公式、表格、列表、空文本块、分页符和目录插入命令；`AppShell.tsx` 已从 1068 行收敛到 402 行，主要保留页面装配、面板状态、选区状态、拖拽状态和子组件 props 传递。本步未改变现有 UI 入口、中文提示、store 公共接口或 `.layout` 文件结构。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`"
+      ],
+      "affectedFiles": [
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "src/components/layout/useCanvasInsertCommands.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续若继续治理，可单独拆分命令注册表、快捷键、撤销重做或 store 切片治理。"
+    },
+    {
+      "id": "LOG-189",
+      "date": "2026-06-26",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1文本块视觉行边界拆分缺陷修复 V1 边界",
+      "action": "边界确认/准备修复",
+      "result": "已按用户反馈将 `PH2-09` 从暂缓状态临时恢复为进行中的缺陷修复小步：本轮只修复 `分页测试算法1 / max-fill-v1` 中文本块跨页可能在视觉行中间断开的问题，让长标题/段落运行时片段优先按可容纳视觉行边界拆分，并补充 `smoke:m2` 回归验证。本步明确不恢复分页算法新能力开发，不纳入孤儿行寡妇行、真实 DOM 行级测量、默认算法替换、分页引擎重写或 `.layout` 结构变更。",
+      "verification": [
+        "用户已确认本步修复方案。",
+        "`PH2-09` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后修复 `max-fill-v1` 文本块视觉行边界拆分并补充 M2 冒烟验证。"
+    },
+    {
+      "id": "LOG-190",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1文本块视觉行边界拆分缺陷修复 V1",
+      "action": "修复/验证/文档同步",
+      "result": "已完成 `max-fill-v1` 文本块视觉行边界拆分缺陷修复：文本块跨页时不再只按源码显式换行作为安全分割点；当单个源码行跨越多条视觉行时，会按当前页面宽度、字号、首行宽度和可容纳行数计算运行时拆分点，并避免为了寻找标点向前回退过多导致半行提前换页。列表项和表格单元格复用的文本拆分函数也默认贴近最后可容纳字符，减少中文内容因标点回退造成的视觉半行断开。`smoke:m2` 已补充中文长段落两行跨页回归验证，本步完成后将 `PH2-09` 恢复为暂缓状态，避免继续扩张分页算法新能力。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续除非用户重新确认，否则不继续扩张 `PH2-09` 分页算法新能力。"
+    },
+    {
+      "id": "LOG-191",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1字符级精确流式布局 V1",
+      "action": "重构/验证/文档同步",
+      "result": "已完�?textMetrics.ts 字符级精确流式布局核心函数 flowText：不再用「字符数÷每行字数」估算行高，改为逐字符查宽度表（宽字符≈fontSize，窄字符≈fontSize×0.5，空格≈fontSize×0.25），批量累加后模拟真实换行过程，计算实际渲染行数和最优分割点。列表项文本和表格单元格文本也同步使用同一套字符级流式布局逻辑。estimatedMaxFill.ts 中已删除本地重复的 computeTextSplitOffsetForLineCount 和 findPreferredTextSplitOffset，统一从 textMetrics.ts 导入。smoke:m2 已补充混排文本（中文+英文+数字）跨页回归验证。",
+      "verification": [
+        "npm run typecheck 成�?",
+        "npm run smoke:m2 成功，输�?M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。",
+        "npm run build 成功�?",
+        "npm run progress:build 与 progress:check 均通过"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/textMetrics.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续推进 PH2-09 后续子步或进入 PH2-12 最终串联验收。"
+    },
+    {
+      "id": "LOG-192",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-05C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认块多选合并与撤销重做 V1 边界",
+      "action": "边界确认/准备实现",
+      "result": "已按用户确认新增 `PH2-05C` 并写入本步边界：本轮实现 Shift 多选连续顶层块、块级浮动工具条合并入口，以及运行时文档模型撤销/重做 V1；本步明确不纳入拖拽框选、跨类型合并、页面设置撤销、完整命令历史或 `.layout` 顶层结构变更。",
+      "verification": [
+        "用户已确认本步开发方案。",
+        "`PH2-05C` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后实现块范围选择、块合并模型操作、撤销重做历史栈、顶部按钮和 M2 冒烟验证。"
+    },
+    {
+      "id": "LOG-193",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-05C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成块多选合并与撤销重做 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-05C`：画布顶层块支持 Shift 连续多选，多选后展示块级浮动工具条“合并”；模型层新增连续同类型文本块合并，保留第一个块并以换行追加后续内容；运行时 store 已加入 `LayoutDocument` 快照历史，顶部撤销/重做按钮与 `Ctrl/Cmd+Z`、`Ctrl/Cmd+Shift+Z`、`Ctrl/Cmd+Y` 快捷键可回退和恢复主要文档模型变更。本步未扩展到拖拽框选、跨类型合并、页面设置撤销或完整命令历史。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续在复杂块编辑增强中拆分拖拽框选、多块移动/删除、输入历史合并或页面设置撤销。"
+    },
+    {
+      "id": "LOG-194",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-06A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认字体导入与工程内字体资产 V1 边界",
+      "action": "边界确认/准备实现",
+      "result": "已按用户确认新增 `PH2-06A` 并写入本步边界：本轮在现有字体选择能力基础上补齐本地字体导入 V1，支持选择 `.ttf`、`.otf`、`.woff`、`.woff2` 字体文件，复制到默认工作区字体目录，并作为 `LayoutDocument.resources` 中的字体资产进入字体下拉、画布预览和 HTML/PDF 导出。本步明确不纳入系统级字体安装、系统字体扫描、字体管理器、字体授权检查、字体真实测量分页或 `.layout` 顶层结构变更。",
+      "verification": [
+        "用户已确认本步开发方案。",
+        "`PH2-06A` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后实现字体文件选择、复制、字体资源写回、预览与导出消费，并补充 M2 冒烟验证。"
+    },
+    {
+      "id": "LOG-195",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认前端可配置语法映射系统 V1 边界",
+      "action": "边界确认/准备实现",
+      "result": "已按用户确认新增 `PH2-13` 并写入本步边界：本轮建立前端可配置的语法映射系统，支持文本标记语法映射（如 LaTeX 命令转标准样式）和块级指令映射（如自定义指令转标准块）。映射配置通过前端 UI 动态管理，配置变更在 Markdown 导入时生效，结果可被画布预览和 HTML/PDF 导出共同消费。本步基于现有 `syntax-mappings.ts` 和 `remark-text-marks.ts` 的解析逻辑进行扩展。",
+      "verification": [
+        "用户已确认本步开发方案。",
+        "`PH2-13` 任务卡已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后开始实现：步骤1-建立映射配置数据模型与持久化。"
+    },
+    {
+      "id": "LOG-196",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-06A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成字体导入与工程内字体资产 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-06A`：主进程新增字体导入 IPC，支持选择 `.ttf`、`.otf`、`.woff`、`.woff2` 字体文件并复制到默认工作区 `字体资源` 目录；文档模型新增 `font` 资源类型和字体资源工具函数，导入字体会写入 `LayoutDocument.resources` 并进入撤销/重做历史、未保存状态、自动草稿和 `.layout` 保存恢复链路；顶端快捷栏新增“导入字体”按钮，顶端和右侧字体下拉会合并系统预设字体与导入字体；画布预览和 HTML/PDF 导出统一根据字体资源生成 `@font-face`。本步未做系统级字体安装、字体管理器、系统字体扫描或字体真实测量分页。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "electron/main/file-handlers.ts",
+        "electron/main/ipc-handlers.ts",
+        "electron/preload/index.ts",
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/fontResources.ts",
+        "src/engine/document-model/index.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/services/FileService.ts",
+        "src/services/exportHtml.ts",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/utils/filePath.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可继续做字体管理器、字体缺失提示、系统字体扫描，或回到 `PH2-12` 做 M2 桌面链路验收。"
+    },
+    {
+      "id": "LOG-197",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "排查多行段落格式尾字漏应用问题",
+      "action": "排查/风险登记",
+      "result": "已定位多行段落进行文字/字体格式时最后几个字被单独保留在未格式化 `span` 中的原因：编辑态把 `TextRun` 中的换行渲染为 `<br>`，`extractTextRunsFromRichRoot` 又把 `<br>` 还原为 `\\n`，但 `findSelectionPoint` 只遍历文本节点恢复选区，`measureSelectionOffset` 通过克隆片段的 `innerText` 计算偏移，导致 `<br>` 与 `\\n` 的字符计数口径不一致。截图样例中未格式化尾字为 3 个，正好对应段落内 3 个 `<br>`，说明格式应用时的选区结束位置少计了换行数量，`applyTextRunPatchToTextRuns` 只格式化到真实文本末尾之前，剩余尾字被拆成独立未格式化 `TextRun/span`。",
+      "verification": [
+        "静态检查 `src/components/layout/CanvasPane.tsx` 的 `renderTextRunsToHtml`、`extractTextRunsFromRichRoot`、`findSelectionPoint`、`measureSelectionOffset` 与 `RichTextCanvasEditor` 数据流。",
+        "静态检查 `src/engine/document-model/operations.ts` 的 `applyTextRunPatchToTextRuns`，确认格式应用严格依赖传入选区范围。",
+        "已将缺陷同步登记为 `RISK-006`，并将 `PH2-06` 恢复为 `进行中` 等待用户确认修复方案。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/document-model/operations.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "请用户确认下一步修复边界：优先统一富文本编辑态选区偏移与换行计数，并补充多行段落样式应用回归验证；确认后再开始改产品代码。"
+    },
+    {
+      "id": "LOG-198",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认多行段落格式尾字漏应用修复边界",
+      "action": "边界确认/准备修复",
+      "result": "已按用户确认将本步收口为 `PH2-06` 缺陷修复：只统一 `CanvasPane` 富文本编辑态中 `<br>` 与 `\\n` 的选区偏移计数口径，修复多行段落通过顶部快捷格式工具栏、右侧对象属性或浮动工具条应用文字/字体格式时末尾文字漏格式的问题，并补充多行段落回归验证。本步不新增样式功能、不改变 `TextRun` / `LayoutDocument` / `.layout` 结构，也不重构分页、导出、表格、图片、公式或目录能力。",
+      "verification": [
+        "用户已确认执行修复。",
+        "`PH2-06` 已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后修复 `CanvasPane` 富文本选区偏移并补充 `smoke:m2` 回归验证。"
+    },
+    {
+      "id": "LOG-199",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成前端可配置语法映射系统 V1 核心实现",
+      "action": "新增/集成/验证",
+      "result": "已完成 `PH2-13` 核心实现：\n1. 新增 `syntaxMappingConfig.ts` 定义 `TextMarkMapping`、`BlockCommandMapping` 和 `SyntaxMappingConfig` 类型，并预置默认映射（++text++、\\underline{}、\\textbf{}、\\textit{}、\\sout{} 以及 Obsidian callout :::note 等）。\n2. 新增 `text-mark-mappings.ts` 实现动态文本标记映射器，支持从配置动态加载正则映射规则。\n3. 新增 `block-command-mappings.ts` 实现块级指令预处理器，支持将 Obsidian callout 等自定义指令转换为标准 blockquote。\n4. 新增 `preprocessor.ts` 提供统一的预处理入口。\n5. 重构 `remark.ts` 支持 `createConfiguredRemarkProcessor` 传入自定义语法映射配置。\n6. 新增 `SyntaxMappingPanel.tsx` 前端配置面板组件。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/syntaxMappingConfig.ts",
+        "src/engine/parser/text-mark-mappings.ts",
+        "src/engine/parser/block-command-mappings.ts",
+        "src/engine/parser/preprocessor.ts",
+        "src/engine/parser/remark.ts",
+        "src/engine/parser/syntax-mappings.ts",
+        "src/components/settings/SyntaxMappingPanel.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后完成剩余工作：步骤6-接入 Store 并完成端到端验收，包括将配置面板接入右侧面板、将配置随 `.layout` 持久化、以及补充冒烟验证。"
+    },
+    {
+      "id": "LOG-200",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成前端可配置语法映射系统 V1 端到端集成",
+      "action": "新增/集成/验证",
+      "result": "已完成 `PH2-13` 端到端集成：在 `LayoutDocumentMeta` 中新增 `syntaxMappingConfig` 字段，配置随 `.layout` 文件持久化；`createLayoutDocumentFromMarkdown` 支持传入自定义语法映射配置；`createRemarkProcessor` 支持从文档配置加载映射规则；在右侧面板新增「语法映射」Tab，接入 `SyntaxMappingPanel` 组件，用户可直接查看和修改映射规则。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "右侧面板新增「语法映射」Tab，可查看和修改映射规则。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/parser/remark.ts",
+        "src/components/settings/SyntaxMappingPanel.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后执行 `npm run smoke:m2` 确认整体链路未回退。"
+    },
+    {
+      "id": "LOG-201",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成多行段落格式尾字漏应用修复",
+      "action": "修复/验证/文档同步",
+      "result": "已修复多行段落应用文字/字体格式时尾字漏格式的问题：`CanvasPane` 富文本编辑态的选区点查找和偏移测量不再依赖只遍历文本节点或 `innerText` 估算，而是使用统一的 DOM 文本长度口径，把 `<br>` 和块级换行都按 1 个字符计入，与 `TextRun` 中的 `\\n` 保持一致。这样顶部快捷格式工具栏、右侧对象属性和浮动工具条基于同一选区范围应用样式时，不会再因为多行段落换行少计而把末尾文字拆成未格式化的独立 `span`。`smoke:m2` 已新增多行段落完整选区回归断言，覆盖尾部“品服务”仍保留颜色、字号和加粗格式。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：15 个结构块，3 页，4 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可进入 `PH2-12` 做 M2 桌面链路人工验收，重点回归多行段落选区和格式工具条。"
+    },
+    {
+      "id": "LOG-202",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-14"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认字体字号批量快捷应用 V1 开发边界",
+      "action": "边界确认/准备实现",
+      "result": "已按用户确认新建 `PH2-14` 并写回本步边界：本步在顶端快捷格式栏补齐字体和字号的批量快捷应用，作用范围包括全文字、H1、H2、H3、H4、段落、列表和表格；其中全文字规则作为低优先级文字基线，块类型规则可以覆盖全文规则，当前选区或单个节点局部样式继续保持最高优先级。本步不做完整模板编辑器、样式方案保存、其他文字样式批量应用、撤销重做重构或分页算法升级。",
+      "verification": [
+        "用户已确认执行修正版方案。",
+        "`PH2-14` 已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后实现字体字号范围规则、顶端快捷入口、预览/分页/导出消费与 `smoke:m2` 验证。"
+    },
+    {
+      "id": "LOG-203",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "补充语法映射配置面板样式",
+      "action": "完善样式",
+      "result": "根据用户反馈「没做css」，已为 `SyntaxMappingPanel` 组件补充完整的 CSS 样式，包括面板容器、标题栏、描述区、文本标记映射列表、块级命令映射列表、开关按钮、徽章、删除按钮和提示框等所有元素的样式。",
+      "verification": [
+        "`npm run build` 构建成功。"
+      ],
+      "affectedFiles": [
+        "src/styles.css"
+      ],
+      "next": "刷新应用页面，查看语法映射面板的样式效果。"
+    },
+    {
+      "id": "LOG-204",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "添加自定义语法映射入口",
+      "action": "功能增强",
+      "result": "根据用户反馈，已为语法映射配置面板添加自定义映射入口，包括文本标记映射和块级指令映射的内联添加表单，支持填写名称、正则表达式/指令、目标类型和描述。同时修复了 CanvasPane.tsx 中 renderBlock 函数参数顺序错误的类型问题。",
+      "verification": [
+        "`npm run typecheck` 类型检查通过。",
+        "`npm run build` 构建成功。"
+      ],
+      "affectedFiles": [
+        "src/components/settings/SyntaxMappingPanel.tsx",
+        "src/styles.css",
+        "src/components/layout/CanvasPane.tsx"
+      ],
+      "next": "刷新应用页面，测试添加自定义语法映射功能。"
+    },
+    {
+      "id": "LOG-205",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-14"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成字体字号批量快捷应用 V1",
+      "action": "新增/集成/验证/文档同步",
+      "result": "已完成 `PH2-14`：新增字体字号快捷规则解析模块，将全文字、H1、H2、H3、H4、段落、列表和表格的批量字体字号设置写入现有 `LayoutDocument.styles.textStyles`；顶端快捷格式栏已提供范围选择、字号输入和“应用”入口；样式优先级已固定为默认/模板基线 < 全文字体字号 < 块类型字体字号 < 当前选区/单个节点局部样式。画布预览、分页估算、HTML/PDF 导出和 `.layout` 保存恢复已共同消费同一套规则，H4 已补齐独立渲染与冒烟验证口径。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/quickTextStyle.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "src/hooks/usePagination.ts",
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/index.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续可进入 `PH2-12` 做 M2 桌面链路人工验收，重点回归顶端字体字号批量应用与局部样式覆盖优先级。"
+    },
+    {
+      "id": "LOG-206",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI 面板基础结构开发方案",
+      "action": "方案确认/准备实现",
+      "result": "已按用户确认新建 `PH3-01` 并写回本步边界：本步实现 AI 面板基础结构，支持 OpenAI/Anthropic/自定义 Provider 配置、流式内容生成、文本优化和文档排版检查功能。AI 面板位于右侧面板 Tab，支持 [生成] [优化] [检查] [设置] 四个 Tab 切换。本步纳入：AI 类型定义、AiService 核心服务、AI Store 状态管理、AI 面板 UI 组件、与 AppShell 集成。本步明确不纳入：悬浮菜单润色入口、AI 内容注释标记、完整错误处理与重试机制、AI 使用统计、命令面板集成、首次使用引导。",
+      "verification": [
+        "用户已确认执行方案。",
+        "`PH3-01` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "第三阶段与 ai-service 模块状态已更新为进行中。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "开始实现 AI 类型定义、AiService 核心服务、AI Store 状态管理和 AI 面板 UI 组件。"
+    },
+    {
+      "id": "LOG-207",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI 面板基础结构实现",
+      "action": "实现/验证",
+      "result": "已完成 AI 面板基础结构的全量实现：1) 创建 AI 类型定义（src/types/ai.ts），包含配置、生成/优化/检查选项、结果项等类型；2) 实现 AiService 核心服务（src/services/AiService.ts），支持 OpenAI/Anthropic/自定义 Provider 配置、流式生成/优化、非流式检查功能；3) 创建 AI Store 状态管理（src/store/slices/aiSlice.ts），管理配置、面板状态和各 Tab 操作状态；4) 实现 AI 面板 UI 组件（src/components/ai/），包括 AiPanel.tsx、AiGenerateTab.tsx、AiOptimizeTab.tsx、AiCheckTab.tsx、AiSettings.tsx；5) 集成到 AppShell 和 Toolbar，在右侧面板添加 AI Tab，工具栏添加 AI 按钮。",
+      "verification": [
+        "npm run typecheck 通过，无 TypeScript 错误。",
+        "npm run build 通过，构建产物生成成功。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/services/AiService.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/store/types.ts",
+        "src/store/index.ts",
+        "src/components/ai/AiPanel.tsx",
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/components/ai/AiOptimizeTab.tsx",
+        "src/components/ai/AiCheckTab.tsx",
+        "src/components/ai/AiSettings.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/styles.css"
+      ],
+      "next": "AI 面板基础结构完成，待用户配置 AI 服务后进行实际功能测试。后续可继续增强：悬浮菜单润色入口、AI 内容注释标记、完整错误处理与重试机制等。"
+    },
+    {
+      "id": "LOG-208",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "实现连接测试功能并优化错误提示",
+      "action": "修复/增强",
+      "result": "1) 实现了连接测试功能（AiSettings.tsx），发送最小请求验证 API 可用性，并提供详细的错误信息（包括 CORS 跨域、网络错误等常见问题提示）；2) 优化了生成时的错误处理（AiGenerateTab.tsx），对 'failed to fetch' 等网络错误提供更友好的中文提示和可能原因说明。",
+      "verification": [
+        "npm run typecheck 通过。",
+        "功能已集成，可在设置页面点击「测试连接」按钮验证。"
+      ],
+      "affectedFiles": [
+        "src/components/ai/AiSettings.tsx",
+        "src/components/ai/AiGenerateTab.tsx"
+      ],
+      "next": "用户可通过「设置」Tab 配置并测试 AI 服务连接。如需进一步改进，可考虑：1) 添加代理配置选项；2) 支持配置第三方转发服务（如 API Proxy）。"
     }
   ]
 }

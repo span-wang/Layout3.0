@@ -7,6 +7,7 @@ import {
   Eraser,
   FileDown,
   FilePlus2,
+  FileUp,
   Files,
   FolderOpen,
   Highlighter,
@@ -25,6 +26,7 @@ import {
   Save,
   Search,
   Sigma,
+  Sparkles,
   SquareSplitHorizontal,
   StickyNote,
   Strikethrough,
@@ -36,7 +38,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import type { MouseEvent } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { ToolButton } from '@/components/common/ToolButton';
 import { fontFamilyPlaceholderValue, textFontFamilyGroups } from '@/constants/fontFamilies';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
@@ -50,6 +52,11 @@ import {
   type TextRangeSelection,
   type TextRun,
 } from '@/engine/document-model';
+import { buildFontFamilyGroupsWithImportedFonts } from '@/engine/document-model/fontResources';
+import {
+  getQuickTextStyleRule,
+  type QuickTextStyleScope,
+} from '@/engine/style/quickTextStyle';
 import { useAppStore } from '@/store';
 import type { CanvasTextSelectionState, WorkspaceViewMode } from '@/types/workspace';
 
@@ -59,6 +66,8 @@ interface ToolbarProps {
   workspaceViewMode: WorkspaceViewMode;
   isSaving: boolean;
   isExporting: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
   canvasTextSelection: CanvasTextSelectionState;
   onCreateDocument: () => void;
   onOpenDocument: () => void;
@@ -66,6 +75,9 @@ interface ToolbarProps {
   onSaveDocument: () => void;
   onSaveDocumentAs: () => void;
   onExportPdf: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  onImportFont: () => void;
   onInsertImage: () => void;
   onInsertEquation: () => void;
   onInsertTable: () => void;
@@ -76,6 +88,7 @@ interface ToolbarProps {
   onToggleLeftPanel: () => void;
   onToggleRightPanel: () => void;
   onChangeViewMode: (mode: WorkspaceViewMode) => void;
+  onOpenAiPanel: () => void;
 }
 
 const viewModeIcons: Record<WorkspaceViewMode, typeof PanelsTopLeft> = {
@@ -129,6 +142,21 @@ const quickTextEditableBlockTypes: LayoutBlock['type'][] = ['heading', 'paragrap
 const quickBlockStyleEditableBlockTypes: LayoutBlock['type'][] = ['heading', 'paragraph', 'code', 'list', 'table'];
 const defaultQuickTextColor = '#344054';
 const defaultQuickHighlightColor = '#FEF08A';
+const defaultQuickFontSize = 16;
+
+const quickTextStyleScopeOptions: Array<{
+  id: QuickTextStyleScope;
+  label: string;
+}> = [
+  { id: 'allText', label: '全文字' },
+  { id: 'heading1', label: 'H1' },
+  { id: 'heading2', label: 'H2' },
+  { id: 'heading3', label: 'H3' },
+  { id: 'heading4', label: 'H4' },
+  { id: 'paragraph', label: '段落' },
+  { id: 'list', label: '列表' },
+  { id: 'table', label: '表格' },
+];
 
 function normalizeQuickSelection(text: string, selection: TextRangeSelection | null): TextRangeSelection | null {
   if (!text) {
@@ -217,6 +245,8 @@ export function Toolbar({
   workspaceViewMode,
   isSaving,
   isExporting,
+  canUndo,
+  canRedo,
   canvasTextSelection,
   onCreateDocument,
   onOpenDocument,
@@ -224,6 +254,9 @@ export function Toolbar({
   onSaveDocument,
   onSaveDocumentAs,
   onExportPdf,
+  onUndo,
+  onRedo,
+  onImportFont,
   onInsertImage,
   onInsertEquation,
   onInsertTable,
@@ -234,6 +267,7 @@ export function Toolbar({
   onToggleLeftPanel,
   onToggleRightPanel,
   onChangeViewMode,
+  onOpenAiPanel,
 }: ToolbarProps): JSX.Element {
   const layoutDocument = useAppStore((state) => state.layoutDocument);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
@@ -242,7 +276,12 @@ export function Toolbar({
   const applyLayoutNodeTextStyle = useAppStore((state) => state.applyLayoutNodeTextStyle);
   const clearLayoutNodeTextFormatting = useAppStore((state) => state.clearLayoutNodeTextFormatting);
   const applyLayoutNodeBlockStyle = useAppStore((state) => state.applyLayoutNodeBlockStyle);
+  const applyLayoutQuickTextStyle = useAppStore((state) => state.applyLayoutQuickTextStyle);
   const selectedNodeInfo = getSelectedLayoutNodeInfo(layoutDocument);
+  const fontFamilyGroups = buildFontFamilyGroupsWithImportedFonts(
+    textFontFamilyGroups,
+    layoutDocument?.resources,
+  );
   const activeSelection =
     canvasTextSelection.nodeId === selectedNodeInfo?.nodeId ? canvasTextSelection.selection : null;
   const canEditTextStyle = isQuickTextStyleEditable(selectedNodeInfo);
@@ -256,12 +295,17 @@ export function Toolbar({
       ? getQuickSharedTextStyleValue(selectedNodeInfo.textRuns, activeSelection, 'highlightColor') ??
         defaultQuickHighlightColor
       : defaultQuickHighlightColor;
+  const [quickFontFamily, setQuickFontFamily] = useState(fontFamilyPlaceholderValue);
+  const [quickTextStyleScope, setQuickTextStyleScope] = useState<QuickTextStyleScope>('allText');
+  const [quickFontSize, setQuickFontSize] = useState(String(defaultQuickFontSize));
   const currentFontFamily =
     selectedNodeInfo
       ? getQuickSharedTextStyleValue(selectedNodeInfo.textRuns, activeSelection, 'fontFamily') ??
-        fontFamilyPlaceholderValue
-      : fontFamilyPlaceholderValue;
+        quickFontFamily
+      : quickFontFamily;
+  const quickScopeStyle = getQuickTextStyleRule(layoutDocument?.styles, quickTextStyleScope);
   const currentTextAlign = selectedNodeInfo?.ownerBlock.blockStyleOverrides.textAlign ?? 'left';
+  const canApplyQuickTextStyle = !!layoutDocument && quickFontFamily !== fontFamilyPlaceholderValue;
 
   const syncEditingTextBeforeStyleAction = (nodeId: string) => {
     if (!canvasTextSelection.isEditing || canvasTextSelection.nodeId !== nodeId) {
@@ -340,6 +384,15 @@ export function Toolbar({
     });
   };
 
+  const handleQuickFontFamilyChange = (fontFamily: string) => {
+    if (fontFamily === fontFamilyPlaceholderValue) {
+      return;
+    }
+
+    setQuickFontFamily(fontFamily);
+    applyQuickFontFamily(fontFamily);
+  };
+
   const applyQuickTextAlign = (textAlign: 'left' | 'center' | 'right' | 'justify') => {
     if (!selectedNodeInfo || !canEditBlockStyle) {
       return;
@@ -359,6 +412,25 @@ export function Toolbar({
     clearLayoutNodeTextFormatting({
       nodeId: selectedNodeInfo.nodeId,
       selection: activeSelection,
+    });
+  };
+
+  const applyQuickTextStyleScope = () => {
+    if (!layoutDocument || quickFontFamily === fontFamilyPlaceholderValue) {
+      return;
+    }
+
+    const parsedFontSize = Number.parseInt(quickFontSize, 10);
+    const nextFontSize = Number.isFinite(parsedFontSize)
+      ? Math.max(10, Math.min(72, Math.round(parsedFontSize)))
+      : defaultQuickFontSize;
+    setQuickFontSize(String(nextFontSize));
+    applyLayoutQuickTextStyle({
+      scope: quickTextStyleScope,
+      styleOverrides: {
+        fontFamily: quickFontFamily,
+        fontSize: nextFontSize,
+      },
     });
   };
 
@@ -403,10 +475,10 @@ export function Toolbar({
             <FileDown size={18} />
           </ToolButton>
           <span className="toolbar-divider" />
-          <ToolButton label="撤销">
+          <ToolButton label="撤销" disabled={!canUndo} onClick={onUndo}>
             <Undo2 size={18} />
           </ToolButton>
-          <ToolButton label="重做">
+          <ToolButton label="重做" disabled={!canRedo} onClick={onRedo}>
             <Redo2 size={18} />
           </ToolButton>
           <ToolButton label="搜索">
@@ -456,6 +528,13 @@ export function Toolbar({
           >
             <PanelRight size={18} />
           </ToolButton>
+          <ToolButton
+            label="AI 助手"
+            isActive={false}
+            onClick={onOpenAiPanel}
+          >
+            <Sparkles size={18} />
+          </ToolButton>
         </div>
       </div>
 
@@ -463,19 +542,19 @@ export function Toolbar({
         <section className="format-toolbar-group" aria-label="字体">
           <span className="format-toolbar-title">字体</span>
           <div className="format-toolbar-controls">
-            <label className={canEditTextStyle ? 'format-select-shell' : 'format-select-shell disabled'}>
+            <label className={layoutDocument ? 'format-select-shell' : 'format-select-shell disabled'}>
               <Type size={15} />
               <select
                 className="format-select-input"
                 aria-label="字体家族"
-                disabled={!canEditTextStyle}
+                disabled={!layoutDocument}
                 value={currentFontFamily}
-                onChange={(event) => applyQuickFontFamily(event.target.value)}
+                onChange={(event) => handleQuickFontFamilyChange(event.target.value)}
               >
                 <option value={fontFamilyPlaceholderValue} disabled>
                   字体
                 </option>
-                {textFontFamilyGroups.map((group) => (
+                {fontFamilyGroups.map((group) => (
                   <optgroup key={group.label} label={group.label}>
                     {group.options.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -486,6 +565,15 @@ export function Toolbar({
                 ))}
               </select>
             </label>
+            <button
+              type="button"
+              className="format-icon-button"
+              title="导入字体"
+              aria-label="导入字体"
+              onClick={onImportFont}
+            >
+              <FileUp size={17} />
+            </button>
             {quickTextMarkOptions.map((option) => {
               const Icon = option.icon;
               const isActive = selectedNodeInfo
@@ -557,6 +645,45 @@ export function Toolbar({
             >
               <Eraser size={15} />
               <span>清除</span>
+            </button>
+            <span className="format-toolbar-separator" aria-hidden="true" />
+            <label className={layoutDocument ? 'format-select-shell compact' : 'format-select-shell compact disabled'}>
+              <select
+                className="format-select-input"
+                aria-label="应用范围"
+                disabled={!layoutDocument}
+                value={quickTextStyleScope}
+                onChange={(event) => setQuickTextStyleScope(event.target.value as QuickTextStyleScope)}
+              >
+                {quickTextStyleScopeOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <input
+              className="format-number-input"
+              type="number"
+              min={10}
+              max={72}
+              step={1}
+              aria-label="批量字号"
+              disabled={!layoutDocument}
+              value={quickFontSize}
+              placeholder={quickScopeStyle.fontSize ? String(quickScopeStyle.fontSize) : '字号'}
+              onChange={(event) => setQuickFontSize(event.target.value)}
+            />
+            <button
+              type="button"
+              className="format-select-button format-apply-button"
+              disabled={!canApplyQuickTextStyle}
+              title="按所选范围应用当前字体和字号"
+              aria-label="应用字体字号"
+              onClick={applyQuickTextStyleScope}
+            >
+              <Type size={15} />
+              <span>应用</span>
             </button>
           </div>
         </section>

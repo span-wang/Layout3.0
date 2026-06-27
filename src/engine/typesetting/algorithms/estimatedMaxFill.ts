@@ -15,17 +15,20 @@ import {
   getHeadingText,
   getLayoutBlockPlainText,
   getLayoutListItemLevel,
+  buildTocItemsFromBlocks,
   getTableCellColSpan,
   isCoveredTableCell,
   resolveTableColumnWidths,
   resolveTableRowHeightPx,
   type LayoutBlock,
   type LayoutListItem,
+  type LayoutStyleSheet,
   type LayoutTableCell,
   type LayoutTableRow,
   type ListBlockMetadata,
   type TableBlockMetadata,
   type TextRun,
+  type TocItem,
 } from '@/engine/document-model';
 import {
   estimateImageVisibleHeightPx,
@@ -37,7 +40,13 @@ import type {
   ResolvedStyleContract,
   TextBlockStyleRule,
 } from '@/engine/style/types';
-import { estimateTextLines } from '../textMetrics';
+import {
+  getEffectiveListItemMaxFontSize,
+  getEffectiveTableCellMaxFontSize,
+  getEffectiveTextRunsMaxFontSize,
+} from '@/engine/style/quickTextStyle';
+import { estimateTextLines, computeTextSplitOffsetForLineCount } from '../textMetrics';
+import { buildTocFragment, estimateTocBlockHeight } from '../tocLayout';
 import type {
   LayoutWarning,
   PageLayout,
@@ -124,7 +133,10 @@ export function clearAllBlockHeightCache(): void {
 
 // ============== 辅助函数 ==============
 
-function buildBlockHeightCacheKey(contract: ResolvedStyleContract): string {
+function buildBlockHeightCacheKey(
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+): string {
   const { blockStyles } = contract;
   return JSON.stringify({
     pageSize: contract.pageSize,
@@ -144,6 +156,7 @@ function buildBlockHeightCacheKey(contract: ResolvedStyleContract): string {
     table: blockStyles.table,
     horizontalRule: blockStyles.horizontalRule,
     image: blockStyles.image,
+    quickTextStyles: styles?.textStyles ?? {},
   });
 }
 
@@ -155,23 +168,19 @@ function isListBlock(block: LayoutBlock): block is ListLayoutBlock {
   return block.type === 'list' && block.metadata.kind === 'list';
 }
 
-function getMaxFontSize(
-  textRuns: Array<{ styleOverrides: { fontSize?: number } }>,
-  fallback: number,
-): number {
-  return textRuns.reduce(
-    (max, run) => Math.max(max, run.styleOverrides.fontSize ?? fallback),
-    fallback,
-  );
-}
-
 function resolveTextBlockStyle(
   block: LayoutBlock,
   baseStyle: TextBlockStyleRule,
+  styles?: LayoutStyleSheet,
 ): TextBlockStyleRule {
   return {
     ...baseStyle,
-    fontSize: getMaxFontSize(block.textRuns, baseStyle.fontSize),
+    fontSize: getEffectiveTextRunsMaxFontSize({
+      textRuns: block.textRuns,
+      block,
+      styles,
+      fallback: baseStyle.fontSize,
+    }),
     lineHeight: block.blockStyleOverrides.lineHeight ?? baseStyle.lineHeight,
     marginTop: block.blockStyleOverrides.spaceBefore ?? baseStyle.marginTop,
     marginBottom: block.blockStyleOverrides.spaceAfter ?? baseStyle.marginBottom,
@@ -185,7 +194,7 @@ function estimateTextBlockHeight(
   text: string,
   widthPx: number,
   style: TextBlockStyleRule,
-  firstLineWidthPx = widthPx,
+  firstLineWidthPx: number,
 ): number {
   const lines = estimateTextLines(text, widthPx, style.fontSize, {
     firstLineWidthPx,
@@ -357,13 +366,19 @@ function estimateListItemHeight(
   fragmentItemIndex: number,
   block: ListLayoutBlock,
   contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
 ): number {
   const listStyle = resolveListBlockStyle(block, contract);
   const itemText = item.textRuns.map((run) => run.text).join('');
   const lines = estimateTextLines(
     itemText,
     getListItemTextWidthPx(item, block, contract),
-    getMaxFontSize(item.textRuns, listStyle.fontSize),
+    getEffectiveListItemMaxFontSize({
+      item,
+      block,
+      styles,
+      fallback: listStyle.fontSize,
+    }),
   );
   const gap = fragmentItemIndex === 0 ? 0 : listStyle.itemGap;
 
@@ -388,10 +403,11 @@ function estimateListItemsHeight(
   block: ListLayoutBlock,
   items: LayoutListItem[],
   contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
 ): number {
   return items.reduce(
     (total, item, itemIndex) =>
-      total + estimateListItemHeight(item, itemIndex, block, contract),
+      total + estimateListItemHeight(item, itemIndex, block, contract, styles),
     0,
   );
 }
@@ -399,11 +415,12 @@ function estimateListItemsHeight(
 function estimateListBlockHeight(
   block: ListLayoutBlock,
   contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
 ): number {
   const listStyle = resolveListBlockStyle(block, contract);
   return (
     listStyle.marginTop +
-    estimateListItemsHeight(block, block.metadata.items, contract) +
+    estimateListItemsHeight(block, block.metadata.items, contract, styles) +
     listStyle.marginBottom
   );
 }
@@ -449,8 +466,9 @@ function splitListItemToFit(payload: {
   availableHeight: number;
   fragmentIndex: number;
   contract: ResolvedStyleContract;
+  styles?: LayoutStyleSheet;
 }): ListItemSplitResult | null {
-  const { block, item, fragmentItemIndex, availableHeight, fragmentIndex, contract } = payload;
+  const { block, item, fragmentItemIndex, availableHeight, fragmentIndex, contract, styles } = payload;
   const listStyle = resolveListBlockStyle(block, contract);
   const gap = fragmentItemIndex === 0 ? 0 : listStyle.itemGap;
   const usableHeight = availableHeight - gap;
@@ -464,7 +482,12 @@ function splitListItemToFit(payload: {
   const splitOffset = computeTextSplitOffsetForLineCount(
     itemText,
     getListItemTextWidthPx(item, block, contract),
-    getMaxFontSize(item.textRuns, listStyle.fontSize),
+    getEffectiveListItemMaxFontSize({
+      item,
+      block,
+      styles,
+      fallback: listStyle.fontSize,
+    }),
     maxLines,
   );
 
@@ -491,7 +514,7 @@ function splitListItemToFit(payload: {
     remainingRuns,
     `split-${fragmentIndex}-rest`,
   );
-  const currentHeight = estimateListItemHeight(currentItem, fragmentItemIndex, block, contract);
+  const currentHeight = estimateListItemHeight(currentItem, fragmentItemIndex, block, contract, styles);
 
   if (currentHeight > availableHeight) {
     return null;
@@ -511,8 +534,9 @@ function buildListFragment(payload: {
   fragmentIndex: number;
   isCurrentPageEmpty: boolean;
   contract: ResolvedStyleContract;
+  styles?: LayoutStyleSheet;
 }): ListFragmentBuildResult | null {
-  const { block, startItemIndex, availableHeight, fragmentIndex, isCurrentPageEmpty, contract } = payload;
+  const { block, startItemIndex, availableHeight, fragmentIndex, isCurrentPageEmpty, contract, styles } = payload;
   const listStyle = resolveListBlockStyle(block, contract);
   const fragmentItems: LayoutListItem[] = [];
   let nextItemIndex = startItemIndex;
@@ -524,6 +548,7 @@ function buildListFragment(payload: {
       fragmentItems.length,
       block,
       contract,
+      styles,
     );
     const candidateHeight = fragmentHeight + itemHeight;
     const canFit = candidateHeight <= availableHeight;
@@ -537,6 +562,7 @@ function buildListFragment(payload: {
         availableHeight: availableHeight - fragmentHeight,
         fragmentIndex,
         contract,
+        styles,
       });
 
       if (splitResult && fragmentHeight + splitResult.currentHeight <= availableHeight) {
@@ -614,6 +640,7 @@ function estimateTableRowHeight(
   row: LayoutTableRow,
   rowIndex: number,
   contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
 ): number {
   const estimatedRowHeight = row.cells.reduce((maxHeight, cell) => {
     if (isCoveredTableCell(cell)) {
@@ -625,7 +652,12 @@ function estimateTableRowHeight(
     const lines = estimateTextLines(
       cell.textRuns.map((run) => run.text).join(''),
       cellWidthPx,
-      getMaxFontSize(cell.textRuns, contract.blockStyles.paragraph.fontSize),
+      getEffectiveTableCellMaxFontSize({
+        cell,
+        block,
+        styles,
+        fallback: contract.blockStyles.paragraph.fontSize,
+      }),
     );
     const lineHeight = getTableLineHeight(block, contract);
 
@@ -651,55 +683,7 @@ function isSimpleSplittableTableRow(row: LayoutTableRow): boolean {
   );
 }
 
-function findPreferredTextSplitOffset(text: string, maxOffset: number): number {
-  const clampedOffset = Math.max(0, Math.min(text.length, maxOffset));
-  if (clampedOffset <= 0 || clampedOffset >= text.length) {
-    return clampedOffset;
-  }
 
-  const minLookBackOffset = Math.max(0, clampedOffset - 32);
-  for (let offset = clampedOffset; offset > minLookBackOffset; offset -= 1) {
-    const previousChar = text[offset - 1];
-    if (/[\s,.;:!?，。；：！？、]/u.test(previousChar)) {
-      return offset;
-    }
-  }
-
-  return clampedOffset;
-}
-
-function computeTextSplitOffsetForLineCount(
-  text: string,
-  widthPx: number,
-  fontSize: number,
-  maxLines: number,
-): number {
-  if (maxLines <= 0 || text.length === 0) {
-    return 0;
-  }
-
-  if (estimateTextLines(text, widthPx, fontSize) <= maxLines) {
-    return text.length;
-  }
-
-  let low = 0;
-  let high = text.length;
-  let bestOffset = 0;
-
-  while (low <= high) {
-    const middleOffset = Math.floor((low + high) / 2);
-    const lines = estimateTextLines(text.slice(0, middleOffset), widthPx, fontSize);
-
-    if (lines <= maxLines) {
-      bestOffset = middleOffset;
-      low = middleOffset + 1;
-    } else {
-      high = middleOffset - 1;
-    }
-  }
-
-  return findPreferredTextSplitOffset(text, bestOffset);
-}
 
 function createTableCellTextSlice(
   cell: LayoutTableCell,
@@ -724,8 +708,9 @@ function splitTableRowToFit(payload: {
   availableHeight: number;
   fragmentIndex: number;
   contract: ResolvedStyleContract;
+  styles?: LayoutStyleSheet;
 }): TableRowSplitResult | null {
-  const { block, row, rowIndex, availableHeight, fragmentIndex, contract } = payload;
+  const { block, row, rowIndex, availableHeight, fragmentIndex, contract, styles } = payload;
   if (!isSimpleSplittableTableRow(row)) {
     return null;
   }
@@ -748,7 +733,12 @@ function splitTableRowToFit(payload: {
     const splitOffset = computeTextSplitOffsetForLineCount(
       cellText,
       getTableCellTextWidthPx(block, row, cellIndex, contract),
-      getMaxFontSize(cell.textRuns, contract.blockStyles.paragraph.fontSize),
+      getEffectiveTableCellMaxFontSize({
+        cell,
+        block,
+        styles,
+        fallback: contract.blockStyles.paragraph.fontSize,
+      }),
       maxLines,
     );
     const { currentPageRuns, remainingRuns } = splitTextRunsByPlainTextLength(cell.textRuns, splitOffset);
@@ -786,7 +776,7 @@ function splitTableRowToFit(payload: {
   return {
     currentRow,
     remainingRow,
-    currentHeight: estimateTableRowHeight(block, currentRow, rowIndex, contract),
+    currentHeight: estimateTableRowHeight(block, currentRow, rowIndex, contract, styles),
   };
 }
 
@@ -806,12 +796,13 @@ function getRepeatedTableHeaderRow(block: TableLayoutBlock): LayoutTableRow | nu
 function estimateTableBlockHeight(
   block: TableLayoutBlock,
   contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
 ): number {
   const marginTop = getTableMarginTop(block, contract);
   const marginBottom = getTableMarginBottom(block, contract);
 
   const rowsHeight = block.metadata.rows.reduce((total, row, rowIndex) => {
-    return total + estimateTableRowHeight(block, row, rowIndex, contract);
+    return total + estimateTableRowHeight(block, row, rowIndex, contract, styles);
   }, 0);
 
   return marginTop + rowsHeight + marginBottom;
@@ -857,8 +848,9 @@ function buildTableFragment(payload: {
   isCurrentPageEmpty: boolean;
   rowHeights: number[];
   contract: ResolvedStyleContract;
+  styles?: LayoutStyleSheet;
 }): TableFragmentBuildResult | null {
-  const { block, startRowIndex, availableHeight, fragmentIndex, isCurrentPageEmpty, rowHeights, contract } = payload;
+  const { block, startRowIndex, availableHeight, fragmentIndex, isCurrentPageEmpty, rowHeights, contract, styles } = payload;
   const rows = block.metadata.rows;
   const repeatedHeaderRow = getRepeatedTableHeaderRow(block);
   const fragmentRows: TableFragmentRow[] = [];
@@ -873,11 +865,12 @@ function buildTableFragment(payload: {
       originalRowIndex: 0,
       isRepeatedHeader: true,
     });
-    fragmentHeight += rowHeights[0] ?? estimateTableRowHeight(block, repeatedHeaderRow, 0, contract);
+    fragmentHeight += rowHeights[0] ?? estimateTableRowHeight(block, repeatedHeaderRow, 0, contract, styles);
   }
 
   while (nextRowIndex < rows.length) {
-    const rowHeight = rowHeights[nextRowIndex] ?? estimateTableRowHeight(block, rows[nextRowIndex], nextRowIndex, contract);
+    const rowHeight =
+      rowHeights[nextRowIndex] ?? estimateTableRowHeight(block, rows[nextRowIndex], nextRowIndex, contract, styles);
     const candidateHeight = fragmentHeight + rowHeight;
     const canFit = candidateHeight <= availableHeight;
     const mustForceFirstRealRow = isCurrentPageEmpty && realRowCount === 0;
@@ -890,6 +883,7 @@ function buildTableFragment(payload: {
         availableHeight: availableHeight - fragmentHeight,
         fragmentIndex,
         contract,
+        styles,
       });
 
       if (splitResult && fragmentHeight + splitResult.currentHeight <= availableHeight) {
@@ -935,7 +929,8 @@ function buildTableFragment(payload: {
     }
 
     const nextBodyRow = rows[nextRowIndex];
-    const nextBodyRowHeight = rowHeights[nextRowIndex] ?? estimateTableRowHeight(block, nextBodyRow, nextRowIndex, contract);
+    const nextBodyRowHeight =
+      rowHeights[nextRowIndex] ?? estimateTableRowHeight(block, nextBodyRow, nextRowIndex, contract, styles);
     fragmentRows.push({
       row: nextBodyRow,
       originalRowIndex: nextRowIndex,
@@ -1030,14 +1025,16 @@ function estimateFloatingImageFootprintHeight(
 function getCachedBlockHeight(
   block: LayoutBlock,
   contract: ResolvedStyleContract,
+  tocItems: TocItem[] = [],
+  styles?: LayoutStyleSheet,
 ): number {
-  const cacheKey = buildBlockHeightCacheKey(contract);
+  const cacheKey = buildBlockHeightCacheKey(contract, styles);
   const contractCache = blockHeightCache.get(block);
   if (contractCache?.has(cacheKey)) {
     return contractCache.get(cacheKey)!;
   }
 
-  const height = estimateBlockHeight(block, contract);
+  const height = estimateBlockHeight(block, contract, tocItems, styles);
   if (contractCache) {
     contractCache.set(cacheKey, height);
   } else {
@@ -1052,6 +1049,8 @@ function getCachedBlockHeight(
 function estimateBlockHeight(
   block: LayoutBlock,
   contract: ResolvedStyleContract,
+  tocItems: TocItem[] = [],
+  styles?: LayoutStyleSheet,
 ): number {
   const contentWidthPx = contract.contentWidthPx;
 
@@ -1059,7 +1058,7 @@ function estimateBlockHeight(
     case 'pageBreak':
       return 0;
     case 'toc':
-      return 220;
+      return estimateTocBlockHeight(block, tocItems, contract);
     case 'heading': {
       const lineWidths = resolveHangingIndentLineWidths(
         contentWidthPx,
@@ -1075,6 +1074,7 @@ function estimateBlockHeight(
             : block.metadata.kind === 'heading' && block.metadata.depth === 2
               ? contract.blockStyles.heading2
               : contract.blockStyles.heading3,
+          styles,
         ),
         lineWidths.firstLineWidthPx,
       );
@@ -1087,12 +1087,12 @@ function estimateBlockHeight(
       return estimateTextBlockHeight(
         getLayoutBlockPlainText(block),
         lineWidths.followingLineWidthPx,
-        resolveTextBlockStyle(block, contract.blockStyles.paragraph),
+        resolveTextBlockStyle(block, contract.blockStyles.paragraph, styles),
         lineWidths.firstLineWidthPx,
       );
     }
     case 'list': {
-      return isListBlock(block) ? estimateListBlockHeight(block, contract) : 0;
+      return isListBlock(block) ? estimateListBlockHeight(block, contract, styles) : 0;
     }
     case 'blockquote':
       return (
@@ -1101,7 +1101,7 @@ function estimateBlockHeight(
         (block.metadata.kind === 'blockquote'
           ? block.metadata.blocks.reduce(
               (total, nestedBlock) =>
-                total + estimateBlockHeight(nestedBlock, contract),
+                total + estimateBlockHeight(nestedBlock, contract, tocItems, styles),
               0,
             )
           : 0) +
@@ -1110,10 +1110,12 @@ function estimateBlockHeight(
     case 'code': {
       const codeStyle = {
         ...contract.blockStyles.code,
-        fontSize: getMaxFontSize(
-          block.textRuns,
-          contract.blockStyles.code.fontSize,
-        ),
+        fontSize: getEffectiveTextRunsMaxFontSize({
+          textRuns: block.textRuns,
+          block,
+          styles,
+          fallback: contract.blockStyles.code.fontSize,
+        }),
         lineHeight:
           block.blockStyleOverrides.lineHeight ?? contract.blockStyles.code.lineHeight,
         marginTop:
@@ -1146,7 +1148,7 @@ function estimateBlockHeight(
       if (!isTableBlock(block)) {
         return 0;
       }
-      return estimateTableBlockHeight(block, contract);
+      return estimateTableBlockHeight(block, contract, styles);
     case 'image':
       return estimateImageBlockHeight(block, contract);
     case 'horizontalRule':
@@ -1168,6 +1170,7 @@ function computeOptimalTextSplit(
   block: LayoutBlock,
   availableHeight: number,
   contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
 ): TextFragmentInfo | null {
   const contentWidthPx = contract.contentWidthPx;
   const lineWidths = resolveHangingIndentLineWidths(
@@ -1186,10 +1189,11 @@ function computeOptimalTextSplit(
         : block.metadata.kind === 'heading' && block.metadata.depth === 2
           ? contract.blockStyles.heading2
           : contract.blockStyles.heading3,
+      styles,
     );
     plainText = getLayoutBlockPlainText(block);
   } else if (block.type === 'paragraph') {
-    style = resolveTextBlockStyle(block, contract.blockStyles.paragraph);
+    style = resolveTextBlockStyle(block, contract.blockStyles.paragraph, styles);
     plainText = getLayoutBlockPlainText(block);
   } else {
     return null;
@@ -1224,8 +1228,8 @@ function computeOptimalTextSplit(
     };
   }
 
-  // 需要分割文本，逐行计算精确分割点。
-  // 分割点保存原始文本里的字符位置，确保换行符不会遗留到下一页开头。
+  // 需要分割文本：先尊重源码中的显式换行；如果单个源码行自身跨越多条视觉行，
+  // 再按估算视觉行边界切开，避免在用户看到的同一行中间提前换页。
   const lines = plainText.split('\n');
 
   let accumulatedLines = 0;
@@ -1238,13 +1242,15 @@ function computeOptimalTextSplit(
     const isLastLine = i === lines.length - 1;
     const lineEndOffset = lineStartOffset + lineText.length;
     const splitOffsetAfterLine = isLastLine ? lineEndOffset : lineEndOffset + 1;
+    const lineFirstWidthPx =
+      i === 0 ? lineWidths.firstLineWidthPx : lineWidths.followingLineWidthPx;
 
     // 使用 estimateTextLines 计算这一行的行数（与分页逻辑一致）
     const currentLineBreaks = estimateTextLines(
       lineText,
       lineWidths.followingLineWidthPx,
       style.fontSize,
-      { firstLineWidthPx: i === 0 ? lineWidths.firstLineWidthPx : lineWidths.followingLineWidthPx },
+      { firstLineWidthPx: lineFirstWidthPx },
     );
 
     // 确保行数是有效的正数
@@ -1252,9 +1258,27 @@ function computeOptimalTextSplit(
 
     // 检查加入这一行后是否会超出
     if (accumulatedLines + validLineBreaks > maxLines) {
-      // 已经超出，在上一个安全分割点结束
-      const currentPageText = plainText.slice(0, lastSafeSplitOffset);
-      const remainingText = plainText.slice(lastSafeSplitOffset);
+      const remainingLineCount = maxLines - accumulatedLines;
+      const splitOffsetInLine = computeTextSplitOffsetForLineCount(
+        lineText,
+        lineFirstWidthPx,
+        style.fontSize,
+        remainingLineCount,
+      );
+      const shouldSplitInsideCurrentLine = splitOffsetInLine > 0;
+      const splitOffset = shouldSplitInsideCurrentLine
+        ? lineStartOffset + splitOffsetInLine
+        : lastSafeSplitOffset;
+      const usedLineCount = shouldSplitInsideCurrentLine
+        ? accumulatedLines + estimateTextLines(
+            lineText.slice(0, splitOffsetInLine),
+            lineWidths.followingLineWidthPx,
+            style.fontSize,
+            { firstLineWidthPx: lineFirstWidthPx },
+          )
+        : lastSafeLineCount;
+      const currentPageText = plainText.slice(0, splitOffset);
+      const remainingText = plainText.slice(splitOffset);
 
       // 如果当前页文本为空，返回 null 让整个块翻页
       if (currentPageText.trim().length === 0) {
@@ -1264,7 +1288,7 @@ function computeOptimalTextSplit(
       return {
         currentPageText,
         remainingText,
-        height: style.marginTop + lastSafeLineCount * lineHeight + style.marginBottom,
+        height: style.marginTop + usedLineCount * lineHeight + style.marginBottom,
       };
     }
 
@@ -1377,13 +1401,14 @@ function hasRemainingContent(blocks: LayoutBlock[], startIndex: number): boolean
 export function paginateMaxFillBlocks(
   context: PaginationAlgorithmContext,
 ): PageLayout[] {
-  const { blocks: originalBlocks, contract } = context;
+  const { blocks: originalBlocks, contract, styles } = context;
 
   if (originalBlocks.length === 0) {
     return [createEmptyPage(1, contract)];
   }
 
   const pageCapacity = contract.contentHeightPx;
+  const tocItems = buildTocItemsFromBlocks(originalBlocks);
   const pages: PageLayout[] = [];
   let currentPage = createEmptyPage(1, contract);
   let currentHeight = 0;
@@ -1429,7 +1454,69 @@ export function paginateMaxFillBlocks(
     }
 
     // 计算当前块高度
-    const blockHeight = getCachedBlockHeight(block, contract);
+    // 目录高度取决于整篇文档标题数量，不能只按块对象缓存，否则标题变化后会复用旧高度。
+    const blockHeight = block.type === 'toc'
+      ? estimateBlockHeight(block, contract, tocItems, styles)
+      : getCachedBlockHeight(block, contract, tocItems, styles);
+
+    if (block.type === 'toc' && block.metadata.kind === 'toc' && blockHeight > pageCapacity - currentHeight) {
+      const maxDepth = block.metadata.maxDepth;
+      const totalFilteredTocItems = tocItems.filter((item) => item.depth <= maxDepth).length;
+      let startItemIndex = 0;
+      let fragmentIndex = 1;
+
+      while (startItemIndex < Math.max(1, totalFilteredTocItems)) {
+        const fragment = buildTocFragment({
+          block,
+          allTocItems: tocItems,
+          startItemIndex,
+          availableHeight: pageCapacity - currentHeight,
+          fragmentIndex,
+          isCurrentPageEmpty: placedBlocks.length === 0,
+          contract,
+        });
+
+        if (!fragment) {
+          if (placedBlocks.length === 0) {
+            currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
+            placedBlocks.push({ block, height: blockHeight });
+            currentHeight += blockHeight;
+            shouldPushCurrentPage = true;
+            break;
+          }
+
+          syncPlacedBlocksToPage(currentPage, placedBlocks);
+          pages.push(currentPage);
+          currentPage = createEmptyPage(pages.length + 1, contract);
+          currentHeight = 0;
+          placedBlocks = [];
+          continue;
+        }
+
+        if (fragment.height > pageCapacity) {
+          currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
+        }
+
+        placedBlocks.push({ block: fragment.block, height: fragment.height });
+        currentHeight += fragment.height;
+        startItemIndex = fragment.nextItemIndex;
+        fragmentIndex += 1;
+        shouldPushCurrentPage = true;
+
+        const totalTocItems = fragment.block.metadata.kind === 'toc'
+          ? fragment.block.metadata.runtimeSlice?.totalItems ?? 0
+          : 0;
+        if (startItemIndex < totalTocItems) {
+          syncPlacedBlocksToPage(currentPage, placedBlocks);
+          pages.push(currentPage);
+          currentPage = createEmptyPage(pages.length + 1, contract);
+          currentHeight = 0;
+          placedBlocks = [];
+        }
+      }
+
+      continue;
+    }
 
     // 处理表格块：整表放不下当前页时，优先把能容纳的表格行留在当前页。
     if (isTableBlock(block) && block.metadata.rows.length > 0) {
@@ -1443,7 +1530,7 @@ export function paginateMaxFillBlocks(
 
       let tableBlock = block;
       let rowHeights = tableBlock.metadata.rows.map((row, rowIndex) =>
-        estimateTableRowHeight(tableBlock, row, rowIndex, contract),
+        estimateTableRowHeight(tableBlock, row, rowIndex, contract, styles),
       );
       let startRowIndex = 0;
       let fragmentIndex = 1;
@@ -1457,13 +1544,14 @@ export function paginateMaxFillBlocks(
           isCurrentPageEmpty: placedBlocks.length === 0,
           rowHeights,
           contract,
+          styles,
         });
 
         if (!fragment) {
           if (placedBlocks.length === 0) {
             // 极端数据兜底：空页仍无法生成片段时，强制放入并给出超高内容提示，避免分页死循环。
             currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
-            const fallbackHeight = estimateTableBlockHeight(tableBlock, contract);
+            const fallbackHeight = estimateTableBlockHeight(tableBlock, contract, styles);
             placedBlocks.push({ block: tableBlock, height: fallbackHeight });
             currentHeight += fallbackHeight;
             startRowIndex = tableBlock.metadata.rows.length;
@@ -1497,7 +1585,7 @@ export function paginateMaxFillBlocks(
             },
           };
           rowHeights = tableBlock.metadata.rows.map((row, rowIndex) =>
-            estimateTableRowHeight(tableBlock, row, rowIndex, contract),
+            estimateTableRowHeight(tableBlock, row, rowIndex, contract, styles),
           );
         }
         startRowIndex = fragment.nextRowIndex;
@@ -1536,6 +1624,7 @@ export function paginateMaxFillBlocks(
           fragmentIndex,
           isCurrentPageEmpty: placedBlocks.length === 0,
           contract,
+          styles,
         });
 
         if (!fragment) {
@@ -1627,9 +1716,9 @@ export function paginateMaxFillBlocks(
         shouldPushCurrentPage = true;
       } else {
         // 不能完整放入，尝试按行分割
-        const splitInfo = computeOptimalTextSplit(block, availableHeight, contract);
+        const splitInfo = computeOptimalTextSplit(block, availableHeight, contract, styles);
 
-        if (splitInfo && splitInfo.remainingText.length > 0) {
+        if (splitInfo) {
           // splitInfo 返回当前页文本和剩余文本两部分
           // 当前页文本放入当前页，剩余文本创建新块放入下一页
 
@@ -1661,6 +1750,7 @@ export function paginateMaxFillBlocks(
             blocks.splice(index + 1, 0, remainingBlock);
           }
         } else {
+          // splitInfo 为 null（usableHeight<=0）→ 整个块翻页
           // 当前页剩余空间不足时，先换页，再让同一个文本块重新走完整分割流程。
           if (placedBlocks.length > 0) {
             syncPlacedBlocksToPage(currentPage, placedBlocks);
