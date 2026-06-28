@@ -3,7 +3,7 @@ import type { AiGenerationRecord } from '@/types/ai';
 
 interface AiGenerationRecordsPanelProps {
   records: AiGenerationRecord[];
-  recordFilePath: string | null;
+  recordDirectoryPath: string | null;
   error: string | null;
   onRefresh: () => Promise<void>;
   onRestore: (record: AiGenerationRecord) => void;
@@ -32,7 +32,7 @@ function buildRecordSubtitle(record: AiGenerationRecord): string {
 
 export function AiGenerationRecordsPanel({
   records,
-  recordFilePath,
+  recordDirectoryPath,
   error,
   onRefresh,
   onRestore,
@@ -77,7 +77,7 @@ export function AiGenerationRecordsPanel({
   };
 
   const handleClear = async () => {
-    if (!window.confirm('确定要清空全部 AI 生成记录吗？本地 records.json 中的记录也会被清空。')) {
+    if (!window.confirm('确定要清空全部 AI 生成记录吗？本地记录文件夹中的记录文件也会被清空。')) {
       return;
     }
 
@@ -109,9 +109,9 @@ export function AiGenerationRecordsPanel({
             清空全部
           </button>
         </div>
-        {recordFilePath ? (
-          <p className="ai-record-path" title={recordFilePath}>
-            存储位置：{recordFilePath}
+        {recordDirectoryPath ? (
+          <p className="ai-record-path" title={recordDirectoryPath}>
+            存储文件夹：{recordDirectoryPath}
           </p>
         ) : null}
         {error ? <div className="ai-record-error">{error}</div> : null}

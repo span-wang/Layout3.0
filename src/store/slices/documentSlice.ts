@@ -34,6 +34,8 @@ import {
   updateTableStructureByCell,
   mergeTableCellsByRange,
   mergeTopLevelTextBlocksByIds,
+  normalizeLayoutDocumentSyntaxMappingConfig,
+  normalizeSyntaxMappingConfig,
   updateLayoutBlockText as updateLayoutBlockTextModel,
   updateLayoutImageAttributes as updateLayoutImageAttributesModel,
   updateLayoutListItemText,
@@ -56,6 +58,7 @@ import type {
   ListReorderAction,
   ListStructureAction,
   ListTaskConversionAction,
+  SyntaxMappingConfig,
   TableColumnAlign,
   TablePropertyEditResult,
   TableStructureAction,
@@ -1117,7 +1120,7 @@ function pushDocumentHistory(state: DocumentSlice): void {
 }
 
 function restoreLayoutDocumentSnapshot(state: DocumentSlice, document: LayoutDocument): void {
-  state.layoutDocument = cloneLayoutDocumentSnapshot(document);
+  state.layoutDocument = normalizeLayoutDocumentSyntaxMappingConfig(cloneLayoutDocumentSnapshot(document));
   state.title = state.layoutDocument.title;
   state.source = state.layoutDocument.source;
   state.parseState = 'ready';
@@ -1209,7 +1212,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       state.documentFormat = documentFormat;
       state.source = source;
       state.parseState = 'ready';
-      state.layoutDocument = layoutDocument;
+      state.layoutDocument = normalizeLayoutDocumentSyntaxMappingConfig(layoutDocument);
       state.documentHistoryPast = [];
       state.documentHistoryFuture = [];
       state.parseError = null;
@@ -1224,7 +1227,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       state.documentFormat = documentFormat ?? getDocumentFormatFromPath(filePath ?? null);
       state.source = source;
       state.parseState = 'ready';
-      state.layoutDocument = layoutDocument;
+      state.layoutDocument = normalizeLayoutDocumentSyntaxMappingConfig(layoutDocument);
       state.documentHistoryPast = [];
       state.documentHistoryFuture = [];
       state.parseError = null;
@@ -1277,9 +1280,23 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
   setLayoutDocument: (document) =>
     set((state) => {
       state.parseState = 'ready';
-      state.layoutDocument = document;
+      state.layoutDocument = normalizeLayoutDocumentSyntaxMappingConfig(document);
       state.documentHistoryPast = [];
       state.documentHistoryFuture = [];
+      state.parseError = null;
+    }),
+  updateSyntaxMappingConfig: (config: SyntaxMappingConfig) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      pushDocumentHistory(state);
+      // 语法映射配置属于文档级设置，写入 meta 后会随 .layout 文件一起保存。
+      state.layoutDocument.meta.syntaxMappingConfig = normalizeSyntaxMappingConfig(config);
+      refreshDocumentMeta(state, state.layoutDocument.blocks);
+      state.isDirty = true;
+      state.parseState = 'ready';
       state.parseError = null;
     }),
   appendLayoutParagraphBlock: ({ text }) => {

@@ -8,6 +8,7 @@ export type PageSettingsTab =
   | '页面规格'
   | '页边距'
   | '页眉页脚预留'
+  | '块排版'
   | '模板起点'
   | '分页策略';
 

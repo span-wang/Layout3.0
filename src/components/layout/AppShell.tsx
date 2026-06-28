@@ -16,6 +16,7 @@ import { useResolvedStyleContract } from '@/hooks/useResolvedStyleContract';
 import { useAppStore } from '@/store';
 import type { AiGenerationRecord } from '@/types/ai';
 import type { CanvasTextSelectionState, WorkspaceDirectoryEntry } from '@/types/workspace';
+import type { MeasuredTextLineBreaks } from '@/engine/typesetting';
 import { CanvasPane } from './CanvasPane';
 import { EditorPane } from './EditorPane';
 import { LeftPanel } from './LeftPanel';
@@ -25,10 +26,31 @@ import { Toolbar } from './Toolbar';
 import { useCanvasInsertCommands } from './useCanvasInsertCommands';
 import { useWorkspaceFileCommands } from './useWorkspaceFileCommands';
 
+function areMeasuredTextLineBreaksEqual(
+  currentBreaks: MeasuredTextLineBreaks,
+  nextBreaks: MeasuredTextLineBreaks,
+): boolean {
+  const currentKeys = Object.keys(currentBreaks);
+  const nextKeys = Object.keys(nextBreaks);
+  if (currentKeys.length !== nextKeys.length) {
+    return false;
+  }
+
+  return nextKeys.every((key) => {
+    const currentOffsets = currentBreaks[key] ?? [];
+    const nextOffsets = nextBreaks[key] ?? [];
+    return (
+      currentOffsets.length === nextOffsets.length &&
+      nextOffsets.every((offset, index) => currentOffsets[index] === offset)
+    );
+  });
+}
+
 export function AppShell(): JSX.Element {
   const resolvedStyleContract = useResolvedStyleContract();
   const [measuredBlockHeights, setMeasuredBlockHeights] = useState<Record<string, number>>({});
-  usePagination(resolvedStyleContract, measuredBlockHeights);
+  const [measuredTextLineBreaks, setMeasuredTextLineBreaks] = useState<MeasuredTextLineBreaks>({});
+  usePagination(resolvedStyleContract, measuredBlockHeights, measuredTextLineBreaks);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [dragSource, setDragSource] = useState<string | null>(null);
@@ -63,9 +85,9 @@ export function AppShell(): JSX.Element {
   const updateGeneratedContent = useAppStore((state) => state.updateGeneratedContent);
   const setGenerateError = useAppStore((state) => state.setGenerateError);
   const aiGenerationRecords = useAppStore((state) => state.aiGenerationRecords);
-  const aiGenerationRecordFilePath = useAppStore((state) => state.aiGenerationRecordFilePath);
+  const aiGenerationRecordDirectoryPath = useAppStore((state) => state.aiGenerationRecordDirectoryPath);
   const aiGenerationRecordsError = useAppStore((state) => state.aiGenerationRecordsError);
-  const setAiGenerationRecordFile = useAppStore((state) => state.setAiGenerationRecordFile);
+  const setAiGenerationRecordDirectory = useAppStore((state) => state.setAiGenerationRecordDirectory);
   const setAiGenerationRecordsError = useAppStore((state) => state.setAiGenerationRecordsError);
   const parseState = useAppStore((state) => state.parseState);
   const layoutDocument = useAppStore((state) => state.layoutDocument);
@@ -163,6 +185,12 @@ export function AppShell(): JSX.Element {
     });
   }, []);
 
+  const handleMeasuredTextLineBreaksChange = useCallback((nextBreaks: MeasuredTextLineBreaks) => {
+    setMeasuredTextLineBreaks((currentBreaks) =>
+      areMeasuredTextLineBreaksEqual(currentBreaks, nextBreaks) ? currentBreaks : nextBreaks,
+    );
+  }, []);
+
   const handleSelectLayoutNode = useCallback(
     (nodeId: string) => {
       selectLayoutNode(nodeId);
@@ -255,12 +283,12 @@ export function AppShell(): JSX.Element {
 
   const handleRefreshAiGenerationRecords = useCallback(async () => {
     try {
-      const recordFile = await listAiGenerationRecords(workspaceRootPath ?? currentDirectoryPath);
-      setAiGenerationRecordFile(recordFile);
+      const recordDirectory = await listAiGenerationRecords(workspaceRootPath ?? currentDirectoryPath);
+      setAiGenerationRecordDirectory(recordDirectory);
     } catch (error) {
       setAiGenerationRecordsError(error instanceof Error ? error.message : 'AI 生成记录读取失败');
     }
-  }, [currentDirectoryPath, setAiGenerationRecordFile, setAiGenerationRecordsError, workspaceRootPath]);
+  }, [currentDirectoryPath, setAiGenerationRecordDirectory, setAiGenerationRecordsError, workspaceRootPath]);
 
   useEffect(() => {
     void handleRefreshAiGenerationRecords();
@@ -311,8 +339,8 @@ export function AppShell(): JSX.Element {
   const handleDeleteAiGenerationRecord = useCallback(
     async (recordId: string) => {
       try {
-        const recordFile = await deleteAiGenerationRecord(workspaceRootPath ?? currentDirectoryPath, recordId);
-        setAiGenerationRecordFile(recordFile);
+        const recordDirectory = await deleteAiGenerationRecord(workspaceRootPath ?? currentDirectoryPath, recordId);
+        setAiGenerationRecordDirectory(recordDirectory);
         showMessage('已删除 AI 生成记录');
       } catch (error) {
         const message = error instanceof Error ? error.message : '删除 AI 生成记录失败';
@@ -322,7 +350,7 @@ export function AppShell(): JSX.Element {
     },
     [
       currentDirectoryPath,
-      setAiGenerationRecordFile,
+      setAiGenerationRecordDirectory,
       setAiGenerationRecordsError,
       showMessage,
       workspaceRootPath,
@@ -331,8 +359,8 @@ export function AppShell(): JSX.Element {
 
   const handleClearAiGenerationRecords = useCallback(async () => {
     try {
-      const recordFile = await clearAiGenerationRecords(workspaceRootPath ?? currentDirectoryPath);
-      setAiGenerationRecordFile(recordFile);
+      const recordDirectory = await clearAiGenerationRecords(workspaceRootPath ?? currentDirectoryPath);
+      setAiGenerationRecordDirectory(recordDirectory);
       showMessage('已清空 AI 生成记录');
     } catch (error) {
       const message = error instanceof Error ? error.message : '清空 AI 生成记录失败';
@@ -341,7 +369,7 @@ export function AppShell(): JSX.Element {
     }
   }, [
     currentDirectoryPath,
-    setAiGenerationRecordFile,
+    setAiGenerationRecordDirectory,
     setAiGenerationRecordsError,
     showMessage,
     workspaceRootPath,
@@ -551,7 +579,7 @@ export function AppShell(): JSX.Element {
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
             aiGenerationRecords={aiGenerationRecords}
-            aiGenerationRecordFilePath={aiGenerationRecordFilePath}
+            aiGenerationRecordDirectoryPath={aiGenerationRecordDirectoryPath}
             aiGenerationRecordsError={aiGenerationRecordsError}
             onRefreshAiGenerationRecords={handleRefreshAiGenerationRecords}
             onRestoreAiGenerationRecord={handleRestoreAiGenerationRecord}
@@ -623,6 +651,7 @@ export function AppShell(): JSX.Element {
                 onConsumeRequestedScrollToNode={handleConsumeRequestedScrollNode}
                 isCondensed={shouldShowEditor}
                 onMeasuredBlockHeightsChange={handleMeasuredBlockHeightsChange}
+                onMeasuredTextLineBreaksChange={handleMeasuredTextLineBreaksChange}
               />
             ) : null}
           </div>

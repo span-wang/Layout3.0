@@ -15,6 +15,7 @@ import type {
   LayoutDocument,
   LayoutFontResource,
   ParseState,
+  SyntaxMappingConfig,
   TableColumnAlign,
   TableCellRangeSelection,
   TableStructureAction,
@@ -25,6 +26,8 @@ import type {
 } from '@/engine/document-model';
 import type {
   HeaderFooterPresetId,
+  BlockSpacingParameterKey,
+  BlockSpacingParameters,
   MarginMode,
   MarginPresetId,
   MarginSide,
@@ -93,6 +96,7 @@ export interface DocumentSlice {
   setSource: (nextSource: string) => void;
   setParseState: (nextState: ParseState) => void;
   setLayoutDocument: (document: LayoutDocument) => void;
+  updateSyntaxMappingConfig: (config: SyntaxMappingConfig) => void;
   appendLayoutParagraphBlock: (payload: { text: string }) => string | null;
   insertLayoutMarkdownBlocks: (payload: {
     markdown: string;
@@ -307,6 +311,15 @@ export interface StyleSlice {
   setHeaderFooterLinked: (linked: boolean) => void;
   setPaginationAlgorithmId: (algorithmId: PaginationAlgorithmId) => void;
   setPaginationBehaviorOption: (option: PaginationBehaviorOption, value: boolean) => void;
+  setBlockSpacingParameter: (parameter: BlockSpacingParameterKey, value: number) => void;
+  applyBlockSpacingPreset: (presetId: string) => void;
+  addBlockSpacingPreset: (payload: { name: string; description: string }) => string;
+  updateBlockSpacingPreset: (payload: {
+    presetId: string;
+    name?: string;
+    description?: string;
+    parameters?: BlockSpacingParameters;
+  }) => void;
 }
 
 export type StoreSlice<T> = StateCreator<AppStore, [['zustand/immer', never]], [], T>;

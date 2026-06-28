@@ -1730,6 +1730,9 @@ button {
 
 .page-body h1 {
   margin: var(--page-heading1-margin-top, 0px) 0 var(--page-heading1-margin-bottom, 28px);
+  padding-left: var(--page-heading1-inset-left, 0px);
+  padding-right: var(--page-heading1-inset-right, 0px);
+  box-sizing: border-box;
   color: #102a43;
   font-size: var(--page-heading1-font-size, 34px);
   line-height: var(--page-heading1-line-height, 40px);
@@ -1737,6 +1740,9 @@ button {
 
 .page-body h2 {
   margin: var(--page-heading2-margin-top, 28px) 0 var(--page-heading2-margin-bottom, 16px);
+  padding-left: var(--page-heading2-inset-left, 0px);
+  padding-right: var(--page-heading2-inset-right, 0px);
+  box-sizing: border-box;
   color: #12314e;
   font-size: var(--page-heading2-font-size, 24px);
   line-height: var(--page-heading2-line-height, 32px);
@@ -1744,6 +1750,9 @@ button {
 
 .page-body h3 {
   margin: var(--page-heading3-margin-top, 24px) 0 var(--page-heading3-margin-bottom, 12px);
+  padding-left: var(--page-heading3-inset-left, 0px);
+  padding-right: var(--page-heading3-inset-right, 0px);
+  box-sizing: border-box;
   color: #12314e;
   font-size: var(--page-heading3-font-size, 20px);
   line-height: var(--page-heading3-line-height, 28px);
@@ -1753,12 +1762,18 @@ button {
 .page-body h5,
 .page-body h6 {
   margin: var(--page-heading3-margin-top, 24px) 0 var(--page-heading3-margin-bottom, 12px);
+  padding-left: var(--page-heading3-inset-left, 0px);
+  padding-right: var(--page-heading3-inset-right, 0px);
+  box-sizing: border-box;
   color: #12314e;
   font-size: var(--page-paragraph-font-size, 16px);
   line-height: var(--page-paragraph-line-height, 28px);
 }
 
 .page-body p {
+  box-sizing: border-box;
+  padding-left: var(--page-paragraph-inset-left, 0px);
+  padding-right: var(--page-paragraph-inset-right, 0px);
   color: #344054;
   font-size: var(--page-paragraph-font-size, 16px);
   line-height: var(--page-paragraph-line-height, 28px);
@@ -1786,6 +1801,10 @@ button {
 }
 
 .page-body li.task-list-item {
+  list-style: none;
+}
+
+.page-body li.list-item-marker-hidden {
   list-style: none;
 }
 
@@ -2383,6 +2402,7 @@ button {
   min-width: 0;
   margin: 0 16px 16px;
   gap: 12px;
+  overflow: hidden;
 }
 
 .right-panel-rail {
@@ -2437,28 +2457,52 @@ button {
   align-content: start;
   gap: 14px;
   min-width: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .page-settings-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 36px;
-  gap: 6px;
-  justify-content: start;
-  padding: 0 2px;
-  overflow-x: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 2px 10px;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #f7f9fb 0%, rgba(247, 249, 251, 0.94) 100%);
+  border-bottom: 1px solid #e1e8ef;
+  overflow: visible;
 }
 
 .page-settings-icon-button {
-  display: inline-grid;
-  place-items: center;
-  width: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
   height: 36px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  overflow: hidden;
   color: #526171;
   background: #ffffff;
   border: 1px solid #d5e0e8;
   border-radius: 10px;
+}
+
+.page-settings-icon-button span {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .page-settings-icon-button.active {
@@ -2471,11 +2515,13 @@ button {
   display: grid;
   align-content: start;
   gap: 12px;
+  min-width: 0;
 }
 
 .detail-panel {
   display: grid;
   gap: 12px;
+  min-width: 0;
   padding: 14px;
   background: #ffffff;
   border: 1px solid #dfe8ef;
@@ -2787,6 +2833,20 @@ button {
   color: #5f7080;
   font-size: 11px;
   line-height: 1.6;
+}
+
+.block-spacing-custom-list {
+  display: grid;
+  gap: 10px;
+}
+
+.block-spacing-custom-item {
+  display: grid;
+  gap: 10px;
+  padding: 10px 11px;
+  background: #f7fafc;
+  border: 1px solid #e1e9ef;
+  border-radius: 10px;
 }
 
 .property-stack {
@@ -3422,6 +3482,88 @@ button {
   border-style: solid;
 }
 
+.mapping-ai-recognizer {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: #f8fcfc;
+  border: 1px solid #d1e7ea;
+  border-radius: 8px;
+}
+
+.mapping-ai-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mapping-ai-header div {
+  display: grid;
+  gap: 2px;
+}
+
+.mapping-ai-header strong {
+  color: #243141;
+  font-size: 13px;
+}
+
+.mapping-ai-header span {
+  color: #6c7b8b;
+  font-size: 11px;
+}
+
+.mapping-ai-textarea {
+  min-height: 72px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.mapping-ai-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mapping-ai-candidate {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #bfe0e2;
+  border-radius: 8px;
+}
+
+.mapping-ai-candidate-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mapping-ai-candidate-head strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #253444;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mapping-ai-candidate-head span {
+  flex: none;
+  padding: 2px 7px;
+  color: #0d5663;
+  font-size: 10px;
+  background: #edf8f8;
+  border-radius: 4px;
+}
+
+.mapping-ai-candidate p {
+  margin: 0;
+  color: #6c7b8b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .mapping-form {
   display: flex;
   flex-direction: column;
@@ -3512,6 +3654,11 @@ button {
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.mapping-form-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .mapping-form-btn-cancel {
@@ -3805,6 +3952,95 @@ button {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* AI 多配置设置 */
+.ai-config-manager {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.45fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.ai-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ai-config-row {
+  width: 100%;
+  padding: 8px 10px;
+  color: #4a5568;
+  text-align: left;
+  background: #ffffff;
+  border: 1px solid #e1e9ef;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ai-config-row:hover,
+.ai-config-row.active {
+  color: #0d5663;
+  background: #f0fdfa;
+  border-color: #0d5663;
+}
+
+.ai-config-row-new {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-config-row-main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-config-row-main strong,
+.ai-config-row-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-config-row-main strong {
+  font-size: 12px;
+}
+
+.ai-config-row-main span {
+  font-size: 10px;
+  color: #718096;
+}
+
+.ai-config-editor {
+  min-width: 0;
+}
+
+.ai-config-empty {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #718096;
+  background: #f8fafc;
+  border: 1px solid #e1e9ef;
+  border-radius: 6px;
+}
+
+.ai-task-assignment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-task-assignment-row {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  color: #4a5568;
 }
 
 /* AI 快速卡片 */

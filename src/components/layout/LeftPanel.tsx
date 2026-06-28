@@ -63,7 +63,7 @@ interface LeftPanelProps {
   searchQuery: string;
   onSearchQueryChange: (q: string) => void;
   aiGenerationRecords: AiGenerationRecord[];
-  aiGenerationRecordFilePath: string | null;
+  aiGenerationRecordDirectoryPath: string | null;
   aiGenerationRecordsError: string | null;
   onRefreshAiGenerationRecords: () => Promise<void>;
   onRestoreAiGenerationRecord: (record: AiGenerationRecord) => void;
@@ -529,7 +529,7 @@ function renderPanelContent(
   searchQuery: string,
   onSearchQueryChange: (q: string) => void,
   aiGenerationRecords: AiGenerationRecord[],
-  aiGenerationRecordFilePath: string | null,
+  aiGenerationRecordDirectoryPath: string | null,
   aiGenerationRecordsError: string | null,
   onRefreshAiGenerationRecords: () => Promise<void>,
   onRestoreAiGenerationRecord: (record: AiGenerationRecord) => void,
@@ -733,7 +733,7 @@ function renderPanelContent(
       return (
         <AiGenerationRecordsPanel
           records={aiGenerationRecords}
-          recordFilePath={aiGenerationRecordFilePath}
+          recordDirectoryPath={aiGenerationRecordDirectoryPath}
           error={aiGenerationRecordsError}
           onRefresh={onRefreshAiGenerationRecords}
           onRestore={onRestoreAiGenerationRecord}
@@ -794,7 +794,7 @@ export function LeftPanel({
   searchQuery,
   onSearchQueryChange,
   aiGenerationRecords,
-  aiGenerationRecordFilePath,
+  aiGenerationRecordDirectoryPath,
   aiGenerationRecordsError,
   onRefreshAiGenerationRecords,
   onRestoreAiGenerationRecord,
@@ -899,7 +899,7 @@ export function LeftPanel({
             searchQuery,
             onSearchQueryChange,
             aiGenerationRecords,
-            aiGenerationRecordFilePath,
+            aiGenerationRecordDirectoryPath,
             aiGenerationRecordsError,
             onRefreshAiGenerationRecords,
             onRestoreAiGenerationRecord,

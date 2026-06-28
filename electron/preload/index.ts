@@ -38,8 +38,8 @@ interface AiGenerationRecord {
   createdAt: string;
 }
 
-interface AiGenerationRecordFileResult {
-  recordFilePath: string;
+interface AiGenerationRecordDirectoryResult {
+  recordDirectoryPath: string;
   records: AiGenerationRecord[];
 }
 
@@ -110,18 +110,18 @@ const layoutAPI = {
     ipcRenderer.invoke('ai:cancelRequest', requestId),
   listAiGenerationRecords: (payload: {
     workspaceRootPath: string | null;
-  }): Promise<AiGenerationRecordFileResult> => ipcRenderer.invoke('aiRecords:list', payload),
+  }): Promise<AiGenerationRecordDirectoryResult> => ipcRenderer.invoke('aiRecords:list', payload),
   addAiGenerationRecord: (payload: {
     workspaceRootPath: string | null;
     record: Omit<AiGenerationRecord, 'id' | 'createdAt'> & Partial<Pick<AiGenerationRecord, 'id' | 'createdAt'>>;
-  }): Promise<AiGenerationRecordFileResult> => ipcRenderer.invoke('aiRecords:add', payload),
+  }): Promise<AiGenerationRecordDirectoryResult> => ipcRenderer.invoke('aiRecords:add', payload),
   deleteAiGenerationRecord: (payload: {
     workspaceRootPath: string | null;
     recordId: string;
-  }): Promise<AiGenerationRecordFileResult> => ipcRenderer.invoke('aiRecords:delete', payload),
+  }): Promise<AiGenerationRecordDirectoryResult> => ipcRenderer.invoke('aiRecords:delete', payload),
   clearAiGenerationRecords: (payload: {
     workspaceRootPath: string | null;
-  }): Promise<AiGenerationRecordFileResult> => ipcRenderer.invoke('aiRecords:clear', payload),
+  }): Promise<AiGenerationRecordDirectoryResult> => ipcRenderer.invoke('aiRecords:clear', payload),
 };
 
 contextBridge.exposeInMainWorld('layoutAPI', layoutAPI);

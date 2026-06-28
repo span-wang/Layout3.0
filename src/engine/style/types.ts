@@ -41,6 +41,8 @@ export interface BaseBlockStyleRule {
 export interface TextBlockStyleRule extends BaseBlockStyleRule {
   fontSize: number;
   lineHeight: number;
+  insetLeft: number;
+  insetRight: number;
 }
 
 export interface ListBlockStyleRule extends TextBlockStyleRule {
@@ -103,6 +105,49 @@ export interface StyleSettings {
   isHeaderFooterLinked: boolean;
   paginationAlgorithmId: PaginationAlgorithmId;
   paginationBehavior: PaginationBehavior;
+  blockSpacingPresetId: string;
+  blockSpacing: BlockSpacingParameters;
+  customBlockSpacingPresets: BlockSpacingPreset[];
+}
+
+export interface BlockSpacingParameters {
+  heading1SpaceBefore: number;
+  heading1SpaceAfter: number;
+  heading2SpaceBefore: number;
+  heading2SpaceAfter: number;
+  heading3SpaceBefore: number;
+  heading3SpaceAfter: number;
+  paragraphSpaceBefore: number;
+  paragraphSpaceAfter: number;
+  listSpaceBefore: number;
+  listSpaceAfter: number;
+  listItemGap: number;
+  blockquoteSpaceBefore: number;
+  blockquoteSpaceAfter: number;
+  codeSpaceBefore: number;
+  codeSpaceAfter: number;
+  codePaddingX: number;
+  codePaddingY: number;
+  tableSpaceBefore: number;
+  tableSpaceAfter: number;
+  tableCellPaddingX: number;
+  tableCellPaddingY: number;
+  imageSpaceBefore: number;
+  imageSpaceAfter: number;
+  ruleSpaceBefore: number;
+  ruleSpaceAfter: number;
+  textInsetLeft: number;
+  textInsetRight: number;
+}
+
+export type BlockSpacingParameterKey = keyof BlockSpacingParameters;
+
+export interface BlockSpacingPreset {
+  id: string;
+  name: string;
+  description: string;
+  parameters: BlockSpacingParameters;
+  builtIn?: boolean;
 }
 
 export interface PageSizeDefinition {

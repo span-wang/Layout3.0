@@ -1,10 +1,22 @@
-import { defaultStyleSettings } from '@/engine/style/presets';
-import { cloneStyleSettings, normalizeStyleSettings } from '@/engine/style/styleSettings';
-import type { BoxInsets, MarginSide } from '@/engine/style/types';
+import { blockSpacingPresetDefinitions, defaultStyleSettings } from '@/engine/style/presets';
+import {
+  cloneBlockSpacingParameters,
+  cloneStyleSettings,
+  normalizeBlockSpacingParameters,
+  normalizeStyleSettings,
+} from '@/engine/style/styleSettings';
+import type {
+  BlockSpacingParameters,
+  BlockSpacingParameterKey,
+  BoxInsets,
+  MarginSide,
+} from '@/engine/style/types';
 import type { StoreSlice, StyleSlice } from '@/store/types';
 
 const MIN_MARGIN_MM = 5;
 const MAX_MARGIN_MM = 80;
+const MIN_BLOCK_SPACING_PX = 0;
+const MAX_BLOCK_SPACING_PX = 240;
 
 function clampMarginValue(value: number): number {
   if (!Number.isFinite(value)) {
@@ -28,6 +40,39 @@ function setAllMargins(target: BoxInsets, value: number): void {
   target.right = value;
   target.bottom = value;
   target.left = value;
+}
+
+function clampBlockSpacingValue(value: number): number {
+  if (!Number.isFinite(value)) {
+    return MIN_BLOCK_SPACING_PX;
+  }
+
+  return Math.min(MAX_BLOCK_SPACING_PX, Math.max(MIN_BLOCK_SPACING_PX, Math.round(value)));
+}
+
+function normalizePresetText(value: string, fallback: string): string {
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
+
+function createCustomBlockSpacingPresetId(): string {
+  return `block-spacing-${Date.now().toString(36)}`;
+}
+
+function findBlockSpacingPreset(
+  styleSettings: { customBlockSpacingPresets: StyleSlice['styleSettings']['customBlockSpacingPresets'] },
+  presetId: string,
+) {
+  return [...blockSpacingPresetDefinitions, ...styleSettings.customBlockSpacingPresets].find(
+    (preset) => preset.id === presetId,
+  );
+}
+
+function clampBlockSpacingParameters(parameters: BlockSpacingParameters): BlockSpacingParameters {
+  return Object.entries(parameters).reduce((nextParameters, [key, value]) => {
+    nextParameters[key as BlockSpacingParameterKey] = clampBlockSpacingValue(value);
+    return nextParameters;
+  }, {} as BlockSpacingParameters);
 }
 
 export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
@@ -139,6 +184,62 @@ export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
   setPaginationBehaviorOption: (option, value) =>
     set((state) => {
       state.styleSettings.paginationBehavior[option] = value;
+      state.isDirty = true;
+    }),
+  setBlockSpacingParameter: (parameter, value) =>
+    set((state) => {
+      state.styleSettings.blockSpacing[parameter] = clampBlockSpacingValue(value);
+      state.styleSettings.blockSpacingPresetId = 'custom';
+      state.isDirty = true;
+    }),
+  applyBlockSpacingPreset: (presetId) =>
+    set((state) => {
+      const preset = findBlockSpacingPreset(state.styleSettings, presetId);
+      if (!preset) {
+        return;
+      }
+
+      state.styleSettings.blockSpacing = cloneBlockSpacingParameters(preset.parameters);
+      state.styleSettings.blockSpacingPresetId = preset.id;
+      state.isDirty = true;
+    }),
+  addBlockSpacingPreset: ({ name, description }) => {
+    const presetId = createCustomBlockSpacingPresetId();
+
+    set((state) => {
+      const presetName = normalizePresetText(name, `自定义预设 ${state.styleSettings.customBlockSpacingPresets.length + 1}`);
+      state.styleSettings.customBlockSpacingPresets.push({
+        id: presetId,
+        name: presetName,
+        description: description.trim(),
+        parameters: cloneBlockSpacingParameters(state.styleSettings.blockSpacing),
+      });
+      state.styleSettings.blockSpacingPresetId = presetId;
+      state.isDirty = true;
+    });
+
+    return presetId;
+  },
+  updateBlockSpacingPreset: ({ presetId, name, description, parameters }) =>
+    set((state) => {
+      const preset = state.styleSettings.customBlockSpacingPresets.find((item) => item.id === presetId);
+      if (!preset) {
+        return;
+      }
+
+      if (name !== undefined) {
+        preset.name = normalizePresetText(name, preset.name);
+      }
+      if (description !== undefined) {
+        preset.description = description.trim();
+      }
+      if (parameters) {
+        const nextParameters = clampBlockSpacingParameters(normalizeBlockSpacingParameters(parameters));
+        preset.parameters = nextParameters;
+        if (state.styleSettings.blockSpacingPresetId === presetId) {
+          state.styleSettings.blockSpacing = cloneBlockSpacingParameters(nextParameters);
+        }
+      }
       state.isDirty = true;
     }),
 });

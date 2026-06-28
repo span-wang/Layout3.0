@@ -1,4 +1,4 @@
-import type { AiGenerationRecord, AiGenerationRecordFileResult } from '@/types/ai';
+import type { AiGenerationRecord, AiGenerationRecordDirectoryResult } from '@/types/ai';
 
 type AiRecordApiMethodName =
   | 'listAiGenerationRecords'
@@ -22,7 +22,7 @@ function normalizeWorkspacePath(workspaceRootPath: string | null | undefined): s
 
 export async function listAiGenerationRecords(
   workspaceRootPath: string | null | undefined,
-): Promise<AiGenerationRecordFileResult> {
+): Promise<AiGenerationRecordDirectoryResult> {
   const listRecords = requireAiRecordApiMethod('listAiGenerationRecords');
   return await listRecords({ workspaceRootPath: normalizeWorkspacePath(workspaceRootPath) });
 }
@@ -30,7 +30,7 @@ export async function listAiGenerationRecords(
 export async function addAiGenerationRecord(payload: {
   workspaceRootPath: string | null | undefined;
   record: Omit<AiGenerationRecord, 'id' | 'createdAt'> & Partial<Pick<AiGenerationRecord, 'id' | 'createdAt'>>;
-}): Promise<AiGenerationRecordFileResult> {
+}): Promise<AiGenerationRecordDirectoryResult> {
   const addRecord = requireAiRecordApiMethod('addAiGenerationRecord');
   return await addRecord({
     workspaceRootPath: normalizeWorkspacePath(payload.workspaceRootPath),
@@ -41,7 +41,7 @@ export async function addAiGenerationRecord(payload: {
 export async function deleteAiGenerationRecord(
   workspaceRootPath: string | null | undefined,
   recordId: string,
-): Promise<AiGenerationRecordFileResult> {
+): Promise<AiGenerationRecordDirectoryResult> {
   const deleteRecord = requireAiRecordApiMethod('deleteAiGenerationRecord');
   return await deleteRecord({
     workspaceRootPath: normalizeWorkspacePath(workspaceRootPath),
@@ -51,7 +51,7 @@ export async function deleteAiGenerationRecord(
 
 export async function clearAiGenerationRecords(
   workspaceRootPath: string | null | undefined,
-): Promise<AiGenerationRecordFileResult> {
+): Promise<AiGenerationRecordDirectoryResult> {
   const clearRecords = requireAiRecordApiMethod('clearAiGenerationRecords');
   return await clearRecords({ workspaceRootPath: normalizeWorkspacePath(workspaceRootPath) });
 }

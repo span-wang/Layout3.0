@@ -18,15 +18,15 @@ export function AiOptimizeTab(): JSX.Element {
   const setOptimizeError = useAppStore((state) => state.setOptimizeError);
   const finishOptimizing = useAppStore((state) => state.finishOptimizing);
   const clearOptimizedContent = useAppStore((state) => state.clearOptimizedContent);
-  const isAiConfigured = useAppStore((state) => state.isAiConfigured);
 
   const [selectedText, setSelectedText] = useState('');
   const [optimizeMode, setOptimizeMode] = useState<OptimizeMode>('polish');
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleOptimize = async () => {
-    if (!isAiConfigured) {
-      setOptimizeError('请先在「设置」中配置 AI 服务');
+    const config = useAppStore.getState().getAiConfigForTask('optimize');
+    if (!config) {
+      setOptimizeError('请先在「设置」中为「文本优化」分配可用 AI 配置');
       return;
     }
 
@@ -36,10 +36,8 @@ export function AiOptimizeTab(): JSX.Element {
     }
 
     try {
-      const config = useAppStore.getState().aiConfig;
-      if (config) {
-        aiService.configure(config);
-      }
+      // 按“文本优化”任务读取配置，允许和生成/检查使用不同模型。
+      aiService.configure(config);
 
       startOptimizing();
 

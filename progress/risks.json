@@ -38,7 +38,7 @@
       "type": "范围调整",
       "description": "用户明确要求后续不要再继续分页算法开发，当前开发重心需要从 `PH2-09` 切回非分页产品功能收尾。",
       "impactScope": "PH2-09 精细分页算法（二次推进）、第二阶段下一步推荐顺序、当前执行看板",
-      "currentHandling": "已完成 `PH2-09-max-fill-tail-misbreak-v2` 返工：短尾断点 V1 不完整的问题已通过完整上下文回归固化，算法1现在按浏览器相邻块 margin 折叠口径累计同页块高度，避免标题/列表之间空白被重复计算后把“初步印象。”提前拆到第二页。完成后 `PH2-09` 仍恢复暂缓，若无新的确认，不自动继续推进孤寡行、真实测量分页或其他分页算法主线能力。"
+      "currentHandling": "已完成 `PH2-09-max-fill-tail-misbreak-v2` 返工：短尾断点 V1 不完整的问题已通过完整上下文回归固化，算法1现在按浏览器相邻块 margin 折叠口径累计同页块高度，避免标题/列表之间空白被重复计算后把“初步印象。”提前拆到第二页。2026-06-28 已完成单点缺陷修复 `PH2-09-max-fill-list-item-continuation-marker-fix-v1`：同一列表项内部跨页后，续页片段不再重复显示有序编号、无序项目符号或任务勾选框。2026-06-28 已完成 `PH2-09-max-fill-real-line-break-measure-v1` 返工：当前问题明确不是孤字保护，而是纯估算在字体、字号、字重、字体回退和列表缩进变化后会偏离浏览器真实换行；隐藏测量层已产出真实换行索引，算法1页尾切分文本块、列表项和表格单元格时优先使用真实行尾。完成后 `PH2-09` 仍恢复暂缓，不自动继续推进孤寡行、默认算法替换或其他分页算法主线能力。"
     },
     {
       "id": "RISK-006",
@@ -79,6 +79,46 @@
       "description": "桌面端多个输入框存在明显输入等待，部分右侧属性输入每个字符都会写回 `LayoutDocument`，进而触发撤销栈、分页重算和隐藏测量层，导致普通输入也被重模型更新拖慢。",
       "impactScope": "PH2-12 桌面端真实操作验收、RightPanel 属性输入、CanvasPane 画布预览、Typesetting Engine 分页刷新、用户连续输入体验",
       "currentHandling": "已完成首轮修复：画布富文本编辑和右侧图片/公式属性输入已改为本地草稿或非受控输入，确认后再写回模型；`CanvasPane` 已增加记忆化隔离。若仍存在全局卡顿，再另拆画布渲染隔离深化或隐藏测量层降频任务。"
+    },
+    {
+      "id": "RISK-011",
+      "date": "2026-06-28",
+      "type": "缺陷",
+      "description": "画布原位富文本编辑态中，从文字后方向前拖选时，程序化选区恢复可能打断浏览器反向拖选过程，导致用户感觉块内文字只能从前往后选择。",
+      "impactScope": "PH2-06 文本与段落局部样式编辑、CanvasPane 富文本编辑器、选区浮动工具条、顶部快捷格式工具栏、右侧对象属性文字样式",
+      "currentHandling": "已完成修复：`CanvasPane` 富文本编辑聚焦 effect 不再随 `editingSelection` 变化反复调用 `restoreRichSelection`，拖选过程交给浏览器原生选区处理；DOM 重写后的必要选区恢复仍保留在 `RichTextCanvasEditor` 内部同步逻辑中。已通过 `typecheck`、`smoke:m2` 和 `build` 验证。"
+    },
+    {
+      "id": "RISK-012",
+      "date": "2026-06-28",
+      "type": "范围调整",
+      "description": "AI 生成记录原先集中写入 `AI生成记录/records.json`，随着生成次数增加会让单个 JSON 文件持续变大；用户已确认改为 `AI生成记录/` 文件夹下一条记录一个文件。",
+      "impactScope": "PH3-01 AI 生成记录本地存储、Electron 主进程记录 IPC、左侧 AI 生成记录面板、旧 `records.json` 兼容迁移",
+      "currentHandling": "已完成处理：AI 生成记录现在写入 `AI生成记录/` 文件夹内的独立 JSON 文件；旧 `records.json` 会在读取时拆分迁移，迁移成功后删除旧聚合文件。本步未扩展搜索、标签、导出、优化/检查历史或 AI 请求链路，并已通过 `typecheck` 与 `build` 验证。"
+    },
+    {
+      "id": "RISK-013",
+      "date": "2026-06-28",
+      "type": "范围调整",
+      "description": "AI 设置从单配置扩展为多配置后，生成、优化、检查、语法映射 AI 正则识别都需要明确读取各自分配的配置；若迁移规则不清晰，旧用户保存的单配置可能在升级后暂时不可用。",
+      "impactScope": "PH3-08 AI 多配置与任务功能分配、AI 设置页、AiSlice localStorage、生成/优化/检查/AI 正则识别调用链路",
+      "currentHandling": "已完成 `PH3-08`：AI 设置页支持多套本机配置档案和任务功能分配，生成、优化、检查、AI 正则识别会分别读取对应配置；旧单配置会自动迁移为“默认配置”，并默认分配给所有任务。API Key 加密、云同步、提示词模板和费用统计仍按边界延后处理。"
+    },
+    {
+      "id": "RISK-014",
+      "date": "2026-06-28",
+      "type": "缺陷",
+      "description": "语法映射 AI 正则识别遇到 LaTeX 示例 `$ \\underline{\\text{文字}} $` 时，模型可能返回非严格 JSON 或未完整转义的反斜杠正则，导致前端只提示“AI 返回内容不是有效 JSON”，用户无法采用候选规则。",
+      "impactScope": "PH2-13 语法映射 AI 正则识别、AiService 结果解析、SyntaxMappingPanel 错误提示、LaTeX 文本标记示例识别",
+      "currentHandling": "已完成 `PH2-13-ai-regex-json-tolerance-v1` 小修复：`AiService` 现在可从非严格 JSON/Markdown 包裹文本中提取规则字段，并会对反斜杠 pattern 做候选修复；`$...$` 示例会提供核心 LaTeX 语法给 AI，同时 `inlineMath` 命中映射时可转入现有 TextMark 链路；`$ \\underline{\\text{文字}} $` 已通过本地回归验证。"
+    },
+    {
+      "id": "RISK-015",
+      "date": "2026-06-28",
+      "type": "缺陷",
+      "description": "自定义语法映射重新打开 `.layout` 文件后不在「语法映射」面板显示，但已解析到正文模型中的样式仍然生效，容易让用户误以为规则丢失或无法继续维护。",
+      "impactScope": "PH2-13 前端可配置语法映射系统、SyntaxMappingPanel 面板显示、LayoutDocument.meta.syntaxMappingConfig 持久化、`.layout` 打开恢复、自动草稿恢复",
+      "currentHandling": "已完成 `PH2-13-custom-mapping-reopen-display-fix-v1` 小修复：语法映射配置会在新建、Markdown 导入、`.layout` 保存/打开、草稿恢复、store 写回和面板展示入口统一规范化；默认映射补齐、自定义映射保留，历史 `metadata.syntaxMappingConfig` 会迁移到 `meta.syntaxMappingConfig`。已通过保存重开和旧字段迁移回归验证；本步不尝试从旧文件已解析样式中反推原始正则。"
     }
   ]
 }

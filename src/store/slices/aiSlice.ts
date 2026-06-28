@@ -2,12 +2,24 @@
  * AI Slice - 管理 AI 面板状态
  */
 
-import type { AiConfig, AiPanelTab, AiCheckResult, AiGenerationRecord } from '@/types/ai';
+import type {
+  AiConfig,
+  AiConfigProfile,
+  AiPanelTab,
+  AiCheckResult,
+  AiGenerationRecord,
+  AiTaskConfigAssignments,
+  AiTaskType,
+  AiProvider,
+} from '@/types/ai';
+import { DEFAULT_AI_TASK_ASSIGNMENTS } from '@/types/ai';
 
 export interface AiSlice {
-  // 配置状态
+  // 兼容旧调用的当前配置状态，默认指向“内容生成”分配的配置
   aiConfig: AiConfig | null;
   isAiConfigured: boolean;
+  aiConfigs: AiConfigProfile[];
+  aiTaskAssignments: AiTaskConfigAssignments;
 
   // 面板状态
   isAiPanelOpen: boolean;
@@ -18,7 +30,7 @@ export interface AiSlice {
   generatedContent: string;
   generateError: string | null;
   aiGenerationRecords: AiGenerationRecord[];
-  aiGenerationRecordFilePath: string | null;
+  aiGenerationRecordDirectoryPath: string | null;
   aiGenerationRecordsError: string | null;
 
   // 优化状态
@@ -34,6 +46,11 @@ export interface AiSlice {
 
   // 配置 actions
   setAiConfig: (config: AiConfig | null) => void;
+  upsertAiConfigProfile: (config: AiConfigProfile) => void;
+  deleteAiConfigProfile: (configId: string) => void;
+  setAiTaskConfigAssignment: (taskType: AiTaskType, configId: string | null) => void;
+  getAiConfigForTask: (taskType: AiTaskType) => AiConfigProfile | null;
+  isAiTaskConfigured: (taskType: AiTaskType) => boolean;
 
   // 面板 actions
   openAiPanel: () => void;
@@ -46,8 +63,8 @@ export interface AiSlice {
   setGenerateError: (error: string | null) => void;
   finishGenerating: () => void;
   clearGeneratedContent: () => void;
-  setAiGenerationRecordFile: (payload: {
-    recordFilePath: string;
+  setAiGenerationRecordDirectory: (payload: {
+    recordDirectoryPath: string;
     records: AiGenerationRecord[];
   }) => void;
   setAiGenerationRecordsError: (error: string | null) => void;
@@ -73,48 +90,161 @@ export interface AiSlice {
 }
 
 // localStorage 键名
-const AI_CONFIG_KEY = 'layout3-ai-config';
+const LEGACY_AI_CONFIG_KEY = 'layout3-ai-config';
+const AI_CONFIGS_KEY = 'layout3-ai-configs-v1';
+const AI_TASK_ASSIGNMENTS_KEY = 'layout3-ai-task-assignments-v1';
 
-/**
- * 从 localStorage 加载 AI 配置
- */
-function loadAiConfig(): AiConfig | null {
-  try {
-    const stored = localStorage.getItem(AI_CONFIG_KEY);
-    if (stored) {
-      return JSON.parse(stored) as AiConfig;
-    }
-  } catch {
-    // 忽略解析错误
+const aiTaskTypes: AiTaskType[] = ['generate', 'optimize', 'check', 'regexRecognition'];
+
+function isKnownProvider(value: unknown): value is AiProvider {
+  return value === 'openai' || value === 'anthropic' || value === 'custom';
+}
+
+function createAiConfigId(): string {
+  return `ai-config-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function isUsableAiConfig(config: AiConfig | null | undefined): boolean {
+  return !!config?.apiKey?.trim() && !!config?.model?.trim();
+}
+
+function normalizeAiConfigProfile(raw: unknown, index: number): AiConfigProfile | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
   }
-  return null;
+
+  const value = raw as Partial<AiConfigProfile>;
+  if (!isKnownProvider(value.provider)) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  return {
+    id: typeof value.id === 'string' && value.id.trim() ? value.id : createAiConfigId(),
+    name: typeof value.name === 'string' && value.name.trim() ? value.name.trim() : `AI 配置 ${index + 1}`,
+    provider: value.provider,
+    apiKey: typeof value.apiKey === 'string' ? value.apiKey : '',
+    baseUrl: typeof value.baseUrl === 'string' ? value.baseUrl : '',
+    model: typeof value.model === 'string' ? value.model : '',
+    temperature: typeof value.temperature === 'number' ? value.temperature : 0.7,
+    createdAt: typeof value.createdAt === 'string' ? value.createdAt : now,
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now,
+  };
+}
+
+function createProfileFromLegacyConfig(config: AiConfig): AiConfigProfile {
+  const now = new Date().toISOString();
+  return {
+    id: 'ai-config-default',
+    name: '默认配置',
+    provider: config.provider,
+    apiKey: config.apiKey,
+    baseUrl: config.baseUrl,
+    model: config.model,
+    temperature: config.temperature ?? 0.7,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 /**
- * 保存 AI 配置到 localStorage
+ * 标准化任务分配：缺失或指向已删除配置时，自动回落到第一条可用配置。
  */
-function saveAiConfig(config: AiConfig | null): void {
+function normalizeAssignments(
+  configs: AiConfigProfile[],
+  assignments?: Partial<AiTaskConfigAssignments> | null,
+): AiTaskConfigAssignments {
+  const existingIds = new Set(configs.map((config) => config.id));
+  const fallbackConfigId = configs.find(isUsableAiConfig)?.id ?? configs[0]?.id ?? null;
+
+  return aiTaskTypes.reduce<AiTaskConfigAssignments>((result, taskType) => {
+    const assignedId = assignments?.[taskType] ?? null;
+    result[taskType] = assignedId && existingIds.has(assignedId) ? assignedId : fallbackConfigId;
+    return result;
+  }, { ...DEFAULT_AI_TASK_ASSIGNMENTS });
+}
+
+function findConfigForTask(
+  configs: AiConfigProfile[],
+  assignments: AiTaskConfigAssignments,
+  taskType: AiTaskType,
+): AiConfigProfile | null {
+  const config = configs.find((item) => item.id === assignments[taskType]) ?? null;
+  return isUsableAiConfig(config) ? config : null;
+}
+
+function buildAiConfigState(
+  configs: AiConfigProfile[],
+  assignments: AiTaskConfigAssignments,
+): Pick<AiSlice, 'aiConfig' | 'isAiConfigured' | 'aiConfigs' | 'aiTaskAssignments'> {
+  const normalizedAssignments = normalizeAssignments(configs, assignments);
+  return {
+    aiConfig: findConfigForTask(configs, normalizedAssignments, 'generate'),
+    isAiConfigured: configs.some(isUsableAiConfig),
+    aiConfigs: configs,
+    aiTaskAssignments: normalizedAssignments,
+  };
+}
+
+function saveAiSettings(configs: AiConfigProfile[], assignments: AiTaskConfigAssignments): void {
   try {
-    if (config) {
-      localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(config));
-    } else {
-      localStorage.removeItem(AI_CONFIG_KEY);
+    localStorage.setItem(AI_CONFIGS_KEY, JSON.stringify(configs));
+    localStorage.setItem(AI_TASK_ASSIGNMENTS_KEY, JSON.stringify(assignments));
+  } catch {
+    // 忽略保存错误，避免本机存储异常打断用户当前操作。
+  }
+}
+
+/**
+ * 从 localStorage 加载 AI 多配置；如果只存在旧单配置，则迁移为“默认配置”。
+ */
+function loadAiSettings(): Pick<AiSlice, 'aiConfig' | 'isAiConfigured' | 'aiConfigs' | 'aiTaskAssignments'> {
+  try {
+    const storedConfigs = localStorage.getItem(AI_CONFIGS_KEY);
+    if (storedConfigs) {
+      const parsedConfigs = JSON.parse(storedConfigs) as unknown;
+      const configs = Array.isArray(parsedConfigs)
+        ? parsedConfigs
+            .map((config, index) => normalizeAiConfigProfile(config, index))
+            .filter((config): config is AiConfigProfile => config !== null)
+        : [];
+
+      const storedAssignments = localStorage.getItem(AI_TASK_ASSIGNMENTS_KEY);
+      const parsedAssignments = storedAssignments ? (JSON.parse(storedAssignments) as Partial<AiTaskConfigAssignments>) : null;
+      const assignments = normalizeAssignments(configs, parsedAssignments);
+      return buildAiConfigState(configs, assignments);
+    }
+
+    const legacyStored = localStorage.getItem(LEGACY_AI_CONFIG_KEY);
+    if (legacyStored) {
+      const legacyConfig = JSON.parse(legacyStored) as AiConfig;
+      if (legacyConfig?.provider && legacyConfig?.apiKey && legacyConfig?.model) {
+        const migratedConfig = createProfileFromLegacyConfig(legacyConfig);
+        const assignments = normalizeAssignments([migratedConfig]);
+        saveAiSettings([migratedConfig], assignments);
+        return buildAiConfigState([migratedConfig], assignments);
+      }
     }
   } catch {
-    // 忽略保存错误
+    // 忽略解析错误，损坏的本地配置不应影响应用启动。
   }
+
+  return buildAiConfigState([], { ...DEFAULT_AI_TASK_ASSIGNMENTS });
 }
 
 export const createAiSlice = (
-  set: (partial: Partial<AiSlice> | ((state: AiSlice) => Partial<AiSlice>)) => void
+  set: (partial: Partial<AiSlice> | ((state: AiSlice) => Partial<AiSlice>)) => void,
+  get: () => AiSlice,
 ): AiSlice => {
-  // 从 localStorage 恢复配置
-  const initialConfig = loadAiConfig();
+  // 从 localStorage 恢复多配置；旧单配置会迁移为“默认配置”。
+  const initialAiSettings = loadAiSettings();
 
   return {
     // 配置状态
-    aiConfig: initialConfig,
-    isAiConfigured: !!initialConfig?.apiKey && !!initialConfig?.model,
+    aiConfig: initialAiSettings.aiConfig,
+    isAiConfigured: initialAiSettings.isAiConfigured,
+    aiConfigs: initialAiSettings.aiConfigs,
+    aiTaskAssignments: initialAiSettings.aiTaskAssignments,
 
     // 面板状态
     isAiPanelOpen: false,
@@ -125,7 +255,7 @@ export const createAiSlice = (
     generatedContent: '',
     generateError: null,
     aiGenerationRecords: [],
-    aiGenerationRecordFilePath: null,
+    aiGenerationRecordDirectoryPath: null,
     aiGenerationRecordsError: null,
 
     // 优化状态
@@ -141,11 +271,71 @@ export const createAiSlice = (
 
     // 配置 actions
     setAiConfig: (config: AiConfig | null) => {
-      saveAiConfig(config);
-      set({
-        aiConfig: config,
-        isAiConfigured: !!config?.apiKey && !!config?.model,
+      set((state) => {
+        if (!config) {
+          const emptyAssignments = normalizeAssignments([]);
+          saveAiSettings([], emptyAssignments);
+          return buildAiConfigState([], emptyAssignments);
+        }
+
+        const now = new Date().toISOString();
+        const existingGenerateConfigId = state.aiTaskAssignments.generate ?? state.aiConfigs[0]?.id ?? 'ai-config-default';
+        const existingConfig = state.aiConfigs.find((item) => item.id === existingGenerateConfigId);
+        const nextConfig: AiConfigProfile = {
+          ...config,
+          id: existingGenerateConfigId,
+          name: existingConfig?.name ?? '默认配置',
+          createdAt: existingConfig?.createdAt ?? now,
+          updatedAt: now,
+        };
+        const otherConfigs = state.aiConfigs.filter((item) => item.id !== existingGenerateConfigId);
+        const nextConfigs = [nextConfig, ...otherConfigs];
+        const nextAssignments = normalizeAssignments(nextConfigs, {
+          ...state.aiTaskAssignments,
+          generate: nextConfig.id,
+        });
+        saveAiSettings(nextConfigs, nextAssignments);
+        return buildAiConfigState(nextConfigs, nextAssignments);
       });
+    },
+
+    upsertAiConfigProfile: (config: AiConfigProfile) =>
+      set((state) => {
+        const exists = state.aiConfigs.some((item) => item.id === config.id);
+        const nextConfigs = exists
+          ? state.aiConfigs.map((item) => (item.id === config.id ? config : item))
+          : [...state.aiConfigs, config];
+        const nextAssignments = normalizeAssignments(nextConfigs, state.aiTaskAssignments);
+        saveAiSettings(nextConfigs, nextAssignments);
+        return buildAiConfigState(nextConfigs, nextAssignments);
+      }),
+
+    deleteAiConfigProfile: (configId: string) =>
+      set((state) => {
+        const nextConfigs = state.aiConfigs.filter((config) => config.id !== configId);
+        const nextAssignments = normalizeAssignments(nextConfigs, state.aiTaskAssignments);
+        saveAiSettings(nextConfigs, nextAssignments);
+        return buildAiConfigState(nextConfigs, nextAssignments);
+      }),
+
+    setAiTaskConfigAssignment: (taskType: AiTaskType, configId: string | null) =>
+      set((state) => {
+        const nextAssignments = normalizeAssignments(state.aiConfigs, {
+          ...state.aiTaskAssignments,
+          [taskType]: configId,
+        });
+        saveAiSettings(state.aiConfigs, nextAssignments);
+        return buildAiConfigState(state.aiConfigs, nextAssignments);
+      }),
+
+    getAiConfigForTask: (taskType: AiTaskType) => {
+      const state = get();
+      return findConfigForTask(state.aiConfigs, state.aiTaskAssignments, taskType);
+    },
+
+    isAiTaskConfigured: (taskType: AiTaskType) => {
+      const state = get();
+      return findConfigForTask(state.aiConfigs, state.aiTaskAssignments, taskType) !== null;
     },
 
     // 面板 actions
@@ -172,9 +362,9 @@ export const createAiSlice = (
 
     clearGeneratedContent: () => set({ generatedContent: '', generateError: null }),
 
-    setAiGenerationRecordFile: (payload) =>
+    setAiGenerationRecordDirectory: (payload) =>
       set({
-        aiGenerationRecordFilePath: payload.recordFilePath,
+        aiGenerationRecordDirectoryPath: payload.recordDirectoryPath,
         aiGenerationRecords: payload.records,
         aiGenerationRecordsError: null,
       }),

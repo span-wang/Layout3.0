@@ -19,6 +19,7 @@ import {
   resolveTableColumnWidths,
   resolveTableRowHeightPx,
   serializeLayoutProjectFile,
+  shouldHideLayoutListItemMarker,
   toggleTextMarkOnBlock,
   updateLayoutImageAttributes,
   updateTableColumnAlignByCell,
@@ -28,6 +29,7 @@ import {
   updateTableStructureByCell,
   type LayoutFontResource,
   type LayoutBlock,
+  type SyntaxMappingConfig,
 } from '../src/engine/document-model/index.ts';
 import { textFontFamilyGroups } from '../src/constants/fontFamilies.ts';
 import { renderEquationToHtml, renderInlineEquationToHtml, splitInlineEquations } from '../src/engine/document-model/equation';
@@ -98,6 +100,76 @@ async function main(): Promise<void> {
   assert(document.blocks.some((block) => block.type === 'image'), 'M2 冒烟失败：Markdown 未导入图片块');
   assert(document.blocks.some((block) => block.type === 'equation'), 'M2 冒烟失败：Markdown 未导入公式块');
   assert(document.blocks.some((block) => block.type === 'list'), 'M2 冒烟失败：Markdown 未导入列表块');
+
+  const customSyntaxMappingConfig: SyntaxMappingConfig = {
+    version: '1.0.0',
+    textMarkMappings: [
+      {
+        id: 'textmark-smoke-double-equals',
+        name: '冒烟自定义等号映射',
+        enabled: true,
+        pattern: '==(.+?)==',
+        markType: 'underline',
+        description: '将 ==text== 映射为下划线文本',
+      },
+    ],
+    blockCommandMappings: [],
+  };
+  const customSyntaxDocument = await createLayoutDocumentFromMarkdown(
+    '这是 ==重点== 文本',
+    customSyntaxMappingConfig,
+  );
+  const customSyntaxParagraph = customSyntaxDocument.blocks.find(
+    (block) => block.type === 'paragraph' && block.metadata.kind === 'paragraph',
+  );
+  assert(
+    customSyntaxParagraph?.textRuns.some((run) =>
+      run.text === '重点' && run.marks.some((mark) => mark.type === 'underline'),
+    ),
+    'M2 冒烟失败：自定义语法映射没有在 Markdown 导入时生效',
+  );
+  const customSyntaxProjectFile = serializeLayoutProjectFile({
+    document: customSyntaxDocument,
+    styleSettings: defaultStyleSettings,
+  });
+  const reopenedCustomSyntaxDocument = parseLayoutProjectFile(customSyntaxProjectFile).document;
+  assert(
+    reopenedCustomSyntaxDocument.meta.syntaxMappingConfig?.textMarkMappings.some(
+      (mapping) => mapping.id === 'textmark-smoke-double-equals',
+    ) &&
+      reopenedCustomSyntaxDocument.meta.syntaxMappingConfig.textMarkMappings.some(
+        (mapping) => mapping.id === 'md-underline',
+      ),
+    'M2 冒烟失败：自定义语法映射保存重开后没有和默认规则一起恢复显示',
+  );
+  const legacySyntaxProjectFile = JSON.stringify(
+    {
+      kind: 'layout-project',
+      version: '1.0.0',
+      savedAt: '2026-06-28T00:00:00.000Z',
+      document: {
+        ...customSyntaxDocument,
+        meta: {
+          ...customSyntaxDocument.meta,
+          syntaxMappingConfig: undefined,
+        },
+        metadata: {
+          syntaxMappingConfig: customSyntaxMappingConfig,
+        },
+      },
+      styleSettings: defaultStyleSettings,
+    },
+    null,
+    2,
+  );
+  const migratedLegacySyntaxDocument = parseLayoutProjectFile(legacySyntaxProjectFile).document;
+  assert(
+    migratedLegacySyntaxDocument.meta.syntaxMappingConfig?.textMarkMappings.some(
+      (mapping) => mapping.id === 'textmark-smoke-double-equals',
+    ) &&
+      (migratedLegacySyntaxDocument as { metadata?: unknown }).metadata === undefined,
+    'M2 冒烟失败：旧 metadata.syntaxMappingConfig 没有迁移到 meta.syntaxMappingConfig',
+  );
 
   const importedFontResource: LayoutFontResource = {
     id: 'font-resource-m2-smoke',
@@ -678,8 +750,18 @@ async function main(): Promise<void> {
   );
   const equationRenderResult = renderEquationToHtml(insertedEquationBlock.metadata.value);
   assert(
-    equationRenderResult.error === null && equationRenderResult.html.includes('<math'),
+    equationRenderResult.error === null &&
+      equationRenderResult.html.includes('katex-html') &&
+      equationRenderResult.html.includes('katex-mathml'),
     'M2 冒烟失败：块级公式没有成功渲染为可视化 HTML',
+  );
+  const radicalEquationRenderResult = renderEquationToHtml('x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}');
+  assert(
+    radicalEquationRenderResult.error === null &&
+      radicalEquationRenderResult.html.includes('katex-html') &&
+      radicalEquationRenderResult.html.includes('katex-mathml') &&
+      radicalEquationRenderResult.html.includes('<svg'),
+    'M2 冒烟失败：根号公式没有使用 KaTeX HTML/SVG 视觉渲染',
   );
   const invalidEquationRenderResult = renderEquationToHtml('\\frac{');
   assert(
@@ -705,7 +787,7 @@ async function main(): Promise<void> {
     );
     const rendered = renderInlineEquationToHtml(test.input);
     assert(
-      rendered.length > 0 && !rendered.startsWith('$'),
+      rendered.includes('katex-html') && rendered.includes('katex-mathml') && !rendered.startsWith('$'),
       `M2 冒烟失败：行内公式 "${test.input}" 渲染结果不符合预期`,
     );
   }
@@ -718,6 +800,18 @@ async function main(): Promise<void> {
   assert(mixedFragments[1].type === 'equation' && mixedFragments[1].content === 'E = mc^2', 'M2 冒烟失败：混合文本第二段应为公式');
   assert(mixedFragments[2].type === 'text' && mixedFragments[2].content === '，能量与质量成正比。', 'M2 冒烟失败：混合文本第三段应为普通文字');
 
+  const smokeBlockSpacing = {
+    ...defaultStyleSettings.blockSpacing,
+    heading2SpaceBefore: 30,
+    paragraphSpaceAfter: 26,
+    listItemGap: 11,
+    codePaddingX: 22,
+    codePaddingY: 18,
+    tableCellPaddingY: 14,
+    imageSpaceAfter: 28,
+    textInsetLeft: 12,
+    textInsetRight: 10,
+  };
   const styleSettings = cloneStyleSettings({
     ...defaultStyleSettings,
     templateId: 'lecture',
@@ -729,6 +823,16 @@ async function main(): Promise<void> {
       left: 16,
     },
     paginationAlgorithmId: ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
+    blockSpacingPresetId: 'm2-smoke-spacing',
+    blockSpacing: smokeBlockSpacing,
+    customBlockSpacingPresets: [
+      {
+        id: 'm2-smoke-spacing',
+        name: 'M2 冒烟排版',
+        description: '验证块排版参数预设保存恢复',
+        parameters: smokeBlockSpacing,
+      },
+    ],
   });
   const serialized = serializeLayoutProjectFile({ document, styleSettings });
   const restoredProject = parseLayoutProjectFile(serialized);
@@ -737,6 +841,13 @@ async function main(): Promise<void> {
   assert(
     restoredProject.styleSettings.paginationAlgorithmId === ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
     'M2 冒烟失败：layout 工程文件没有恢复分页算法选择',
+  );
+  assert(
+    restoredProject.styleSettings.blockSpacingPresetId === 'm2-smoke-spacing' &&
+      restoredProject.styleSettings.customBlockSpacingPresets[0]?.name === 'M2 冒烟排版' &&
+      restoredProject.styleSettings.blockSpacing.paragraphSpaceAfter === 26 &&
+      restoredProject.styleSettings.blockSpacing.codePaddingX === 22,
+    'M2 冒烟失败：layout 工程文件没有恢复块排版参数预设',
   );
   const restoredStyledParagraph = restoredProject.document.blocks.find((block) => block.id === styledParagraph.id);
   assert(
@@ -809,6 +920,48 @@ async function main(): Promise<void> {
 
   const contract = resolveStyleContract(restoredProject.styleSettings);
   assert(contract.templateLabel.includes('讲义'), 'M2 冒烟失败：模板设置没有进入样式契约');
+  assert(
+    contract.blockStyles.heading2.marginTop === 30 &&
+      contract.blockStyles.paragraph.marginBottom === 26 &&
+      contract.blockStyles.paragraph.insetLeft === 12 &&
+      contract.blockStyles.paragraph.insetRight === 10 &&
+      contract.blockStyles.list.itemGap === 11 &&
+      contract.blockStyles.code.paddingX === 22 &&
+      contract.blockStyles.code.paddingY === 18 &&
+      contract.blockStyles.table.cellPaddingY === 14 &&
+      contract.blockStyles.image.marginBottom === 28,
+    'M2 冒烟失败：块排版参数没有进入样式契约',
+  );
+
+  useAppStore.getState().replaceStyleSettings(defaultStyleSettings);
+  useAppStore.getState().applyBlockSpacingPreset('compact');
+  assert(
+    useAppStore.getState().styleSettings.blockSpacing.listItemGap === 4,
+    'M2 冒烟失败：内置块排版预设没有应用到 store',
+  );
+  useAppStore.getState().setBlockSpacingParameter('paragraphSpaceAfter', 31);
+  const smokePresetId = useAppStore.getState().addBlockSpacingPreset({
+    name: '冒烟预设',
+    description: '用于验证自定义块排版预设',
+  });
+  useAppStore.getState().setBlockSpacingParameter('paragraphSpaceAfter', 36);
+  useAppStore.getState().updateBlockSpacingPreset({
+    presetId: smokePresetId,
+    name: '冒烟预设重命名',
+    description: '描述已更新',
+    parameters: useAppStore.getState().styleSettings.blockSpacing,
+  });
+  useAppStore.getState().applyBlockSpacingPreset(smokePresetId);
+  assert(
+    useAppStore.getState().styleSettings.blockSpacing.paragraphSpaceAfter === 36 &&
+      useAppStore.getState().styleSettings.customBlockSpacingPresets.some(
+        (preset) =>
+          preset.id === smokePresetId &&
+          preset.name === '冒烟预设重命名' &&
+          preset.description === '描述已更新',
+      ),
+    'M2 冒烟失败：自定义块排版预设没有正确新增、重命名、更新参数或应用',
+  );
   const pages = paginateBlocks(restoredProject.document.blocks, contract, {
     algorithmId: restoredProject.styleSettings.paginationAlgorithmId,
     styles: restoredProject.document.styles,
@@ -866,6 +1019,11 @@ async function main(): Promise<void> {
     'padding-left:36px',
     'padding-right:18px',
     'text-indent:16px',
+    '--page-heading2-margin-top:30px',
+    '--page-paragraph-margin-bottom:26px',
+    '--page-paragraph-inset-left:12px',
+    '--page-code-padding-x:22px',
+    '--page-table-cell-padding-y:14px',
     '<th',
     'width:180px',
     'height:58px',
@@ -1769,6 +1927,108 @@ async function main(): Promise<void> {
       (block) => block.metadata.kind === 'list' && block.metadata.start !== null && block.metadata.start >= 3,
     ),
     'M2 冒烟失败：分页测试算法1列表项内部拆分后有序列表起始编号异常',
+  );
+  const longListItemHiddenMarkerCount = longListItemPieces.filter((item) =>
+    shouldHideLayoutListItemMarker(item),
+  ).length;
+  const firstLongListItemPiece = longListItemPieces[0];
+  assert(firstLongListItemPiece, 'M2 冒烟失败：分页测试算法1列表项内部拆分后缺少首页片段');
+  assert(
+    !shouldHideLayoutListItemMarker(firstLongListItemPiece) &&
+      longListItemHiddenMarkerCount === longListItemPieces.length - 1,
+    'M2 冒烟失败：分页测试算法1列表项续页片段没有正确标记隐藏列表符号',
+  );
+  const longListItemExportHtml = buildExportHtml({
+    pages: maxFillLongListItemPages,
+    title: '列表项续页符号验证',
+  });
+  const longListItemHiddenMarkerHtmlCount =
+    longListItemExportHtml.match(/data-list-marker-hidden="true"/g)?.length ?? 0;
+  assert(
+    longListItemHiddenMarkerHtmlCount === longListItemHiddenMarkerCount,
+    'M2 冒烟失败：导出 HTML 没有同步隐藏列表项续页符号',
+  );
+  assert(
+    !longListItemExportHtml.includes('data-list-marker-hidden="true"><span class="task-list-checkbox"'),
+    'M2 冒烟失败：任务列表项续页不应重复显示勾选框',
+  );
+
+  const measuredLineBreakListItemText =
+    '核心原则：按章节顺序精学，不跳重点；每学完一章做对应章节练习题（客观题+简单计算题）；整理笔记和错题本。';
+  const measuredLineBreakListItemId = 'm2-max-fill-measured-line-break-list-item-1';
+  const measuredLineBreakSplitOffset =
+    measuredLineBreakListItemText.indexOf('简单计算题') + '简单计算题'.length;
+  const maxFillMeasuredLineBreakListBlock: LayoutBlock = {
+    id: 'm2-max-fill-measured-line-break-list',
+    type: 'list',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'list',
+      ordered: true,
+      start: 1,
+      spread: false,
+      items: [
+        {
+          id: measuredLineBreakListItemId,
+          sourceRange: null,
+          textRuns: [
+            {
+              id: 'm2-max-fill-measured-line-break-list-run-1',
+              text: measuredLineBreakListItemText,
+              sourceRange: null,
+              marks: [],
+              charStyleRef: null,
+              styleOverrides: {},
+              annotations: [],
+            },
+          ],
+          level: 1,
+          checked: null,
+        },
+      ],
+    },
+  };
+  const maxFillMeasuredLineBreakPages = paginateBlocks(
+    [maxFillMeasuredLineBreakListBlock],
+    {
+      ...tinyListContract,
+      contentHeightPx: 24,
+      contentWidthPx: 656,
+    },
+    {
+      algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+      measuredTextLineBreaks: {
+        [measuredLineBreakListItemId]: [
+          measuredLineBreakSplitOffset,
+          measuredLineBreakListItemText.length,
+        ],
+      },
+    },
+  );
+  const measuredLineBreakListFragments = maxFillMeasuredLineBreakPages
+    .flatMap((page) => page.blocks)
+    .filter((block) => block.type === 'list' && block.metadata.kind === 'list');
+  const measuredLineBreakFirstText = measuredLineBreakListFragments[0]?.metadata.kind === 'list'
+    ? measuredLineBreakListFragments[0].metadata.items[0]?.textRuns.map((run) => run.text).join('')
+    : '';
+  const measuredLineBreakSecondText = measuredLineBreakListFragments[1]?.metadata.kind === 'list'
+    ? measuredLineBreakListFragments[1].metadata.items[0]?.textRuns.map((run) => run.text).join('')
+    : '';
+  assert(
+    measuredLineBreakListFragments.length === 2 &&
+      measuredLineBreakFirstText.endsWith('简单计算题') &&
+      measuredLineBreakSecondText.startsWith('）；') &&
+      !measuredLineBreakFirstText.endsWith('简单计算') &&
+      !measuredLineBreakSecondText.startsWith('题）'),
+    'M2 冒烟失败：分页测试算法1没有优先使用真实换行测量，仍把“简单计算题”拆成“简单计算 / 题”',
   );
 
   const maxFillTableIntroBlock: LayoutBlock = {

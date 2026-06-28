@@ -5625,6 +5625,554 @@
         "progress/logs.json"
       ],
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可重新用分页测试算法1查看截图中的学习计划列表项，确认“初步印象。”不再被单独拆到第二页。"
+    },
+    {
+      "id": "LOG-229",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1列表项续页隐藏列表符号修复边界",
+      "action": "方案确认/风险同步/准备修复",
+      "result": "用户反馈列表块分块后不要在第二页显式显示列表符号，并确认继续执行。本步纳入：修复分页测试算法1把同一个长列表项拆到下一页后续页片段仍显示 `1.`、项目符号或任务勾选框的问题；画布预览和 HTML/PDF 导出共用同一运行时标记；补充 `smoke:m2` 回归。本步明确不纳入孤寡行完整控制、真实 DOM 行级测量、默认算法替换、分页引擎重写或 `.layout` 结构变更。",
+      "verification": [
+        "用户已确认执行列表项续页隐藏列表符号修复。",
+        "`PH2-09` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-005` 已同步说明本次仍是用户确认的分页单点缺陷例外，不代表分页算法主线恢复推进。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修复列表项续页 marker 渲染并补充冒烟验证。"
+    },
+    {
+      "id": "LOG-230",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1列表项续页隐藏列表符号修复",
+      "action": "修复/验证/文档同步",
+      "result": "已完成列表项续页 marker 修复：分页测试算法1在拆分同一个长列表项时，会给后续运行时片段标记 `runtimePagination.hideMarker`；画布预览和 HTML/PDF 导出会消费该标记，隐藏续页片段的有序编号、无序项目符号和任务勾选框，同时保留真正跨页的不同列表项续编号。该标记只存在于运行时分页结果，不写回原始 `.layout` 文档模型。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖同一长列表项续页不重复显示列表符号的回归。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/utils.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可重新用分页测试算法1查看列表块跨页结果，确认第二页续文不再重复显示 `1.` 或列表符号。"
+    },
+    {
+      "id": "LOG-231",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认画布块内文字反向拖选修复边界",
+      "action": "方案确认/风险同步/准备修复",
+      "result": "用户反馈块内文字选择时只能从前往后选，不能从后往前选，并确认按最小方案修复。本步纳入：修复标题、段落、代码块、列表项、表格单元格原位富文本编辑态中的反向拖选；调整 `CanvasPane` 富文本选区恢复时机，避免拖选过程中反复重置浏览器 DOM 选区；保持正向拖选、键盘选区、浮动工具条定位和样式写回链路不回退。本步明确不纳入跨块选择、表格范围选择、图片、公式、目录、分页算法、新样式功能或 `.layout` 结构变更。",
+      "verification": [
+        "用户已确认执行块内文字反向拖选修复。",
+        "`PH2-06` 已临时标记为 `进行中`，并在 `knownIssues` 中写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-011` 已记录该交互缺陷的影响范围和当前处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修复 `CanvasPane` 富文本选区恢复逻辑并运行验证。"
+    },
+    {
+      "id": "LOG-232",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成画布块内文字反向拖选修复",
+      "action": "修复/验证/文档同步",
+      "result": "已完成画布块内文字反向拖选修复：`CanvasPane` 富文本编辑器进入编辑时仍会聚焦并保护滚动，但不再随着 `editingSelection` 每次变化调用 `restoreRichSelection`，避免用户从后往前拖选时被程序化选区恢复打断。需要重写富文本 DOM 后恢复选区的场景仍保留在 `RichTextCanvasEditor` 自身同步逻辑中，因此浮动工具条、样式写回和外部样式应用后的选区保持能力不回退。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可在画布中双击文本块进入编辑态后，从文字后方向前拖选做人工确认。"
+    },
+    {
+      "id": "LOG-233",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI 生成记录按文件拆分存储边界",
+      "action": "方案确认/范围调整/准备修复",
+      "result": "用户确认 AI 生成记录不要继续全部放到单个 `records.json` 中，改为写入 `AI生成记录/` 文件夹下的一条记录一个 JSON 文件。本步纳入：AI 生成成功后创建独立记录文件，记录列表从文件夹读取并按生成时间排序，删除单条记录删除对应文件，清空全部删除记录文件夹内的记录文件；同时兼容旧 `AI生成记录/records.json`，读取时拆分为多个独立文件，拆分成功后删除旧聚合文件，避免继续留下超大文件。本步明确不纳入搜索、标签、收藏、导出、优化/检查历史、AI 请求链路、模型配置或 `.layout` 结构调整。",
+      "verification": [
+        "用户已确认执行 AI 生成记录按文件拆分存储方案。",
+        "`PH3-01` 已临时标记为 `进行中`，并在 `knownIssues` 中写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-012` 已记录该存储结构范围调整的原因、影响范围和当前处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修改 AI 生成记录 IPC、前端类型与展示文案。"
+    },
+    {
+      "id": "LOG-234",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI 生成记录按文件拆分存储",
+      "action": "修复/迁移兼容/验证/文档同步",
+      "result": "已完成 AI 生成记录存储方式调整：主进程记录 IPC 不再把所有记录写入单个 `records.json`，而是扫描、创建、删除 `AI生成记录/` 文件夹下的独立记录 JSON 文件；每个记录文件保存 `version` 和单条 `record`。读取记录时会先检查旧 `AI生成记录/records.json`，将旧记录拆分写入独立文件，拆分成功后删除旧聚合文件；同 ID 已存在的新记录文件不会被旧文件覆盖。左侧“AI生成记录”面板继续支持刷新、查看、恢复到结果区、插入当前文档、删除单条和清空全部，并将展示文案改为记录文件夹路径。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "electron/main/ai-record-handlers.ts",
+        "electron/preload/index.ts",
+        "src/types/ai.ts",
+        "src/services/AiGenerationRecordService.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/components/ai/AiGenerationRecordsPanel.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "用户可完成一次 AI 生成后，在工作区 `AI生成记录/` 文件夹中看到独立 JSON 记录文件；如果已有旧 `records.json`，打开 AI 生成记录列表时会自动拆分迁移。"
+    },
+    {
+      "id": "LOG-235",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1真实换行测量分割返工边界",
+      "action": "方案确认/返工登记/风险同步",
+      "result": "用户确认当前分页测试算法1页尾误拆不是“孤字保护”问题，而是算法最后一行分割点仍依赖字符宽度估算；字体、字号、字重、字体回退和列表缩进变化后估算会与真实浏览器换行偏离，出现最后一行明明还有空间却把“题”等字符切到下一页。本步纳入：在隐藏测量层补充段落、标题和列表项真实换行位置测量，算法1切分文本块或列表项时优先使用真实行尾索引，缺少测量结果时才回退估算；补充“简单计算题”页尾误拆回归。本步明确不纳入孤寡行完整控制、默认算法替换、分页引擎重写、页面前缀复用型脏区重排或 `.layout` 结构变更。",
+      "verification": [
+        "用户已确认执行真实换行测量优先的分页测试算法1返工方案。",
+        "`PH2-09` 已临时标记为 `进行中`，并写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-005` 已同步说明本次是用户确认的缺陷返工，不代表分页算法主线默认恢复推进。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现隐藏测量层真实换行索引与算法1优先使用真实行尾分割。"
+    },
+    {
+      "id": "LOG-236",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认语法映射 AI 正则识别 V1 边界",
+      "action": "方案确认/边界登记/准备开发",
+      "result": "用户确认在现有「语法映射」面板中新增 AI 识别正则能力。本步纳入：在面板中新增 AI 识别入口，用户输入示例语法并选择目标文本样式后，由 AI 返回映射名称、正则表达式和说明；前端校验正则有效且包含捕获组；识别结果先预览，用户确认采用后加入文本标记映射；同时补齐语法映射配置传入当前文档与写回当前 `.layout` 文档的链路，并修复配置变更可能通知旧状态的问题。本步明确不纳入块级指令 AI 识别、映射冲突检测、优先级自动排序、全文自动扫描、多条规则推荐、AI Provider 配置调整、分页算法或导出引擎修改。",
+      "verification": [
+        "用户已确认执行语法映射 AI 正则识别 V1 方案。",
+        "`PH2-13` 已临时标记为 `进行中`，并在 `parallelExecutionBoundaries` 中写回本步纳入、本步明确不纳入和后续归属任务。",
+        "本步已说明对分页算法无直接修改；新增规则只会通过既有样式解析与测量链路间接影响分页结果。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现 `SyntaxMappingPanel`、AI 服务正则识别方法、文档配置写回和验证。"
+    },
+    {
+      "id": "LOG-237",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1真实换行测量分割返工",
+      "action": "修复/验证/文档同步",
+      "result": "已完成分页测试算法1页尾分割点返工：`CanvasPane` 隐藏测量层在测量顶层块高的同时，会按真实 DOM Range rect 统计段落、标题、列表项和表格单元格的每条视觉行结束字符索引，并按块内容、TextRun 样式、文档样式和页面契约缓存；`usePagination` 与分页入口新增运行时 `measuredTextLineBreaks` 通道；`max-fill-v1` 在切分文本块、列表项和表格单元格时优先使用真实行尾索引，缺少测量时才回退估算。新增 `smoke:m2` 回归覆盖“简单计算题”不再被拆成“简单计算 / 题）...”。完成后 `PH2-09` 恢复暂缓，不继续默认推进分页算法主线。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖真实换行测量分割回归。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/hooks/usePagination.ts",
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/index.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可刷新应用后用分页测试算法1重新检查截图中的“简单计算题”页尾分割点。"
+    },
+    {
+      "id": "LOG-238",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成语法映射 AI 正则识别 V1",
+      "action": "功能增强/写回链路修复/验证/文档同步",
+      "result": "已完成语法映射 AI 正则识别 V1：1) `AiService` 新增 `recognizeTextMarkRegex`，复用现有 AI 配置和主进程请求链路，要求 AI 返回结构化 JSON，并校验正则有效、包含捕获组且能匹配用户示例；2) `SyntaxMappingPanel` 新增「AI 识别正则」入口，用户输入示例语法并选择目标样式后可获得候选规则，点击「采用此规则」后再加入文本标记映射；3) 手动新增文本标记映射也补充捕获组校验；4) 右侧语法映射面板已接入当前 `LayoutDocument.meta.syntaxMappingConfig`，配置变更写回当前 `.layout` 文档、进入撤销栈并标记未保存；5) 修复原面板新增、启用、删除、重置规则时可能通知旧状态的问题；6) 配置化文本标记正则在 Remark 解析中统一带全局标志，避免普通配置正则重复命中同一位置。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项。",
+        "`npm run build` 成功。",
+        "本地解析验证成功：自定义配置 `==(.+?)==` 可将 `这是 ==重点== 文本` 解析为下划线 TextMark。"
+      ],
+      "affectedFiles": [
+        "src/services/AiService.ts",
+        "src/components/settings/SyntaxMappingPanel.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/engine/document-model/syntaxMappingConfig.ts",
+        "src/engine/parser/remark.ts",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "用户可在「语法映射」面板输入示例语法并使用 AI 生成候选正则；后续块级指令 AI 识别、映射冲突检测和全文自动推荐继续归属 `PH2-13` 增强。"
+    },
+    {
+      "id": "LOG-239",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH3-08"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI 多配置与任务功能分配 V1 边界",
+      "action": "方案确认/边界登记/准备开发",
+      "result": "用户确认 AI 设置需要支持添加多套 AI 配置，并能为不同 AI 功能分配不同配置。本步纳入：扩展 AI 类型与 store 状态，支持多条 AI 配置、任务功能分配和旧单配置自动迁移；AI 设置页新增配置列表、添加、编辑、删除、测试连接、拉取模型和任务功能分配；生成、优化、检查、语法映射 AI 正则识别调用时读取对应任务分配的配置。本步明确不纳入 API Key 加密、系统凭据存储、云同步、团队共享、提示词模板管理、费用统计、优化/检查历史、命令面板或分页/导出/`.layout` 结构调整。",
+      "verification": [
+        "用户已确认执行 AI 多配置与任务功能分配 V1。",
+        "`PH3-08` 已新增并标记为 `进行中`，executionBoundary 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-013` 已记录单配置升级到多配置的迁移风险与当前处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现多配置类型、store 迁移、设置页管理界面和四类 AI 功能的配置分配调用。"
+    },
+    {
+      "id": "LOG-240",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 AI 正则识别 JSON 容错修复 V1 边界",
+      "action": "缺陷确认/边界登记/风险同步/准备修复",
+      "result": "用户在「AI 识别正则」中输入 `$ \\underline{\\text{文字}} $` 后触发“AI 返回内容不是有效 JSON”的错误，并确认按小修复处理。本步纳入：增强 AI 正则识别结果解析，兼容非严格 JSON、Markdown 包裹和反斜杠未完整转义的正则内容；对用户示例中的外层 `$...$` 做识别前规范化；补充 `$ \\underline{\\text{文字}} $` 本地回归验证；改进错误提示，区分返回结构不可解析、正则无效、缺少捕获组和无法匹配示例。本步明确不纳入 AI Provider 配置、模型配置、API Key 存储、多配置任务分配、块级指令 AI 识别、公式解析重做、映射冲突检测或分页算法修改。",
+      "verification": [
+        "用户已确认执行 AI 正则识别 JSON 容错修复 V1。",
+        "`PH2-13` 已临时标记为 `进行中`，并在 `parallelExecutionBoundaries` 中写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-014` 已登记该 AI 返回解析缺陷的影响范围与处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修复 `AiService` 的 AI 正则识别返回解析与 LaTeX 示例规范化。"
+    },
+    {
+      "id": "LOG-241",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH3-08"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI 多配置与任务功能分配 V1",
+      "action": "功能增强/迁移兼容/验证/文档同步",
+      "result": "已完成 AI 多配置与任务功能分配 V1：1) 新增 AI 配置档案类型、任务功能分配类型与 store 状态，支持多条本机配置、旧单配置自动迁移为“默认配置”，并默认分配给所有任务；2) AI 设置页改为配置列表 + 编辑表单 + 任务功能分配，可添加、编辑、删除、测试连接和拉取模型；3) 内容生成、文本优化、文档检查和语法映射 AI 正则识别已分别按任务分配读取配置；4) AI 生成记录继续只记录 Provider 和模型，不记录 API Key；5) 补齐多配置设置页样式并保持中文界面文案。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/store/index.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/components/ai/AiSettings.tsx",
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/components/ai/AiOptimizeTab.tsx",
+        "src/components/ai/AiCheckTab.tsx",
+        "src/components/settings/SyntaxMappingPanel.tsx",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可在「AI助手-设置」中保存多套配置，并分别分配给内容生成、文本优化、文档检查和 AI 正则识别。"
+    },
+    {
+      "id": "LOG-242",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 AI 正则识别 JSON 容错修复 V1",
+      "action": "缺陷修复/解析容错/回归验证/文档同步",
+      "result": "已完成 AI 正则识别 JSON 容错修复 V1：1) `AiService` 的正则识别结果解析改为先尝试严格 JSON，失败后从非严格 JSON 或 Markdown 包裹文本中提取 `name`、`pattern`、`description`；2) 对 AI 返回的 pattern 增加反斜杠候选修复、JSON 风格反斜杠折叠和常见 LaTeX 命令修复，避免 `\\underline`、`\\text`、`\\{`、`\\$` 直接导致不可用；3) `$...$` 示例会额外提取核心 LaTeX 示例提示给 AI，并在必要时生成可匹配外层美元符号的候选正则；4) `remark-text-marks` 增加 `inlineMath` 命中语法映射时转入 TextMark 的最小口径，普通未命中公式仍保持原样；5) 已验证 `$ \\underline{\\text{文字}} $` 可解析为下划线 TextMark。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "本地回归验证成功：模拟 AI 返回非严格 JSON 后，`$ \\underline{\\text{文字}} $` 生成的候选规则可将 `文字` 解析为 `underline` TextMark。",
+        "本地反向验证成功：普通公式 `$x^2$` 未命中语法映射时仍保持无 TextMark 的公式文本。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/services/AiService.ts",
+        "src/engine/parser/remark-text-marks.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可重新在「AI 识别正则」中输入 `$ \\underline{\\text{文字}} $` 验证候选规则。"
+    },
+    {
+      "id": "LOG-243",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认自定义映射重开后显示修复边界",
+      "action": "缺陷确认/边界登记/风险同步/准备修复",
+      "result": "用户反馈自定义语法映射重新打开文件后不在「语法映射」面板显示，但映射效果仍然存在，并确认按小修复处理。本步纳入：语法映射配置规范化，打开文件、恢复草稿、新建空白文档和写回配置时保证 `LayoutDocument.meta.syntaxMappingConfig` 稳定；兼容历史 `LayoutDocument.metadata.syntaxMappingConfig`；合并默认映射和自定义映射；补充保存后重新解析 `.layout` 的本地回归验证。本步明确不纳入从已解析样式反推原始正则、块级指令 AI 识别、映射冲突检测、优先级自动排序、AI Provider 配置、分页算法、导出引擎或 `.layout` 主结构版本修改。",
+      "verification": [
+        "用户已确认执行自定义映射重开后显示修复方案。",
+        "`PH2-13` 已临时标记为 `进行中`，并在 `parallelExecutionBoundaries` 中写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-015` 已登记该配置恢复缺陷的影响范围与处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现语法映射配置规范化、旧字段兼容和保存重开回归验证。"
+    },
+    {
+      "id": "LOG-244",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-13"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成自定义映射重开后显示修复 V1",
+      "action": "缺陷修复/迁移兼容/回归验证/文档同步",
+      "result": "已完成自定义映射重开后显示修复 V1：1) `syntaxMappingConfig` 新增配置规范化和文档级迁移函数，默认映射会补齐，自定义映射会保留，非法旧配置会被安全跳过；2) 新建文档、Markdown 导入、`.layout` 保存序列化、`.layout` 打开解析、草稿恢复、store 写回和 `SyntaxMappingPanel` 展示入口已统一使用规范化配置；3) 历史误写到 `LayoutDocument.metadata.syntaxMappingConfig` 的配置会在打开时迁移到 `LayoutDocument.meta.syntaxMappingConfig`，并从保存结果中移除旧 `metadata` 字段；4) `smoke:m2` 新增保存重开自定义 `==(.+?)==` 映射和旧字段迁移回归。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖自定义映射保存重开与旧字段迁移。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/syntaxMappingConfig.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/projectFile.ts",
+        "src/engine/parser/remark.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/settings/SyntaxMappingPanel.tsx",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可新增一条自定义映射、保存 `.layout`、重新打开后确认该规则仍显示在「语法映射」面板。"
+    },
+    {
+      "id": "LOG-245",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-15"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认块排版参数预设 V1 开发边界",
+      "action": "需求确认/边界登记/准备实现",
+      "result": "用户确认新增块排版参数调节和自定义预设能力。本步纳入：右侧「页面设置」新增「块排版」入口；调节标题/正文/列表/引用/代码/表格/图片等块前后距、段落左右内缩、列表项间距、代码块内边距、表格单元格内边距；支持将当前参数保存为自定义预设，并可一键应用、命名、重命名、修改参数、添加或修改描述；预设和当前应用参数写入 `StyleSettings` 并随 `.layout` 保存恢复；画布预览、分页估算和 HTML/PDF 导出共同消费同一套样式契约。本步明确不纳入完整模板编辑器、样式方案导入导出、图片/公式/目录复杂盒模型、颜色高亮等其他文字样式预设、分页算法重写、真实测量分页或撤销重做体系重构。",
+      "verification": [
+        "用户已确认执行块排版参数预设 V1 方案。",
+        "`PH2-15` 已新增为进行中任务，并在 `executionBoundary` 中写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始扩展 `StyleSettings`、样式契约、右侧面板和 M2 冒烟验证。"
+    },
+    {
+      "id": "LOG-246",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-15"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成块排版参数预设 V1",
+      "action": "功能增强/样式契约/预设管理/回归修复/验证/文档同步",
+      "result": "已完成块排版参数预设 V1：1) `StyleSettings` 新增块排版参数、自定义块排版预设和当前预设 ID，并通过归一化兼容旧 `.layout` 缺字段；2) 样式契约会把全局块前后距、文字块左右内缩、列表项间距、代码块内边距、表格单元格内边距、图片/分隔线前后距注入 `ResolvedStyleContract.blockStyles`；3) 右侧「页面设置」新增「块排版」入口，支持内置预设一键应用，用户可添加自定义预设、重命名、修改描述、把当前参数保存回预设，并直接调节各项像素参数；4) 画布预览、分页估算和 HTML/PDF 导出已共同消费块排版契约；5) 根据用户截图反馈，页面设置二级菜单已改为带中文标签的两列吸顶菜单，避免块排版长面板中只剩横向滚动条或看似消失。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖块排版预设保存恢复、store 应用、自定义预设更新、样式契约生效和导出变量。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/engine/style/resolveContract.ts",
+        "src/engine/style/blockStyleResolution.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/services/exportHtml.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/store/types.ts",
+        "src/types/workspace.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可在「页面设置-块排版」中查看二级菜单和预设管理入口。"
+    },
+    {
+      "id": "LOG-247",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-15"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认页面设置二级菜单显示返修边界",
+      "action": "缺陷反馈/边界登记/准备修复",
+      "result": "用户反馈「页面设置」二级菜单仍未显示，截图中只看到块排版内容区和横向滚动条。本步纳入：修复右侧「页面设置」二级菜单在窄右栏中的可见性，约束菜单与按钮宽度，消除菜单区域横向滚动条，让「页面规格 / 页边距 / 页眉页脚预留 / 块排版 / 模板起点 / 分页策略」入口稳定显示。本步明确不纳入：新增块排版参数、改动预设保存逻辑、改动分页算法、改动导出样式契约、重构右侧面板整体信息架构。后续归属任务：若后续需要把二级菜单改成独立左侧子栏、下拉菜单或可折叠分组，另按 `PH2-15` 或新的 UI 体验任务确认后拆分。",
+      "verification": [
+        "用户截图确认当前可见问题仍存在。",
+        "本步边界已登记到 `progress/logs.json`，后续完成后补充验证结果并生成展示文档。"
+      ],
+      "affectedFiles": [
+        "progress/logs.json"
+      ],
+      "next": "开始最小化修复 `src/styles.css` 中页面设置二级菜单的宽度、盒模型与横向溢出，再运行类型检查、构建和进度校验。"
+    },
+    {
+      "id": "LOG-248",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-15"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成页面设置二级菜单显示返修",
+      "action": "缺陷修复/样式收敛/回归验证/文档同步",
+      "result": "已完成「页面设置」二级菜单显示返修：右侧工作区现在会隐藏横向溢出并只保留纵向滚动；二级菜单、按钮、详情面板和详情卡片补齐 `min-width: 0` 与 `box-sizing: border-box`，避免按钮宽度叠加 padding 后撑出窄右栏；菜单文字在极窄宽度下会省略，不再把二级菜单压成只剩横向滚动条。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/styles.css",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户刷新应用后可在「页面设置」顶部看到两列二级菜单入口。"
+    },
+    {
+      "id": "LOG-249",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认公式根号渲染连续性修复边界",
+      "action": "缺陷反馈/边界登记/准备修复",
+      "result": "用户反馈二次求根公式中的根号渲染有间断、不连续且粗细不一致，并确认按最小缺陷修复处理。本步纳入：定位 KaTeX 当前输出模式，将块级公式、行内公式、右侧预览和 HTML/PDF 导出统一从纯 MathML 视觉输出调整为 KaTeX HTML/CSS 可视输出并保留 MathML 语义；使用二次求根公式做根号连续性回归；运行类型检查和必要冒烟验证。本步明确不纳入：公式编号、题注、公式样式面板、公式编辑器重构、行内公式交互、分页算法调整或 `.layout` 结构变更。",
+      "verification": [
+        "用户已确认执行公式根号渲染连续性修复 V1。",
+        "`PH2-10` 已在并行边界中写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后开始修改公式渲染输出模式并验证根号显示。"
+    },
+    {
+      "id": "LOG-250",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成公式根号渲染连续性修复",
+      "action": "缺陷修复/公式渲染/回归验证/文档同步",
+      "result": "已完成公式根号渲染连续性修复：`renderEquationToHtml` 和 `renderInlineEquationToHtml` 统一从纯 `mathml` 输出切换为 KaTeX `htmlAndMathml` 输出，使块级公式、行内公式、右侧公式预览和 HTML/PDF 导出都使用 KaTeX HTML/CSS/SVG 负责视觉渲染，同时保留 MathML 语义。二次求根公式中的根号现在会输出 KaTeX SVG 视觉结构，避免浏览器原生 MathML 绘制造成的根号断裂、间断和粗细不一致。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并新增根号公式必须包含 KaTeX HTML/MathML/SVG 输出的回归。",
+        "本地根号公式渲染检查成功：二次求根公式输出同时包含 `katex-html`、`katex-mathml` 和 `<svg`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/equation.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户刷新应用后可重新查看二次求根公式，确认根号连续且粗细一致。"
     }
   ]
 }

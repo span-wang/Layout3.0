@@ -97,6 +97,10 @@ export interface LayoutListItem {
   // 多级列表先固定支持 1-3 级；旧文档缺字段时按 1 级兼容。
   level?: number;
   checked: boolean | null;
+  // 只给分页运行时片段使用：同一个列表项续到下一页时隐藏重复的编号、符号或任务勾选框。
+  runtimePagination?: {
+    hideMarker?: boolean;
+  };
 }
 
 export interface LayoutTableCell {

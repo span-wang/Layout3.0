@@ -19,11 +19,14 @@ export interface PageLayout {
   warnings: LayoutWarning[];
 }
 
+export type MeasuredTextLineBreaks = Record<string, number[]>;
+
 export interface PaginationAlgorithmContext {
   blocks: LayoutBlock[];
   contract: ResolvedStyleContract;
   styles?: LayoutStyleSheet;
   measuredBlockHeights?: Record<string, number>;
+  measuredTextLineBreaks?: MeasuredTextLineBreaks;
 }
 
 export type RebalanceTrailingBlockStrategy = 'v1' | 'v2';
@@ -39,4 +42,5 @@ export interface PaginateBlocksOptions {
   algorithmId?: PaginationAlgorithmId;
   styles?: LayoutStyleSheet;
   measuredBlockHeights?: Record<string, number>;
+  measuredTextLineBreaks?: MeasuredTextLineBreaks;
 }

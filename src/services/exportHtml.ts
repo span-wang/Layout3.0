@@ -12,6 +12,7 @@ import {
   isImageTextWrapMode,
   buildLayoutListTree,
   getLayoutListItemLevel,
+  shouldHideLayoutListItemMarker,
   resolveTableColumnWidths,
   type LayoutBlock,
   type LayoutStyleSheet,
@@ -29,6 +30,7 @@ import {
   resolveQuickTextStyleForRun,
 } from '@/engine/style/quickTextStyle';
 import {
+  buildPageStyleVariables,
   resolveBlockDefaultTextMetrics,
   resolveBlockEffectiveTextMetrics,
 } from '@/engine/style/blockStyleResolution';
@@ -99,14 +101,19 @@ function buildBlockStyle(
   const indentStyle = supportsBlockIndent ? resolveHangingIndentStyle(block.blockStyleOverrides) : null;
   const textIndent = indentStyle ? indentStyle.textIndent : block.blockStyleOverrides.firstLineIndent;
   const lineHeight = resolveBlockLineHeightStyle(block, contract, styles);
+  const hasLeftIndentOverride =
+    block.blockStyleOverrides.indentLeft !== undefined || block.blockStyleOverrides.hangingIndent !== undefined;
+  const hasRightIndentOverride = block.blockStyleOverrides.indentRight !== undefined;
+  const hasTextIndentOverride =
+    block.blockStyleOverrides.firstLineIndent !== undefined || block.blockStyleOverrides.hangingIndent !== undefined;
   const declarations = [
     block.blockStyleOverrides.textAlign ? `text-align:${block.blockStyleOverrides.textAlign}` : '',
     lineHeight ? `line-height:${lineHeight}px` : '',
     block.blockStyleOverrides.spaceBefore !== undefined ? `margin-top:${block.blockStyleOverrides.spaceBefore}px` : '',
     block.blockStyleOverrides.spaceAfter !== undefined ? `margin-bottom:${block.blockStyleOverrides.spaceAfter}px` : '',
-    indentStyle && indentStyle.paddingLeft > 0 ? `padding-left:${indentStyle.paddingLeft}px` : '',
-    indentStyle && indentStyle.paddingRight > 0 ? `padding-right:${indentStyle.paddingRight}px` : '',
-    textIndent && textIndent !== 0 ? `text-indent:${textIndent}px` : '',
+    indentStyle && hasLeftIndentOverride ? `padding-left:${indentStyle.paddingLeft}px` : '',
+    indentStyle && hasRightIndentOverride ? `padding-right:${indentStyle.paddingRight}px` : '',
+    hasTextIndentOverride && textIndent !== undefined ? `text-indent:${textIndent}px` : '',
     block.blockStyleOverrides.backgroundColor ? `background-color:${block.blockStyleOverrides.backgroundColor}` : '',
   ].filter(Boolean);
 
@@ -185,12 +192,18 @@ function buildTableCellStyle(align: 'left' | 'center' | 'right' | null | undefin
 }
 
 function renderListItemContent(item: LayoutListItem, inheritedStyle = {}): string {
-  const listItemClass = item.checked === null ? '' : ' class="task-list-item"';
+  const shouldHideMarker = shouldHideLayoutListItemMarker(item);
+  const listItemClasses = [
+    item.checked === null ? '' : 'task-list-item',
+    shouldHideMarker ? 'list-item-marker-hidden' : '',
+  ].filter(Boolean);
+  const listItemClass = listItemClasses.length > 0 ? ` class="${listItemClasses.join(' ')}"` : '';
+  const markerHiddenAttribute = shouldHideMarker ? ' data-list-marker-hidden="true"' : '';
   const checkedMark =
-    item.checked === null
+    item.checked === null || shouldHideMarker
       ? ''
       : `<span class="task-list-checkbox">${item.checked ? '☑' : '☐'}</span>`;
-  return `<li${listItemClass} data-list-level="${getLayoutListItemLevel(item)}">${checkedMark}${renderTextRuns(item.textRuns, inheritedStyle)}`;
+  return `<li${listItemClass} data-list-level="${getLayoutListItemLevel(item)}"${markerHiddenAttribute}>${checkedMark}${renderTextRuns(item.textRuns, inheritedStyle)}`;
 }
 
 function renderListTreeNodes(
@@ -405,7 +418,7 @@ function renderPages(pages: PageLayout[], styles?: LayoutStyleSheet): string {
       const bodyParts: string[] = [];
 
       for (let index = 0; index < page.blocks.length; index += 1) {
-        const block = page.blocks[index];
+      const block = page.blocks[index];
         if (block.type === 'toc' && block.metadata.kind === 'toc') {
           const visibleTocItems = getVisibleTocItemsForBlock(block, tocItems);
           const entries =
@@ -425,7 +438,16 @@ function renderPages(pages: PageLayout[], styles?: LayoutStyleSheet): string {
         bodyParts.push(renderBlock(block, styles, page.contract));
       }
 
-      return `<section class="page" style="width:${metrics.pageWidthPx}px;min-height:${metrics.pageHeightPx}px;grid-template-rows:${metrics.headerHeight}px 1fr ${metrics.footerHeight}px;">
+      const pageStyleDeclarations = [
+        ...Object.entries(buildPageStyleVariables(page.contract)).map(([name, value]) => `${name}:${value}`),
+        `--page-padding-left:${metrics.paddingLeft}px`,
+        `--page-padding-right:${metrics.paddingRight}px`,
+        `width:${metrics.pageWidthPx}px`,
+        `min-height:${metrics.pageHeightPx}px`,
+        `grid-template-rows:${metrics.headerHeight}px 1fr ${metrics.footerHeight}px`,
+      ].join(';');
+
+      return `<section class="page" style="${escapeHtml(pageStyleDeclarations)}">
         <header class="page-header">${escapeHtml(pageTitle)}<span>${escapeHtml(page.contract.pageLabel)}</span></header>
         <article class="page-body">${bodyParts.join('')}</article>
         <footer class="page-footer"><span>${escapeHtml(page.contract.templateLabel)}</span><span>${page.pageNumber}</span></footer>
@@ -572,42 +594,70 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
       .page-body {
         padding-top: 0;
         padding-bottom: 0;
-        padding-left: ${firstPage ? `${firstPage.contract.marginsPx.left}px` : '56px'};
-        padding-right: ${firstPage ? `${firstPage.contract.marginsPx.right}px` : '56px'};
+        padding-left: var(--page-padding-left, ${firstPage ? `${firstPage.contract.marginsPx.left}px` : '56px'});
+        padding-right: var(--page-padding-right, ${firstPage ? `${firstPage.contract.marginsPx.right}px` : '56px'});
       }
 
       h1 {
-        margin: 0 0 28px;
+        box-sizing: border-box;
+        margin: var(--page-heading1-margin-top, 0px) 0 var(--page-heading1-margin-bottom, 28px);
+        padding-left: var(--page-heading1-inset-left, 0px);
+        padding-right: var(--page-heading1-inset-right, 0px);
         color: #102a43;
-        font-size: 34px;
-        line-height: 1.2;
+        font-size: var(--page-heading1-font-size, 34px);
+        line-height: var(--page-heading1-line-height, 40px);
       }
 
       h2 {
-        margin: 28px 0 16px;
+        box-sizing: border-box;
+        margin: var(--page-heading2-margin-top, 28px) 0 var(--page-heading2-margin-bottom, 16px);
+        padding-left: var(--page-heading2-inset-left, 0px);
+        padding-right: var(--page-heading2-inset-right, 0px);
         color: #12314e;
-        font-size: 24px;
+        font-size: var(--page-heading2-font-size, 24px);
+        line-height: var(--page-heading2-line-height, 32px);
       }
 
       h3, h4, h5, h6 {
-        margin: 24px 0 12px;
+        box-sizing: border-box;
+        margin: var(--page-heading3-margin-top, 24px) 0 var(--page-heading3-margin-bottom, 12px);
+        padding-left: var(--page-heading3-inset-left, 0px);
+        padding-right: var(--page-heading3-inset-right, 0px);
         color: #12314e;
-        font-size: 18px;
+        font-size: var(--page-heading3-font-size, 18px);
+        line-height: var(--page-heading3-line-height, 28px);
       }
 
       p, li {
-        margin: 0 0 14px;
         color: #344054;
-        font-size: 16px;
-        line-height: 1.72;
+        font-size: var(--page-paragraph-font-size, 16px);
+        line-height: var(--page-paragraph-line-height, 28px);
+      }
+
+      p {
+        box-sizing: border-box;
+        margin: var(--page-paragraph-margin-top, 0px) 0 var(--page-paragraph-margin-bottom, 16px);
+        padding-left: var(--page-paragraph-inset-left, 0px);
+        padding-right: var(--page-paragraph-inset-right, 0px);
       }
 
       ul, ol {
-        margin: 0 0 16px;
-        padding-left: 24px;
+        margin: var(--page-list-margin-top, 0px) 0 var(--page-list-margin-bottom, 16px);
+        padding-left: var(--page-list-indent, 24px);
+        font-size: var(--page-list-font-size, 16px);
+        line-height: var(--page-list-line-height, 28px);
+      }
+
+      ul > li + li,
+      ol > li + li {
+        margin-top: var(--page-list-item-gap, 8px);
       }
 
       li.task-list-item {
+        list-style: none;
+      }
+
+      li.list-item-marker-hidden {
         list-style: none;
       }
 
@@ -620,15 +670,17 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
       }
 
       blockquote {
-        margin: 20px 0;
+        margin: var(--page-blockquote-margin-top, 20px) 0 var(--page-blockquote-margin-bottom, 20px);
         padding: 4px 0 4px 16px;
         border-left: 4px solid #b8d8dc;
       }
 
       pre {
-        margin: 20px 0;
-        padding: 14px 16px;
+        margin: var(--page-code-margin-top, 20px) 0 var(--page-code-margin-bottom, 20px);
+        padding: var(--page-code-padding-y, 14px) var(--page-code-padding-x, 16px);
         color: #d7e3f4;
+        font-size: var(--page-code-font-size, 14px);
+        line-height: var(--page-code-line-height, 24px);
         background: #173047;
         border-radius: 12px;
         white-space: pre-wrap;
@@ -636,12 +688,12 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
 
       table {
         width: 100%;
-        margin: 20px 0;
+        margin: var(--page-table-margin-top, 20px) 0 var(--page-table-margin-bottom, 20px);
         border-collapse: collapse;
       }
 
       td, th {
-        padding: 10px 12px;
+        padding: var(--page-table-cell-padding-y, 10px) var(--page-table-cell-padding-x, 12px);
         border: 1px solid #d5dde6;
       }
 
@@ -653,14 +705,14 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
 
       hr {
         border: 0;
-        border-top: 1px solid #d5dde6;
-        margin: 24px 0;
+        border-top: var(--page-rule-stroke-width, 1px) solid #d5dde6;
+        margin: var(--page-rule-margin-top, 24px) 0 var(--page-rule-margin-bottom, 24px);
       }
 
       .image-shell {
         display: grid;
-        gap: 8px;
-        margin: 20px 0;
+        gap: var(--page-image-caption-gap, 8px);
+        margin: var(--page-image-margin-top, 20px) 0 var(--page-image-margin-bottom, 20px);
         width: fit-content;
         max-width: 100%;
         position: relative;

@@ -146,13 +146,13 @@ export function AiCheckTab(): JSX.Element {
   const ignoreCheckItem = useAppStore((state) => state.ignoreCheckItem);
   const unignoreCheckItem = useAppStore((state) => state.unignoreCheckItem);
   const clearCheckResult = useAppStore((state) => state.clearCheckResult);
-  const isAiConfigured = useAppStore((state) => state.isAiConfigured);
   const layoutDocument = useAppStore((state) => state.layoutDocument);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleCheck = async () => {
-    if (!isAiConfigured) {
-      setCheckError('请先在「设置」中配置 AI 服务');
+    const config = useAppStore.getState().getAiConfigForTask('check');
+    if (!config) {
+      setCheckError('请先在「设置」中为「文档检查」分配可用 AI 配置');
       return;
     }
 
@@ -162,10 +162,8 @@ export function AiCheckTab(): JSX.Element {
     }
 
     try {
-      const config = useAppStore.getState().aiConfig;
-      if (config) {
-        aiService.configure(config);
-      }
+      // 文档检查可以使用更稳定或成本更低的独立模型配置。
+      aiService.configure(config);
 
       startChecking();
 

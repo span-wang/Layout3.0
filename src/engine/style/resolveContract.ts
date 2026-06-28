@@ -123,6 +123,50 @@ function applyTemplate(blockStyles: BlockStyleContract, templateId: StyleSetting
   }
 }
 
+function applyTextInsets(blockStyles: BlockStyleContract, settings: StyleSettings): void {
+  const { textInsetLeft, textInsetRight } = settings.blockSpacing;
+
+  blockStyles.heading1.insetLeft = textInsetLeft;
+  blockStyles.heading1.insetRight = textInsetRight;
+  blockStyles.heading2.insetLeft = textInsetLeft;
+  blockStyles.heading2.insetRight = textInsetRight;
+  blockStyles.heading3.insetLeft = textInsetLeft;
+  blockStyles.heading3.insetRight = textInsetRight;
+  blockStyles.paragraph.insetLeft = textInsetLeft;
+  blockStyles.paragraph.insetRight = textInsetRight;
+}
+
+function applyBlockSpacing(blockStyles: BlockStyleContract, settings: StyleSettings): void {
+  const spacing = settings.blockSpacing;
+
+  blockStyles.heading1.marginTop = spacing.heading1SpaceBefore;
+  blockStyles.heading1.marginBottom = spacing.heading1SpaceAfter;
+  blockStyles.heading2.marginTop = spacing.heading2SpaceBefore;
+  blockStyles.heading2.marginBottom = spacing.heading2SpaceAfter;
+  blockStyles.heading3.marginTop = spacing.heading3SpaceBefore;
+  blockStyles.heading3.marginBottom = spacing.heading3SpaceAfter;
+  blockStyles.paragraph.marginTop = spacing.paragraphSpaceBefore;
+  blockStyles.paragraph.marginBottom = spacing.paragraphSpaceAfter;
+  blockStyles.list.marginTop = spacing.listSpaceBefore;
+  blockStyles.list.marginBottom = spacing.listSpaceAfter;
+  blockStyles.list.itemGap = spacing.listItemGap;
+  blockStyles.blockquote.marginTop = spacing.blockquoteSpaceBefore;
+  blockStyles.blockquote.marginBottom = spacing.blockquoteSpaceAfter;
+  blockStyles.code.marginTop = spacing.codeSpaceBefore;
+  blockStyles.code.marginBottom = spacing.codeSpaceAfter;
+  blockStyles.code.paddingX = spacing.codePaddingX;
+  blockStyles.code.paddingY = spacing.codePaddingY;
+  blockStyles.table.marginTop = spacing.tableSpaceBefore;
+  blockStyles.table.marginBottom = spacing.tableSpaceAfter;
+  blockStyles.table.cellPaddingX = spacing.tableCellPaddingX;
+  blockStyles.table.cellPaddingY = spacing.tableCellPaddingY;
+  blockStyles.image.marginTop = spacing.imageSpaceBefore;
+  blockStyles.image.marginBottom = spacing.imageSpaceAfter;
+  blockStyles.horizontalRule.marginTop = spacing.ruleSpaceBefore;
+  blockStyles.horizontalRule.marginBottom = spacing.ruleSpaceAfter;
+  applyTextInsets(blockStyles, settings);
+}
+
 function applyPaginationBehavior(contract: ResolvedStyleContract): void {
   const { blockStyles, paginationBehavior } = contract;
 
@@ -189,6 +233,7 @@ export function resolveStyleContract(settings: StyleSettings): ResolvedStyleCont
   };
 
   applyTemplate(contract.blockStyles, settings.templateId);
+  applyBlockSpacing(contract.blockStyles, settings);
   applyPaginationBehavior(contract);
 
   return contract;

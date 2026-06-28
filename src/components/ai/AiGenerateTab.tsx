@@ -20,10 +20,9 @@ export function AiGenerateTab(): JSX.Element {
   const finishGenerating = useAppStore((state) => state.finishGenerating);
   const clearGeneratedContent = useAppStore((state) => state.clearGeneratedContent);
   const insertLayoutMarkdownBlocks = useAppStore((state) => state.insertLayoutMarkdownBlocks);
-  const isAiConfigured = useAppStore((state) => state.isAiConfigured);
   const workspaceRootPath = useAppStore((state) => state.workspaceRootPath);
   const currentDirectoryPath = useAppStore((state) => state.currentDirectoryPath);
-  const setAiGenerationRecordFile = useAppStore((state) => state.setAiGenerationRecordFile);
+  const setAiGenerationRecordDirectory = useAppStore((state) => state.setAiGenerationRecordDirectory);
   const setAiGenerationRecordsError = useAppStore((state) => state.setAiGenerationRecordsError);
 
   const [generateType, setGenerateType] = useState<GenerateType>('lecture');
@@ -34,8 +33,9 @@ export function AiGenerateTab(): JSX.Element {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleGenerate = async () => {
-    if (!isAiConfigured) {
-      setGenerateError('请先在「设置」中配置 AI 服务');
+    const config = useAppStore.getState().getAiConfigForTask('generate');
+    if (!config) {
+      setGenerateError('请先在「设置」中为「内容生成」分配可用 AI 配置');
       return;
     }
 
@@ -45,11 +45,8 @@ export function AiGenerateTab(): JSX.Element {
     }
 
     try {
-      // 配置 AI 服务
-      const config = useAppStore.getState().aiConfig;
-      if (config) {
-        aiService.configure(config);
-      }
+      // 每次生成前按任务分配加载配置，避免多个 AI 功能互相抢同一套配置。
+      aiService.configure(config);
 
       startGenerating();
       setAiGenerationRecordsError(null);
@@ -71,8 +68,8 @@ export function AiGenerateTab(): JSX.Element {
 
       if (finalContent.trim()) {
         try {
-          // 生成完成后把结果写入用户工作区文件，前端只刷新展示列表。
-          const recordFile = await addAiGenerationRecord({
+          // 生成完成后把结果写入用户工作区文件夹，前端只刷新展示列表。
+          const recordDirectory = await addAiGenerationRecord({
             workspaceRootPath: workspaceRootPath ?? currentDirectoryPath,
             record: {
               type: options.type,
@@ -87,7 +84,7 @@ export function AiGenerateTab(): JSX.Element {
               content: finalContent,
             },
           });
-          setAiGenerationRecordFile(recordFile);
+          setAiGenerationRecordDirectory(recordDirectory);
         } catch (recordError) {
           setAiGenerationRecordsError(
             recordError instanceof Error ? recordError.message : 'AI 生成记录保存失败',

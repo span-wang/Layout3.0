@@ -23,6 +23,31 @@ export interface AiConfig {
 }
 
 /**
+ * AI 配置档案
+ * 在本机保存多套配置时使用，API 调用仍只需要 AiConfig 字段。
+ */
+export interface AiConfigProfile extends AiConfig {
+  /** 配置唯一 ID，用于任务功能分配 */
+  id: string;
+  /** 用户可读的配置名称 */
+  name: string;
+  /** 创建时间 ISO 字符串 */
+  createdAt: string;
+  /** 更新时间 ISO 字符串 */
+  updatedAt: string;
+}
+
+/**
+ * 可分配 AI 配置的任务功能
+ */
+export type AiTaskType = 'generate' | 'optimize' | 'check' | 'regexRecognition';
+
+/**
+ * AI 任务功能到配置 ID 的映射
+ */
+export type AiTaskConfigAssignments = Record<AiTaskType, string | null>;
+
+/**
  * 生成内容类型
  */
 export type GenerateType = 'lecture' | 'summary' | 'exercise' | 'exam';
@@ -75,11 +100,11 @@ export interface AiGenerationRecord {
 }
 
 /**
- * AI 生成记录文件读取结果
+ * AI 生成记录文件夹读取结果
  */
-export interface AiGenerationRecordFileResult {
-  /** 记录文件完整路径 */
-  recordFilePath: string;
+export interface AiGenerationRecordDirectoryResult {
+  /** 记录文件夹完整路径 */
+  recordDirectoryPath: string;
   /** 生成记录列表 */
   records: AiGenerationRecord[];
 }
@@ -210,6 +235,26 @@ export const PROVIDER_LABELS: Record<AiProvider, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
   custom: '自定义',
+};
+
+/**
+ * AI 任务功能中文映射
+ */
+export const AI_TASK_LABELS: Record<AiTaskType, string> = {
+  generate: '内容生成',
+  optimize: '文本优化',
+  check: '文档检查',
+  regexRecognition: 'AI 正则识别',
+};
+
+/**
+ * 默认任务功能分配，具体配置 ID 会在加载配置时补齐。
+ */
+export const DEFAULT_AI_TASK_ASSIGNMENTS: AiTaskConfigAssignments = {
+  generate: null,
+  optimize: null,
+  check: null,
+  regexRecognition: null,
 };
 
 /**

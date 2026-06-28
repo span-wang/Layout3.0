@@ -19,5 +19,6 @@ export function paginateBlocks(
     contract,
     styles: options.styles,
     measuredBlockHeights: options.measuredBlockHeights,
+    measuredTextLineBreaks: options.measuredTextLineBreaks,
   });
 }

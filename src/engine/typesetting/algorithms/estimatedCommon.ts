@@ -103,6 +103,20 @@ function estimateTextBlockHeight(
   return style.marginTop + lines * style.lineHeight + style.marginBottom;
 }
 
+function resolveTextBlockLineWidths(
+  contentWidthPx: number,
+  block: LayoutBlock,
+  baseStyle: TextBlockStyleRule,
+) {
+  // 全局块排版预设提供默认左右内缩；单块局部缩进仍然优先覆盖。
+  return resolveHangingIndentLineWidths(contentWidthPx, {
+    indentLeft: block.blockStyleOverrides.indentLeft ?? baseStyle.insetLeft,
+    indentRight: block.blockStyleOverrides.indentRight ?? baseStyle.insetRight,
+    firstLineIndent: block.blockStyleOverrides.firstLineIndent,
+    hangingIndent: block.blockStyleOverrides.hangingIndent,
+  });
+}
+
 function isTableBlock(block: LayoutBlock): block is TableLayoutBlock {
   return block.type === 'table' && block.metadata.kind === 'table';
 }
@@ -405,25 +419,23 @@ function estimateBlockHeight(
     case 'toc':
       return estimateTocBlockHeight(block, tocItems, contract);
     case 'heading': {
-      const lineWidths = resolveHangingIndentLineWidths(contentWidthPx, block.blockStyleOverrides);
+      const baseStyle =
+        block.metadata.kind === 'heading' && block.metadata.depth === 1
+          ? contract.blockStyles.heading1
+          : block.metadata.kind === 'heading' && block.metadata.depth === 2
+            ? contract.blockStyles.heading2
+            : contract.blockStyles.heading3;
+      const lineWidths = resolveTextBlockLineWidths(contentWidthPx, block, baseStyle);
       // 标题同时受左右缩进、首行缩进与悬挂缩进影响，宽度先统一收窄再估算。
       return estimateTextBlockHeight(
         getLayoutBlockPlainText(block),
         lineWidths.followingLineWidthPx,
-        resolveTextBlockStyle(
-          block,
-          block.metadata.kind === 'heading' && block.metadata.depth === 1
-            ? contract.blockStyles.heading1
-            : block.metadata.kind === 'heading' && block.metadata.depth === 2
-              ? contract.blockStyles.heading2
-              : contract.blockStyles.heading3,
-          styles,
-        ),
+        resolveTextBlockStyle(block, baseStyle, styles),
         lineWidths.firstLineWidthPx,
       );
     }
     case 'paragraph': {
-      const lineWidths = resolveHangingIndentLineWidths(contentWidthPx, block.blockStyleOverrides);
+      const lineWidths = resolveTextBlockLineWidths(contentWidthPx, block, contract.blockStyles.paragraph);
       // 段落和标题共用同一套缩进宽度算法，避免预览和分页结果偏移。
       return estimateTextBlockHeight(
         getLayoutBlockPlainText(block),

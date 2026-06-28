@@ -5,11 +5,13 @@ import {
   paginateBlocks,
 } from '@/engine/typesetting';
 import type { ResolvedStyleContract } from '@/engine/style/types';
+import type { MeasuredTextLineBreaks } from '@/engine/typesetting';
 import { useAppStore } from '@/store';
 
 export function usePagination(
   resolvedStyleContract: ResolvedStyleContract,
   measuredBlockHeights: Record<string, number> = {},
+  measuredTextLineBreaks: MeasuredTextLineBreaks = {},
 ): void {
   const parseState = useAppStore((state) => state.parseState);
   const layoutBlocks = useAppStore((state) => state.layoutDocument?.blocks ?? null);
@@ -32,7 +34,8 @@ export function usePagination(
       algorithmId: paginationAlgorithmId,
       styles: layoutStyles ?? undefined,
       measuredBlockHeights: shouldUseMeasuredHeights ? measuredBlockHeights : undefined,
+      measuredTextLineBreaks: shouldUseMeasuredHeights ? measuredTextLineBreaks : undefined,
     });
     setPageLayouts(nextPages);
-  }, [layoutBlocks, layoutStyles, measuredBlockHeights, paginationAlgorithmId, parseState, resolvedStyleContract, setPageLayouts]);
+  }, [layoutBlocks, layoutStyles, measuredBlockHeights, measuredTextLineBreaks, paginationAlgorithmId, parseState, resolvedStyleContract, setPageLayouts]);
 }

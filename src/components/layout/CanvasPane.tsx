@@ -26,6 +26,7 @@ import {
   getTextContentFromRuns,
   getVisibleTocItemsForBlock,
   isEditableLayoutTextBlock,
+  shouldHideLayoutListItemMarker,
   toggleTextMarkInTextRuns,
   type LayoutBlock,
   type LayoutStyleSheet,
@@ -70,7 +71,7 @@ import {
   resolveQuickTextStyleForRun,
 } from '@/engine/style/quickTextStyle';
 import type { ResolvedStyleContract } from '@/engine/style/types';
-import type { PageLayout } from '@/engine/typesetting/types';
+import type { MeasuredTextLineBreaks, PageLayout } from '@/engine/typesetting/types';
 import { useAppStore } from '@/store';
 import type { CanvasTextSelectionState } from '@/types/workspace';
 import { createTextFragment, resolveHangingIndentStyle } from '@/engine/document-model/utils';
@@ -106,11 +107,13 @@ interface CanvasPaneProps {
   onConsumeRequestedScrollToNode?: (nodeId: string) => void;
   isCondensed?: boolean;
   onMeasuredBlockHeightsChange?: (heights: Record<string, number>) => void;
+  onMeasuredTextLineBreaksChange?: (lineBreaks: MeasuredTextLineBreaks) => void;
 }
 
 interface BlockMeasurementCacheEntry {
   signature: string;
   heightPx: number;
+  textLineBreaks: MeasuredTextLineBreaks;
 }
 
 interface RenderListTreeOptions {
@@ -386,10 +389,126 @@ function buildBlockMeasurementSignature(block: LayoutBlock, styleSignature: stri
   })}`;
 }
 
+const TEXT_LINE_TOP_TOLERANCE_PX = 1;
+
+function normalizeMeasuredLineBreakOffsets(offsets: number[], textLength: number): number[] {
+  const normalizedOffsets: number[] = [];
+
+  offsets.forEach((offset) => {
+    const normalizedOffset = Math.max(0, Math.min(textLength, Math.round(offset)));
+    const previousOffset = normalizedOffsets[normalizedOffsets.length - 1] ?? 0;
+    if (normalizedOffset > previousOffset) {
+      normalizedOffsets.push(normalizedOffset);
+    }
+  });
+
+  if (textLength > 0 && normalizedOffsets[normalizedOffsets.length - 1] !== textLength) {
+    normalizedOffsets.push(textLength);
+  }
+
+  return normalizedOffsets;
+}
+
+function measureTextLineBreakOffsets(root: HTMLElement): number[] {
+  const lineBreakOffsets: number[] = [];
+  const range = document.createRange();
+  let textOffset = 0;
+  let currentLineTop: number | null = null;
+  let currentLineEndOffset = 0;
+
+  const pushLineBreak = (offset: number) => {
+    const previousOffset = lineBreakOffsets[lineBreakOffsets.length - 1] ?? 0;
+    if (offset > previousOffset) {
+      lineBreakOffsets.push(offset);
+    }
+  };
+
+  const visitNode = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const nodeText = node.textContent?.replace(/\u00A0/g, ' ') ?? '';
+
+      for (let index = 0; index < nodeText.length; index += 1) {
+        range.setStart(node, index);
+        range.setEnd(node, index + 1);
+
+        const rect = Array.from(range.getClientRects()).find(
+          (item) => item.width > 0 || item.height > 0,
+        );
+        const nextOffset = textOffset + index + 1;
+
+        // 真实换行以浏览器返回的字符 rect.top 为准；top 变化说明进入了下一条视觉行。
+        if (rect) {
+          if (currentLineTop === null) {
+            currentLineTop = rect.top;
+          } else if (Math.abs(rect.top - currentLineTop) > TEXT_LINE_TOP_TOLERANCE_PX) {
+            pushLineBreak(currentLineEndOffset);
+            currentLineTop = rect.top;
+          }
+        }
+
+        currentLineEndOffset = nextOffset;
+      }
+
+      textOffset += nodeText.length;
+      return;
+    }
+
+    if (!(node instanceof HTMLElement)) {
+      return;
+    }
+
+    if (node.tagName.toLowerCase() === 'br') {
+      textOffset += 1;
+      currentLineEndOffset = textOffset;
+      pushLineBreak(currentLineEndOffset);
+      currentLineTop = null;
+      return;
+    }
+
+    Array.from(node.childNodes).forEach((childNode) => visitNode(childNode));
+  };
+
+  try {
+    Array.from(root.childNodes).forEach((childNode) => visitNode(childNode));
+  } finally {
+    range.detach();
+  }
+
+  if (currentLineEndOffset > 0) {
+    pushLineBreak(currentLineEndOffset);
+  }
+
+  return normalizeMeasuredLineBreakOffsets(lineBreakOffsets, textOffset);
+}
+
+function measureTextLineBreaksInBlock(blockElement: HTMLElement): MeasuredTextLineBreaks {
+  const nextLineBreaks: MeasuredTextLineBreaks = {};
+  const textElements = blockElement.querySelectorAll<HTMLElement>('[data-measure-text-node-id]');
+
+  textElements.forEach((element) => {
+    const nodeId = element.dataset.measureTextNodeId;
+    if (!nodeId) {
+      return;
+    }
+
+    const lineBreakOffsets = measureTextLineBreakOffsets(element);
+    if (lineBreakOffsets.length > 0) {
+      nextLineBreaks[nodeId] = lineBreakOffsets;
+    }
+  });
+
+  return nextLineBreaks;
+}
+
 function buildBlockStyle(block: LayoutBlock, effectiveLineHeight?: number): CSSProperties {
   const supportsBlockIndent = block.type === 'heading' || block.type === 'paragraph';
   const indentStyle = supportsBlockIndent ? resolveHangingIndentStyle(block.blockStyleOverrides) : null;
   const textIndent = indentStyle ? indentStyle.textIndent : block.blockStyleOverrides.firstLineIndent;
+  const hasLeftIndentOverride =
+    block.blockStyleOverrides.indentLeft !== undefined || block.blockStyleOverrides.hangingIndent !== undefined;
+  const hasRightIndentOverride = block.blockStyleOverrides.indentRight !== undefined;
+  const hasTextIndentOverride =
+    block.blockStyleOverrides.firstLineIndent !== undefined || block.blockStyleOverrides.hangingIndent !== undefined;
 
   return {
     textAlign: block.blockStyleOverrides.textAlign,
@@ -404,9 +523,9 @@ function buildBlockStyle(block: LayoutBlock, effectiveLineHeight?: number): CSSP
     marginBottom: block.blockStyleOverrides.spaceAfter !== undefined
       ? `${block.blockStyleOverrides.spaceAfter}px`
       : undefined,
-    paddingLeft: indentStyle && indentStyle.paddingLeft > 0 ? `${indentStyle.paddingLeft}px` : undefined,
-    paddingRight: indentStyle && indentStyle.paddingRight > 0 ? `${indentStyle.paddingRight}px` : undefined,
-    textIndent: textIndent && textIndent !== 0
+    paddingLeft: indentStyle && hasLeftIndentOverride ? `${indentStyle.paddingLeft}px` : undefined,
+    paddingRight: indentStyle && hasRightIndentOverride ? `${indentStyle.paddingRight}px` : undefined,
+    textIndent: hasTextIndentOverride && textIndent !== undefined
       ? `${textIndent}px`
       : undefined,
     backgroundColor: block.blockStyleOverrides.backgroundColor,
@@ -908,6 +1027,7 @@ function getEditableTableCellNode(cell: LayoutTableCell): EditableCanvasNode {
 function buildListItemClassName(item: LayoutListItem): string {
   return [
     item.checked === null ? '' : 'task-list-item',
+    shouldHideLayoutListItemMarker(item) ? 'list-item-marker-hidden' : '',
     `list-level-${getLayoutListItemLevel(item)}`,
   ]
     .filter(Boolean)
@@ -942,6 +1062,7 @@ function renderListTreeNodes({
   return nodes.map((node) => {
     const item = node.item;
     const itemNode = getEditableListItemNode(item);
+    const shouldHideMarker = shouldHideLayoutListItemMarker(item);
 
     return (
       <li
@@ -955,15 +1076,16 @@ function renderListTreeNodes({
           className: buildListItemClassName(item),
         })}
         data-list-level={getLayoutListItemLevel(item)}
+        data-list-marker-hidden={shouldHideMarker ? 'true' : undefined}
         onContextMenu={(event) => onListItemContextMenu(event, item.id)}
       >
         <span className={item.checked === null ? 'list-item-content' : 'task-list-item-content'}>
-          {item.checked !== null ? (
+          {item.checked !== null && !shouldHideMarker ? (
             <span className="task-list-checkbox" aria-hidden="true">
               {item.checked ? '☑' : '☐'}
             </span>
           ) : null}
-          <span className="list-item-text">
+          <span className="list-item-text" data-measure-text-node-id={item.id}>
             {editingNodeId === item.id
               ? isRichTextCanvasEditorKind(editingKind ?? 'listItem')
                 ? (
@@ -2391,6 +2513,7 @@ function renderBlock(
           <h1
             key={`${block.id}-${index}`}
             {...getSelectableBlockProps()}
+            data-measure-text-node-id={block.id}
             style={blockStyle}
           >
             {content}
@@ -2403,6 +2526,7 @@ function renderBlock(
           <h2
             key={`${block.id}-${index}`}
             {...getSelectableBlockProps()}
+            data-measure-text-node-id={block.id}
             style={blockStyle}
           >
             {content}
@@ -2415,6 +2539,7 @@ function renderBlock(
           <h4
             key={`${block.id}-${index}`}
             {...getSelectableBlockProps()}
+            data-measure-text-node-id={block.id}
             style={blockStyle}
           >
             {content}
@@ -2426,6 +2551,7 @@ function renderBlock(
         <h3
           key={`${block.id}-${index}`}
           {...getSelectableBlockProps()}
+          data-measure-text-node-id={block.id}
           style={blockStyle}
         >
           {content}
@@ -2477,6 +2603,7 @@ function renderBlock(
         <p
           key={`${block.id}-${index}`}
           {...getSelectableBlockProps()}
+          data-measure-text-node-id={block.id}
           style={blockStyle}
         >
           {isEditing
@@ -2699,7 +2826,7 @@ function renderBlock(
                               onStartEditing,
                             })}
                           >
-                            <div className="table-cell-content">
+                            <div className="table-cell-content" data-measure-text-node-id={cell.id}>
                               {editingNodeId === cell.id
                                 ? isRichTextCanvasEditorKind(editingKind ?? 'tableCell')
                                   ? (
@@ -3001,6 +3128,7 @@ function CanvasPaneComponent({
   onConsumeRequestedScrollToNode,
   isCondensed = false,
   onMeasuredBlockHeightsChange,
+  onMeasuredTextLineBreaksChange,
 }: CanvasPaneProps): JSX.Element {
   const fontFaceCss = buildFontFaceCss(documentResources);
   const updateLayoutImageAttributes = useAppStore((state) => state.updateLayoutImageAttributes);
@@ -3138,7 +3266,7 @@ function CanvasPaneComponent({
   }, [draftImageOffsets]);
 
   useLayoutEffect(() => {
-    if (!onMeasuredBlockHeightsChange) {
+    if (!onMeasuredBlockHeightsChange && !onMeasuredTextLineBreaksChange) {
       return;
     }
 
@@ -3149,6 +3277,7 @@ function CanvasPaneComponent({
     );
     const nextCache: Record<string, BlockMeasurementCacheEntry> = {};
     const nextHeights: Record<string, number> = {};
+    const nextTextLineBreaks: MeasuredTextLineBreaks = {};
 
     documentBlocks.forEach((block) => {
       const signature = buildBlockMeasurementSignature(block, styleSignature);
@@ -3157,6 +3286,7 @@ function CanvasPaneComponent({
       if (cachedEntry?.signature === signature) {
         nextCache[block.id] = cachedEntry;
         nextHeights[block.id] = cachedEntry.heightPx;
+        Object.assign(nextTextLineBreaks, cachedEntry.textLineBreaks ?? {});
       }
     });
 
@@ -3176,14 +3306,17 @@ function CanvasPaneComponent({
         const signature = buildBlockMeasurementSignature(block, styleSignature);
         const rect = element.getBoundingClientRect();
         const heightPx = Math.max(0, Math.ceil(rect.height));
-        nextCache[blockId] = { signature, heightPx };
+        const textLineBreaks = measureTextLineBreaksInBlock(element);
+        nextCache[blockId] = { signature, heightPx, textLineBreaks };
         nextHeights[blockId] = heightPx;
+        Object.assign(nextTextLineBreaks, textLineBreaks);
       });
     }
 
     blockMeasurementCacheRef.current = nextCache;
-    onMeasuredBlockHeightsChange(nextHeights);
-  }, [documentBlocks, documentStyles, onMeasuredBlockHeightsChange, resolvedStyleContract]);
+    onMeasuredBlockHeightsChange?.(nextHeights);
+    onMeasuredTextLineBreaksChange?.(nextTextLineBreaks);
+  }, [documentBlocks, documentStyles, onMeasuredBlockHeightsChange, onMeasuredTextLineBreaksChange, resolvedStyleContract]);
 
   useLayoutEffect(() => {
     const canvasPane = canvasPaneRef.current;
@@ -3717,10 +3850,10 @@ function CanvasPaneComponent({
     const scrollSnapshot = pendingScrollSnapshotRef.current;
     const canvasPane = canvasPaneRef.current;
     focusCanvasEditorWithoutScroll(editor, canvasPane, scrollSnapshot);
-    restoreRichSelection(editor, editingSelection);
+    // 进入编辑时只负责聚焦；拖选过程中不能跟随 editingSelection 反复恢复 DOM 选区。
     restoreCanvasScrollSnapshot(canvasPane, scrollSnapshot);
     pendingScrollSnapshotRef.current = null;
-  }, [editingNodeId, editingSelection, isEditingRichText]);
+  }, [editingNodeId, isEditingRichText]);
 
   useEffect(() => {
     const editor = editorRef.current;

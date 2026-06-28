@@ -1,5 +1,8 @@
-import { defaultStyleSettings } from './presets';
+import { defaultBlockSpacingParameters, defaultStyleSettings } from './presets';
 import type {
+  BlockSpacingParameterKey,
+  BlockSpacingParameters,
+  BlockSpacingPreset,
   BoxInsets,
   HeaderFooterPresetId,
   MarginMode,
@@ -10,6 +13,36 @@ import type {
   StyleSettings,
   TemplateId,
 } from './types';
+
+export const blockSpacingParameterKeys: BlockSpacingParameterKey[] = [
+  'heading1SpaceBefore',
+  'heading1SpaceAfter',
+  'heading2SpaceBefore',
+  'heading2SpaceAfter',
+  'heading3SpaceBefore',
+  'heading3SpaceAfter',
+  'paragraphSpaceBefore',
+  'paragraphSpaceAfter',
+  'listSpaceBefore',
+  'listSpaceAfter',
+  'listItemGap',
+  'blockquoteSpaceBefore',
+  'blockquoteSpaceAfter',
+  'codeSpaceBefore',
+  'codeSpaceAfter',
+  'codePaddingX',
+  'codePaddingY',
+  'tableSpaceBefore',
+  'tableSpaceAfter',
+  'tableCellPaddingX',
+  'tableCellPaddingY',
+  'imageSpaceBefore',
+  'imageSpaceAfter',
+  'ruleSpaceBefore',
+  'ruleSpaceAfter',
+  'textInsetLeft',
+  'textInsetRight',
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -30,6 +63,48 @@ function clonePaginationBehavior(behavior: PaginationBehavior): PaginationBehavi
     avoidBreakInsideCodeBlocks: behavior.avoidBreakInsideCodeBlocks,
     avoidBreakInsideTables: behavior.avoidBreakInsideTables,
     avoidBreakInsideImages: behavior.avoidBreakInsideImages,
+  };
+}
+
+export function cloneBlockSpacingParameters(parameters: BlockSpacingParameters): BlockSpacingParameters {
+  return {
+    heading1SpaceBefore: parameters.heading1SpaceBefore,
+    heading1SpaceAfter: parameters.heading1SpaceAfter,
+    heading2SpaceBefore: parameters.heading2SpaceBefore,
+    heading2SpaceAfter: parameters.heading2SpaceAfter,
+    heading3SpaceBefore: parameters.heading3SpaceBefore,
+    heading3SpaceAfter: parameters.heading3SpaceAfter,
+    paragraphSpaceBefore: parameters.paragraphSpaceBefore,
+    paragraphSpaceAfter: parameters.paragraphSpaceAfter,
+    listSpaceBefore: parameters.listSpaceBefore,
+    listSpaceAfter: parameters.listSpaceAfter,
+    listItemGap: parameters.listItemGap,
+    blockquoteSpaceBefore: parameters.blockquoteSpaceBefore,
+    blockquoteSpaceAfter: parameters.blockquoteSpaceAfter,
+    codeSpaceBefore: parameters.codeSpaceBefore,
+    codeSpaceAfter: parameters.codeSpaceAfter,
+    codePaddingX: parameters.codePaddingX,
+    codePaddingY: parameters.codePaddingY,
+    tableSpaceBefore: parameters.tableSpaceBefore,
+    tableSpaceAfter: parameters.tableSpaceAfter,
+    tableCellPaddingX: parameters.tableCellPaddingX,
+    tableCellPaddingY: parameters.tableCellPaddingY,
+    imageSpaceBefore: parameters.imageSpaceBefore,
+    imageSpaceAfter: parameters.imageSpaceAfter,
+    ruleSpaceBefore: parameters.ruleSpaceBefore,
+    ruleSpaceAfter: parameters.ruleSpaceAfter,
+    textInsetLeft: parameters.textInsetLeft,
+    textInsetRight: parameters.textInsetRight,
+  };
+}
+
+function cloneBlockSpacingPreset(preset: BlockSpacingPreset): BlockSpacingPreset {
+  return {
+    id: preset.id,
+    name: preset.name,
+    description: preset.description,
+    builtIn: preset.builtIn,
+    parameters: cloneBlockSpacingParameters(preset.parameters),
   };
 }
 
@@ -65,6 +140,10 @@ function normalizeBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
+function normalizeString(value: unknown, fallback: string): string {
+  return typeof value === 'string' && value.trim() ? value : fallback;
+}
+
 function normalizeBoxInsets(value: unknown, fallback: BoxInsets): BoxInsets {
   if (!isRecord(value)) {
     return cloneBoxInsets(fallback);
@@ -76,6 +155,44 @@ function normalizeBoxInsets(value: unknown, fallback: BoxInsets): BoxInsets {
     bottom: normalizeNumber(value.bottom, fallback.bottom),
     left: normalizeNumber(value.left, fallback.left),
   };
+}
+
+function normalizeSpacingNumber(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.min(240, Math.round(value)));
+}
+
+export function normalizeBlockSpacingParameters(
+  value: unknown,
+  fallback: BlockSpacingParameters = defaultBlockSpacingParameters,
+): BlockSpacingParameters {
+  if (!isRecord(value)) {
+    return cloneBlockSpacingParameters(fallback);
+  }
+
+  return blockSpacingParameterKeys.reduce((parameters, key) => {
+    parameters[key] = normalizeSpacingNumber(value[key], fallback[key]);
+    return parameters;
+  }, {} as BlockSpacingParameters);
+}
+
+function normalizeBlockSpacingPresets(value: unknown): BlockSpacingPreset[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRecord)
+    .map((item, index) => ({
+      id: normalizeString(item.id, `custom-block-spacing-${index + 1}`),
+      name: normalizeString(item.name, `自定义预设 ${index + 1}`),
+      description: typeof item.description === 'string' ? item.description : '',
+      builtIn: false,
+      parameters: normalizeBlockSpacingParameters(item.parameters),
+    }));
 }
 
 function normalizePaginationAlgorithmId(value: unknown, fallback: string): string {
@@ -113,6 +230,8 @@ export function cloneStyleSettings(styleSettings: StyleSettings): StyleSettings 
     customMarginsMm: cloneBoxInsets(styleSettings.customMarginsMm),
     paginationAlgorithmId: styleSettings.paginationAlgorithmId,
     paginationBehavior: clonePaginationBehavior(styleSettings.paginationBehavior),
+    blockSpacing: cloneBlockSpacingParameters(styleSettings.blockSpacing),
+    customBlockSpacingPresets: styleSettings.customBlockSpacingPresets.map(cloneBlockSpacingPreset),
   };
 }
 
@@ -163,5 +282,14 @@ export function normalizeStyleSettings(value: unknown): StyleSettings {
       value.paginationBehavior,
       defaultStyleSettings.paginationBehavior,
     ),
+    blockSpacingPresetId: normalizeString(
+      value.blockSpacingPresetId,
+      defaultStyleSettings.blockSpacingPresetId,
+    ),
+    blockSpacing: normalizeBlockSpacingParameters(
+      value.blockSpacing,
+      defaultStyleSettings.blockSpacing,
+    ),
+    customBlockSpacingPresets: normalizeBlockSpacingPresets(value.customBlockSpacingPresets),
   };
 }

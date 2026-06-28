@@ -95,6 +95,10 @@ export function getLayoutListItemLevel(item: LayoutListItem): LayoutListLevel {
   return normalizeLayoutListLevel(item.level);
 }
 
+export function shouldHideLayoutListItemMarker(item: LayoutListItem): boolean {
+  return item.runtimePagination?.hideMarker === true;
+}
+
 export function buildLayoutListTree(items: LayoutListItem[]): LayoutListTreeNode[] {
   const roots: LayoutListTreeNode[] = [];
   const stack: Array<{ level: LayoutListLevel; node: LayoutListTreeNode }> = [];

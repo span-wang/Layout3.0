@@ -1,5 +1,7 @@
 import katex from 'katex';
 
+const KATEX_OUTPUT_MODE = 'htmlAndMathml';
+
 export interface RenderEquationResult {
   html: string;
   error: string | null;
@@ -23,7 +25,8 @@ export function renderEquationToHtml(value: string): RenderEquationResult {
       html: katex.renderToString(normalizedValue, {
         displayMode: true,
         throwOnError: true,
-        output: 'mathml',
+        // 使用 KaTeX HTML/CSS 做视觉渲染，避免浏览器原生 MathML 把根号画出断裂。
+        output: KATEX_OUTPUT_MODE,
       }),
       error: null,
     };
@@ -60,7 +63,8 @@ export function renderInlineEquationToHtml(formulaContent: string): string {
     return katex.renderToString(normalizedContent, {
       displayMode: false,
       throwOnError: false,
-      output: 'mathml',
+      // 行内公式也保持同一输出口径，确保预览和导出中的根号样式一致。
+      output: KATEX_OUTPUT_MODE,
     });
   } catch {
     // 渲染失败时返回原始内容

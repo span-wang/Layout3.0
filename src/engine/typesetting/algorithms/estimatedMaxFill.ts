@@ -50,6 +50,7 @@ import { estimateTextLines, computeTextSplitOffsetForLineCount } from '../textMe
 import { buildTocFragment, estimateTocBlockHeight } from '../tocLayout';
 import type {
   LayoutWarning,
+  MeasuredTextLineBreaks,
   PageLayout,
   PaginationAlgorithmContext,
 } from '../types';
@@ -218,6 +219,20 @@ function estimateTextBlockHeight(
   return style.marginTop + lines * style.lineHeight + style.marginBottom;
 }
 
+function resolveTextBlockLineWidths(
+  contentWidthPx: number,
+  block: LayoutBlock,
+  baseStyle: TextBlockStyleRule,
+) {
+  // 块排版预设给文字块提供默认左右内缩，单块局部缩进继续作为最高优先级。
+  return resolveHangingIndentLineWidths(contentWidthPx, {
+    indentLeft: block.blockStyleOverrides.indentLeft ?? baseStyle.insetLeft,
+    indentRight: block.blockStyleOverrides.indentRight ?? baseStyle.insetRight,
+    firstLineIndent: block.blockStyleOverrides.firstLineIndent,
+    hangingIndent: block.blockStyleOverrides.hangingIndent,
+  });
+}
+
 /**
  * 获取文本块可用的行高信息
  */
@@ -383,6 +398,7 @@ function estimateListItemHeight(
   block: ListLayoutBlock,
   contract: ResolvedStyleContract,
   styles?: LayoutStyleSheet,
+  measuredTextLineBreaks?: MeasuredTextLineBreaks,
 ): number {
   const listStyle = resolveListBlockStyle(block, contract);
   const itemText = item.textRuns.map((run) => run.text).join('');
@@ -397,7 +413,12 @@ function estimateListItemHeight(
     baseFontSize: contract.blockStyles.list.fontSize,
     baseLineHeight: listStyle.lineHeight,
   });
-  const lines = estimateTextLines(
+  const measuredLineBreaks = resolveMeasuredLineBreakOffsets(
+    item.id,
+    itemText,
+    measuredTextLineBreaks,
+  );
+  const lines = measuredLineBreaks?.length ?? estimateTextLines(
     itemText,
     getListItemTextWidthPx(item, block, contract),
     fontSize,
@@ -472,12 +493,19 @@ function createListItemTextSlice(
   item: LayoutListItem,
   textRuns: TextRun[],
   suffix: string,
+  shouldHideMarker = false,
 ): LayoutListItem {
   return {
     ...item,
     id: `${item.id}-${suffix}`,
     sourceRange: null,
     textRuns,
+    runtimePagination: shouldHideMarker
+      ? {
+          ...item.runtimePagination,
+          hideMarker: true,
+        }
+      : item.runtimePagination,
   };
 }
 
@@ -489,8 +517,18 @@ function splitListItemToFit(payload: {
   fragmentIndex: number;
   contract: ResolvedStyleContract;
   styles?: LayoutStyleSheet;
+  measuredTextLineBreaks?: MeasuredTextLineBreaks;
 }): ListItemSplitResult | null {
-  const { block, item, fragmentItemIndex, availableHeight, fragmentIndex, contract, styles } = payload;
+  const {
+    block,
+    item,
+    fragmentItemIndex,
+    availableHeight,
+    fragmentIndex,
+    contract,
+    styles,
+    measuredTextLineBreaks,
+  } = payload;
   const listStyle = resolveListBlockStyle(block, contract);
   const gap = fragmentItemIndex === 0 ? 0 : listStyle.itemGap;
   const usableHeight = availableHeight - gap;
@@ -512,15 +550,23 @@ function splitListItemToFit(payload: {
     return null;
   }
 
-  const splitOffset = adjustSplitOffsetForReadableTrailingText(
+  const measuredSplitInfo = resolveMeasuredTextSplitInfo(
+    item.id,
     itemText,
-    computeTextSplitOffsetForLineCount(
-      itemText,
-      getListItemTextWidthPx(item, block, contract),
-      fontSize,
-      maxLines,
-    ),
+    maxLines,
+    measuredTextLineBreaks,
   );
+  const splitOffset = measuredSplitInfo
+    ? measuredSplitInfo.splitOffset
+    : adjustSplitOffsetForReadableTrailingText(
+        itemText,
+        computeTextSplitOffsetForLineCount(
+          itemText,
+          getListItemTextWidthPx(item, block, contract),
+          fontSize,
+          maxLines,
+        ),
+      );
 
   if (splitOffset <= 0 || splitOffset >= itemText.length) {
     return null;
@@ -544,8 +590,11 @@ function splitListItemToFit(payload: {
     item,
     remainingRuns,
     `split-${fragmentIndex}-rest`,
+    true,
   );
-  const currentHeight = estimateListItemHeight(currentItem, fragmentItemIndex, block, contract, styles);
+  const currentHeight = measuredSplitInfo
+    ? gap + measuredSplitInfo.usedLineCount * lineHeight
+    : estimateListItemHeight(currentItem, fragmentItemIndex, block, contract, styles);
 
   if (currentHeight > availableHeight) {
     return null;
@@ -566,8 +615,18 @@ function buildListFragment(payload: {
   isCurrentPageEmpty: boolean;
   contract: ResolvedStyleContract;
   styles?: LayoutStyleSheet;
+  measuredTextLineBreaks?: MeasuredTextLineBreaks;
 }): ListFragmentBuildResult | null {
-  const { block, startItemIndex, availableHeight, fragmentIndex, isCurrentPageEmpty, contract, styles } = payload;
+  const {
+    block,
+    startItemIndex,
+    availableHeight,
+    fragmentIndex,
+    isCurrentPageEmpty,
+    contract,
+    styles,
+    measuredTextLineBreaks,
+  } = payload;
   const listStyle = resolveListBlockStyle(block, contract);
   const fragmentItems: LayoutListItem[] = [];
   let nextItemIndex = startItemIndex;
@@ -580,6 +639,7 @@ function buildListFragment(payload: {
       block,
       contract,
       styles,
+      measuredTextLineBreaks,
     );
     const candidateHeight = fragmentHeight + itemHeight;
     const canFit = candidateHeight <= availableHeight;
@@ -594,6 +654,7 @@ function buildListFragment(payload: {
         fragmentIndex,
         contract,
         styles,
+        measuredTextLineBreaks,
       });
 
       if (splitResult && fragmentHeight + splitResult.currentHeight <= availableHeight) {
@@ -782,8 +843,9 @@ function splitTableRowToFit(payload: {
   fragmentIndex: number;
   contract: ResolvedStyleContract;
   styles?: LayoutStyleSheet;
+  measuredTextLineBreaks?: MeasuredTextLineBreaks;
 }): TableRowSplitResult | null {
-  const { block, row, rowIndex, availableHeight, fragmentIndex, contract, styles } = payload;
+  const { block, row, rowIndex, availableHeight, fragmentIndex, contract, styles, measuredTextLineBreaks } = payload;
   if (!isSimpleSplittableTableRow(row)) {
     return null;
   }
@@ -803,15 +865,23 @@ function splitTableRowToFit(payload: {
 
   row.cells.forEach((cell, cellIndex) => {
     const cellText = cell.textRuns.map((run) => run.text).join('');
-    const splitOffset = adjustSplitOffsetForReadableTrailingText(
+    const measuredSplitInfo = resolveMeasuredTextSplitInfo(
+      cell.id,
       cellText,
-      computeTextSplitOffsetForLineCount(
-        cellText,
-        getTableCellTextWidthPx(block, row, cellIndex, contract),
-        getTableCellEffectiveFontSize(cell, block, styles, contract),
-        maxLines,
-      ),
+      maxLines,
+      measuredTextLineBreaks,
     );
+    const splitOffset = measuredSplitInfo
+      ? measuredSplitInfo.splitOffset
+      : adjustSplitOffsetForReadableTrailingText(
+          cellText,
+          computeTextSplitOffsetForLineCount(
+            cellText,
+            getTableCellTextWidthPx(block, row, cellIndex, contract),
+            getTableCellEffectiveFontSize(cell, block, styles, contract),
+            maxLines,
+          ),
+        );
     const { currentPageRuns, remainingRuns } = splitTextRunsByPlainTextLength(cell.textRuns, splitOffset);
 
     if (currentPageRuns.length > 0) {
@@ -920,8 +990,19 @@ function buildTableFragment(payload: {
   rowHeights: number[];
   contract: ResolvedStyleContract;
   styles?: LayoutStyleSheet;
+  measuredTextLineBreaks?: MeasuredTextLineBreaks;
 }): TableFragmentBuildResult | null {
-  const { block, startRowIndex, availableHeight, fragmentIndex, isCurrentPageEmpty, rowHeights, contract, styles } = payload;
+  const {
+    block,
+    startRowIndex,
+    availableHeight,
+    fragmentIndex,
+    isCurrentPageEmpty,
+    rowHeights,
+    contract,
+    styles,
+    measuredTextLineBreaks,
+  } = payload;
   const rows = block.metadata.rows;
   const repeatedHeaderRow = getRepeatedTableHeaderRow(block);
   const fragmentRows: TableFragmentRow[] = [];
@@ -955,6 +1036,7 @@ function buildTableFragment(payload: {
         fragmentIndex,
         contract,
         styles,
+        measuredTextLineBreaks,
       });
 
       if (splitResult && fragmentHeight + splitResult.currentHeight <= availableHeight) {
@@ -1128,6 +1210,71 @@ function getMeasuredTopLevelBlockHeight(
   }
 
   return measuredHeight;
+}
+
+interface MeasuredTextSplitInfo {
+  splitOffset: number;
+  usedLineCount: number;
+  totalLineCount: number;
+}
+
+function resolveMeasuredLineBreakOffsets(
+  nodeId: string,
+  text: string,
+  measuredTextLineBreaks: MeasuredTextLineBreaks | undefined,
+): number[] | null {
+  const rawOffsets = measuredTextLineBreaks?.[nodeId];
+  if (!rawOffsets || rawOffsets.length === 0) {
+    return null;
+  }
+
+  const normalizedOffsets = rawOffsets
+    .map((offset) => Math.round(offset))
+    .filter((offset, index, offsets) =>
+      Number.isFinite(offset) &&
+      offset > 0 &&
+      offset <= text.length &&
+      (index === 0 || offset > offsets[index - 1]),
+    );
+
+  if (
+    normalizedOffsets.length === 0 ||
+    normalizedOffsets[normalizedOffsets.length - 1] !== text.length
+  ) {
+    return null;
+  }
+
+  return normalizedOffsets;
+}
+
+function resolveMeasuredTextSplitInfo(
+  nodeId: string,
+  text: string,
+  maxLines: number,
+  measuredTextLineBreaks: MeasuredTextLineBreaks | undefined,
+): MeasuredTextSplitInfo | null {
+  if (maxLines <= 0 || text.length === 0) {
+    return null;
+  }
+
+  const measuredLineBreaks = resolveMeasuredLineBreakOffsets(
+    nodeId,
+    text,
+    measuredTextLineBreaks,
+  );
+  if (!measuredLineBreaks) {
+    return null;
+  }
+
+  const usedLineCount = Math.min(maxLines, measuredLineBreaks.length);
+  return {
+    splitOffset:
+      measuredLineBreaks.length <= maxLines
+        ? text.length
+        : measuredLineBreaks[Math.max(0, maxLines - 1)],
+    usedLineCount,
+    totalLineCount: measuredLineBreaks.length,
+  };
 }
 
 function countMeaningfulTextCharacters(text: string): number {
@@ -1312,30 +1459,22 @@ function estimateBlockHeight(
     case 'toc':
       return estimateTocBlockHeight(block, tocItems, contract);
     case 'heading': {
-      const lineWidths = resolveHangingIndentLineWidths(
-        contentWidthPx,
-        block.blockStyleOverrides,
-      );
+      const baseStyle =
+        block.metadata.kind === 'heading' && block.metadata.depth === 1
+          ? contract.blockStyles.heading1
+          : block.metadata.kind === 'heading' && block.metadata.depth === 2
+            ? contract.blockStyles.heading2
+            : contract.blockStyles.heading3;
+      const lineWidths = resolveTextBlockLineWidths(contentWidthPx, block, baseStyle);
       return estimateTextBlockHeight(
         getLayoutBlockPlainText(block),
         lineWidths.followingLineWidthPx,
-        resolveTextBlockStyle(
-          block,
-          block.metadata.kind === 'heading' && block.metadata.depth === 1
-            ? contract.blockStyles.heading1
-            : block.metadata.kind === 'heading' && block.metadata.depth === 2
-              ? contract.blockStyles.heading2
-              : contract.blockStyles.heading3,
-          styles,
-        ),
+        resolveTextBlockStyle(block, baseStyle, styles),
         lineWidths.firstLineWidthPx,
       );
     }
     case 'paragraph': {
-      const lineWidths = resolveHangingIndentLineWidths(
-        contentWidthPx,
-        block.blockStyleOverrides,
-      );
+      const lineWidths = resolveTextBlockLineWidths(contentWidthPx, block, contract.blockStyles.paragraph);
       return estimateTextBlockHeight(
         getLayoutBlockPlainText(block),
         lineWidths.followingLineWidthPx,
@@ -1428,33 +1567,36 @@ function computeOptimalTextSplit(
   availableHeight: number,
   contract: ResolvedStyleContract,
   styles?: LayoutStyleSheet,
+  measuredTextLineBreaks?: MeasuredTextLineBreaks,
 ): TextFragmentInfo | null {
   const contentWidthPx = contract.contentWidthPx;
-  const lineWidths = resolveHangingIndentLineWidths(
-    contentWidthPx,
-    block.blockStyleOverrides,
-  );
 
   let style: TextBlockStyleRule;
+  let baseStyle: TextBlockStyleRule;
   let plainText: string;
 
   if (block.type === 'heading') {
-    style = resolveTextBlockStyle(
-      block,
+    baseStyle =
       block.metadata.kind === 'heading' && block.metadata.depth === 1
         ? contract.blockStyles.heading1
         : block.metadata.kind === 'heading' && block.metadata.depth === 2
           ? contract.blockStyles.heading2
-          : contract.blockStyles.heading3,
+          : contract.blockStyles.heading3;
+    style = resolveTextBlockStyle(
+      block,
+      baseStyle,
       styles,
     );
     plainText = getLayoutBlockPlainText(block);
   } else if (block.type === 'paragraph') {
-    style = resolveTextBlockStyle(block, contract.blockStyles.paragraph, styles);
+    baseStyle = contract.blockStyles.paragraph;
+    style = resolveTextBlockStyle(block, baseStyle, styles);
     plainText = getLayoutBlockPlainText(block);
   } else {
     return null;
   }
+
+  const lineWidths = resolveTextBlockLineWidths(contentWidthPx, block, baseStyle);
 
   // 计算可用行数（排除 margin）
   const usableHeight = availableHeight - style.marginTop - style.marginBottom;
@@ -1466,6 +1608,35 @@ function computeOptimalTextSplit(
   const maxLines = Math.floor(usableHeight / lineHeight);
   if (maxLines <= 0) {
     return null;
+  }
+
+  const measuredSplitInfo = resolveMeasuredTextSplitInfo(
+    block.id,
+    plainText,
+    maxLines,
+    measuredTextLineBreaks,
+  );
+
+  if (measuredSplitInfo) {
+    if (measuredSplitInfo.totalLineCount <= maxLines) {
+      return {
+        currentPageText: plainText,
+        remainingText: '',
+        height: style.marginTop + measuredSplitInfo.totalLineCount * lineHeight + style.marginBottom,
+      };
+    }
+
+    const currentPageText = plainText.slice(0, measuredSplitInfo.splitOffset);
+    const remainingText = plainText.slice(measuredSplitInfo.splitOffset);
+    if (currentPageText.trim().length === 0) {
+      return null;
+    }
+
+    return {
+      currentPageText,
+      remainingText,
+      height: style.marginTop + measuredSplitInfo.usedLineCount * lineHeight + style.marginBottom,
+    };
   }
 
   // 使用 estimateTextLines 计算总行数（保持与分页一致）
@@ -1739,7 +1910,7 @@ function hasRemainingContent(blocks: LayoutBlock[], startIndex: number): boolean
 export function paginateMaxFillBlocks(
   context: PaginationAlgorithmContext,
 ): PageLayout[] {
-  const { blocks: originalBlocks, contract, styles, measuredBlockHeights } = context;
+  const { blocks: originalBlocks, contract, styles, measuredBlockHeights, measuredTextLineBreaks } = context;
 
   if (originalBlocks.length === 0) {
     return [createEmptyPage(1, contract)];
@@ -1914,6 +2085,7 @@ export function paginateMaxFillBlocks(
           rowHeights,
           contract,
           styles,
+          measuredTextLineBreaks,
         });
 
         if (!fragment) {
@@ -1999,6 +2171,7 @@ export function paginateMaxFillBlocks(
           isCurrentPageEmpty: placedBlocks.length === 0,
           contract,
           styles,
+          measuredTextLineBreaks,
         });
 
         if (!fragment) {
@@ -2094,7 +2267,13 @@ export function paginateMaxFillBlocks(
         shouldPushCurrentPage = true;
       } else {
         // 不能完整放入，尝试按行分割
-        const splitInfo = computeOptimalTextSplit(block, availableHeight, contract, styles);
+        const splitInfo = computeOptimalTextSplit(
+          block,
+          availableHeight,
+          contract,
+          styles,
+          measuredTextLineBreaks,
+        );
 
         if (splitInfo) {
           // splitInfo 返回当前页文本和剩余文本两部分

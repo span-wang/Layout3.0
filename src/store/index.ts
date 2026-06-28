@@ -11,6 +11,6 @@ export const useAppStore = create<AppStore>()(
     ...createDocumentSlice(...args),
     ...createStyleSlice(...args),
     ...createUiSlice(...args),
-    ...createAiSlice(args[0]),
+    ...createAiSlice(args[0], args[1]),
   })),
 );

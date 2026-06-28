@@ -34,6 +34,7 @@ import { buildFontFamilyGroupsWithImportedFonts } from '@/engine/document-model/
 import { isImageTextWrapMode, resolveImageLayout } from '@/engine/document-model/imageLayout';
 import { renderEquationToHtml } from '@/engine/document-model/equation';
 import {
+  blockSpacingPresetDefinitions,
   headerFooterPresetDefinitions,
   marginPresetDefinitions,
   pageSizeDefinitions,
@@ -43,6 +44,9 @@ import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '@/en
 import { listPaginationAlgorithms } from '@/engine/typesetting';
 import type { LayoutWarning } from '@/engine/typesetting/types';
 import type {
+  BlockSpacingParameterKey,
+  BlockSpacingParameters,
+  BlockSpacingPreset,
   HeaderFooterPresetId,
   MarginPresetId,
   MarginSide,
@@ -107,6 +111,7 @@ const pageSettingsTabs: Array<{
   { id: '页面规格', label: '页面规格', description: '纸张与方向', icon: FileText },
   { id: '页边距', label: '页边距', description: '预设与自定义边距', icon: PanelTop },
   { id: '页眉页脚预留', label: '页眉页脚预留', description: '控制预留区域高度', icon: PanelBottom },
+  { id: '块排版', label: '块排版', description: '块间距与预设', icon: SlidersHorizontal },
   { id: '模板起点', label: '模板起点', description: '默认或模板套用', icon: Layers3 },
   { id: '分页策略', label: '分页策略', description: '标题、代码块与图片保护', icon: SlidersHorizontal },
 ];
@@ -171,6 +176,69 @@ const paginationBehaviorOptions: Array<{
   { id: 'avoidBreakInsideCodeBlocks', label: '代码块整块保护', description: '优先保持代码块不被拆开' },
   { id: 'avoidBreakInsideTables', label: '表格整块保护', description: '表格跨页能力完成前尽量整体显示' },
   { id: 'avoidBreakInsideImages', label: '图片整块保护', description: '图片与说明尽量保持在同一页' },
+];
+
+const blockSpacingParameterGroups: Array<{
+  title: string;
+  hint: string;
+  items: Array<{
+    id: BlockSpacingParameterKey;
+    label: string;
+    max?: number;
+    step?: number;
+  }>;
+}> = [
+  {
+    title: '标题外边距',
+    hint: '控制标题块上下留白',
+    items: [
+      { id: 'heading1SpaceBefore', label: 'H1 段前' },
+      { id: 'heading1SpaceAfter', label: 'H1 段后' },
+      { id: 'heading2SpaceBefore', label: 'H2 段前' },
+      { id: 'heading2SpaceAfter', label: 'H2 段后' },
+      { id: 'heading3SpaceBefore', label: 'H3 段前' },
+      { id: 'heading3SpaceAfter', label: 'H3 段后' },
+    ],
+  },
+  {
+    title: '正文块间距',
+    hint: '控制正文、列表和引用之间的距离',
+    items: [
+      { id: 'paragraphSpaceBefore', label: '段落段前' },
+      { id: 'paragraphSpaceAfter', label: '段落段后' },
+      { id: 'listSpaceBefore', label: '列表段前' },
+      { id: 'listSpaceAfter', label: '列表段后' },
+      { id: 'listItemGap', label: '列表项间距' },
+      { id: 'blockquoteSpaceBefore', label: '引用段前' },
+      { id: 'blockquoteSpaceAfter', label: '引用段后' },
+    ],
+  },
+  {
+    title: '块内边距',
+    hint: '控制文字块、代码块和表格内部留白',
+    items: [
+      { id: 'textInsetLeft', label: '文字块左内缩', max: 200, step: 2 },
+      { id: 'textInsetRight', label: '文字块右内缩', max: 200, step: 2 },
+      { id: 'codePaddingX', label: '代码左右内边距' },
+      { id: 'codePaddingY', label: '代码上下内边距' },
+      { id: 'tableCellPaddingX', label: '单元格左右内边距' },
+      { id: 'tableCellPaddingY', label: '单元格上下内边距' },
+    ],
+  },
+  {
+    title: '其他块外边距',
+    hint: '控制代码、表格、图片和分隔线之间的距离',
+    items: [
+      { id: 'codeSpaceBefore', label: '代码段前' },
+      { id: 'codeSpaceAfter', label: '代码段后' },
+      { id: 'tableSpaceBefore', label: '表格段前' },
+      { id: 'tableSpaceAfter', label: '表格段后' },
+      { id: 'imageSpaceBefore', label: '图片段前' },
+      { id: 'imageSpaceAfter', label: '图片段后' },
+      { id: 'ruleSpaceBefore', label: '分隔线段前' },
+      { id: 'ruleSpaceAfter', label: '分隔线段后' },
+    ],
+  },
 ];
 
 const textMarkOptions: Array<{ id: TextMarkType; label: string }> = [
@@ -2661,6 +2729,233 @@ function renderHeaderFooterPanel({
   );
 }
 
+function getBlockSpacingPresetOptions(styleSettings: StyleSettings): BlockSpacingPreset[] {
+  return [...blockSpacingPresetDefinitions, ...styleSettings.customBlockSpacingPresets];
+}
+
+function renderBlockSpacingPanel({
+  styleSettings,
+  setBlockSpacingParameter,
+  applyBlockSpacingPreset,
+  addBlockSpacingPreset,
+  updateBlockSpacingPreset,
+  newPresetName,
+  setNewPresetName,
+  newPresetDescription,
+  setNewPresetDescription,
+}: {
+  styleSettings: StyleSettings;
+  setBlockSpacingParameter: (parameter: BlockSpacingParameterKey, value: number) => void;
+  applyBlockSpacingPreset: (presetId: string) => void;
+  addBlockSpacingPreset: (payload: { name: string; description: string }) => string;
+  updateBlockSpacingPreset: (payload: {
+    presetId: string;
+    name?: string;
+    description?: string;
+    parameters?: BlockSpacingParameters;
+  }) => void;
+  newPresetName: string;
+  setNewPresetName: (value: string) => void;
+  newPresetDescription: string;
+  setNewPresetDescription: (value: string) => void;
+}): JSX.Element {
+  const allPresets = getBlockSpacingPresetOptions(styleSettings);
+  const activePreset = allPresets.find((preset) => preset.id === styleSettings.blockSpacingPresetId);
+
+  const handleAddPreset = () => {
+    addBlockSpacingPreset({
+      name: newPresetName,
+      description: newPresetDescription,
+    });
+    setNewPresetName('');
+    setNewPresetDescription('');
+  };
+
+  return (
+    <>
+      <section className="detail-panel">
+        <div className="detail-panel-head">
+          <h3>块排版预设</h3>
+          <span>一键应用整篇文档的块间距和内边距</span>
+        </div>
+        <div className="option-card-grid">
+          {allPresets.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              className={preset.id === styleSettings.blockSpacingPresetId ? 'option-card active' : 'option-card'}
+              onClick={() => applyBlockSpacingPreset(preset.id)}
+            >
+              <strong>{preset.name}</strong>
+              <span>{preset.description || (preset.builtIn ? '内置预设' : '自定义预设')}</span>
+            </button>
+          ))}
+        </div>
+        <div className="panel-note-list">
+          <p>
+            当前：
+            <strong>{activePreset?.name ?? '自定义参数'}</strong>
+          </p>
+          <p>单个块的局部段距、缩进和行高仍会优先覆盖这里的全局参数。</p>
+        </div>
+      </section>
+
+      <section className="detail-panel">
+        <div className="detail-panel-head">
+          <h3>添加预设</h3>
+          <span>把当前参数保存成一套可复用方案</span>
+        </div>
+        <div className="property-stack">
+          <label>
+            预设名称
+            <input
+              className="style-text-input"
+              type="text"
+              value={newPresetName}
+              onChange={(event) => setNewPresetName(event.target.value)}
+              placeholder="例如：讲义留白"
+            />
+          </label>
+          <label>
+            预设描述
+            <input
+              className="style-text-input"
+              type="text"
+              value={newPresetDescription}
+              onChange={(event) => setNewPresetDescription(event.target.value)}
+              placeholder="说明这套参数适合什么场景"
+            />
+          </label>
+        </div>
+        <button type="button" className="segment-chip table-structure-button" onClick={handleAddPreset}>
+          添加为预设
+        </button>
+      </section>
+
+      {styleSettings.customBlockSpacingPresets.length > 0 ? (
+        <section className="detail-panel">
+          <div className="detail-panel-head">
+            <h3>自定义预设</h3>
+            <span>可重命名、改描述或保存当前参数</span>
+          </div>
+          <div className="block-spacing-custom-list">
+            {styleSettings.customBlockSpacingPresets.map((preset) => (
+              <article key={preset.id} className="block-spacing-custom-item">
+                <div className="property-stack">
+                  <label>
+                    名称
+                    <input
+                      key={`block-spacing-name-${preset.id}-${preset.name}`}
+                      className="style-text-input"
+                      type="text"
+                      defaultValue={preset.name}
+                      onBlur={(event) =>
+                        updateBlockSpacingPreset({
+                          presetId: preset.id,
+                          name: event.currentTarget.value,
+                        })
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  </label>
+                  <label>
+                    描述
+                    <input
+                      key={`block-spacing-description-${preset.id}-${preset.description}`}
+                      className="style-text-input"
+                      type="text"
+                      defaultValue={preset.description}
+                      onBlur={(event) =>
+                        updateBlockSpacingPreset({
+                          presetId: preset.id,
+                          description: event.currentTarget.value,
+                        })
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                <div className="segmented-group">
+                  <button type="button" className="segment-chip" onClick={() => applyBlockSpacingPreset(preset.id)}>
+                    应用
+                  </button>
+                  <button
+                    type="button"
+                    className="segment-chip"
+                    onClick={() =>
+                      updateBlockSpacingPreset({
+                        presetId: preset.id,
+                        parameters: styleSettings.blockSpacing,
+                      })
+                    }
+                  >
+                    保存当前参数
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {blockSpacingParameterGroups.map((group) => (
+        <section key={group.title} className="detail-panel">
+          <div className="detail-panel-head">
+            <h3>{group.title}</h3>
+            <span>{group.hint}</span>
+          </div>
+          <div className="margin-grid">
+            {group.items.map((item) => {
+              const currentValue = styleSettings.blockSpacing[item.id];
+              const maxValue = item.max ?? 160;
+              const stepValue = item.step ?? 1;
+
+              return (
+                <label key={item.id}>
+                  {item.label}
+                  <div className="number-input-shell">
+                    <input
+                      key={`${item.id}-${currentValue}`}
+                      type="number"
+                      min={0}
+                      max={maxValue}
+                      step={stepValue}
+                      defaultValue={currentValue}
+                      onBlur={(event) => {
+                        const nextValue = Number(event.currentTarget.value);
+                        if (!Number.isFinite(nextValue)) {
+                          event.currentTarget.value = String(currentValue);
+                          return;
+                        }
+
+                        setBlockSpacingParameter(item.id, Math.max(0, Math.min(maxValue, Math.round(nextValue))));
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                    <span>px</span>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
+
 function renderTemplatePanel({
   styleSettings,
   setTemplateId,
@@ -2789,6 +3084,11 @@ export function RightPanel({
   const setHeaderFooterLinked = useAppStore((state) => state.setHeaderFooterLinked);
   const setPaginationAlgorithmId = useAppStore((state) => state.setPaginationAlgorithmId);
   const setPaginationBehaviorOption = useAppStore((state) => state.setPaginationBehaviorOption);
+  const setBlockSpacingParameter = useAppStore((state) => state.setBlockSpacingParameter);
+  const applyBlockSpacingPreset = useAppStore((state) => state.applyBlockSpacingPreset);
+  const addBlockSpacingPreset = useAppStore((state) => state.addBlockSpacingPreset);
+  const updateBlockSpacingPreset = useAppStore((state) => state.updateBlockSpacingPreset);
+  const updateSyntaxMappingConfig = useAppStore((state) => state.updateSyntaxMappingConfig);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
   const updateLayoutNodeText = useAppStore((state) => state.updateLayoutNodeText);
   const toggleLayoutNodeTextMark = useAppStore((state) => state.toggleLayoutNodeTextMark);
@@ -2828,6 +3128,8 @@ export function RightPanel({
     header: String(styleSettings.customHeaderReservedMm),
     footer: String(styleSettings.customFooterReservedMm),
   });
+  const [newBlockSpacingPresetName, setNewBlockSpacingPresetName] = useState('');
+  const [newBlockSpacingPresetDescription, setNewBlockSpacingPresetDescription] = useState('');
   const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
   const selectedNodeInfo = getSelectedLayoutNodeInfo(layoutDocument);
   const selectedBlockquoteContext = getSelectedBlockquoteContext(layoutDocument);
@@ -2954,6 +3256,18 @@ export function RightPanel({
           handleHeaderFooterDraftChange,
           commitHeaderFooterDraft,
         });
+      case '块排版':
+        return renderBlockSpacingPanel({
+          styleSettings,
+          setBlockSpacingParameter,
+          applyBlockSpacingPreset,
+          addBlockSpacingPreset,
+          updateBlockSpacingPreset,
+          newPresetName: newBlockSpacingPresetName,
+          setNewPresetName: setNewBlockSpacingPresetName,
+          newPresetDescription: newBlockSpacingPresetDescription,
+          setNewPresetDescription: setNewBlockSpacingPresetDescription,
+        });
       case '模板起点':
         return renderTemplatePanel({
           styleSettings,
@@ -3030,7 +3344,10 @@ export function RightPanel({
     if (activeRightPanelTab === '语法映射') {
       return (
         <div className="right-panel-detail">
-          <SyntaxMappingPanel />
+          <SyntaxMappingPanel
+            config={layoutDocument?.meta.syntaxMappingConfig}
+            onChange={updateSyntaxMappingConfig}
+          />
         </div>
       );
     }
@@ -3062,6 +3379,7 @@ export function RightPanel({
                 aria-label={tab.label}
               >
                 <Icon size={17} />
+                <span>{tab.label}</span>
               </button>
             );
           })}

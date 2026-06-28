@@ -13,6 +13,16 @@ export interface UnderlineNode {
 }
 
 /**
+ * remark-math 扩展出的行内公式节点。
+ * 本插件只在公式内容命中文本标记映射时才替换它，普通公式仍按原公式节点保留。
+ */
+interface InlineMathNode {
+  type: 'inlineMath';
+  value: string;
+  position?: Text['position'];
+}
+
+/**
  * 手动解析 LaTeX 命令的大括号平衡
  * 用于从匹配位置向前找到第一个 {，然后提取从该 { 到匹配的 } 之间的内容
  * @param text 输入文本
@@ -261,6 +271,55 @@ function processTextNode(node: Text, mappings: SyntaxMapping[]): PhrasingContent
 }
 
 /**
+ * 处理行内公式节点中的 LaTeX 文本标记。
+ *
+ * 例如用户把 `$ \underline{\text{文字}} $` 当作“下划线文本语法”导入时，
+ * remark-math 会先生成 inlineMath；这里仅在配置规则命中时把它转回 TextMark 节点。
+ */
+function processInlineMathNode(node: InlineMathNode, mappings: SyntaxMapping[]): PhrasingContent[] {
+  if (!node.value) {
+    return [node as unknown as PhrasingContent];
+  }
+
+  const mathText = node.value.trim();
+  const pseudoTextNode: Text = {
+    type: 'text',
+    value: mathText,
+    position: node.position,
+  };
+  const newNodes = processTextNode(pseudoTextNode, mappings);
+
+  if (newNodes.length === 1 && (newNodes[0] as Text).type === 'text' && (newNodes[0] as Text).value === mathText) {
+    return [node as unknown as PhrasingContent];
+  }
+
+  return newNodes;
+}
+
+function collectReplacement(
+  replacements: Array<{ parent: PhrasingContent; index: number; newNodes: PhrasingContent[] }>,
+  parent: unknown,
+  index: number | undefined | null,
+  newNodes: PhrasingContent[],
+): typeof SKIP | undefined {
+  if (index === null || index === undefined || !parent) {
+    return undefined;
+  }
+
+  const parentNode = parent as { children?: PhrasingContent[] };
+  if ('children' in parentNode && Array.isArray(parentNode.children)) {
+    replacements.push({
+      parent: parentNode as PhrasingContent,
+      index,
+      newNodes,
+    });
+    return SKIP;
+  }
+
+  return undefined;
+}
+
+/**
  * remark 插件：处理文本中的特殊语法标记
  *
  * @param mappings 可选的语法映射列表，如果不提供则使用默认的 SYNTAX_MAPPINGS
@@ -304,6 +363,16 @@ export function remarkTextMarks(mappings?: SyntaxMapping[]): () => (tree: Root) 
           });
           return SKIP;
         }
+      });
+
+      visit(tree, 'inlineMath', (node: InlineMathNode, index, parent) => {
+        const newNodes = processInlineMathNode(node, activeMappings);
+
+        if (newNodes.length === 1 && (newNodes[0] as InlineMathNode).type === 'inlineMath') {
+          return;
+        }
+
+        return collectReplacement(replacements, parent, index as number | null | undefined, newNodes);
       });
 
       // 执行替换

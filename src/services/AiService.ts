@@ -11,6 +11,8 @@ import type {
   AiCheckResult,
   StreamCallback,
 } from '@/types/ai';
+import type { TextMarkMapping, TextMarkType } from '@/engine/document-model';
+import { hasRegexCaptureGroup } from '@/engine/document-model';
 
 /**
  * 模型信息
@@ -20,6 +22,21 @@ export interface ModelInfo {
   name: string;
   description?: string;
 }
+
+/**
+ * AI 正则识别入参
+ */
+export interface AiRegexRecognitionOptions {
+  /** 用户提供的示例语法，例如 \mybold{文字} 或 ==文字== */
+  sample: string;
+  /** 希望映射成的文本样式 */
+  markType: TextMarkType;
+}
+
+/**
+ * AI 正则识别结果，暂不包含 id，采用时由语法映射面板生成。
+ */
+export type AiRegexRecognitionResult = Omit<TextMarkMapping, 'id'>;
 
 interface AiMainProcessRequestResult {
   ok: boolean;
@@ -78,6 +95,205 @@ function parseJsonResponse<T>(endpoint: string, response: AiMainProcessRequestRe
   } catch {
     throw createUnexpectedResponseError(endpoint, response);
   }
+}
+
+function extractJsonObject(raw: string): string {
+  const fencedMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fencedMatch) {
+    return fencedMatch[1].trim();
+  }
+
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    return raw.slice(start, end + 1).trim();
+  }
+
+  return raw.trim();
+}
+
+function normalizeRegexPattern(rawPattern: string): string {
+  const trimmedPattern = rawPattern.trim();
+  const regexLiteralMatch = trimmedPattern.match(/^\/([\s\S]*)\/[a-z]*$/);
+  return regexLiteralMatch ? regexLiteralMatch[1] : trimmedPattern;
+}
+
+function escapeRegExpSource(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function stripSimpleRegexAnchors(pattern: string): string {
+  let nextPattern = pattern;
+  if (nextPattern.startsWith('^')) {
+    nextPattern = nextPattern.slice(1);
+  }
+  if (nextPattern.endsWith('$') && !nextPattern.endsWith('\\$')) {
+    nextPattern = nextPattern.slice(0, -1);
+  }
+  return nextPattern;
+}
+
+function getDollarWrappedInnerSample(sample: string): string | null {
+  const trimmedSample = sample.trim();
+  if (trimmedSample.startsWith('$$') || trimmedSample.endsWith('$$')) {
+    return null;
+  }
+
+  const match = trimmedSample.match(/^\$\s*([\s\S]*?)\s*\$$/);
+  return match ? match[1].trim() : null;
+}
+
+function getRegexRecognitionCoreSample(sample: string): string {
+  return getDollarWrappedInnerSample(sample) ?? sample.trim();
+}
+
+function wrapPatternForDollarSample(pattern: string): string {
+  return `\\$?\\s*(?:${stripSimpleRegexAnchors(pattern)})\\s*\\$?`;
+}
+
+function decodeLooseRegexField(value: string): string {
+  return value
+    .trim()
+    .replace(/^`+|`+$/g, '')
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'")
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\r')
+    .replace(/\\t/g, '\t');
+}
+
+function extractLooseField(raw: string, key: string): string | undefined {
+  const quotedField = new RegExp(`["']?${key}["']?\\s*:\\s*(["'\`])([\\s\\S]*?)\\1`, 'i').exec(raw);
+  if (quotedField?.[2]) {
+    return decodeLooseRegexField(quotedField[2]);
+  }
+
+  const lineField = new RegExp(`["']?${key}["']?\\s*:\\s*([^,\\n\\r}]+)`, 'i').exec(raw);
+  if (lineField?.[1]) {
+    return decodeLooseRegexField(lineField[1]);
+  }
+
+  return undefined;
+}
+
+function parseRegexRecognitionPayload(raw: string): { name?: unknown; pattern?: unknown; description?: unknown } {
+  const extracted = extractJsonObject(raw);
+  try {
+    return JSON.parse(extracted) as { name?: unknown; pattern?: unknown; description?: unknown };
+  } catch {
+    const loosePayload = {
+      name: extractLooseField(extracted, 'name'),
+      pattern: extractLooseField(extracted, 'pattern'),
+      description: extractLooseField(extracted, 'description'),
+    };
+
+    if (loosePayload.name || loosePayload.pattern || loosePayload.description) {
+      return loosePayload;
+    }
+
+    throw new Error('AI 返回内容无法提取规则字段，请重试一次或换一个更短的示例');
+  }
+}
+
+function collapseJsonStyleBackslashes(pattern: string): string {
+  return pattern.replace(/\\\\/g, '\\');
+}
+
+function repairBareLatexCommands(pattern: string): string {
+  // AI 有时会把用于匹配 LaTeX 命令的 `\\underline` 写成 `\underline`，
+  // 这会被 RegExp 当成非法或特殊转义；这里只修复常见文本标记命令。
+  return pattern.replace(
+    /(^|[^\\])\\(underline|text|textbf|textit|sout)\b/g,
+    (_match, prefix: string, command: string) => `${prefix}\\\\${command}`,
+  );
+}
+
+function createLatexCommandFallbackPattern(sample: string): string | null {
+  const coreSample = getRegexRecognitionCoreSample(sample);
+  const textCommandMatch = coreSample.match(/^\\([A-Za-z]+)\s*\{\s*\\text\s*\{[\s\S]+}\s*}$/);
+  if (textCommandMatch) {
+    const command = escapeRegExpSource(textCommandMatch[1]);
+    return `\\$?\\s*\\\\${command}\\s*\\{\\s*\\\\text\\s*\\{(.+?)\\}\\s*\\}\\s*\\$?`;
+  }
+
+  const commandMatch = coreSample.match(/^\\([A-Za-z]+)\s*\{[\s\S]+}$/);
+  if (commandMatch) {
+    const command = escapeRegExpSource(commandMatch[1]);
+    return `\\$?\\s*\\\\${command}\\s*\\{(.+?)\\}\\s*\\$?`;
+  }
+
+  return null;
+}
+
+function dedupePatterns(patterns: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  return patterns.filter((pattern): pattern is string => {
+    if (!pattern || seen.has(pattern)) {
+      return false;
+    }
+    seen.add(pattern);
+    return true;
+  });
+}
+
+function getRegexMatch(pattern: string, sample: string): RegExpExecArray | null {
+  try {
+    const regex = new RegExp(pattern, 's');
+    return regex.exec(sample);
+  } catch {
+    return null;
+  }
+}
+
+function findUsableRegexPattern(rawPattern: string, sample: string): string {
+  const normalizedPattern = normalizeRegexPattern(rawPattern);
+  const coreSample = getRegexRecognitionCoreSample(sample);
+  const collapsedPattern = collapseJsonStyleBackslashes(normalizedPattern);
+  const fallbackPattern = createLatexCommandFallbackPattern(sample);
+  const baseCandidates = dedupePatterns([
+    normalizedPattern,
+    collapsedPattern,
+    repairBareLatexCommands(normalizedPattern),
+    repairBareLatexCommands(collapsedPattern),
+    fallbackPattern,
+  ]);
+  const candidates = dedupePatterns([
+    ...baseCandidates,
+    ...baseCandidates.map((pattern) => (coreSample !== sample.trim() ? wrapPatternForDollarSample(pattern) : null)),
+  ]);
+
+  for (const candidate of candidates) {
+    if (!hasRegexCaptureGroup(candidate)) {
+      continue;
+    }
+
+    const originalMatch = getRegexMatch(candidate, sample);
+    if (originalMatch?.[1]) {
+      return candidate;
+    }
+
+    if (coreSample !== sample.trim()) {
+      const coreMatch = getRegexMatch(candidate, coreSample);
+      if (coreMatch?.[1]) {
+        return coreSample === sample.trim() ? candidate : wrapPatternForDollarSample(candidate);
+      }
+    }
+  }
+
+  throw new Error('AI 返回的正则表达式无法匹配示例语法，请补充更明确的示例');
+}
+
+function getTextMarkTypeLabel(markType: TextMarkType): string {
+  const labels: Record<TextMarkType, string> = {
+    bold: '加粗',
+    italic: '斜体',
+    underline: '下划线',
+    strike: '删除线',
+    code: '行内代码',
+    link: '链接',
+  };
+
+  return labels[markType];
 }
 
 /**
@@ -445,6 +661,46 @@ ${content}`;
   }
 
   /**
+   * 根据用户给出的示例语法，让 AI 生成可用于文本标记映射的 JavaScript 正则表达式。
+   */
+  async recognizeTextMarkRegex(
+    options: AiRegexRecognitionOptions,
+    signal?: AbortSignal,
+  ): Promise<AiRegexRecognitionResult> {
+    const sample = options.sample.trim();
+    if (!sample) {
+      throw new Error('请先输入需要识别的示例语法');
+    }
+    const coreSample = getRegexRecognitionCoreSample(sample);
+
+    const systemPrompt = `你是一个严谨的 JavaScript 正则表达式助手，专门为 Markdown 文本标记映射生成正则。
+
+要求：
+1. 只返回 JSON，不要返回 Markdown 代码块或解释。
+2. pattern 必须是 JavaScript RegExp 的 source 字符串，不要包含开头和结尾的 /。
+3. pattern 必须包含至少一个捕获组，用第一个捕获组提取被标记的正文。
+4. pattern 应尽量只匹配用户给出的语法边界，不要贪婪匹配整段文本。
+5. 不要使用会改变正文内容的替换写法。
+6. 如果示例有外层 $...$，pattern 应能匹配外层美元符号和空格，但第一个捕获组只捕获正文。
+
+返回格式：
+{
+  "name": "规则名称",
+  "pattern": "正则表达式 source 字符串",
+  "description": "一句中文说明"
+}`;
+
+    const userMessage = `原始示例语法：${sample}
+核心示例语法：${coreSample}
+目标文本样式：${getTextMarkTypeLabel(options.markType)}
+
+请生成一条可用于识别该语法的 JavaScript 正则表达式。`;
+
+    const rawResult = await this.generateNonStream(systemPrompt, userMessage, signal);
+    return this.parseRegexRecognitionResult(rawResult, options.markType, sample);
+  }
+
+  /**
    * 发送最小请求验证当前配置是否可用。
    */
   async testConnection(signal?: AbortSignal): Promise<void> {
@@ -659,6 +915,54 @@ ${options.text}
     return {
       items: [],
       checkedAt: Date.now(),
+    };
+  }
+
+  /**
+   * 解析并校验 AI 返回的正则识别结果。
+   */
+  private parseRegexRecognitionResult(
+    raw: string,
+    markType: TextMarkType,
+    sample: string,
+  ): AiRegexRecognitionResult {
+    let parsed: { name?: unknown; pattern?: unknown; description?: unknown };
+    try {
+      parsed = parseRegexRecognitionPayload(raw);
+    } catch (error) {
+      const fallbackPattern = createLatexCommandFallbackPattern(sample);
+      if (!fallbackPattern) {
+        throw error;
+      }
+      parsed = {
+        pattern: fallbackPattern,
+        description: 'AI 返回结构不完整，已根据 LaTeX 示例自动生成候选正则',
+      };
+    }
+
+    const pattern = typeof parsed.pattern === 'string' ? findUsableRegexPattern(parsed.pattern, sample) : createLatexCommandFallbackPattern(sample) ?? '';
+    if (!pattern) {
+      throw new Error('AI 没有返回可用的正则表达式');
+    }
+
+    if (!hasRegexCaptureGroup(pattern)) {
+      throw new Error('AI 返回的正则表达式缺少捕获组，无法提取被标记文本');
+    }
+
+    if (!getRegexMatch(pattern, sample)?.[1] && !getRegexMatch(pattern, getRegexRecognitionCoreSample(sample))?.[1]) {
+      throw new Error('AI 返回的正则表达式无法匹配示例语法，请补充更明确的示例');
+    }
+
+    const fallbackName = `AI 识别${getTextMarkTypeLabel(markType)}语法`;
+    return {
+      name: typeof parsed.name === 'string' && parsed.name.trim() ? parsed.name.trim() : fallbackName,
+      pattern,
+      markType,
+      enabled: true,
+      description:
+        typeof parsed.description === 'string' && parsed.description.trim()
+          ? parsed.description.trim()
+          : `由 AI 根据示例「${sample}」识别生成`,
     };
   }
 }

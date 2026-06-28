@@ -1,5 +1,6 @@
 import { cloneStyleSettings, normalizeStyleSettings } from '@/engine/style/styleSettings';
 import type { StyleSettings } from '@/engine/style/types';
+import { normalizeLayoutDocumentSyntaxMappingConfig } from './syntaxMappingConfig';
 import type { LayoutDocument } from './types';
 
 export interface LayoutProjectFile {
@@ -41,7 +42,7 @@ export function serializeLayoutProjectFile(payload: {
     kind: 'layout-project',
     version: '1.0.0',
     savedAt: new Date().toISOString(),
-    document: payload.document,
+    document: normalizeLayoutDocumentSyntaxMappingConfig(payload.document),
     styleSettings: cloneStyleSettings(payload.styleSettings),
   };
 
@@ -70,7 +71,7 @@ export function parseLayoutProjectFile(content: string): {
   }
 
   return {
-    document: parsed.document,
+    document: normalizeLayoutDocumentSyntaxMappingConfig(parsed.document),
     styleSettings: normalizeStyleSettings(parsed.styleSettings),
   };
 }
