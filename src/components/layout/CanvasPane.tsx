@@ -66,11 +66,13 @@ import {
   resolveBlockDefaultTextMetrics,
   resolveBlockEffectiveTextMetrics,
 } from '@/engine/style/blockStyleResolution';
+import { shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
 import {
   resolveQuickTextStyleForBlock,
   resolveQuickTextStyleForRun,
 } from '@/engine/style/quickTextStyle';
-import type { ResolvedStyleContract } from '@/engine/style/types';
+import { renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
+import type { HeaderFooterContent, ResolvedStyleContract } from '@/engine/style/types';
 import type { MeasuredTextLineBreaks, PageLayout } from '@/engine/typesetting/types';
 import { useAppStore } from '@/store';
 import type { CanvasTextSelectionState } from '@/types/workspace';
@@ -89,6 +91,7 @@ interface CanvasPaneProps {
   parseError: string | null;
   parseState: ParseState;
   resolvedStyleContract: ResolvedStyleContract;
+  headerFooterContent: HeaderFooterContent;
   selectedNodeId: string | null;
   selectedBlockIds: string[];
   onSelectNode: (nodeId: string) => void;
@@ -371,8 +374,11 @@ function buildMeasurementStyleSignature(
   styles: LayoutStyleSheet,
 ): string {
   return JSON.stringify({
-    contentWidthPx: contract.contentWidthPx,
+    contentWidthPx: contract.singleColumnContentWidthPx,
+    columnCount: contract.columnCount,
+    columnGapPx: contract.columnGapPx,
     blockStyles: contract.blockStyles,
+    themeLayoutMetrics: contract.themeLayoutMetrics,
     templateId: contract.templateId,
     themeId: contract.themeId,
     textStyles: styles.textStyles,
@@ -501,10 +507,34 @@ function measureTextLineBreaksInBlock(blockElement: HTMLElement): MeasuredTextLi
   return nextLineBreaks;
 }
 
-function buildBlockStyle(block: LayoutBlock, effectiveLineHeight?: number): CSSProperties {
+function resolveHeadingDecorationMarkerInset(
+  block: LayoutBlock,
+  contract?: ResolvedStyleContract,
+): number {
+  if (!contract || block.type !== 'heading' || block.metadata.kind !== 'heading') {
+    return 0;
+  }
+
+  if (block.metadata.depth === 1) {
+    return contract.themeLayoutMetrics.heading1.markerInsetLeft;
+  }
+
+  if (block.metadata.depth === 2) {
+    return contract.themeLayoutMetrics.heading2.markerInsetLeft;
+  }
+
+  return contract.themeLayoutMetrics.heading3.markerInsetLeft;
+}
+
+function buildBlockStyle(
+  block: LayoutBlock,
+  effectiveLineHeight?: number,
+  contract?: ResolvedStyleContract,
+): CSSProperties {
   const supportsBlockIndent = block.type === 'heading' || block.type === 'paragraph';
   const indentStyle = supportsBlockIndent ? resolveHangingIndentStyle(block.blockStyleOverrides) : null;
   const textIndent = indentStyle ? indentStyle.textIndent : block.blockStyleOverrides.firstLineIndent;
+  const decorationMarkerInset = resolveHeadingDecorationMarkerInset(block, contract);
   const hasLeftIndentOverride =
     block.blockStyleOverrides.indentLeft !== undefined || block.blockStyleOverrides.hangingIndent !== undefined;
   const hasRightIndentOverride = block.blockStyleOverrides.indentRight !== undefined;
@@ -524,7 +554,7 @@ function buildBlockStyle(block: LayoutBlock, effectiveLineHeight?: number): CSSP
     marginBottom: block.blockStyleOverrides.spaceAfter !== undefined
       ? `${block.blockStyleOverrides.spaceAfter}px`
       : undefined,
-    paddingLeft: indentStyle && hasLeftIndentOverride ? `${indentStyle.paddingLeft}px` : undefined,
+    paddingLeft: indentStyle && hasLeftIndentOverride ? `${indentStyle.paddingLeft + decorationMarkerInset}px` : undefined,
     paddingRight: indentStyle && hasRightIndentOverride ? `${indentStyle.paddingRight}px` : undefined,
     textIndent: hasTextIndentOverride && textIndent !== undefined
       ? `${textIndent}px`
@@ -2446,7 +2476,7 @@ function renderBlock(
     tableResizeState?.pageContract,
     documentStyles,
   );
-  const blockStyle = buildBlockStyle(block, effectiveLineHeight);
+  const blockStyle = buildBlockStyle(block, effectiveLineHeight, tableResizeState?.pageContract);
   const isEditing = editingNodeId === block.id;
   const getSelectableBlockProps = (className = '') =>
     createSelectableBlockProps(
@@ -2481,8 +2511,23 @@ function renderBlock(
           <span className="page-break-marker-line" aria-hidden="true" />
         </div>
       );
+    case 'columnBreak':
+      return (
+        <div
+          key={`column-break-${block.id}-${index}`}
+          {...getSelectableBlockProps('column-break-marker')}
+          aria-label="分栏断点"
+        >
+          <span className="column-break-marker-line" aria-hidden="true" />
+          <span className="column-break-marker-label">分栏断点</span>
+          <span className="column-break-marker-line" aria-hidden="true" />
+        </div>
+      );
     case 'heading': {
       const depth = block.metadata.kind === 'heading' ? block.metadata.depth : 3;
+      const headingClassName = shouldLayoutBlockSpanAllColumns(block, tableResizeState?.pageContract)
+        ? 'column-span-all'
+        : '';
       const content = isEditing
         ? isRichTextCanvasEditorKind(editingKind ?? 'heading')
           ? (
@@ -2513,7 +2558,7 @@ function renderBlock(
         return (
           <h1
             key={`${block.id}-${index}`}
-            {...getSelectableBlockProps()}
+            {...getSelectableBlockProps(headingClassName)}
             data-measure-text-node-id={block.id}
             style={blockStyle}
           >
@@ -2526,7 +2571,7 @@ function renderBlock(
         return (
           <h2
             key={`${block.id}-${index}`}
-            {...getSelectableBlockProps()}
+            {...getSelectableBlockProps(headingClassName)}
             data-measure-text-node-id={block.id}
             style={blockStyle}
           >
@@ -2539,7 +2584,7 @@ function renderBlock(
         return (
           <h4
             key={`${block.id}-${index}`}
-            {...getSelectableBlockProps()}
+            {...getSelectableBlockProps(headingClassName)}
             data-measure-text-node-id={block.id}
             style={blockStyle}
           >
@@ -2551,7 +2596,7 @@ function renderBlock(
       return (
         <h3
           key={`${block.id}-${index}`}
-          {...getSelectableBlockProps()}
+          {...getSelectableBlockProps(headingClassName)}
           data-measure-text-node-id={block.id}
           style={blockStyle}
         >
@@ -2771,7 +2816,7 @@ function renderBlock(
         const resolvedColumnWidths = resolveTableColumnWidths(
           tableResizeState?.draftTableColumnWidths?.[block.id] ?? block.metadata.columnWidthsPx,
           columnCount,
-          tableResizeState?.pageContract?.contentWidthPx ?? 640,
+          tableResizeState?.pageContract?.singleColumnContentWidthPx ?? 640,
         );
         const shouldShowResizeHandles =
           block.id === selectedNodeId || isTableCellSelected(block, selectedNodeId);
@@ -3111,6 +3156,7 @@ function CanvasPaneComponent({
   parseError,
   parseState,
   resolvedStyleContract,
+  headerFooterContent,
   selectedNodeId,
   selectedBlockIds,
   onSelectNode,
@@ -3206,6 +3252,8 @@ function CanvasPaneComponent({
     '--page-padding-right': '0px',
     width: `${resolvedStyleContract.contentWidthPx}px`,
   } as CSSProperties;
+  const pageBodyClassName =
+    resolvedStyleContract.columnCount > 1 ? 'page-body page-body-columns' : 'page-body';
 
   useLayoutEffect(() => {
     const pageStack = pageStackRef.current;
@@ -4310,7 +4358,7 @@ function CanvasPaneComponent({
     const existingWidths = resolveTableColumnWidths(
       draftTableColumnWidths[block.id] ?? block.metadata.columnWidthsPx,
       block.metadata.rows[0]?.cells.length ?? 0,
-      resolvedStyleContract.contentWidthPx,
+      resolvedStyleContract.singleColumnContentWidthPx,
     );
     const startWidthPx = existingWidths[columnIndex] ?? measuredWidthPx;
     const startNextWidthPx = existingWidths[columnIndex + 1] ?? measuredNextWidthPx;
@@ -4804,6 +4852,13 @@ function CanvasPaneComponent({
               const measuredWidth = pageStackWidth && pageStackWidth > 0 ? pageStackWidth : maxWidth;
               const displayWidth = Math.min(page.contract.pageWidthPx, maxWidth, measuredWidth);
               const pageScale = displayWidth / page.contract.pageWidthPx;
+              const renderedHeaderFooter = renderHeaderFooterContent(headerFooterContent, {
+                documentTitle,
+                pageTitle,
+                pageNumber: page.pageNumber,
+                totalPages: pageLayouts.length,
+                contract: page.contract,
+              });
 
               return (
                 <div
@@ -4813,6 +4868,7 @@ function CanvasPaneComponent({
                 >
                   <div
                     className="page"
+                    data-theme-id={page.contract.themeId}
                     style={pageStyle}
                     onClick={
                       activeImageResize || activeImageCrop || activeTableColumnResize || activeTableRowResize
@@ -4821,10 +4877,11 @@ function CanvasPaneComponent({
                     }
                   >
                     <div className="page-header">
-                      <span>{pageTitle}</span>
-                      <span>{page.contract.pageLabel}</span>
+                      <span>{renderedHeaderFooter.header.left}</span>
+                      <span>{renderedHeaderFooter.header.center}</span>
+                      <span>{renderedHeaderFooter.header.right}</span>
                     </div>
-                    <article className="page-body">
+                    <article className={pageBodyClassName}>
                       {(() => {
                         const renderedBlocks: ReactNode[] = [];
 
@@ -4894,8 +4951,9 @@ function CanvasPaneComponent({
                       })()}
                     </article>
                     <div className="page-footer">
-                      <span>{page.contract.templateThemeLabel}</span>
-                      <span>{page.pageNumber}</span>
+                      <span>{renderedHeaderFooter.footer.left}</span>
+                      <span>{renderedHeaderFooter.footer.center}</span>
+                      <span>{renderedHeaderFooter.footer.right}</span>
                     </div>
                   </div>
                 </div>
@@ -4905,6 +4963,7 @@ function CanvasPaneComponent({
           <div
             ref={measurementLayerRef}
             className="page-measurement-layer"
+            data-theme-id={resolvedStyleContract.themeId}
             aria-hidden="true"
             style={measurementPageStyle}
           >

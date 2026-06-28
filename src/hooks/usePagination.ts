@@ -28,8 +28,9 @@ export function usePagination(
     }
 
     const shouldUseMeasuredHeights =
-      paginationAlgorithmId === MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID ||
-      paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID;
+      resolvedStyleContract.columnCount === 1 &&
+      (paginationAlgorithmId === MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID ||
+        paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID);
     const nextPages = paginateBlocks(layoutBlocks, resolvedStyleContract, {
       algorithmId: paginationAlgorithmId,
       styles: layoutStyles ?? undefined,

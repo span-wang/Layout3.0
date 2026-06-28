@@ -4,7 +4,11 @@ import type {
   BlockSpacingParameters,
   BlockSpacingPreset,
   BoxInsets,
+  ColumnSettings,
+  HeaderFooterContent,
+  HeaderFooterLineContent,
   HeaderFooterPresetId,
+  HeaderFooterSlot,
   MarginMode,
   MarginPresetId,
   PageOrientation,
@@ -64,6 +68,30 @@ function clonePaginationBehavior(behavior: PaginationBehavior): PaginationBehavi
     avoidBreakInsideCodeBlocks: behavior.avoidBreakInsideCodeBlocks,
     avoidBreakInsideTables: behavior.avoidBreakInsideTables,
     avoidBreakInsideImages: behavior.avoidBreakInsideImages,
+  };
+}
+
+function cloneColumnSettings(columns: ColumnSettings): ColumnSettings {
+  return {
+    count: columns.count,
+    gapMm: columns.gapMm,
+    divider: columns.divider,
+    headingsSpanAll: columns.headingsSpanAll,
+  };
+}
+
+function cloneHeaderFooterLineContent(line: HeaderFooterLineContent): HeaderFooterLineContent {
+  return {
+    left: line.left,
+    center: line.center,
+    right: line.right,
+  };
+}
+
+export function cloneHeaderFooterContent(content: HeaderFooterContent): HeaderFooterContent {
+  return {
+    header: cloneHeaderFooterLineContent(content.header),
+    footer: cloneHeaderFooterLineContent(content.footer),
   };
 }
 
@@ -129,12 +157,17 @@ function isHeaderFooterPresetId(value: unknown): value is HeaderFooterPresetId {
   return value === 'none' || value === 'compact' || value === 'standard';
 }
 
+function isPageColumnCount(value: unknown): value is ColumnSettings['count'] {
+  return value === 1 || value === 2 || value === 3;
+}
+
 function isTemplateId(value: unknown): value is TemplateId {
   return value === 'default' || value === 'lecture' || value === 'notes';
 }
 
 function isThemeId(value: unknown): value is ThemeId {
-  return value === 'default' || value === 'snowMountain';
+  // 读取旧工程或异常工程时，未知主题会被 normalizeStyleSettings 回退到默认主题。
+  return value === 'default' || value === 'snowMountain' || value === 'handDrawn';
 }
 
 function normalizeNumber(value: unknown, fallback: number): number {
@@ -147,6 +180,10 @@ function normalizeBoolean(value: unknown, fallback: boolean): boolean {
 
 function normalizeString(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim() ? value : fallback;
+}
+
+function normalizeContentString(value: unknown, fallback: string): string {
+  return typeof value === 'string' ? value : fallback;
 }
 
 function normalizeBoxInsets(value: unknown, fallback: BoxInsets): BoxInsets {
@@ -162,12 +199,65 @@ function normalizeBoxInsets(value: unknown, fallback: BoxInsets): BoxInsets {
   };
 }
 
+function normalizeHeaderFooterLineContent(
+  value: unknown,
+  fallback: HeaderFooterLineContent,
+): HeaderFooterLineContent {
+  if (!isRecord(value)) {
+    return cloneHeaderFooterLineContent(fallback);
+  }
+
+  const slots: HeaderFooterSlot[] = ['left', 'center', 'right'];
+  return slots.reduce((line, slot) => {
+    line[slot] = normalizeContentString(value[slot], fallback[slot]);
+    return line;
+  }, {} as HeaderFooterLineContent);
+}
+
+function normalizeHeaderFooterContent(
+  value: unknown,
+  fallback: HeaderFooterContent = defaultStyleSettings.headerFooterContent,
+): HeaderFooterContent {
+  if (!isRecord(value)) {
+    return cloneHeaderFooterContent(fallback);
+  }
+
+  return {
+    header: normalizeHeaderFooterLineContent(value.header, fallback.header),
+    footer: normalizeHeaderFooterLineContent(value.footer, fallback.footer),
+  };
+}
+
 function normalizeSpacingNumber(value: unknown, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return fallback;
   }
 
   return Math.max(0, Math.min(240, Math.round(value)));
+}
+
+function normalizeColumnGapMm(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(4, Math.min(30, Math.round(value)));
+}
+
+function normalizeColumnSettings(
+  value: unknown,
+  fallback: ColumnSettings = defaultStyleSettings.columns,
+): ColumnSettings {
+  if (!isRecord(value)) {
+    return cloneColumnSettings(fallback);
+  }
+
+  return {
+    count: isPageColumnCount(value.count) ? value.count : fallback.count,
+    gapMm: normalizeColumnGapMm(value.gapMm, fallback.gapMm),
+    divider: normalizeBoolean(value.divider, fallback.divider),
+    headingsSpanAll: normalizeBoolean(value.headingsSpanAll, fallback.headingsSpanAll),
+  };
 }
 
 export function normalizeBlockSpacingParameters(
@@ -184,7 +274,7 @@ export function normalizeBlockSpacingParameters(
   }, {} as BlockSpacingParameters);
 }
 
-function normalizeBlockSpacingPresets(value: unknown): BlockSpacingPreset[] {
+export function normalizeBlockSpacingPresets(value: unknown): BlockSpacingPreset[] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -233,6 +323,8 @@ export function cloneStyleSettings(styleSettings: StyleSettings): StyleSettings 
   return {
     ...styleSettings,
     customMarginsMm: cloneBoxInsets(styleSettings.customMarginsMm),
+    headerFooterContent: cloneHeaderFooterContent(styleSettings.headerFooterContent),
+    columns: cloneColumnSettings(styleSettings.columns),
     paginationAlgorithmId: styleSettings.paginationAlgorithmId,
     paginationBehavior: clonePaginationBehavior(styleSettings.paginationBehavior),
     blockSpacing: cloneBlockSpacingParameters(styleSettings.blockSpacing),
@@ -276,10 +368,13 @@ export function normalizeStyleSettings(value: unknown): StyleSettings {
       value.customFooterReservedMm,
       defaultStyleSettings.customFooterReservedMm,
     ),
+    // 旧 .layout 没有页眉页脚内容字段时，使用当前默认内容来保持原有视觉效果。
+    headerFooterContent: normalizeHeaderFooterContent(value.headerFooterContent),
     isHeaderFooterLinked: normalizeBoolean(
       value.isHeaderFooterLinked,
       defaultStyleSettings.isHeaderFooterLinked,
     ),
+    columns: normalizeColumnSettings(value.columns),
     paginationAlgorithmId: normalizePaginationAlgorithmId(
       value.paginationAlgorithmId,
       defaultStyleSettings.paginationAlgorithmId,

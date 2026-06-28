@@ -15,6 +15,7 @@ import {
 } from '@/engine/document-model';
 import { estimateImageVisibleHeightPx, isImageTextWrapMode, resolveHangingIndentLineWidths, resolveImageLayout } from '@/engine/document-model';
 import type { ResolvedStyleContract, TextBlockStyleRule } from '@/engine/style/types';
+import { shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
 import {
   getEffectiveListItemMaxFontSize,
   getEffectiveTableCellMaxFontSize,
@@ -41,6 +42,21 @@ interface PlacedBlockEntry {
   height: number;
 }
 
+interface ColumnFlowState {
+  pageHeight: number;
+  columnCount: number;
+  completedOffset: number;
+  currentColumnIndex: number;
+  columnHeights: number[];
+}
+
+interface ColumnPlacementCandidate {
+  fits: boolean;
+  availableHeight: number;
+  columnIndex: number;
+  isSpanAll: boolean;
+}
+
 type TableLayoutBlock = LayoutBlock & {
   type: 'table';
   metadata: TableBlockMetadata;
@@ -64,6 +80,179 @@ const COST_V1_MAX_TRAILING_MOVE_COUNT = 3;
 const COST_V1_MIN_SCORE_IMPROVEMENT = 0.08;
 const COST_V1_LAST_HEADING_PENALTY = 0.45;
 const COST_V1_LAST_TOC_PENALTY = 0.28;
+
+function getPaginationContentWidthPx(contract: ResolvedStyleContract): number {
+  if (contract.columnCount <= 1) {
+    return contract.contentWidthPx;
+  }
+
+  return Math.max(
+    40,
+    (contract.contentWidthPx - Math.max(0, contract.columnCount - 1) * contract.columnGapPx) /
+      contract.columnCount,
+  );
+}
+
+function getPaginationPageCapacityPx(contract: ResolvedStyleContract): number {
+  return contract.contentHeightPx * contract.columnCount;
+}
+
+function createColumnFlowState(contract: ResolvedStyleContract): ColumnFlowState {
+  return {
+    pageHeight: contract.contentHeightPx,
+    columnCount: Math.max(1, contract.columnCount),
+    completedOffset: 0,
+    currentColumnIndex: 0,
+    columnHeights: Array.from({ length: Math.max(1, contract.columnCount) }, () => 0),
+  };
+}
+
+function cloneColumnFlowState(state: ColumnFlowState): ColumnFlowState {
+  return {
+    pageHeight: state.pageHeight,
+    columnCount: state.columnCount,
+    completedOffset: state.completedOffset,
+    currentColumnIndex: state.currentColumnIndex,
+    columnHeights: [...state.columnHeights],
+  };
+}
+
+function resetColumnFlowState(state: ColumnFlowState): void {
+  state.completedOffset = 0;
+  state.currentColumnIndex = 0;
+  state.columnHeights = Array.from({ length: state.columnCount }, () => 0);
+}
+
+function getCurrentBandHeight(state: ColumnFlowState): number {
+  return state.columnHeights.reduce((maxHeight, height) => Math.max(maxHeight, height), 0);
+}
+
+function isColumnSpanAllBlock(block: LayoutBlock, contract: ResolvedStyleContract): boolean {
+  return shouldLayoutBlockSpanAllColumns(block, contract);
+}
+
+function resolveColumnPlacementCandidate(
+  state: ColumnFlowState,
+  block: LayoutBlock,
+  blockHeight: number,
+  contract: ResolvedStyleContract,
+): ColumnPlacementCandidate {
+  if (contract.columnCount <= 1) {
+    return {
+      fits: blockHeight <= state.pageHeight - state.completedOffset - state.columnHeights[0],
+      availableHeight: Math.max(0, state.pageHeight - state.completedOffset - state.columnHeights[0]),
+      columnIndex: 0,
+      isSpanAll: false,
+    };
+  }
+
+  if (isColumnSpanAllBlock(block, contract)) {
+    const availableHeight = Math.max(0, state.pageHeight - state.completedOffset - getCurrentBandHeight(state));
+    return {
+      fits: blockHeight <= availableHeight,
+      availableHeight,
+      columnIndex: 0,
+      isSpanAll: true,
+    };
+  }
+
+  let bestColumnIndex = state.currentColumnIndex;
+  let bestAvailableHeight = -1;
+
+  for (let columnIndex = state.currentColumnIndex; columnIndex < state.columnCount; columnIndex += 1) {
+    const availableHeight = Math.max(
+      0,
+      state.pageHeight - state.completedOffset - state.columnHeights[columnIndex],
+    );
+
+    if (availableHeight > bestAvailableHeight) {
+      bestAvailableHeight = availableHeight;
+      bestColumnIndex = columnIndex;
+    }
+
+    if (blockHeight <= availableHeight) {
+      return {
+        fits: true,
+        availableHeight,
+        columnIndex,
+        isSpanAll: false,
+      };
+    }
+  }
+
+  return {
+    fits: false,
+    availableHeight: Math.max(0, bestAvailableHeight),
+    columnIndex: bestColumnIndex,
+    isSpanAll: false,
+  };
+}
+
+function applyColumnPlacement(
+  state: ColumnFlowState,
+  placement: ColumnPlacementCandidate,
+  blockHeight: number,
+): void {
+  if (placement.isSpanAll) {
+    state.completedOffset += getCurrentBandHeight(state) + blockHeight;
+    state.currentColumnIndex = 0;
+    state.columnHeights = Array.from({ length: state.columnCount }, () => 0);
+    return;
+  }
+
+  state.columnHeights[placement.columnIndex] += blockHeight;
+  state.currentColumnIndex = placement.columnIndex;
+}
+
+function rebuildColumnFlowState(
+  state: ColumnFlowState,
+  placedBlocks: PlacedBlockEntry[],
+  contract: ResolvedStyleContract,
+): void {
+  resetColumnFlowState(state);
+  placedBlocks.forEach((entry) => {
+    applyColumnPlacement(
+      state,
+      resolveColumnPlacementCandidate(state, entry.block, entry.height, contract),
+      entry.height,
+    );
+  });
+}
+
+function getColumnAvailableHeightForBlock(
+  state: ColumnFlowState,
+  block: LayoutBlock,
+  blockHeight: number,
+  contract: ResolvedStyleContract,
+): number {
+  return resolveColumnPlacementCandidate(state, block, blockHeight, contract).availableHeight;
+}
+
+function canPlaceBlockSequence(
+  state: ColumnFlowState,
+  block: LayoutBlock,
+  blockHeight: number,
+  nextBlock: LayoutBlock | null,
+  nextBlockHeight: number,
+  contract: ResolvedStyleContract,
+): boolean {
+  if (contract.columnCount <= 1) {
+    return blockHeight + nextBlockHeight <= state.pageHeight - state.completedOffset - state.columnHeights[0];
+  }
+
+  const simulatedState = cloneColumnFlowState(state);
+  const currentPlacement = resolveColumnPlacementCandidate(simulatedState, block, blockHeight, contract);
+  if (!currentPlacement.fits) {
+    return false;
+  }
+
+  applyColumnPlacement(simulatedState, currentPlacement, blockHeight);
+  if (!nextBlock || nextBlockHeight <= 0) {
+    return true;
+  }
+
+  return resolveColumnPlacementCandidate(simulatedState, nextBlock, nextBlockHeight, contract).fits;
+}
 
 function resolveTextBlockStyle(
   block: LayoutBlock,
@@ -96,21 +285,50 @@ function estimateTextBlockHeight(
   widthPx: number,
   style: TextBlockStyleRule,
   firstLineWidthPx = widthPx,
+  decorationHeight = 0,
 ): number {
   const lines = estimateTextLines(text, widthPx, style.fontSize, {
     firstLineWidthPx,
   });
-  return style.marginTop + lines * style.lineHeight + style.marginBottom;
+  return style.marginTop + lines * style.lineHeight + decorationHeight + style.marginBottom;
+}
+
+function resolveHeadingDecorationHeight(contract: ResolvedStyleContract, depth: number): number {
+  const metrics =
+    depth === 1
+      ? contract.themeLayoutMetrics.heading1
+      : depth === 2
+        ? contract.themeLayoutMetrics.heading2
+        : contract.themeLayoutMetrics.heading3;
+
+  // 主题装饰如果会占正文流，分页估算必须提前计入；否则首次分页会低估块高，等隐藏测量回填后才跳页。
+  return (
+    metrics.paddingBottom +
+    (metrics.underlineOccupiesFlow ? metrics.underlineGap + metrics.underlineHeight : 0)
+  );
+}
+
+function resolveHeadingMarkerInset(contract: ResolvedStyleContract, depth: number): number {
+  if (depth === 1) {
+    return contract.themeLayoutMetrics.heading1.markerInsetLeft;
+  }
+
+  if (depth === 2) {
+    return contract.themeLayoutMetrics.heading2.markerInsetLeft;
+  }
+
+  return contract.themeLayoutMetrics.heading3.markerInsetLeft;
 }
 
 function resolveTextBlockLineWidths(
   contentWidthPx: number,
   block: LayoutBlock,
   baseStyle: TextBlockStyleRule,
+  extraInsetLeft = 0,
 ) {
   // 全局块排版预设提供默认左右内缩；单块局部缩进仍然优先覆盖。
   return resolveHangingIndentLineWidths(contentWidthPx, {
-    indentLeft: block.blockStyleOverrides.indentLeft ?? baseStyle.insetLeft,
+    indentLeft: (block.blockStyleOverrides.indentLeft ?? baseStyle.insetLeft) + extraInsetLeft,
     indentRight: block.blockStyleOverrides.indentRight ?? baseStyle.insetRight,
     firstLineIndent: block.blockStyleOverrides.firstLineIndent,
     hangingIndent: block.blockStyleOverrides.hangingIndent,
@@ -136,7 +354,7 @@ function estimateTableRowHeight(
   contract: ResolvedStyleContract,
   styles?: LayoutStyleSheet,
 ): number {
-  const contentWidthPx = contract.contentWidthPx;
+  const contentWidthPx = getPaginationContentWidthPx(contract);
   const columnWidths = resolveTableColumnWidths(
     block.metadata.columnWidthsPx,
     row.cells.length,
@@ -375,6 +593,8 @@ function getBlockLabel(block: LayoutBlock): string {
       }`;
     case 'horizontalRule':
       return '分隔线';
+    case 'columnBreak':
+      return '分栏断点';
     case 'pageBreak':
       return '分页符';
     default:
@@ -411,9 +631,10 @@ function estimateBlockHeight(
   tocItems: TocItem[],
   styles?: LayoutStyleSheet,
 ): number {
-  const contentWidthPx = contract.contentWidthPx;
+  const contentWidthPx = getPaginationContentWidthPx(contract);
 
   switch (block.type) {
+    case 'columnBreak':
     case 'pageBreak':
       return 0;
     case 'toc':
@@ -425,13 +646,20 @@ function estimateBlockHeight(
           : block.metadata.kind === 'heading' && block.metadata.depth === 2
             ? contract.blockStyles.heading2
             : contract.blockStyles.heading3;
-      const lineWidths = resolveTextBlockLineWidths(contentWidthPx, block, baseStyle);
+      const depth = block.metadata.kind === 'heading' ? block.metadata.depth : 3;
+      const lineWidths = resolveTextBlockLineWidths(
+        contentWidthPx,
+        block,
+        baseStyle,
+        resolveHeadingMarkerInset(contract, depth),
+      );
       // 标题同时受左右缩进、首行缩进与悬挂缩进影响，宽度先统一收窄再估算。
       return estimateTextBlockHeight(
         getLayoutBlockPlainText(block),
         lineWidths.followingLineWidthPx,
         resolveTextBlockStyle(block, baseStyle, styles),
         lineWidths.firstLineWidthPx,
+        resolveHeadingDecorationHeight(contract, depth),
       );
     }
     case 'paragraph': {
@@ -612,7 +840,7 @@ function estimateFloatingImageFootprintHeight(block: LayoutBlock, contract: Reso
 
 function hasRemainingContent(blocks: LayoutBlock[], startIndex: number): boolean {
   for (let index = startIndex; index < blocks.length; index += 1) {
-    if (blocks[index].type !== 'pageBreak') {
+    if (blocks[index].type !== 'pageBreak' && blocks[index].type !== 'columnBreak') {
       return true;
     }
   }
@@ -843,12 +1071,13 @@ export function paginateEstimatedBlocks(
     return [createEmptyPage(1, contract)];
   }
 
-  const pageCapacity = contract.contentHeightPx;
+  const pageCapacity = getPaginationPageCapacityPx(contract);
   const tocItems = buildTocItemsFromBlocks(blocks);
   const pages: PageLayout[] = [];
   let currentPage = createEmptyPage(1, contract);
   let currentHeight = 0;
   let placedBlocks: PlacedBlockEntry[] = [];
+  let columnFlowState = createColumnFlowState(contract);
   let shouldPushCurrentPage = true;
 
   for (let index = 0; index < blocks.length; index += 1) {
@@ -868,6 +1097,37 @@ export function paginateEstimatedBlocks(
       currentPage = createEmptyPage(pages.length + 1, contract);
       currentHeight = 0;
       placedBlocks = [];
+      resetColumnFlowState(columnFlowState);
+      shouldPushCurrentPage = nextHasContent;
+      continue;
+    }
+
+    if (block.type === 'columnBreak') {
+      if (contract.columnCount <= 1) {
+        continue;
+      }
+
+      const nextIndex = index + 1;
+      const nextHasContent = hasRemainingContent(blocks, nextIndex);
+      if (!nextHasContent) {
+        continue;
+      }
+
+      if (columnFlowState.currentColumnIndex < columnFlowState.columnCount - 1) {
+        columnFlowState.currentColumnIndex += 1;
+        shouldPushCurrentPage = true;
+        continue;
+      }
+
+      syncPlacedBlocksToPage(currentPage, placedBlocks);
+      if (placedBlocks.length > 0 || (pages.length > 0 && nextHasContent)) {
+        pages.push(currentPage);
+      }
+
+      currentPage = createEmptyPage(pages.length + 1, contract);
+      currentHeight = 0;
+      placedBlocks = [];
+      resetColumnFlowState(columnFlowState);
       shouldPushCurrentPage = nextHasContent;
       continue;
     }
@@ -883,6 +1143,7 @@ export function paginateEstimatedBlocks(
       currentPage = createEmptyPage(pages.length + 1, contract);
       currentHeight = 0;
       placedBlocks = [];
+      resetColumnFlowState(columnFlowState);
     }
 
     const blockHeight = resolveBlockHeight(block, contract, tocItems, styles, measuredBlockHeights);
@@ -891,8 +1152,13 @@ export function paginateEstimatedBlocks(
       ? resolveBlockHeight(nextBlock, contract, tocItems, styles, measuredBlockHeights)
       : 0;
     const requiredHeight = keepWithNext ? blockHeight + nextBlockHeight : blockHeight;
+    const placementCandidate = resolveColumnPlacementCandidate(columnFlowState, block, blockHeight, contract);
+    const canFitInColumnFlow = keepWithNext
+      ? placementCandidate.fits &&
+        canPlaceBlockSequence(columnFlowState, block, blockHeight, nextBlock, nextBlockHeight, contract)
+      : placementCandidate.fits;
 
-    if (block.type === 'toc' && block.metadata.kind === 'toc' && blockHeight > pageCapacity - currentHeight) {
+    if (block.type === 'toc' && block.metadata.kind === 'toc' && !canFitInColumnFlow) {
       const maxDepth = block.metadata.maxDepth;
       const totalFilteredTocItems = tocItems.filter((item) => item.depth <= maxDepth).length;
       let startItemIndex = 0;
@@ -903,7 +1169,7 @@ export function paginateEstimatedBlocks(
           block,
           allTocItems: tocItems,
           startItemIndex,
-          availableHeight: pageCapacity - currentHeight,
+          availableHeight: getColumnAvailableHeightForBlock(columnFlowState, block, blockHeight, contract),
           fragmentIndex,
           isCurrentPageEmpty: placedBlocks.length === 0,
           contract,
@@ -923,12 +1189,14 @@ export function paginateEstimatedBlocks(
           currentPage = createEmptyPage(pages.length + 1, contract);
           currentHeight = 0;
           placedBlocks = [];
+          resetColumnFlowState(columnFlowState);
           continue;
         }
 
         addOversizedWarningsIfNeeded(currentPage, placedBlocks, fragment.block, fragment.height, pageCapacity);
         placedBlocks.push({ block: fragment.block, height: fragment.height });
         currentHeight += fragment.height;
+        rebuildColumnFlowState(columnFlowState, placedBlocks, contract);
         startItemIndex = fragment.nextItemIndex;
         fragmentIndex += 1;
         shouldPushCurrentPage = true;
@@ -942,6 +1210,7 @@ export function paginateEstimatedBlocks(
           currentPage = createEmptyPage(pages.length + 1, contract);
           currentHeight = 0;
           placedBlocks = [];
+          resetColumnFlowState(columnFlowState);
         }
       }
 
@@ -959,7 +1228,7 @@ export function paginateEstimatedBlocks(
         const fragment = buildTableFragment({
           block,
           startRowIndex,
-          availableHeight: pageCapacity - currentHeight,
+          availableHeight: getColumnAvailableHeightForBlock(columnFlowState, block, blockHeight, contract),
           fragmentIndex,
           isCurrentPageEmpty: placedBlocks.length === 0,
           rowHeights,
@@ -983,6 +1252,7 @@ export function paginateEstimatedBlocks(
           currentPage = createEmptyPage(pages.length + 1, contract);
           currentHeight = 0;
           placedBlocks = [];
+          resetColumnFlowState(columnFlowState);
           continue;
         }
 
@@ -995,6 +1265,7 @@ export function paginateEstimatedBlocks(
         );
         placedBlocks.push({ block: fragment.block, height: fragment.height });
         currentHeight += fragment.height;
+        rebuildColumnFlowState(columnFlowState, placedBlocks, contract);
         startRowIndex = fragment.nextRowIndex;
         fragmentIndex += 1;
         shouldPushCurrentPage = true;
@@ -1005,6 +1276,7 @@ export function paginateEstimatedBlocks(
           currentPage = createEmptyPage(pages.length + 1, contract);
           currentHeight = 0;
           placedBlocks = [];
+          resetColumnFlowState(columnFlowState);
         }
       }
 
@@ -1012,7 +1284,7 @@ export function paginateEstimatedBlocks(
     }
 
     let hasTriedRebalance = false;
-    while (placedBlocks.length > 0 && currentHeight + requiredHeight > pageCapacity) {
+    while (placedBlocks.length > 0 && (!canFitInColumnFlow || currentHeight + requiredHeight > pageCapacity)) {
       const costBasedMoveCount = options.costBasedBreak
         ? selectCostBasedTrailingMoveCount({
             currentHeight,
@@ -1038,6 +1310,8 @@ export function paginateEstimatedBlocks(
         placedBlocks = movedBlocks;
         currentHeight = sumPlacedBlockHeights(movedBlocks);
         syncPlacedBlocksToPage(currentPage, placedBlocks);
+        resetColumnFlowState(columnFlowState);
+        rebuildColumnFlowState(columnFlowState, movedBlocks, contract);
         shouldPushCurrentPage = true;
         continue;
       }
@@ -1069,6 +1343,8 @@ export function paginateEstimatedBlocks(
           placedBlocks = [movedBlock];
           currentHeight = movedBlock.height;
           syncPlacedBlocksToPage(currentPage, placedBlocks);
+          resetColumnFlowState(columnFlowState);
+          rebuildColumnFlowState(columnFlowState, placedBlocks, contract);
           addOversizedWarningsIfNeeded(
             currentPage,
             [],
@@ -1086,11 +1362,13 @@ export function paginateEstimatedBlocks(
       currentPage = createEmptyPage(pages.length + 1, contract);
       currentHeight = 0;
       placedBlocks = [];
+      resetColumnFlowState(columnFlowState);
     }
 
     addOversizedWarningsIfNeeded(currentPage, placedBlocks, block, blockHeight, pageCapacity);
     placedBlocks.push({ block, height: blockHeight });
     currentHeight += blockHeight;
+    rebuildColumnFlowState(columnFlowState, placedBlocks, contract);
     shouldPushCurrentPage = true;
   }
 

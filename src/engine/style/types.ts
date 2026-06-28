@@ -10,9 +10,22 @@ export type HeaderFooterPresetId = 'none' | 'compact' | 'standard';
 
 export type TemplateId = 'default' | 'lecture' | 'notes';
 
-export type ThemeId = 'default' | 'snowMountain';
+export type ThemeId = 'default' | 'snowMountain' | 'handDrawn';
 
 export type ImageAlign = 'left' | 'center' | 'right';
+
+export type HeaderFooterArea = 'header' | 'footer';
+
+export type HeaderFooterSlot = 'left' | 'center' | 'right';
+
+export type PageColumnCount = 1 | 2 | 3;
+
+export interface ColumnSettings {
+  count: PageColumnCount;
+  gapMm: number;
+  divider: boolean;
+  headingsSpanAll: boolean;
+}
 
 export interface BoxInsets {
   top: number;
@@ -32,6 +45,17 @@ export interface PaginationBehavior {
 
 export type PaginationBehaviorOption = keyof PaginationBehavior;
 export type PaginationAlgorithmId = string;
+
+export interface HeaderFooterLineContent {
+  left: string;
+  center: string;
+  right: string;
+}
+
+export interface HeaderFooterContent {
+  header: HeaderFooterLineContent;
+  footer: HeaderFooterLineContent;
+}
 
 export interface BaseBlockStyleRule {
   marginTop: number;
@@ -132,6 +156,20 @@ export interface ThemeVisualTokens {
   imageCaptionColor: string;
 }
 
+export interface ThemeHeadingDecorationMetrics {
+  paddingBottom: number;
+  underlineHeight: number;
+  underlineGap: number;
+  markerInsetLeft: number;
+  underlineOccupiesFlow: boolean;
+}
+
+export interface ThemeLayoutMetrics {
+  heading1: ThemeHeadingDecorationMetrics;
+  heading2: ThemeHeadingDecorationMetrics;
+  heading3: ThemeHeadingDecorationMetrics;
+}
+
 export interface StyleSettings {
   pageSize: PageSizeId;
   orientation: PageOrientation;
@@ -146,7 +184,9 @@ export interface StyleSettings {
   footerPreset: HeaderFooterPresetId;
   customHeaderReservedMm: number;
   customFooterReservedMm: number;
+  headerFooterContent: HeaderFooterContent;
   isHeaderFooterLinked: boolean;
+  columns: ColumnSettings;
   paginationAlgorithmId: PaginationAlgorithmId;
   paginationBehavior: PaginationBehavior;
   blockSpacingPresetId: string;
@@ -228,6 +268,7 @@ export interface ThemeDefinition {
   description: string;
   palette: string[];
   tokens: ThemeVisualTokens;
+  layoutMetrics: ThemeLayoutMetrics;
 }
 
 export interface ResolvedStyleContract {
@@ -254,7 +295,16 @@ export interface ResolvedStyleContract {
   contentHeightMm: number;
   contentWidthPx: number;
   contentHeightPx: number;
+  columnCount: PageColumnCount;
+  columnGapMm: number;
+  columnGapPx: number;
+  columnDivider: boolean;
+  headingsSpanAll: boolean;
+  singleColumnContentWidthMm: number;
+  singleColumnContentWidthPx: number;
+  columnPageCapacityPx: number;
   blockStyles: BlockStyleContract;
   themeTokens: ThemeVisualTokens;
+  themeLayoutMetrics: ThemeLayoutMetrics;
   paginationBehavior: PaginationBehavior;
 }

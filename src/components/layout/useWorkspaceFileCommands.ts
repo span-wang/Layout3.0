@@ -544,6 +544,7 @@ export function useWorkspaceFileCommands({
         title: documentTitle,
         resources: layoutDocument.resources,
         styles: layoutDocument.styles,
+        styleSettings,
       });
       showMessage(`PDF 已导出到：${exportedPath}`);
     } catch (error) {

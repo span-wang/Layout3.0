@@ -25,12 +25,15 @@ import type {
   TextStyleOverrides,
 } from '@/engine/document-model';
 import type {
+  HeaderFooterArea,
   HeaderFooterPresetId,
+  HeaderFooterSlot,
   BlockSpacingParameterKey,
   BlockSpacingParameters,
   MarginMode,
   MarginPresetId,
   MarginSide,
+  PageColumnCount,
   PageOrientation,
   PageSizeId,
   PaginationAlgorithmId,
@@ -163,6 +166,9 @@ export interface DocumentSlice {
   insertLayoutPageBreakBlock: (payload: {
     insertAfterNodeId?: string | null;
   }) => string | null;
+  insertLayoutColumnBreakBlock: (payload: {
+    insertAfterNodeId?: string | null;
+  }) => string | null;
   insertLayoutTocBlock: (payload: {
     insertAfterNodeId?: string | null;
   }) => string | null;
@@ -187,6 +193,16 @@ export interface DocumentSlice {
   updateLayoutTableColumnAlign: (payload: {
     cellId: string;
     align: TableColumnAlign;
+  }) => string | null;
+  autoFitLayoutTableSize: (payload: {
+    cellId: string;
+    contentWidthPx: number;
+    rowHeightPx: number;
+    headerRowHeightPx: number;
+    cellPaddingX: number;
+    cellPaddingY: number;
+    baseFontSizePx: number;
+    baseLineHeightPx: number;
   }) => string | null;
   updateLayoutTableColumnWidths: (payload: {
     cellId: string;
@@ -310,7 +326,16 @@ export interface StyleSlice {
   setFooterPreset: (footerPreset: HeaderFooterPresetId) => void;
   setCustomHeaderReservedMm: (value: number) => void;
   setCustomFooterReservedMm: (value: number) => void;
+  setHeaderFooterContentSlot: (payload: {
+    area: HeaderFooterArea;
+    slot: HeaderFooterSlot;
+    value: string;
+  }) => void;
   setHeaderFooterLinked: (linked: boolean) => void;
+  setPageColumnCount: (count: PageColumnCount) => void;
+  setPageColumnGapMm: (value: number) => void;
+  setPageColumnDivider: (value: boolean) => void;
+  setPageColumnHeadingsSpanAll: (value: boolean) => void;
   setPaginationAlgorithmId: (algorithmId: PaginationAlgorithmId) => void;
   setPaginationBehaviorOption: (option: PaginationBehaviorOption, value: boolean) => void;
   setBlockSpacingParameter: (parameter: BlockSpacingParameterKey, value: number) => void;

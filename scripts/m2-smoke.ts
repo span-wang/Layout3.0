@@ -2,6 +2,7 @@ import {
   applyBlockStyleOverridesToBlock,
   applyPageNumbersToTocItems,
   applyTextStyleToBlock,
+  autoFitTablesInLayoutDocument,
   buildHeadingPageNumberMap,
   buildTocItems,
   buildFontFaceCss,
@@ -16,12 +17,14 @@ import {
   parseLayoutProjectFile,
   resolveHangingIndentStyle,
   resolveImageLayout,
+  resolveTableAutoFitSize,
   resolveTableColumnWidths,
   resolveTableRowHeightPx,
   serializeLayoutProjectFile,
   shouldHideLayoutListItemMarker,
   toggleTextMarkOnBlock,
   updateLayoutImageAttributes,
+  updateTableAutoFitSizeByCell,
   updateTableColumnAlignByCell,
   updateTableColumnWidthsByCell,
   updateTableHeaderRowByCell,
@@ -43,6 +46,10 @@ import {
 } from '../src/engine/style/quickTextStyle.ts';
 import { buildExportHtml } from '../src/services/exportHtml.ts';
 import {
+  clearBlockSpacingPresetLibrary,
+  loadBlockSpacingPresetLibrary,
+} from '../src/services/BlockSpacingPresetLibraryService.ts';
+import {
   ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
   MAX_FILL_PAGINATION_ALGORITHM_ID,
   MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID,
@@ -57,11 +64,61 @@ function assert(condition: unknown, message: string): asserts condition {
   }
 }
 
+function createMemoryStorage(): Storage {
+  const store = new Map<string, string>();
+
+  return {
+    get length() {
+      return store.size;
+    },
+    clear() {
+      store.clear();
+    },
+    getItem(key: string) {
+      return store.has(key) ? store.get(key) ?? null : null;
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    },
+    setItem(key: string, value: string) {
+      store.set(key, value);
+    },
+  };
+}
+
 function replaceBlock(blocks: LayoutBlock[], nextBlock: LayoutBlock): LayoutBlock[] {
   return blocks.map((block) => (block.id === nextBlock.id ? nextBlock : block));
 }
 
+function withTestPageMetrics<T extends { contentHeightPx: number; contentWidthPx: number }>(
+  contract: T & { columnCount?: number; columnGapPx?: number },
+): T & { columnPageCapacityPx: number; singleColumnContentWidthPx: number } {
+  // 分栏接入后分页看单栏宽度和 columnPageCapacityPx；测试里手动改宽高时必须同步这两个派生值。
+  const columnCount = Math.max(1, contract.columnCount ?? 1);
+  const columnGapPx = columnCount > 1 ? Math.max(0, contract.columnGapPx ?? 0) : 0;
+  return {
+    ...contract,
+    singleColumnContentWidthPx:
+      columnCount > 1
+        ? (contract.contentWidthPx - (columnCount - 1) * columnGapPx) / columnCount
+        : contract.contentWidthPx,
+    columnPageCapacityPx: contract.contentHeightPx * columnCount,
+  };
+}
+
 async function main(): Promise<void> {
+  const previousLocalStorage = globalThis.localStorage;
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: createMemoryStorage(),
+  });
+
+  clearBlockSpacingPresetLibrary();
+
+  try {
   const source = [
     '# M2 链路冒烟',
     '',
@@ -101,6 +158,34 @@ async function main(): Promise<void> {
   assert(document.blocks.some((block) => block.type === 'equation'), 'M2 冒烟失败：Markdown 未导入公式块');
   assert(document.blocks.some((block) => block.type === 'list'), 'M2 冒烟失败：Markdown 未导入列表块');
 
+  const columnBreakInsertedDocument = await createLayoutDocumentFromMarkdown('# 分栏断点冒烟\n\n正文一');
+  useAppStore.getState().loadDocument({
+    title: columnBreakInsertedDocument.title,
+    filePath: null,
+    source: columnBreakInsertedDocument.source,
+    documentFormat: 'layout',
+    layoutDocument: columnBreakInsertedDocument,
+  });
+  const insertedColumnBreakId = useAppStore.getState().insertLayoutColumnBreakBlock({
+    insertAfterNodeId: columnBreakInsertedDocument.blocks[0]?.id ?? null,
+  });
+  assert(insertedColumnBreakId, 'M2 冒烟失败：未能插入分栏断点');
+  const columnBreakDocument = useAppStore.getState().layoutDocument;
+  const columnBreakBlockCount =
+    columnBreakDocument?.blocks.filter((block) => block.type === 'columnBreak').length ?? 0;
+  assert(columnBreakBlockCount === 1, 'M2 冒烟失败：分栏断点没有进入文档模型');
+  const columnBreakProjectFile = serializeLayoutProjectFile({
+    document: columnBreakDocument!,
+    styleSettings: cloneStyleSettings(defaultStyleSettings),
+  });
+  const reopenedColumnBreakProject = parseLayoutProjectFile(columnBreakProjectFile);
+  assert(
+    reopenedColumnBreakProject.document.blocks.some(
+      (block) => block.type === 'columnBreak' && block.metadata.kind === 'columnBreak',
+    ),
+    'M2 冒烟失败：分栏断点保存重开后没有恢复',
+  );
+
   const customSyntaxMappingConfig: SyntaxMappingConfig = {
     version: '1.0.0',
     textMarkMappings: [
@@ -130,7 +215,7 @@ async function main(): Promise<void> {
   );
   const customSyntaxProjectFile = serializeLayoutProjectFile({
     document: customSyntaxDocument,
-    styleSettings: defaultStyleSettings,
+    styleSettings: cloneStyleSettings(defaultStyleSettings),
   });
   const reopenedCustomSyntaxDocument = parseLayoutProjectFile(customSyntaxProjectFile).document;
   assert(
@@ -157,7 +242,7 @@ async function main(): Promise<void> {
           syntaxMappingConfig: customSyntaxMappingConfig,
         },
       },
-      styleSettings: defaultStyleSettings,
+        styleSettings: cloneStyleSettings(defaultStyleSettings),
     },
     null,
     2,
@@ -546,6 +631,214 @@ async function main(): Promise<void> {
   assert(tableBlock && tableBlock.metadata.kind === 'table', 'M2 冒烟失败：未找到可用于表格验证的表格块');
   const firstCellId = tableBlock.metadata.rows[0]?.cells[0]?.id;
   assert(firstCellId, 'M2 冒烟失败：表格缺少第一个单元格');
+  assert(
+    tableBlock.metadata.columnWidthsPx?.every((width) => width === null) &&
+      tableBlock.metadata.rows.every((row) => row.heightPx === null),
+    'M2 冒烟失败：Markdown 原始表格应先保持未显式设置尺寸，便于验证导入预适应',
+  );
+  const importAutoFitResult = autoFitTablesInLayoutDocument(document, cloneStyleSettings(defaultStyleSettings));
+  const importAutoFitTable = importAutoFitResult.document.blocks.find(
+    (block) => block.id === tableBlock.id && block.type === 'table' && block.metadata.kind === 'table',
+  );
+  assert(
+    importAutoFitResult.didUpdate &&
+      importAutoFitTable?.type === 'table' &&
+      importAutoFitTable.metadata.kind === 'table' &&
+      importAutoFitTable.metadata.columnWidthsPx?.every((width) => typeof width === 'number' && width > 0) &&
+      importAutoFitTable.metadata.rows.every((row) => typeof row.heightPx === 'number' && row.heightPx > 0),
+    'M2 冒烟失败：Markdown 导入后的表格没有在首次渲染前写入自适应列宽行高',
+  );
+  const importAutoFitPreserveResult = autoFitTablesInLayoutDocument(
+    {
+      ...document,
+      blocks: replaceBlock(document.blocks, {
+        ...tableBlock,
+        metadata: {
+          ...tableBlock.metadata,
+          columnWidthsPx: [188, 122, 210],
+          rows: tableBlock.metadata.rows.map((row) => ({ ...row, heightPx: 57 })),
+        },
+      }),
+    },
+    cloneStyleSettings(defaultStyleSettings),
+  );
+  const preservedImportTable = importAutoFitPreserveResult.document.blocks.find(
+    (block) => block.id === tableBlock.id && block.type === 'table' && block.metadata.kind === 'table',
+  );
+  assert(
+    !importAutoFitPreserveResult.didUpdate &&
+      preservedImportTable?.type === 'table' &&
+      preservedImportTable.metadata.kind === 'table' &&
+      preservedImportTable.metadata.columnWidthsPx?.[0] === 188 &&
+      preservedImportTable.metadata.rows[0]?.heightPx === 57,
+    'M2 冒烟失败：导入预适应不应覆盖已保存的表格列宽行高',
+  );
+  useAppStore.getState().setLayoutDocument({
+    ...document,
+    blocks: replaceBlock(document.blocks, {
+      ...tableBlock,
+      metadata: {
+        ...tableBlock.metadata,
+        columnWidthsPx: tableBlock.metadata.rows[0]?.cells.map(() => 120) ?? [],
+        rows: tableBlock.metadata.rows.map((row, rowIndex) => ({
+          ...row,
+          heightPx: rowIndex === 0 ? 32 : 30,
+          cells: row.cells.map((cell, cellIndex) => ({
+            ...cell,
+            textRuns: [
+              {
+                id: `${cell.id}-store-autofit-run`,
+                text: cellIndex === 1
+                  ? 'store 自动适应验证使用的长内容，需要让当前列变宽并让行高随内容抬高'
+                  : '短内容',
+                sourceRange: null,
+                marks: [],
+                charStyleRef: null,
+                styleOverrides: cellIndex === 1 ? { fontSize: 20 } : {},
+                annotations: [],
+              },
+            ],
+          })),
+        })),
+      },
+    }),
+  });
+  const autoFitHistoryLengthBefore = useAppStore.getState().documentHistoryPast.length;
+  const storeAutoFitSelectedNodeId = useAppStore.getState().autoFitLayoutTableSize({
+    cellId: firstCellId,
+    contentWidthPx: 520,
+    rowHeightPx: 40,
+    headerRowHeightPx: 44,
+    cellPaddingX: 12,
+    cellPaddingY: 10,
+    baseFontSizePx: 16,
+    baseLineHeightPx: 24,
+  });
+  const storeAutoFitTable = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === tableBlock.id);
+  assert(
+    storeAutoFitSelectedNodeId === firstCellId &&
+      storeAutoFitTable?.type === 'table' &&
+      storeAutoFitTable.metadata.kind === 'table' &&
+      (storeAutoFitTable.metadata.columnWidthsPx?.[1] ?? 0) > (storeAutoFitTable.metadata.columnWidthsPx?.[0] ?? 0) &&
+      storeAutoFitTable.metadata.rows.some((row) => (row.heightPx ?? 0) > 44) &&
+      useAppStore.getState().documentHistoryPast.length === autoFitHistoryLengthBefore + 1,
+    'M2 冒烟失败：store 表格自动适应没有写回列宽行高或没有进入一次历史栈',
+  );
+  const defaultAutoFitDocument = await createLayoutDocumentFromMarkdown('# 默认表格自适应\n\n起始段落');
+  useAppStore.getState().replaceStyleSettings(cloneStyleSettings(defaultStyleSettings));
+  useAppStore.getState().loadDocument({
+    title: '默认表格自适应',
+    filePath: null,
+    source: defaultAutoFitDocument.source,
+    documentFormat: 'layout',
+    layoutDocument: defaultAutoFitDocument,
+  });
+  const defaultAutoFitHistoryBeforeInsert = useAppStore.getState().documentHistoryPast.length;
+  const insertedDefaultFitCellId = useAppStore.getState().insertLayoutTableBlock({
+    rowCount: 2,
+    columnCount: 3,
+  });
+  assert(insertedDefaultFitCellId, 'M2 冒烟失败：默认自适应测试未能插入表格');
+  const insertedDefaultFitTable = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.type === 'table' && block.metadata.kind === 'table');
+  assert(
+    insertedDefaultFitTable?.type === 'table' &&
+      insertedDefaultFitTable.metadata.kind === 'table' &&
+      insertedDefaultFitTable.metadata.columnWidthsPx?.length === 3 &&
+      insertedDefaultFitTable.metadata.columnWidthsPx.every((width) => typeof width === 'number' && width > 0) &&
+      insertedDefaultFitTable.metadata.rows.every((row) => typeof row.heightPx === 'number' && row.heightPx > 0) &&
+      useAppStore.getState().documentHistoryPast.length === defaultAutoFitHistoryBeforeInsert + 1,
+    'M2 冒烟失败：新插入表格没有默认写回最佳列宽行高或历史栈异常',
+  );
+  const defaultFitFirstWidthBeforeText = insertedDefaultFitTable.metadata.columnWidthsPx?.[0] ?? 0;
+  const defaultFitSecondWidthBeforeText = insertedDefaultFitTable.metadata.columnWidthsPx?.[1] ?? 0;
+  const defaultFitSecondCellId = insertedDefaultFitTable.metadata.rows[0]?.cells[1]?.id;
+  assert(defaultFitSecondCellId, 'M2 冒烟失败：默认自适应测试缺少第二列单元格');
+  const defaultAutoFitHistoryBeforeText = useAppStore.getState().documentHistoryPast.length;
+  useAppStore.getState().updateLayoutNodeText({
+    nodeId: defaultFitSecondCellId,
+    text: '默认启用后，保存单元格长内容时应该自动重新适应列宽和行高，不需要再点右侧按钮。',
+  });
+  const textDefaultFitTable = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === insertedDefaultFitTable.id);
+  assert(
+    textDefaultFitTable?.type === 'table' &&
+      textDefaultFitTable.metadata.kind === 'table' &&
+      (textDefaultFitTable.metadata.columnWidthsPx?.[1] ?? 0) > defaultFitSecondWidthBeforeText &&
+      (textDefaultFitTable.metadata.columnWidthsPx?.[0] ?? 0) < defaultFitFirstWidthBeforeText &&
+      textDefaultFitTable.metadata.rows.some((row) => (row.heightPx ?? 0) > 0) &&
+      useAppStore.getState().documentHistoryPast.length === defaultAutoFitHistoryBeforeText + 1,
+    'M2 冒烟失败：单元格内容保存后没有默认重新适应表格尺寸或历史栈异常',
+  );
+  const defaultAutoFitHistoryBeforeStructure = useAppStore.getState().documentHistoryPast.length;
+  const insertedStructureCellId = useAppStore.getState().updateLayoutTableStructure({
+    cellId: defaultFitSecondCellId,
+    action: 'insertColumnRight',
+  });
+  const structureDefaultFitTable = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === insertedDefaultFitTable.id);
+  assert(
+    insertedStructureCellId &&
+      structureDefaultFitTable?.type === 'table' &&
+      structureDefaultFitTable.metadata.kind === 'table' &&
+      structureDefaultFitTable.metadata.columnWidthsPx?.length === 4 &&
+      structureDefaultFitTable.metadata.columnWidthsPx.every((width) => typeof width === 'number' && width > 0) &&
+      useAppStore.getState().documentHistoryPast.length === defaultAutoFitHistoryBeforeStructure + 1,
+    'M2 冒烟失败：表格结构变化后没有默认重新适应列宽或历史栈异常',
+  );
+  const mergeSourceRows = structureDefaultFitTable.metadata.rows;
+  const defaultFitMergeTargetCellId = mergeSourceRows[1]?.cells[1]?.id;
+  assert(defaultFitMergeTargetCellId, 'M2 冒烟失败：默认自适应合并测试缺少目标单元格');
+  useAppStore.getState().selectLayoutTableCell({ cellId: defaultFitSecondCellId });
+  useAppStore.getState().selectLayoutTableCell({ cellId: defaultFitMergeTargetCellId, extendRange: true });
+  const defaultAutoFitHistoryBeforeMerge = useAppStore.getState().documentHistoryPast.length;
+  const storeDefaultMergeResult = useAppStore.getState().mergeLayoutSelectedTableCells();
+  const mergeDefaultFitTable = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.id === insertedDefaultFitTable.id);
+  assert(
+    storeDefaultMergeResult.didUpdate &&
+      mergeDefaultFitTable?.type === 'table' &&
+      mergeDefaultFitTable.metadata.kind === 'table' &&
+      mergeDefaultFitTable.metadata.rows[0]?.cells[1]?.rowSpan === 2 &&
+      mergeDefaultFitTable.metadata.rows[0]?.cells[1]?.colSpan === 1 &&
+      mergeDefaultFitTable.metadata.rows[1]?.cells[1]?.coveredByCellId === defaultFitSecondCellId &&
+      mergeDefaultFitTable.metadata.columnWidthsPx?.every((width) => typeof width === 'number' && width > 0) &&
+      mergeDefaultFitTable.metadata.rows.every((row) => typeof row.heightPx === 'number' && row.heightPx > 0) &&
+      useAppStore.getState().documentHistoryPast.length === defaultAutoFitHistoryBeforeMerge + 1,
+    'M2 冒烟失败：合并单元格后没有默认重新适应表格尺寸或历史栈异常',
+  );
+  const markdownInsertDocument = await createLayoutDocumentFromMarkdown('# 插入 Markdown 表格');
+  useAppStore.getState().loadDocument({
+    title: '插入 Markdown 表格',
+    filePath: null,
+    source: markdownInsertDocument.source,
+    documentFormat: 'layout',
+    layoutDocument: markdownInsertDocument,
+  });
+  const insertedMarkdownTableNodeId = await useAppStore.getState().insertLayoutMarkdownBlocks({
+    markdown: [
+      '| 项目 | 说明 |',
+      '| --- | --- |',
+      '| 导入表格 | 这段长内容用于验证 Markdown 片段插入时也会在首次渲染前写入自适应尺寸 |',
+    ].join('\n'),
+  });
+  const insertedMarkdownTable = useAppStore
+    .getState()
+    .layoutDocument?.blocks.find((block) => block.type === 'table' && block.metadata.kind === 'table');
+  assert(
+    insertedMarkdownTableNodeId &&
+      insertedMarkdownTable?.type === 'table' &&
+      insertedMarkdownTable.metadata.kind === 'table' &&
+      insertedMarkdownTable.metadata.columnWidthsPx?.every((width) => typeof width === 'number' && width > 0) &&
+      insertedMarkdownTable.metadata.rows.every((row) => typeof row.heightPx === 'number' && row.heightPx > 0),
+    'M2 冒烟失败：Markdown 片段插入表格没有在进入渲染前完成自适应尺寸写回',
+  );
 
   const tableHeaderOffResult = updateTableHeaderRowByCell(tableBlock, firstCellId, false);
   assert(
@@ -636,6 +929,94 @@ async function main(): Promise<void> {
   assert(
     resolveTableRowHeightPx(tableWithSize.metadata.rows[0], 42) === 58,
     'M2 冒烟失败：表格行高解析不符合预期',
+  );
+  const autoFitSourceTable: LayoutBlock = {
+    ...tableWithSize,
+    metadata: {
+      ...tableWithSize.metadata,
+      columnWidthsPx: [120, 120, 120],
+      rows: tableWithSize.metadata.rows.map((row, rowIndex) => ({
+        ...row,
+        heightPx: rowIndex === 0 ? 32 : 30,
+        cells: row.cells.map((cell, cellIndex) => ({
+          ...cell,
+          textRuns: [
+            {
+              id: `${cell.id}-autofit-run`,
+              text: cellIndex === 1
+                ? '这是一个需要更宽列宽和更高行高的长单元格内容，用来验证表格自动适应能力'
+                : cellIndex === 0
+                  ? '短项'
+                  : '中等内容',
+              sourceRange: null,
+              marks: [],
+              charStyleRef: null,
+              styleOverrides: cellIndex === 1 ? { fontSize: 20 } : {},
+              annotations: [],
+            },
+          ],
+        })),
+      })),
+    },
+  };
+  const autoFitSize = resolveTableAutoFitSize(autoFitSourceTable, {
+    contentWidthPx: 520,
+    rowHeightPx: 40,
+    headerRowHeightPx: 44,
+    cellPaddingX: 12,
+    cellPaddingY: 10,
+    getCellMetrics: ({ cell }) => {
+      const fontSizePx = cell.textRuns[0]?.styleOverrides.fontSize ?? 16;
+      return {
+        fontSizePx,
+        lineHeightPx: fontSizePx > 16 ? 28 : 24,
+      };
+    },
+  });
+  assert(autoFitSize, 'M2 冒烟失败：表格自动适应没有返回尺寸');
+  assert(
+    autoFitSize.columnWidthsPx.length === 3 &&
+      autoFitSize.columnWidthsPx.reduce((total, width) => total + width, 0) === 520,
+    `M2 冒烟失败：表格自动适应列宽没有填满正文宽度，实际为 ${autoFitSize.columnWidthsPx.join(',')}`,
+  );
+  assert(
+    autoFitSize.columnWidthsPx[1] > autoFitSize.columnWidthsPx[0],
+    `M2 冒烟失败：表格自动适应没有让长内容列更宽，实际为 ${autoFitSize.columnWidthsPx.join(',')}`,
+  );
+  assert(
+    autoFitSize.rowHeightsPx.some((height) => height > 44),
+    `M2 冒烟失败：表格自动适应没有按内容抬高行高，实际为 ${autoFitSize.rowHeightsPx.join(',')}`,
+  );
+  const autoFitResult = updateTableAutoFitSizeByCell(autoFitSourceTable, firstCellId, {
+    contentWidthPx: 520,
+    rowHeightPx: 40,
+    headerRowHeightPx: 44,
+    cellPaddingX: 12,
+    cellPaddingY: 10,
+    getCellMetrics: ({ cell }) => {
+      const fontSizePx = cell.textRuns[0]?.styleOverrides.fontSize ?? 16;
+      return {
+        fontSizePx,
+        lineHeightPx: fontSizePx > 16 ? 28 : 24,
+      };
+    },
+  });
+  assert(
+    autoFitResult.didUpdate &&
+      autoFitResult.block.type === 'table' &&
+      autoFitResult.block.metadata.kind === 'table' &&
+      autoFitResult.block.metadata.columnWidthsPx?.[1] === autoFitSize.columnWidthsPx[1] &&
+      autoFitResult.block.metadata.rows.some((row) => (row.heightPx ?? 0) > 44),
+    'M2 冒烟失败：表格自动适应模型写回没有同时更新列宽和行高',
+  );
+  const autoFitExportHtml = buildExportHtml({
+    pages: paginateBlocks([autoFitResult.block], resolveStyleContract(defaultStyleSettings)),
+    title: '表格自动适应导出验证',
+  });
+  assert(
+    autoFitExportHtml.includes(`width:${autoFitSize.columnWidthsPx[1]}px`) &&
+      autoFitExportHtml.includes(`height:${autoFitResult.block.metadata.rows[0]?.heightPx}px`),
+    'M2 冒烟失败：表格自动适应后的导出 HTML 没有消费列宽或行高',
   );
   const mergeFocusCellId = tableWithSize.metadata.rows[1]?.cells[1]?.id;
   assert(mergeFocusCellId, 'M2 冒烟失败：表格缺少用于合并的目标单元格');
@@ -823,6 +1204,24 @@ async function main(): Promise<void> {
       bottom: 18,
       left: 16,
     },
+    headerFooterContent: {
+      header: {
+        left: '讲义：{文档标题}',
+        center: '{本页标题}',
+        right: '{页码}/{总页数}',
+      },
+      footer: {
+        left: '{模板主题}',
+        center: '内部练习',
+        right: '{页面规格}',
+      },
+    },
+    columns: {
+      count: 2,
+      gapMm: 10,
+      divider: true,
+      headingsSpanAll: false,
+    },
     paginationAlgorithmId: ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
     blockSpacingPresetId: 'm2-smoke-spacing',
     blockSpacing: smokeBlockSpacing,
@@ -840,6 +1239,35 @@ async function main(): Promise<void> {
   assert(restoredProject.document.blocks.length === document.blocks.length, 'M2 冒烟失败：layout 工程文件没有恢复完整块数量');
   assert(restoredProject.styleSettings.templateId === 'lecture', 'M2 冒烟失败：layout 工程文件没有恢复模板设置');
   assert(restoredProject.styleSettings.themeId === 'snowMountain', 'M2 冒烟失败：layout 工程文件没有恢复风格主题设置');
+  assert(
+    restoredProject.styleSettings.headerFooterContent.header.left === '讲义：{文档标题}' &&
+      restoredProject.styleSettings.headerFooterContent.header.right === '{页码}/{总页数}' &&
+      restoredProject.styleSettings.headerFooterContent.footer.center === '内部练习',
+    'M2 冒烟失败：layout 工程文件没有恢复页眉页脚内容配置',
+  );
+  assert(
+    restoredProject.styleSettings.columns.count === 2 &&
+      restoredProject.styleSettings.columns.gapMm === 10 &&
+      restoredProject.styleSettings.columns.divider === true &&
+      restoredProject.styleSettings.columns.headingsSpanAll === false,
+    'M2 冒烟失败：layout 工程文件没有恢复分栏配置',
+  );
+  const headingSpanAllProject = parseLayoutProjectFile(
+    serializeLayoutProjectFile({
+      document,
+      styleSettings: cloneStyleSettings({
+        ...styleSettings,
+        columns: {
+          ...styleSettings.columns,
+          headingsSpanAll: true,
+        },
+      }),
+    }),
+  );
+  assert(
+    headingSpanAllProject.styleSettings.columns.headingsSpanAll === true,
+    'M2 冒烟失败：标题不参与分栏开关没有随 layout 工程文件保存恢复',
+  );
   assert(
     restoredProject.styleSettings.paginationAlgorithmId === ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
     'M2 冒烟失败：layout 工程文件没有恢复分页算法选择',
@@ -859,6 +1287,83 @@ async function main(): Promise<void> {
   assert(
     restoredLegacyThemeProject.styleSettings.themeId === 'default',
     'M2 冒烟失败：旧工程文件缺少 themeId 时没有回退到默认主题',
+  );
+  const legacyColumnsProjectFile = JSON.stringify(
+    {
+      ...JSON.parse(serialized),
+      styleSettings: {
+        ...JSON.parse(serialized).styleSettings,
+        columns: {
+          count: 2,
+          gapMm: 10,
+          divider: true,
+        },
+      },
+    },
+    null,
+    2,
+  );
+  const restoredLegacyColumnsProject = parseLayoutProjectFile(legacyColumnsProjectFile);
+  assert(
+    restoredLegacyColumnsProject.styleSettings.columns.headingsSpanAll === false,
+    'M2 冒烟失败：旧 layout 工程文件缺少标题跨栏字段时没有默认让标题参与分栏',
+  );
+  const handDrawnStyleSettings = cloneStyleSettings({
+    ...defaultStyleSettings,
+    templateId: 'notes',
+    themeId: 'handDrawn',
+  });
+  const handDrawnProjectFile = serializeLayoutProjectFile({
+    document,
+    styleSettings: handDrawnStyleSettings,
+  });
+  const restoredHandDrawnProject = parseLayoutProjectFile(handDrawnProjectFile);
+  const handDrawnContract = resolveStyleContract(restoredHandDrawnProject.styleSettings);
+  assert(
+    restoredHandDrawnProject.styleSettings.themeId === 'handDrawn' &&
+      handDrawnContract.themeLabel === '手绘札记' &&
+      handDrawnContract.themeTokens.tableBorderColor === '#3A2E25',
+    'M2 冒烟失败：手绘札记主题没有保存恢复或进入样式契约',
+  );
+  assert(
+    handDrawnContract.themeLayoutMetrics.heading1.paddingBottom === 10 &&
+      handDrawnContract.themeLayoutMetrics.heading2.underlineOccupiesFlow === true &&
+      handDrawnContract.themeLayoutMetrics.heading2.underlineHeight === 8 &&
+      handDrawnContract.themeLayoutMetrics.heading2.markerInsetLeft === 12,
+    'M2 冒烟失败：手绘主题标题装饰占位没有进入分页样式契约',
+  );
+  const unknownThemeProjectFile = JSON.stringify(
+    {
+      ...JSON.parse(serialized),
+      styleSettings: {
+        ...JSON.parse(serialized).styleSettings,
+        themeId: 'missing-theme',
+      },
+    },
+    null,
+    2,
+  );
+  const restoredUnknownThemeProject = parseLayoutProjectFile(unknownThemeProjectFile);
+  assert(
+    restoredUnknownThemeProject.styleSettings.themeId === 'default',
+    'M2 冒烟失败：未知 themeId 没有回退到默认主题',
+  );
+  const legacyHeaderFooterProjectFile = JSON.stringify(
+    {
+      ...JSON.parse(serialized),
+      styleSettings: {
+        ...JSON.parse(serialized).styleSettings,
+        headerFooterContent: undefined,
+      },
+    },
+    null,
+    2,
+  );
+  const restoredLegacyHeaderFooterProject = parseLayoutProjectFile(legacyHeaderFooterProjectFile);
+  assert(
+    restoredLegacyHeaderFooterProject.styleSettings.headerFooterContent.header.left === '{本页标题}' &&
+      restoredLegacyHeaderFooterProject.styleSettings.headerFooterContent.footer.right === '{页码}',
+    'M2 冒烟失败：旧工程文件缺少页眉页脚内容时没有回退到默认配置',
   );
   assert(
     restoredProject.styleSettings.blockSpacingPresetId === 'm2-smoke-spacing' &&
@@ -939,6 +1444,14 @@ async function main(): Promise<void> {
   const contract = resolveStyleContract(restoredProject.styleSettings);
   assert(contract.templateLabel.includes('讲义'), 'M2 冒烟失败：模板设置没有进入样式契约');
   assert(
+    contract.columnCount === 2 &&
+      contract.columnGapMm === 10 &&
+      contract.singleColumnContentWidthPx < contract.contentWidthPx &&
+      contract.columnPageCapacityPx === contract.contentHeightPx * 2 &&
+      contract.headingsSpanAll === false,
+    'M2 冒烟失败：分栏样式契约没有正确计算单栏宽度、多栏页容量或标题分栏默认值',
+  );
+  assert(
     contract.blockStyles.heading2.marginTop === 30 &&
       contract.blockStyles.paragraph.marginBottom === 26 &&
       contract.blockStyles.paragraph.insetLeft === 12 &&
@@ -951,7 +1464,16 @@ async function main(): Promise<void> {
     'M2 冒烟失败：块排版参数没有进入样式契约',
   );
 
-  useAppStore.getState().replaceStyleSettings(defaultStyleSettings);
+  useAppStore.getState().replaceStyleSettings(cloneStyleSettings(defaultStyleSettings));
+  useAppStore.getState().setHeaderFooterContentSlot({
+    area: 'header',
+    slot: 'center',
+    value: 'Store 页眉',
+  });
+  assert(
+    useAppStore.getState().styleSettings.headerFooterContent.header.center === 'Store 页眉',
+    'M2 冒烟失败：store 没有正确写回页眉页脚内容',
+  );
   useAppStore.getState().applyBlockSpacingPreset('compact');
   assert(
     useAppStore.getState().styleSettings.blockSpacing.listItemGap === 4,
@@ -979,6 +1501,21 @@ async function main(): Promise<void> {
           preset.description === '描述已更新',
       ),
     'M2 冒烟失败：自定义块排版预设没有正确新增、重命名、更新参数或应用',
+  );
+  useAppStore.getState().replaceStyleSettings(cloneStyleSettings(defaultStyleSettings));
+  assert(
+    useAppStore.getState().styleSettings.customBlockSpacingPresets.some(
+      (preset) => preset.id === smokePresetId && preset.name === '冒烟预设重命名',
+    ) &&
+      useAppStore.getState().styleSettings.blockSpacing.paragraphSpaceAfter ===
+        defaultStyleSettings.blockSpacing.paragraphSpaceAfter,
+    'M2 冒烟失败：切换文件后自定义块排版预设没有继续显示，或错误篡改了当前文档参数',
+  );
+  assert(
+    loadBlockSpacingPresetLibrary().some(
+      (preset) => preset.id === smokePresetId && preset.description === '描述已更新',
+    ),
+    'M2 冒烟失败：本机块排版预设库没有保存自定义预设',
   );
   const pages = paginateBlocks(restoredProject.document.blocks, contract, {
     algorithmId: restoredProject.styleSettings.paginationAlgorithmId,
@@ -1008,6 +1545,7 @@ async function main(): Promise<void> {
     title: restoredProject.document.title,
     resources: restoredProject.document.resources,
     styles: restoredProject.document.styles,
+    styleSettings: restoredProject.styleSettings,
   });
   const expectedHtmlFragments = [
     `font-family: "${importedFontResource.fontFamily}"`,
@@ -1042,6 +1580,16 @@ async function main(): Promise<void> {
     '--page-paragraph-inset-left:12px',
     '--page-code-padding-x:22px',
     '--page-table-cell-padding-y:14px',
+    'height:1122.52px',
+    'overflow: hidden',
+    'class="table-shell"',
+    'class="preview-table"',
+    'table-layout: fixed',
+    'class="table-cell-content"',
+    `<header class="page-header"><span>讲义：${restoredProject.document.title}</span>`,
+    '<span>1/',
+    '<footer class="page-footer"><span>讲义模板 · 雪山静境</span><span>内部练习</span>',
+    '<span>A4 / 纵向</span>',
     '<th',
     'width:180px',
     'height:58px',
@@ -1055,10 +1603,45 @@ async function main(): Promise<void> {
     '--page-surface-bg:#FAFDFF',
     '--page-heading1-rule:#F2B84B',
     '--page-heading2-marker:#2F6F64',
+    'data-theme-id="snowMountain"',
+    ".page[data-theme-id='snowMountain']",
+    "url(\"data:image/svg+xml,%3Csvg",
+    "width='420' height='72'",
+    "width='14' height='14'",
+    'toc-block-export',
   ];
 
   for (const fragment of expectedHtmlFragments) {
     assert(html.includes(fragment), `M2 冒烟失败：导出 HTML 缺少关键片段 ${fragment}`);
+  }
+
+  const handDrawnPages = paginateBlocks(
+    restoredHandDrawnProject.document.blocks,
+    handDrawnContract,
+    {
+      styles: restoredHandDrawnProject.document.styles,
+    },
+  );
+  const handDrawnHtml = buildExportHtml({
+    pages: handDrawnPages,
+    title: '手绘主题导出验证',
+    styles: restoredHandDrawnProject.document.styles,
+    styleSettings: restoredHandDrawnProject.styleSettings,
+  });
+  for (const fragment of [
+    'data-theme-id="handDrawn"',
+    '笔记模板',
+    '手绘札记',
+    '--page-surface-bg:#FFFDF4',
+    '--page-table-border:#3A2E25',
+    '--page-heading1-decoration-padding-bottom:10px',
+    '--page-heading2-decoration-underline-height:8px',
+    '--page-heading2-decoration-marker-inset-left:12px',
+    '.page[data-theme-id=',
+    'data:image/svg+xml',
+    'toc-block-export',
+  ]) {
+    assert(handDrawnHtml.includes(fragment), `M2 冒烟失败：手绘主题导出 HTML 缺少关键片段 ${fragment}`);
   }
 
   const longTocSource = [
@@ -1080,11 +1663,11 @@ async function main(): Promise<void> {
       blockCount: longTocInsertResult.blocks.length,
     },
   };
-  const longTocContract = {
+  const longTocContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentWidthPx: 520,
     contentHeightPx: 170,
-  };
+  });
   const longTocPages = paginateBlocks(longTocDocument.blocks, longTocContract);
   const longTocFragments = longTocPages
     .flatMap((page) => page.blocks)
@@ -1165,10 +1748,10 @@ async function main(): Promise<void> {
       text: '真实测量块 B',
     },
   };
-  const measuredContract = {
+  const measuredContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentHeightPx: 100,
-  };
+  });
   const measuredPages = paginateBlocks([measuredBlockA, measuredBlockB], measuredContract, {
     algorithmId: MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID,
     measuredBlockHeights: {
@@ -1194,6 +1777,220 @@ async function main(): Promise<void> {
       remeasuredPages[0]?.blocks.map((block) => block.id).join('|') ===
         `${measuredBlockA.id}|${measuredBlockB.id}`,
     'M2 冒烟失败：真实测量块缓存算法没有响应测量高度变化',
+  );
+
+  const dualColumnHeadingBlock: LayoutBlock = {
+    id: 'm2-dual-column-heading',
+    type: 'heading',
+    sourceRange: null,
+    blockStyleRef: 'heading1',
+    blockStyleOverrides: {},
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-dual-column-heading-run',
+        text: '双栏分页回归',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'heading',
+      depth: 1,
+      text: '双栏分页回归',
+    },
+  };
+  const dualColumnParagraphBlocks: LayoutBlock[] = Array.from({ length: 14 }, (_, index) => ({
+    id: `m2-dual-column-paragraph-${index + 1}`,
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: 'paragraph',
+    blockStyleOverrides: {},
+    pagination: {},
+    textRuns: [
+      {
+        id: `m2-dual-column-paragraph-${index + 1}-run`,
+        text: `词条 ${index + 1} adj. 回归验证内容`,
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: `词条 ${index + 1} adj. 回归验证内容`,
+    },
+  }));
+  const dualColumnContract = withTestPageMetrics({
+    ...resolveStyleContract({
+      ...defaultStyleSettings,
+      columns: {
+        count: 2,
+        gapMm: 8,
+        divider: false,
+        headingsSpanAll: false,
+      },
+    }),
+    contentWidthPx: 520,
+    contentHeightPx: 360,
+    columnCount: 2,
+    columnGapPx: 30,
+  });
+  const dualColumnPages = paginateBlocks([dualColumnHeadingBlock, ...dualColumnParagraphBlocks], dualColumnContract);
+  assert(
+    dualColumnPages.length === 2 &&
+      dualColumnPages[0]?.blocks[0]?.id === dualColumnHeadingBlock.id &&
+      dualColumnPages[1]?.blocks[0]?.id === 'm2-dual-column-paragraph-13' &&
+      dualColumnPages.flatMap((page) => page.blocks).map((block) => block.id).join('|') ===
+        [dualColumnHeadingBlock.id, ...dualColumnParagraphBlocks.map((block) => block.id)].join('|'),
+    'M2 冒烟失败：双栏分页没有按两栏容量正确换页，仍可能挤出额外栏位',
+  );
+
+  const createColumnHeadingBlock = (id: string, depth: 1 | 2 | 3, text: string): LayoutBlock => ({
+    id,
+    type: 'heading',
+    sourceRange: null,
+    blockStyleRef: `heading${depth}`,
+    blockStyleOverrides: {},
+    pagination: {},
+    textRuns: [
+      {
+        id: `${id}-run`,
+        text,
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'heading',
+      depth,
+      text,
+    },
+  });
+  const createColumnParagraphBlock = (id: string, text: string): LayoutBlock => ({
+    id,
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: 'paragraph',
+    blockStyleOverrides: {},
+    pagination: {},
+    textRuns: [
+      {
+        id: `${id}-run`,
+        text,
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text,
+    },
+  });
+  const headingParticipationBlocks = [
+    createColumnParagraphBlock('m2-heading-participation-fill', '填充第一栏高度'),
+    createColumnHeadingBlock('m2-heading-participation-h2', 2, '二级标题参与分栏'),
+  ];
+  const headingParticipationContract = withTestPageMetrics({
+    ...dualColumnContract,
+    contentHeightPx: 112,
+    blockStyles: {
+      ...dualColumnContract.blockStyles,
+      heading2: {
+        ...dualColumnContract.blockStyles.heading2,
+        keepWithNext: false,
+        marginTop: 0,
+        marginBottom: 0,
+        lineHeight: 40,
+      },
+      paragraph: {
+        ...dualColumnContract.blockStyles.paragraph,
+        marginTop: 0,
+        marginBottom: 0,
+        lineHeight: 80,
+      },
+    },
+  });
+  const headingParticipationPages = paginateBlocks(headingParticipationBlocks, headingParticipationContract);
+  assert(
+    headingParticipationPages.length === 1 &&
+      headingParticipationPages[0]?.blocks.map((block) => block.id).join('|') ===
+        'm2-heading-participation-fill|m2-heading-participation-h2',
+    'M2 冒烟失败：分栏默认应让二级标题参与分栏并进入下一栏，而不是强制跨栏换页',
+  );
+  const headingSpanAllContract = withTestPageMetrics({
+    ...headingParticipationContract,
+    headingsSpanAll: true,
+  });
+  const headingSpanAllPages = paginateBlocks(headingParticipationBlocks, headingSpanAllContract);
+  assert(
+    headingSpanAllPages.length === 2 &&
+      headingSpanAllPages[0]?.blocks.map((block) => block.id).join('|') === 'm2-heading-participation-fill' &&
+      headingSpanAllPages[1]?.blocks[0]?.id === 'm2-heading-participation-h2',
+    'M2 冒烟失败：标题不参与分栏开关开启后，二级标题没有按跨栏规则换到下一页',
+  );
+  const headingSpanExportHtml = buildExportHtml({
+    pages: [
+      {
+        pageNumber: 1,
+        blocks: [
+          createColumnHeadingBlock('m2-heading-export-h1', 1, '一级标题跨栏'),
+          createColumnHeadingBlock('m2-heading-export-h2-default', 2, '二级标题默认入栏'),
+        ],
+        contract: headingParticipationContract,
+        warnings: [],
+      },
+      {
+        pageNumber: 2,
+        blocks: [createColumnHeadingBlock('m2-heading-export-h2-span', 2, '二级标题跨栏')],
+        contract: headingSpanAllContract,
+        warnings: [],
+      },
+    ],
+    title: '标题分栏导出验证',
+  });
+  assert(
+    headingSpanExportHtml.includes('<h1 class="column-span-all"') &&
+      headingSpanExportHtml.includes('<h2>') &&
+      headingSpanExportHtml.includes('<h2 class="column-span-all"'),
+    'M2 冒烟失败：导出 HTML 没有按一级标题固定跨栏、二级标题默认入栏和开关跨栏输出 class',
+  );
+  const dualColumnBreakPages = paginateBlocks(
+    [
+      dualColumnHeadingBlock,
+      dualColumnParagraphBlocks[0],
+      {
+        id: 'm2-dual-column-break',
+        type: 'columnBreak',
+        sourceRange: null,
+        blockStyleRef: null,
+        blockStyleOverrides: {},
+        textRuns: [],
+        pagination: { columnBreakAfter: true },
+        metadata: {
+          kind: 'columnBreak',
+          command: '/columnbreak',
+        },
+      },
+      ...dualColumnParagraphBlocks.slice(1, 4),
+    ],
+    dualColumnContract,
+  );
+  assert(
+    dualColumnBreakPages.length === 1 &&
+      dualColumnBreakPages[0]?.blocks.filter((block) => block.type === 'columnBreak').length === 0,
+    'M2 冒烟失败：分栏断点不应作为可见分页结果残留',
   );
 
   const maxFillTextBlock: LayoutBlock = {
@@ -1250,10 +2047,10 @@ async function main(): Promise<void> {
       text: '第一页红色文字\n第二页高亮文字\n第三页加粗文字\n第四页普通文字',
     },
   };
-  const tinyMaxFillContract = {
+  const tinyMaxFillContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentHeightPx: 24,
-  };
+  });
   const maxFillPages = paginateBlocks([maxFillTextBlock], tinyMaxFillContract, {
     algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
   });
@@ -1309,11 +2106,11 @@ async function main(): Promise<void> {
       text: maxFillVisualLineText,
     },
   };
-  const visualLineContract = {
+  const visualLineContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentWidthPx: 96,
     contentHeightPx: 48,
-  };
+  });
   const visualLinePages = paginateBlocks([maxFillVisualLineBlock], visualLineContract, {
     algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
   });
@@ -1357,10 +2154,10 @@ async function main(): Promise<void> {
       text: maxFillLargeFontText,
     },
   };
-  const largeFontContract = {
+  const largeFontContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentHeightPx: 72,
-  };
+  });
   const largeFontPages = paginateBlocks([maxFillLargeFontBlock], largeFontContract, {
     algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
   });
@@ -1416,10 +2213,10 @@ async function main(): Promise<void> {
   };
   const measuredHeightPages = paginateBlocks(
     [measuredHeightBlockA, measuredHeightBlockB],
-    {
+    withTestPageMetrics({
       ...resolveStyleContract(defaultStyleSettings),
       contentHeightPx: 100,
-    },
+    }),
     {
       algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
       measuredBlockHeights: {
@@ -1471,11 +2268,11 @@ async function main(): Promise<void> {
       ],
     },
   };
-  const tailMisbreakContract = {
+  const tailMisbreakContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentWidthPx: 656,
     contentHeightPx: 72,
-  };
+  });
   const tailMisbreakPages = paginateBlocks([maxFillTailMisbreakListBlock], tailMisbreakContract, {
     algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
   });
@@ -1497,11 +2294,11 @@ async function main(): Promise<void> {
 
   const tailMeasuredTolerancePages = paginateBlocks(
     [maxFillTailMisbreakListBlock],
-    {
+    withTestPageMetrics({
       ...resolveStyleContract(defaultStyleSettings),
       contentWidthPx: 656,
       contentHeightPx: 100,
-    },
+    }),
     {
       algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
       measuredBlockHeights: {
@@ -1593,11 +2390,11 @@ async function main(): Promise<void> {
       maxFillTailMisbreakListBlock,
       tailContextNextHeadingBlock,
     ],
-    {
+    withTestPageMetrics({
       ...resolveStyleContract(defaultStyleSettings),
       contentWidthPx: 656,
       contentHeightPx: 212,
-    },
+    }),
     {
       algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
     },
@@ -1648,11 +2445,11 @@ async function main(): Promise<void> {
       text: flowMixedText,
     },
   };
-  const mixedContract = {
+  const mixedContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentWidthPx: 42, // 很窄：约 3 个中文字符宽，强制多行跨页
     contentHeightPx: 48, // 约 2 行，强制分页
-  };
+  });
   const mixedPages = paginateBlocks([mixedTextBlock], mixedContract, {
     algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
   });
@@ -1723,16 +2520,16 @@ async function main(): Promise<void> {
       text: '后续段落',
     },
   };
-  const wideMaxFillContract = {
+  const wideMaxFillContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentWidthPx: 2000,
     contentHeightPx: 2000,
-  };
-  const narrowMaxFillContract = {
+  });
+  const narrowMaxFillContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentWidthPx: 80,
     contentHeightPx: 48,
-  };
+  });
   clearAllBlockHeightCache();
   paginateBlocks([maxFillCacheBlock], wideMaxFillContract, {
     algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
@@ -1808,10 +2605,10 @@ async function main(): Promise<void> {
       })),
     },
   };
-  const tinyListContract = {
+  const tinyListContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentHeightPx: 120,
-  };
+  });
   const maxFillListPages = paginateBlocks([maxFillHeadingBlock, maxFillListBlock], tinyListContract, {
     algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
   });
@@ -1854,6 +2651,91 @@ async function main(): Promise<void> {
       preservedStyledItem.textRuns[0]?.marks.some((mark) => mark.type === 'bold') &&
       preservedTaskItem?.checked === true,
     'M2 冒烟失败：分页测试算法1列表拆分后没有保留列表项样式或任务勾选状态',
+  );
+
+  const maxFillRegressionFillerBlock: LayoutBlock = {
+    id: 'm2-max-fill-column-regression-filler',
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 28,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-column-regression-filler-run',
+        text: '页尾占位\n页尾占位\n页尾占位\n页尾占位\n页尾占位\n页尾占位\n页尾占位',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: '页尾占位\n页尾占位\n页尾占位\n页尾占位\n页尾占位\n页尾占位\n页尾占位',
+    },
+  };
+  const maxFillRegressionListBlock: LayoutBlock = {
+    id: 'm2-max-fill-column-regression-list',
+    type: 'list',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 28,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'list',
+      ordered: true,
+      start: 1,
+      spread: false,
+      items: Array.from({ length: 8 }, (_, itemIndex) => ({
+        id: `m2-max-fill-column-regression-list-item-${itemIndex + 1}`,
+        sourceRange: null,
+        textRuns: [
+          {
+            id: `m2-max-fill-column-regression-list-run-${itemIndex + 1}`,
+            text: `第 ${itemIndex + 1} 项`,
+            sourceRange: null,
+            marks: [],
+            charStyleRef: null,
+            styleOverrides: {},
+            annotations: [],
+          },
+        ],
+        level: 1,
+        checked: null,
+      })),
+    },
+  };
+  const maxFillRegressionContract = withTestPageMetrics({
+    ...resolveStyleContract(defaultStyleSettings),
+    contentHeightPx: 224,
+    contentWidthPx: 520,
+  });
+  const maxFillRegressionListPages = paginateBlocks(
+    [maxFillRegressionFillerBlock, maxFillRegressionListBlock],
+    maxFillRegressionContract,
+    {
+      algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+    },
+  );
+  const regressionSecondPageList = maxFillRegressionListPages[1]?.blocks.find(
+    (block) => block.type === 'list' && block.metadata.kind === 'list',
+  );
+  assert(
+    regressionSecondPageList?.type === 'list' &&
+      regressionSecondPageList.metadata.kind === 'list' &&
+      regressionSecondPageList.metadata.items.length > 1,
+    'M2 冒烟失败：分页测试算法1列表换页后仍复用第一页页尾旧高度，导致续页只放 1 项',
   );
 
   const longListItemText = '这是一个需要在列表项内部跨页拆分的长文本片段。'.repeat(26);
@@ -2020,11 +2902,11 @@ async function main(): Promise<void> {
   };
   const maxFillMeasuredLineBreakPages = paginateBlocks(
     [maxFillMeasuredLineBreakListBlock],
-    {
+    withTestPageMetrics({
       ...tinyListContract,
       contentHeightPx: 24,
       contentWidthPx: 656,
-    },
+    }),
     {
       algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
       measuredTextLineBreaks: {
@@ -2178,11 +3060,11 @@ async function main(): Promise<void> {
       ],
     },
   };
-  const tinyTableContract = {
+  const tinyTableContract = withTestPageMetrics({
     ...resolveStyleContract(defaultStyleSettings),
     contentHeightPx: 150,
     contentWidthPx: 520,
-  };
+  });
   const maxFillMediumTablePages = paginateBlocks(
     [maxFillTableIntroBlock, maxFillMediumTableBlock],
     tinyTableContract,
@@ -2215,6 +3097,121 @@ async function main(): Promise<void> {
       mediumTableRealRowIds.join('|') ===
         maxFillMediumTableBlock.metadata.rows.map((row) => row.id).join('|'),
     'M2 冒烟失败：分页测试算法1中等表格按行拆分后行顺序不正确',
+  );
+
+  const maxFillRegressionTableBlock: LayoutBlock = {
+    id: 'm2-max-fill-column-regression-table',
+    type: 'table',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'table',
+      align: [null, null],
+      columnWidthsPx: [260, 260],
+      rows: [
+        {
+          id: 'm2-max-fill-column-regression-table-header',
+          sourceRange: null,
+          heightPx: 28,
+          cells: [
+            {
+              id: 'm2-max-fill-column-regression-table-header-cell-1',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'm2-max-fill-column-regression-table-header-cell-1-run',
+                  text: '表头 A',
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: true,
+            },
+            {
+              id: 'm2-max-fill-column-regression-table-header-cell-2',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'm2-max-fill-column-regression-table-header-cell-2-run',
+                  text: '表头 B',
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: true,
+            },
+          ],
+        },
+        ...Array.from({ length: 8 }, (_, rowIndex) => ({
+          id: `m2-max-fill-column-regression-table-row-${rowIndex + 1}`,
+          sourceRange: null,
+          heightPx: 28,
+          cells: [
+            {
+              id: `m2-max-fill-column-regression-table-row-${rowIndex + 1}-cell-1`,
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: `m2-max-fill-column-regression-table-row-${rowIndex + 1}-cell-1-run`,
+                  text: `第 ${rowIndex + 1} 行 A`,
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: false,
+            },
+            {
+              id: `m2-max-fill-column-regression-table-row-${rowIndex + 1}-cell-2`,
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: `m2-max-fill-column-regression-table-row-${rowIndex + 1}-cell-2-run`,
+                  text: `第 ${rowIndex + 1} 行 B`,
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: false,
+            },
+          ],
+        })),
+      ],
+    },
+  };
+  const maxFillRegressionTablePages = paginateBlocks(
+    [maxFillRegressionFillerBlock, maxFillRegressionTableBlock],
+    maxFillRegressionContract,
+    {
+      algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+    },
+  );
+  const regressionSecondPageTable = maxFillRegressionTablePages[1]?.blocks.find(
+    (block) => block.type === 'table' && block.metadata.kind === 'table',
+  );
+  assert(
+    regressionSecondPageTable?.type === 'table' &&
+      regressionSecondPageTable.metadata.kind === 'table' &&
+      regressionSecondPageTable.metadata.rows.length > 2,
+    'M2 冒烟失败：分页测试算法1表格换页后仍复用第一页页尾旧高度，导致续页只放表头或 1 行',
   );
 
   const longTableCellText =
@@ -2379,6 +3376,16 @@ async function main(): Promise<void> {
   );
 
   console.log(`M2 冒烟验证通过：${restoredProject.document.blocks.length} 个结构块，${pages.length} 页，${tocItems.length} 个目录项。`);
+  } finally {
+    if (previousLocalStorage === undefined) {
+      delete (globalThis as typeof globalThis & { localStorage?: Storage }).localStorage;
+    } else {
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: previousLocalStorage,
+      });
+    }
+  }
 }
 
 main().catch((error) => {

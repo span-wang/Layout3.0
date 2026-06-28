@@ -57,7 +57,7 @@ function getTocBaseHeight(block: LayoutBlock): number {
 }
 
 function estimateTocEntryHeight(item: TocItem, itemIndexInFragment: number, contract: ResolvedStyleContract): number {
-  const innerWidth = Math.max(120, contract.contentWidthPx - TOC_PADDING_X * 2);
+  const innerWidth = Math.max(120, contract.singleColumnContentWidthPx - TOC_PADDING_X * 2);
   const depthIndent = Math.max(0, item.depth - 1) * TOC_ENTRY_DEPTH_INDENT;
   const textWidth = Math.max(
     80,

@@ -10,6 +10,7 @@ import type {
   StyleSettings,
   TemplateDefinition,
   ThemeDefinition,
+  ThemeLayoutMetrics,
   ThemeVisualTokens,
 } from './types';
 import { DEFAULT_PAGINATION_ALGORITHM_ID } from '@/engine/typesetting/algorithmIds';
@@ -136,6 +137,97 @@ const snowMountainThemeTokens: ThemeVisualTokens = {
   imageCaptionColor: '#547087',
 };
 
+// 手绘主题只使用系统字体栈、CSS 变量和内联 SVG 装饰，避免主题依赖外部字体或素材包。
+const handDrawnThemeTokens: ThemeVisualTokens = {
+  pageBackground: '#FFFDF4',
+  pageBorderColor: '#2F2A24',
+  pageShadow: '0 16px 30px rgb(47 42 36 / 16%)',
+  pageTopBandColor: '#2F2A24',
+  pagePattern:
+    'radial-gradient(circle at 8px 10px, rgb(47 42 36 / 0.10) 0.8px, transparent 1px), linear-gradient(0deg, rgb(103 86 58 / 0.08) 1px, transparent 1px)',
+  pagePatternSize: '22px 22px, 100% 32px',
+  headingFontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", "Microsoft YaHei", sans-serif',
+  bodyFontFamily: '"LXGW WenKai", "Kaiti SC", "KaiTi", "STKaiti", "Microsoft YaHei", sans-serif',
+  headerBackground: 'rgb(255 249 226 / 88%)',
+  footerBackground: 'rgb(255 249 226 / 82%)',
+  headerFooterText: '#6B4F2A',
+  headerBorderColor: '#6B4F2A',
+  footerBorderColor: '#6B4F2A',
+  bodyOutlineColor: '#CBB88A',
+  heading1Color: '#2F2A24',
+  heading1RuleColor: '#D88C45',
+  heading2Color: '#3A2E25',
+  heading2MarkerColor: '#3B7A57',
+  heading3Color: '#65451E',
+  paragraphColor: '#2F2A24',
+  mutedTextColor: '#7B6A52',
+  listMarkerColor: '#3B7A57',
+  taskCheckboxColor: '#B75F3C',
+  blockquoteBackground: '#FFF6D7',
+  blockquoteBorderColor: '#B75F3C',
+  blockquoteTextColor: '#4A3526',
+  codeBackground: '#2F2A24',
+  codeBorderColor: '#D88C45',
+  codeTextColor: '#FFF6D7',
+  tableBorderColor: '#3A2E25',
+  tableHeaderBackground: '#FFE8A8',
+  tableHeaderTextColor: '#2F2A24',
+  ruleColor: '#B75F3C',
+  pageBreakLineColor: '#B75F3C',
+  pageBreakBackground: '#FFF3C4',
+  pageBreakBorderColor: '#D88C45',
+  pageBreakTextColor: '#6B4F2A',
+  imageCaptionColor: '#6B4F2A',
+};
+
+export const defaultThemeLayoutMetrics: ThemeLayoutMetrics = {
+  heading1: {
+    paddingBottom: 0,
+    underlineHeight: 0,
+    underlineGap: 0,
+    markerInsetLeft: 0,
+    underlineOccupiesFlow: false,
+  },
+  heading2: {
+    paddingBottom: 0,
+    underlineHeight: 0,
+    underlineGap: 0,
+    markerInsetLeft: 0,
+    underlineOccupiesFlow: false,
+  },
+  heading3: {
+    paddingBottom: 0,
+    underlineHeight: 0,
+    underlineGap: 0,
+    markerInsetLeft: 0,
+    underlineOccupiesFlow: false,
+  },
+};
+
+const handDrawnThemeLayoutMetrics: ThemeLayoutMetrics = {
+  heading1: {
+    paddingBottom: 10,
+    underlineHeight: 14,
+    underlineGap: 0,
+    markerInsetLeft: 0,
+    underlineOccupiesFlow: false,
+  },
+  heading2: {
+    paddingBottom: 0,
+    underlineHeight: 8,
+    underlineGap: 2,
+    markerInsetLeft: 12,
+    underlineOccupiesFlow: true,
+  },
+  heading3: {
+    paddingBottom: 0,
+    underlineHeight: 8,
+    underlineGap: 2,
+    markerInsetLeft: 0,
+    underlineOccupiesFlow: true,
+  },
+};
+
 export const themeDefinitions: ThemeDefinition[] = [
   {
     id: 'default',
@@ -143,6 +235,7 @@ export const themeDefinitions: ThemeDefinition[] = [
     description: '沿用当前清透文档视觉，适合通用讲义与资料。',
     palette: ['#FFFFFF', '#102A43', '#173047', '#F3F7FB'],
     tokens: defaultThemeTokens,
+    layoutMetrics: defaultThemeLayoutMetrics,
   },
   {
     id: 'snowMountain',
@@ -150,6 +243,15 @@ export const themeDefinitions: ThemeDefinition[] = [
     description: '冷静雪峰与晨曦点缀，适合研学讲义、自然科学资料和阅读型笔记。',
     palette: ['#FAFDFF', '#17324D', '#2F6F64', '#D8EEF7', '#F2B84B'],
     tokens: snowMountainThemeTokens,
+    layoutMetrics: defaultThemeLayoutMetrics,
+  },
+  {
+    id: 'handDrawn',
+    name: '手绘札记',
+    description: '纸张纹理、墨线边框与手绘标记，适合课堂笔记、草稿讲义和轻松阅读资料。',
+    palette: ['#FFFDF4', '#2F2A24', '#D88C45', '#3B7A57', '#B75F3C'],
+    tokens: handDrawnThemeTokens,
+    layoutMetrics: handDrawnThemeLayoutMetrics,
   },
 ];
 
@@ -395,7 +497,25 @@ export const defaultStyleSettings: StyleSettings = {
   footerPreset: 'none',
   customHeaderReservedMm: 10,
   customFooterReservedMm: 10,
+  headerFooterContent: {
+    header: {
+      left: '{本页标题}',
+      center: '',
+      right: '{页面规格}',
+    },
+    footer: {
+      left: '{模板主题}',
+      center: '',
+      right: '{页码}',
+    },
+  },
   isHeaderFooterLinked: true,
+  columns: {
+    count: 1,
+    gapMm: 8,
+    divider: false,
+    headingsSpanAll: false,
+  },
   paginationAlgorithmId: DEFAULT_PAGINATION_ALGORITHM_ID,
   paginationBehavior: defaultPaginationBehavior,
   blockSpacingPresetId: 'balanced',

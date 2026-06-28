@@ -11,6 +11,7 @@ import type {
   BoxInsets,
   ResolvedStyleContract,
   StyleSettings,
+  ThemeLayoutMetrics,
   ThemeVisualTokens,
 } from './types';
 
@@ -87,6 +88,14 @@ function cloneThemeTokens(tokens: ThemeVisualTokens): ThemeVisualTokens {
   };
 }
 
+function cloneThemeLayoutMetrics(metrics: ThemeLayoutMetrics): ThemeLayoutMetrics {
+  return {
+    heading1: { ...metrics.heading1 },
+    heading2: { ...metrics.heading2 },
+    heading3: { ...metrics.heading3 },
+  };
+}
+
 function getPageSize(settings: StyleSettings) {
   const definition =
     pageSizeDefinitions.find((item) => item.id === settings.pageSize) ?? pageSizeDefinitions[1];
@@ -123,6 +132,16 @@ function clampReservedHeight(value: number): number {
   }
 
   return Math.min(80, Math.max(0, Math.round(value)));
+}
+
+function resolveSingleColumnWidthMm(contentWidthMm: number, columnCount: number, columnGapMm: number): number {
+  const safeColumnCount = Math.max(1, Math.floor(columnCount));
+  if (safeColumnCount === 1) {
+    return contentWidthMm;
+  }
+
+  const totalGapMm = Math.max(0, safeColumnCount - 1) * Math.max(0, columnGapMm);
+  return Math.max(40, (contentWidthMm - totalGapMm) / safeColumnCount);
 }
 
 function applyTemplate(blockStyles: BlockStyleContract, templateId: StyleSettings['templateId']): void {
@@ -254,6 +273,11 @@ export function resolveStyleContract(settings: StyleSettings): ResolvedStyleCont
     80,
     heightMm - marginsMm.top - marginsMm.bottom - headerReservedMm - footerReservedMm,
   );
+  const columnCount = settings.columns.count;
+  const columnGapMm = columnCount > 1 ? settings.columns.gapMm : 0;
+  const singleColumnContentWidthMm = resolveSingleColumnWidthMm(contentWidthMm, columnCount, columnGapMm);
+  const singleColumnContentWidthPx = mmToPx(singleColumnContentWidthMm);
+  const columnPageCapacityPx = mmToPx(contentHeightMm) * columnCount;
 
   const contract: ResolvedStyleContract = {
     pageSize: settings.pageSize,
@@ -284,8 +308,17 @@ export function resolveStyleContract(settings: StyleSettings): ResolvedStyleCont
     contentHeightMm,
     contentWidthPx: mmToPx(contentWidthMm),
     contentHeightPx: mmToPx(contentHeightMm),
+    columnCount,
+    columnGapMm,
+    columnGapPx: mmToPx(columnGapMm),
+    columnDivider: settings.columns.divider,
+    headingsSpanAll: settings.columns.headingsSpanAll,
+    singleColumnContentWidthMm,
+    singleColumnContentWidthPx,
+    columnPageCapacityPx,
     blockStyles: cloneBlockStyles(defaultBlockStyles),
     themeTokens: cloneThemeTokens(themeDefinition.tokens),
+    themeLayoutMetrics: cloneThemeLayoutMetrics(themeDefinition.layoutMetrics),
     paginationBehavior: { ...settings.paginationBehavior },
   };
 

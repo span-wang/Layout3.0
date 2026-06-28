@@ -6,6 +6,7 @@ import {
   getImageWrapClassName,
   getTocBlockDisplayTitle,
   getVisibleTocItemsForBlock,
+  isCoveredTableCell,
   resolveImageLayout,
   resolveImageRenderMetrics,
   resolveHangingIndentStyle,
@@ -34,7 +35,10 @@ import {
   resolveBlockDefaultTextMetrics,
   resolveBlockEffectiveTextMetrics,
 } from '@/engine/style/blockStyleResolution';
-import type { ResolvedStyleContract } from '@/engine/style/types';
+import { shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
+import { renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
+import { defaultStyleSettings } from '@/engine/style/presets';
+import type { HeaderFooterContent, ResolvedStyleContract, StyleSettings } from '@/engine/style/types';
 import { resolveAssetSrc } from '@/utils/filePath';
 
 export interface PdfExportPayload {
@@ -42,6 +46,7 @@ export interface PdfExportPayload {
   title: string;
   resources?: LayoutResource[];
   styles?: LayoutStyleSheet;
+  styleSettings?: StyleSettings;
 }
 
 function escapeHtml(value: string): string {
@@ -191,6 +196,24 @@ function buildTableCellStyle(align: 'left' | 'center' | 'right' | null | undefin
   return styles.length > 0 ? ` style="${escapeHtml(styles.join(';'))}"` : '';
 }
 
+function isHeaderLikeTableRow(row: TableBlockMetadata['rows'][number], rowIndex: number): boolean {
+  return rowIndex === 0 || row.cells.some((cell) => cell.isHeader);
+}
+
+function getTableRowBaseHeightPx(
+  row: TableBlockMetadata['rows'][number],
+  rowIndex: number,
+  contract: ResolvedStyleContract | undefined,
+): number {
+  if (!contract) {
+    return isHeaderLikeTableRow(row, rowIndex) ? 44 : 40;
+  }
+
+  return isHeaderLikeTableRow(row, rowIndex)
+    ? contract.blockStyles.table.headerRowHeight
+    : contract.blockStyles.table.rowHeight;
+}
+
 function renderListItemContent(item: LayoutListItem, inheritedStyle = {}): string {
   const shouldHideMarker = shouldHideLayoutListItemMarker(item);
   const listItemClasses = [
@@ -236,6 +259,8 @@ function renderBlock(
   switch (block.type) {
     case 'pageBreak':
       return '';
+    case 'columnBreak':
+      return '<div class="column-break-marker"><span class="column-break-marker-line" aria-hidden="true"></span><span class="column-break-marker-label">分栏断点</span><span class="column-break-marker-line" aria-hidden="true"></span></div>';
     case 'heading': {
       const tagName =
         block.metadata.kind === 'heading' && block.metadata.depth === 1
@@ -243,9 +268,10 @@ function renderBlock(
           : block.metadata.kind === 'heading' && block.metadata.depth === 2
             ? 'h2'
             : block.metadata.kind === 'heading' && block.metadata.depth === 3
-              ? 'h3'
-              : 'h4';
-      return `<${tagName}${buildBlockStyle(block, styles, contract)}>${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
+            ? 'h3'
+            : 'h4';
+      const className = shouldLayoutBlockSpanAllColumns(block, contract) ? ' class="column-span-all"' : '';
+      return `<${tagName}${className}${buildBlockStyle(block, styles, contract)}>${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
     }
     case 'toc':
       return '';
@@ -280,21 +306,33 @@ function renderBlock(
       }
       const tableMeta = block.metadata as TableBlockMetadata;
       const columnCount = tableMeta.rows[0]?.cells.length ?? 0;
-      const columnWidths = resolveTableColumnWidths(tableMeta.columnWidthsPx, columnCount, 520);
-      return `<table${buildBlockStyle(block, styles, contract)}><tbody>${tableMeta.rows
-          .map((row) =>
-            `<tr>${row.cells
-              .filter((cell) => !cell.coveredByCellId)
-              .map((cell, cellIndex) => {
-                const tagName = cell.isHeader ? 'th' : 'td';
-                const colSpan = cell.colSpan && cell.colSpan > 1 ? ` colspan="${cell.colSpan}"` : '';
-                const rowSpan = cell.rowSpan && cell.rowSpan > 1 ? ` rowspan="${cell.rowSpan}"` : '';
-                const widthPx = columnWidths[cellIndex];
-                return `<${tagName}${buildTableCellStyle(tableMeta.align[cellIndex] ?? null, widthPx, row.heightPx ?? undefined)}${colSpan}${rowSpan}>${renderTextRuns(cell.textRuns, inheritedStyle)}</${tagName}>`;
-              })
-              .join('')}</tr>`,
-          )
-          .join('')}</tbody></table>`;
+      const contentWidthPx = contract?.singleColumnContentWidthPx ?? contract?.contentWidthPx ?? 520;
+      const columnWidths = resolveTableColumnWidths(tableMeta.columnWidthsPx, columnCount, contentWidthPx);
+      // 导出表格必须保留原始列索引，不能用过滤后的可渲染单元格索引，否则合并单元格后的列宽会和预览分叉。
+      const colgroupHtml = columnWidths
+        .map((widthPx, columnIndex) => `<col style="width:${widthPx}px" data-column-index="${columnIndex}" />`)
+        .join('');
+      const tableRowsHtml = tableMeta.rows
+        .map((row, rowIndex) => {
+          const rowHeightPx = row.heightPx ?? getTableRowBaseHeightPx(row, rowIndex, contract);
+          const rowCellsHtml = row.cells
+            .map((cell, columnIndex) => {
+              if (isCoveredTableCell(cell)) {
+                return '';
+              }
+
+              const tagName = cell.isHeader ? 'th' : 'td';
+              const colSpan = cell.colSpan && cell.colSpan > 1 ? ` colspan="${cell.colSpan}"` : '';
+              const rowSpan = cell.rowSpan && cell.rowSpan > 1 ? ` rowspan="${cell.rowSpan}"` : '';
+              const widthPx = columnWidths[columnIndex];
+              return `<${tagName}${buildTableCellStyle(tableMeta.align[columnIndex] ?? null, widthPx, rowHeightPx)}${colSpan}${rowSpan}><div class="table-cell-content">${renderTextRuns(cell.textRuns, inheritedStyle)}</div></${tagName}>`;
+            })
+            .join('');
+
+          return `<tr style="height:${rowHeightPx}px">${rowCellsHtml}</tr>`;
+        })
+        .join('');
+      return `<div class="table-shell"><table class="preview-table"${buildBlockStyle(block, styles, contract)}><colgroup>${colgroupHtml}</colgroup><tbody>${tableRowsHtml}</tbody></table></div>`;
     case 'image':
       if (block.metadata.kind !== 'image') {
         return '';
@@ -386,7 +424,12 @@ function getPageMetrics(page: PageLayout) {
   };
 }
 
-function renderPages(pages: PageLayout[], styles?: LayoutStyleSheet): string {
+function renderPages(
+  pages: PageLayout[],
+  styles?: LayoutStyleSheet,
+  headerFooterContent: HeaderFooterContent = defaultStyleSettings.headerFooterContent,
+  documentTitle = '未命名文档',
+): string {
   const allBlocks = pages.flatMap((page) => page.blocks);
   const tocItems = applyPageNumbersToTocItems(
     buildTocItems({
@@ -413,9 +456,16 @@ function renderPages(pages: PageLayout[], styles?: LayoutStyleSheet): string {
   return pages
     .map((page) => {
       const titleBlock = page.blocks.find((block) => block.type === 'heading');
-      const pageTitle = titleBlock ? getHeadingText(titleBlock) || '未命名文档' : '未命名文档';
+      const pageTitle = titleBlock ? getHeadingText(titleBlock) || documentTitle : documentTitle;
       const metrics = getPageMetrics(page);
       const bodyParts: string[] = [];
+      const renderedHeaderFooter = renderHeaderFooterContent(headerFooterContent, {
+        documentTitle,
+        pageTitle,
+        pageNumber: page.pageNumber,
+        totalPages: pages.length,
+        contract: page.contract,
+      });
 
       for (let index = 0; index < page.blocks.length; index += 1) {
       const block = page.blocks[index];
@@ -443,20 +493,23 @@ function renderPages(pages: PageLayout[], styles?: LayoutStyleSheet): string {
         `--page-padding-left:${metrics.paddingLeft}px`,
         `--page-padding-right:${metrics.paddingRight}px`,
         `width:${metrics.pageWidthPx}px`,
+        // 预览用固定页面高度配合正文裁切；导出这里也要显式锁住高度，避免打印自然回流把页脚继续往下顶。
+        `height:${metrics.pageHeightPx}px`,
         `min-height:${metrics.pageHeightPx}px`,
         `grid-template-rows:${metrics.headerHeight}px 1fr ${metrics.footerHeight}px`,
       ].join(';');
+      const pageBodyClassName = page.contract.columnCount > 1 ? 'page-body page-body-columns' : 'page-body';
 
-      return `<section class="page" style="${escapeHtml(pageStyleDeclarations)}">
-        <header class="page-header">${escapeHtml(pageTitle)}<span>${escapeHtml(page.contract.pageLabel)}</span></header>
-        <article class="page-body">${bodyParts.join('')}</article>
-        <footer class="page-footer"><span>${escapeHtml(page.contract.templateThemeLabel)}</span><span>${page.pageNumber}</span></footer>
+      return `<section class="page" data-theme-id="${escapeHtml(page.contract.themeId)}" style="${escapeHtml(pageStyleDeclarations)}">
+        <header class="page-header"><span>${escapeHtml(renderedHeaderFooter.header.left)}</span><span>${escapeHtml(renderedHeaderFooter.header.center)}</span><span>${escapeHtml(renderedHeaderFooter.header.right)}</span></header>
+        <article class="${pageBodyClassName}">${bodyParts.join('')}</article>
+        <footer class="page-footer"><span>${escapeHtml(renderedHeaderFooter.footer.left)}</span><span>${escapeHtml(renderedHeaderFooter.footer.center)}</span><span>${escapeHtml(renderedHeaderFooter.footer.right)}</span></footer>
       </section>`;
     })
     .join('');
 }
 
-export function buildExportHtml({ pages, title, resources, styles }: PdfExportPayload): string {
+export function buildExportHtml({ pages, title, resources, styles, styleSettings }: PdfExportPayload): string {
   const firstPage = pages[0];
   const pageSizeRule = firstPage
     ? `${firstPage.contract.pageWidthMm}mm ${firstPage.contract.pageHeightMm}mm`
@@ -522,6 +575,7 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
         background-size: var(--page-surface-pattern-size, 24px 24px);
         box-shadow: var(--page-surface-shadow, 0 12px 32px rgba(15, 23, 42, 0.10));
         border: 1px solid var(--page-surface-border, #d8e1e8);
+        box-sizing: border-box;
       }
 
       .page:last-child {
@@ -594,11 +648,30 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
 
       .page-header,
       .page-footer {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px;
         align-items: center;
-        justify-content: space-between;
         color: var(--page-header-footer-text, #6b7280);
         font-size: 12px;
+      }
+
+      .page-header span,
+      .page-footer span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .page-header span:nth-child(2),
+      .page-footer span:nth-child(2) {
+        text-align: center;
+      }
+
+      .page-header span:nth-child(3),
+      .page-footer span:nth-child(3) {
+        text-align: right;
       }
 
       .page-header {
@@ -621,6 +694,33 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
         font-family: var(--page-body-font-family, inherit);
         outline: 1px dashed var(--page-body-outline, #e4ecf2);
         outline-offset: -1px;
+        overflow: hidden;
+      }
+
+      .page-body.page-body-columns {
+        column-count: var(--page-column-count, 1);
+        column-gap: var(--page-column-gap, 0px);
+        column-rule: var(--page-column-rule-width, 0px) solid var(--page-column-rule-color, #e4ecf2);
+      }
+
+      .page-body.page-body-columns > h1,
+      .page-body.page-body-columns > h2,
+      .page-body.page-body-columns > h3,
+      .page-body.page-body-columns > h4,
+      .page-body.page-body-columns > .toc-block-export,
+      .page-body.page-body-columns > .table-shell,
+      .page-body.page-body-columns > blockquote,
+      .page-body.page-body-columns > pre,
+      .page-body.page-body-columns > p,
+      .page-body.page-body-columns > ul,
+      .page-body.page-body-columns > ol,
+      .page-body.page-body-columns > hr,
+      .page-body.page-body-columns > .equation-shell {
+        break-inside: avoid-column;
+      }
+
+      .page-body.page-body-columns > .column-span-all {
+        column-span: all;
       }
 
       .page h1,
@@ -674,7 +774,7 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
         padding-left: var(--page-heading3-inset-left, 0px);
         padding-right: var(--page-heading3-inset-right, 0px);
         color: var(--page-heading3-color, #12314e);
-        font-size: var(--page-heading3-font-size, 18px);
+        font-size: var(--page-heading3-font-size, 20px);
         line-height: var(--page-heading3-line-height, 28px);
       }
 
@@ -757,27 +857,84 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
         white-space: pre-wrap;
       }
 
-      table {
-        width: 100%;
+      .table-shell {
+        max-width: 100%;
+        overflow: hidden;
         margin: var(--page-table-margin-top, 20px) 0 var(--page-table-margin-bottom, 20px);
-        border-collapse: collapse;
+        font-size: var(--page-paragraph-font-size, 16px);
+        line-height: var(--page-paragraph-line-height, 28px);
+        position: relative;
       }
 
-      td, th {
+      .preview-table {
+        width: 100%;
+        max-width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      .preview-table td,
+      .preview-table th {
+        height: var(--page-table-row-height, auto);
+        min-height: var(--page-table-row-height, auto);
         padding: var(--page-table-cell-padding-y, 10px) var(--page-table-cell-padding-x, 12px);
         border: 1px solid var(--page-table-border, #d5dde6);
+        font-size: inherit;
+        line-height: inherit;
+        vertical-align: top;
+        position: relative;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        word-break: break-word;
       }
 
-      th {
+      .preview-table th {
+        height: var(--page-table-header-row-height, var(--page-table-row-height, auto));
+        min-height: var(--page-table-header-row-height, var(--page-table-row-height, auto));
         color: var(--page-table-header-text, #213547);
         font-weight: 700;
         background: var(--page-table-header-bg, #f3f7fb);
+      }
+
+      .table-cell-content {
+        min-height: 100%;
+        min-width: 0;
+        white-space: inherit;
+        overflow-wrap: inherit;
+        word-break: inherit;
       }
 
       hr {
         border: 0;
         border-top: var(--page-rule-stroke-width, 1px) solid var(--page-rule-color, #d5dde6);
         margin: var(--page-rule-margin-top, 24px) 0 var(--page-rule-margin-bottom, 24px);
+      }
+
+      .column-break-marker {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 12px 0 18px;
+        padding: 4px 0;
+        color: #5f7080;
+      }
+
+      .column-break-marker-line {
+        flex: 1 1 auto;
+        min-width: 18px;
+        border-top: 1px dotted var(--page-break-line, #b9c7d4);
+      }
+
+      .column-break-marker-label {
+        flex: 0 0 auto;
+        padding: 3px 10px;
+        color: var(--page-break-text, #506274);
+        font-size: 12px;
+        font-weight: 650;
+        letter-spacing: 0.04em;
+        background: color-mix(in srgb, var(--page-break-bg, #f4f8fb) 72%, white 28%);
+        border: 1px dashed var(--page-break-border, #d8e1e8);
+        border-radius: 999px;
       }
 
       .image-shell {
@@ -839,6 +996,360 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
         text-align: center;
       }
 
+      /* 雪山主题导出同步画布里的非占位 SVG 装饰，避免 PDF 只保留基础配色。 */
+      .page[data-theme-id='snowMountain'] {
+        color: var(--page-paragraph-color, #24313a);
+        background-image:
+          var(--page-surface-pattern, none),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%238fb7c6' stroke-width='1' stroke-linecap='round' opacity='.22'%3E%3Cpath d='M24 16v12M18 22h12M19 17l10 10M29 17L19 27M72 58v10M67 63h10M68 59l8 8M76 59l-8 8'/%3E%3C/g%3E%3Ccircle cx='50' cy='34' r='1.2' fill='%23d8eef7' opacity='.7'/%3E%3Ccircle cx='18' cy='70' r='1' fill='%238fb7c6' opacity='.45'/%3E%3C/svg%3E");
+        background-size: var(--page-surface-pattern-size, 24px 24px), 96px 96px;
+      }
+
+      .page[data-theme-id='snowMountain']::before {
+        height: 52px;
+        background:
+          linear-gradient(180deg, rgb(216 238 247 / 80%) 0%, rgb(250 253 255 / 0%) 100%),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='72' viewBox='0 0 420 72'%3E%3Cpath d='M0 58L54 31l24 14 43-33 46 36 28-19 52 30 39-47 60 46 31-21 43 25v10H0z' fill='%23d8eef7' opacity='.82'/%3E%3Cpath d='M54 31l24 14 43-33 15 12-15-4-20 18-23-7-18 13zM286 12l60 46-28-10-15-20-17 10-20 20z' fill='%23ffffff' opacity='.92'/%3E%3Cpath d='M0 58C80 45 144 61 218 48s138-8 202 10' fill='none' stroke='%238fb7c6' stroke-width='2' opacity='.45'/%3E%3C/svg%3E")
+          repeat-x left top / 420px 72px;
+      }
+
+      .page[data-theme-id='snowMountain']::after {
+        content: "";
+        position: absolute;
+        inset: 14px;
+        border: 1px solid rgb(143 183 198 / 28%);
+        border-radius: 8px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .page[data-theme-id='snowMountain'] .page-header,
+      .page[data-theme-id='snowMountain'] .page-footer {
+        font-weight: 650;
+        background-image:
+          linear-gradient(var(--page-header-bg, rgb(240 247 250 / 92%)), var(--page-header-bg, rgb(240 247 250 / 92%))),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='12' viewBox='0 0 220 12'%3E%3Cpath d='M2 8c26-7 44 3 70-2s47-5 72-1 48 5 74-3' fill='none' stroke='%238fb7c6' stroke-width='2' stroke-linecap='round' opacity='.68'/%3E%3Cpath d='M38 7l6-5 6 5M146 6l5-4 5 4' fill='none' stroke='%23f2b84b' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round' opacity='.78'/%3E%3C/svg%3E");
+        background-repeat: repeat, repeat-x;
+        background-position: left top, left bottom;
+        background-size: auto, 220px 12px;
+      }
+
+      .page[data-theme-id='snowMountain'] .page-footer {
+        background-image:
+          linear-gradient(var(--page-footer-bg, rgb(240 247 250 / 88%)), var(--page-footer-bg, rgb(240 247 250 / 88%))),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='12' viewBox='0 0 220 12'%3E%3Cpath d='M2 5c30 6 49-3 79 1s55 5 84 0 37-6 53-1' fill='none' stroke='%238fb7c6' stroke-width='2' stroke-linecap='round' opacity='.62'/%3E%3Cpath d='M72 6l5 4 5-4M168 6l5 4 5-4' fill='none' stroke='%23f2b84b' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round' opacity='.72'/%3E%3C/svg%3E");
+        background-position: left top, left top;
+      }
+
+      .page[data-theme-id='snowMountain'] .page-body {
+        outline: 1px dashed rgb(143 183 198 / 42%);
+        outline-offset: -4px;
+      }
+
+      .page[data-theme-id='snowMountain'] h1 {
+        position: relative;
+        background-image:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='12' viewBox='0 0 260 12'%3E%3Cpath d='M2 9c30-7 52 3 82-3s57-5 87-1 55 6 87-3' fill='none' stroke='%23f2b84b' stroke-width='3' stroke-linecap='round' opacity='.9'/%3E%3Cpath d='M22 8l9-6 9 6M164 7l7-5 7 5' fill='none' stroke='%232f6f64' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' opacity='.85'/%3E%3C/svg%3E");
+        background-size: 100% 12px;
+      }
+
+      .page[data-theme-id='snowMountain'] h1::before {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: 2px;
+        width: 42px;
+        height: 26px;
+        background:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='42' height='26' viewBox='0 0 42 26'%3E%3Cpath d='M2 22L13 7l7 8L27 2l13 20z' fill='%23d8eef7' stroke='%238fb7c6' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M13 7l7 8 7-13 4 7-7-3-5 11-6-6-5 8z' fill='%23ffffff' opacity='.9'/%3E%3C/svg%3E")
+          no-repeat center / contain;
+        opacity: .78;
+        pointer-events: none;
+      }
+
+      .page[data-theme-id='snowMountain'] h2::before {
+        left: -18px;
+        top: 7px;
+        bottom: auto;
+        width: 14px;
+        height: 14px;
+        border-radius: 0;
+        background:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath d='M7 1v12M1 7h12M2.8 2.8l8.4 8.4M11.2 2.8l-8.4 8.4' fill='none' stroke='%232f6f64' stroke-width='1.4' stroke-linecap='round' opacity='.9'/%3E%3Ccircle cx='7' cy='7' r='2' fill='%23fafdff' stroke='%238fb7c6' stroke-width='1'/%3E%3C/svg%3E")
+          no-repeat center / contain;
+      }
+
+      .page[data-theme-id='snowMountain'] h3 {
+        background:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='7' viewBox='0 0 180 7'%3E%3Cpath d='M2 5c22-5 38 2 60-1s43-4 65-1 35 3 51-1' fill='none' stroke='%238fb7c6' stroke-width='1.6' stroke-linecap='round' opacity='.74'/%3E%3C/svg%3E")
+          no-repeat left bottom / min(180px, 58%) 7px;
+      }
+
+      .page[data-theme-id='snowMountain'] blockquote {
+        box-shadow: inset 0 0 0 1px rgb(143 183 198 / 24%);
+        background-image:
+          linear-gradient(var(--page-blockquote-bg, #eef7fb), var(--page-blockquote-bg, #eef7fb)),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='42' viewBox='0 0 96 42'%3E%3Cpath d='M3 34L20 16l10 9L44 6l23 25 11-9 15 12' fill='none' stroke='%238fb7c6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.36'/%3E%3C/svg%3E");
+        background-repeat: repeat, no-repeat;
+        background-position: left top, right bottom;
+        background-size: auto, 96px 42px;
+      }
+
+      .page[data-theme-id='snowMountain'] .preview-table th {
+        background-image:
+          linear-gradient(var(--page-table-header-bg, #e3f0f5), var(--page-table-header-bg, #e3f0f5)),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='16' viewBox='0 0 140 16'%3E%3Cpath d='M2 12c18-6 32 2 50-2s35-4 53-1 24 3 33-2' fill='none' stroke='%238fb7c6' stroke-width='2' stroke-linecap='round' opacity='.48'/%3E%3Cpath d='M24 11l6-6 6 6M96 10l5-5 5 5' fill='none' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' opacity='.9'/%3E%3C/svg%3E");
+        background-repeat: repeat, repeat-x;
+        background-position: left top, left bottom;
+        background-size: auto, 140px 16px;
+      }
+
+      .page[data-theme-id='snowMountain'] hr {
+        height: var(--page-rule-stroke-width, 1px);
+        border-top: 0;
+        background:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='2' viewBox='0 0 180 2'%3E%3Cpath d='M1 1c22-1 37 1 59 0s40-1 62 0 36 1 57-1' fill='none' stroke='%238fb7c6' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")
+          repeat-x left center / 180px 2px;
+      }
+
+      .page[data-theme-id='snowMountain'] .toc-block-export {
+        border-color: var(--page-table-border, #c8dce7);
+        background-image:
+          linear-gradient(rgb(250 253 255 / 84%), rgb(250 253 255 / 84%)),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='44' viewBox='0 0 120 44'%3E%3Cpath d='M4 35L22 16l11 10L50 7l26 26 12-9 28 12' fill='none' stroke='%238fb7c6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' opacity='.32'/%3E%3C/svg%3E");
+        background-repeat: repeat, no-repeat;
+        background-position: left top, right bottom;
+        background-size: auto, 120px 44px;
+      }
+
+      .page[data-theme-id='snowMountain'] .image-viewport {
+        border-radius: 6px;
+        outline: 1px solid rgb(143 183 198 / 56%);
+        outline-offset: 3px;
+        box-shadow: 0 10px 22px rgb(23 50 77 / 10%);
+      }
+
+      .page[data-theme-id='snowMountain'] .image-shell figcaption {
+        font-weight: 650;
+      }
+
+      .page[data-theme-id='snowMountain'] .equation-shell {
+        box-shadow: inset 0 0 0 1px rgb(47 111 100 / 22%);
+      }
+
+      /* 手绘主题导出必须和画布预览共用同一套视觉口径，避免 PDF 变成普通表格线。 */
+      .page[data-theme-id='handDrawn'] {
+        color: var(--page-paragraph-color, #2f2a24);
+        border-width: 2px;
+        border-radius: 10px 14px 12px 9px;
+        background-image:
+          var(--page-surface-pattern, none),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%236b4f2a' stroke-width='1' stroke-linecap='round' opacity='.13'%3E%3Cpath d='M12 22c18-4 31 2 47-2s31-8 49-3'/%3E%3Cpath d='M8 83c20 5 37-3 56 1s29 7 48 2'/%3E%3Cpath d='M24 10c-3 18 2 31-1 47s-7 33-2 52'/%3E%3Cpath d='M91 7c4 20-3 33 0 50s7 34 2 54'/%3E%3C/g%3E%3C/svg%3E");
+        background-size: var(--page-surface-pattern-size, 22px 22px), 120px 120px;
+      }
+
+      .page[data-theme-id='handDrawn']::before {
+        height: 10px;
+        background:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='10' viewBox='0 0 160 10'%3E%3Cpath d='M2 6c20-5 36 3 55-1s35-5 52-1 30 3 49-1' fill='none' stroke='%232f2a24' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")
+          repeat-x left center / 160px 10px;
+      }
+
+      .page[data-theme-id='handDrawn']::after {
+        content: "";
+        position: absolute;
+        inset: 12px;
+        border: 1px solid rgb(47 42 36 / 28%);
+        border-radius: 13px 9px 15px 11px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .page[data-theme-id='handDrawn'] .page-header,
+      .page[data-theme-id='handDrawn'] .page-footer {
+        font-weight: 700;
+        border-color: transparent;
+        background-image:
+          linear-gradient(var(--page-header-bg, rgb(255 249 226 / 88%)), var(--page-header-bg, rgb(255 249 226 / 88%))),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='12' viewBox='0 0 180 12'%3E%3Cpath d='M2 7c20-5 35 2 55-2s35-4 55 0 41 3 66-2' fill='none' stroke='%236b4f2a' stroke-width='2' stroke-linecap='round' opacity='.72'/%3E%3C/svg%3E");
+        background-repeat: repeat, repeat-x;
+        background-position: left top, left bottom;
+        background-size: auto, 180px 12px;
+      }
+
+      .page[data-theme-id='handDrawn'] .page-footer {
+        background-image:
+          linear-gradient(var(--page-footer-bg, rgb(255 249 226 / 82%)), var(--page-footer-bg, rgb(255 249 226 / 82%))),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='12' viewBox='0 0 180 12'%3E%3Cpath d='M2 5c25 4 40-2 60 1s35 5 55 1 36-5 63 1' fill='none' stroke='%236b4f2a' stroke-width='2' stroke-linecap='round' opacity='.72'/%3E%3C/svg%3E");
+        background-position: left top, left top;
+      }
+
+      .page[data-theme-id='handDrawn'] .page-body {
+        outline: 1px dashed rgb(107 79 42 / 46%);
+        outline-offset: -5px;
+      }
+
+      .page[data-theme-id='handDrawn'] h1 {
+        position: relative;
+        padding-bottom: var(--page-heading1-decoration-padding-bottom, 10px);
+        letter-spacing: 0;
+        background-image:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='14' viewBox='0 0 220 14'%3E%3Cpath d='M3 9c26-8 45 4 70-2s47-7 73-2 43 5 71-1' fill='none' stroke='%23d88c45' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-size: 100% var(--page-heading1-decoration-underline-height, 14px);
+      }
+
+      .page[data-theme-id='handDrawn'] h1::before {
+        content: "";
+        position: absolute;
+        right: 2px;
+        top: 4px;
+        width: 36px;
+        height: 18px;
+        border: 2px solid var(--page-heading2-marker, #3b7a57);
+        border-left-color: transparent;
+        border-radius: 48% 52% 44% 56%;
+        transform: rotate(-8deg);
+      }
+
+      .page[data-theme-id='handDrawn'] h2 {
+        padding-left: calc(var(--page-heading2-inset-left, 0px) + var(--page-heading2-decoration-marker-inset-left, 12px));
+      }
+
+      .page[data-theme-id='handDrawn'] h2::before {
+        left: -4px;
+        top: 4px;
+        bottom: auto;
+        width: 14px;
+        height: 14px;
+        border: 2px solid var(--page-heading2-marker, #3b7a57);
+        border-radius: 44% 56% 52% 48%;
+        background: transparent;
+        transform: rotate(-12deg);
+      }
+
+      .page[data-theme-id='handDrawn'] h2::after,
+      .page[data-theme-id='handDrawn'] h3::after {
+        content: "";
+        display: block;
+        width: min(220px, 72%);
+        height: var(--page-heading2-decoration-underline-height, 8px);
+        margin-top: var(--page-heading2-decoration-underline-gap, 2px);
+        background:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='8' viewBox='0 0 220 8'%3E%3Cpath d='M2 5c30-5 49 2 78-1s55-5 84 0 39 3 54-1' fill='none' stroke='%23b75f3c' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E")
+          no-repeat left center / 100% var(--page-heading2-decoration-underline-height, 8px);
+      }
+
+      .page[data-theme-id='handDrawn'] h3::after {
+        height: var(--page-heading3-decoration-underline-height, 8px);
+        margin-top: var(--page-heading3-decoration-underline-gap, 2px);
+        background-size: 100% var(--page-heading3-decoration-underline-height, 8px);
+      }
+
+      .page[data-theme-id='handDrawn'] p {
+        text-underline-offset: 3px;
+      }
+
+      .page[data-theme-id='handDrawn'] ul li::marker {
+        content: "> ";
+        color: var(--page-list-marker, #3b7a57);
+        font-weight: 800;
+      }
+
+      .page[data-theme-id='handDrawn'] ol li::marker {
+        color: var(--page-list-marker, #3b7a57);
+        font-weight: 800;
+      }
+
+      .page[data-theme-id='handDrawn'] .task-list-checkbox {
+        color: var(--page-task-checkbox, #b75f3c);
+        text-shadow: 0.6px 0.6px 0 rgb(107 79 42 / 22%);
+        transform: rotate(-4deg);
+      }
+
+      .page[data-theme-id='handDrawn'] blockquote {
+        padding: 12px 16px;
+        border: 2px solid var(--page-blockquote-border, #b75f3c);
+        border-left-width: 5px;
+        border-radius: 15px 9px 13px 10px;
+        box-shadow: 3px 3px 0 rgb(107 79 42 / 12%);
+        transform: rotate(-0.2deg);
+      }
+
+      .page[data-theme-id='handDrawn'] pre {
+        border: 2px solid var(--page-code-border, #d88c45);
+        border-radius: 13px 10px 14px 9px;
+        box-shadow: 4px 4px 0 rgb(216 140 69 / 22%);
+      }
+
+      .page[data-theme-id='handDrawn'] .table-shell {
+        overflow: visible;
+        padding: 3px;
+        border: 2px solid var(--page-table-border, #3a2e25);
+        border-radius: 12px 8px 14px 10px;
+        transform: rotate(0.08deg);
+      }
+
+      .page[data-theme-id='handDrawn'] .preview-table {
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+
+      .page[data-theme-id='handDrawn'] .preview-table td,
+      .page[data-theme-id='handDrawn'] .preview-table th {
+        border-color: var(--page-table-border, #3a2e25);
+        border-width: 0 1.5px 1.5px 0;
+        border-style: solid;
+      }
+
+      .page[data-theme-id='handDrawn'] .preview-table th {
+        background-image:
+          linear-gradient(var(--page-table-header-bg, #ffe8a8), var(--page-table-header-bg, #ffe8a8)),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='16' viewBox='0 0 140 16'%3E%3Cpath d='M2 12c19-7 33 2 51-3s36-5 53-1 22 2 32-2' fill='none' stroke='%23d88c45' stroke-width='3' stroke-linecap='round' opacity='.5'/%3E%3C/svg%3E");
+        background-repeat: repeat, repeat-x;
+        background-position: left top, left bottom;
+        background-size: auto, 140px 16px;
+      }
+
+      .page[data-theme-id='handDrawn'] hr {
+        height: 14px;
+        border: 0;
+        background:
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='14' viewBox='0 0 220 14'%3E%3Cpath d='M2 8c24-8 43 4 66-2s45-6 69-1 51 5 81-2' fill='none' stroke='%23b75f3c' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")
+          repeat-x left center / 220px 14px;
+      }
+
+      .page[data-theme-id='handDrawn'] .toc-block-export {
+        border: 2px solid var(--page-table-border, #3a2e25);
+        border-radius: 14px 9px 12px 11px;
+        background: rgb(255 246 215 / 70%);
+        box-shadow: 3px 3px 0 rgb(107 79 42 / 12%);
+      }
+
+      .page[data-theme-id='handDrawn'] .toc-entry-export-dots {
+        border-bottom-color: var(--page-rule-color, #b75f3c);
+        border-bottom-style: dashed;
+      }
+
+      .page[data-theme-id='handDrawn'] .image-viewport {
+        padding: 4px;
+        border: 2px solid var(--page-table-border, #3a2e25);
+        border-radius: 13px 9px 14px 10px;
+        background: #fffdf4;
+        box-shadow: 4px 4px 0 rgb(47 42 36 / 12%);
+        transform: rotate(-0.12deg);
+      }
+
+      .page[data-theme-id='handDrawn'] .image-shell figcaption {
+        font-weight: 700;
+        transform: rotate(-0.4deg);
+      }
+
+      .page[data-theme-id='handDrawn'] .equation-shell {
+        border: 2px solid var(--page-heading2-marker, #3b7a57);
+        border-radius: 50% 48% 49% 51% / 12% 16% 13% 15%;
+        background: rgb(255 246 215 / 58%);
+      }
+
       @page {
         size: ${pageSizeRule};
         margin: 0;
@@ -866,7 +1377,7 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
     </style>
   </head>
   <body>
-    <div class="export-shell">${renderPages(pages, styles)}</div>
+    <div class="export-shell">${renderPages(pages, styles, styleSettings?.headerFooterContent, title)}</div>
   </body>
 </html>`;
 }

@@ -134,7 +134,23 @@
       "type": "缺陷",
       "description": "当前预览页与 PDF 导出页在页面底端存在可见偏差，尤其带表格的页面更明显；若预览和导出继续使用不同的页面高度与表格行高口径，用户会误以为分页结果不可靠。",
       "impactScope": "PH2-17 预览与 PDF 一致性、CanvasPane 页面渲染、ExportHtml 导出样式、带表格页面的页底位置",
-      "currentHandling": "已尝试通过统一页面固定高度和导出表格结构来修复，但用户反馈“更不对了”。当前先回退该轮修复，恢复到修复前状态，再继续排查真实偏差源；暂不宣称该缺陷已解决。"
+      "currentHandling": "已完成第二轮收口修复：导出页现已显式使用与预览一致的固定页面高度和正文 `overflow: hidden` 裁切；表格导出改为复用 `.table-shell / .preview-table / .table-cell-content / colgroup` 结构，并统一 `table-layout`、列宽、默认行高、表头行高和单元格换行口径；同时修复了导出表格在过滤后使用错误列索引取宽高的问题，并补齐 H3 默认字号 fallback 差异。已通过 `typecheck`、`smoke:m2`、`build` 和进度校验验证。"
+    },
+    {
+      "id": "RISK-018",
+      "date": "2026-06-28",
+      "type": "缺陷",
+      "description": "当前块排版自定义预设虽然会随 `.layout` 保存恢复，但切换到其他 Markdown、新建空白文档或其他文件时，右侧「块排版」面板会重置为默认样式设置，导致用户刚保存的自定义预设列表消失，容易误判为“没有做持久化”。",
+      "impactScope": "PH2-15 块排版参数预设 V1、RightPanel 块排版面板、StyleSettings 重置/替换链路、文件切换工作流、自动草稿恢复",
+      "currentHandling": "已完成 `PH2-15-cross-file-preset-library-fix-v1` 小修复：在保留 `.layout` 文档内持久化的同时，新增本机用户级块排版预设库；打开 Markdown、打开 `.layout`、新建空白文档、切换文件和恢复草稿时统一合并内置预设、当前文档预设和本机预设库，确保用户自定义预设跨文件仍可见、可复用，但不自动改动当前文件已应用的排版参数。已通过 `typecheck`、`smoke:m2` 和 `build` 验证。"
+    },
+    {
+      "id": "RISK-019",
+      "date": "2026-06-28",
+      "type": "缺陷",
+      "description": "手绘主题的标题装饰存在额外占位高度和缩进，但当前分页测量/估算缺少统一的主题装饰占位契约，后续更多主题如果继续用 CSS 装饰也可能让分页结果低估块高或切页不稳定。",
+      "impactScope": "PH2-09 分页测量与估算、PH2-16 主题系统、CanvasPane 隐藏测量层、HTML/PDF 导出、手绘主题及后续占高装饰主题",
+      "currentHandling": "已完成 `PH2-09-theme-decoration-measure-contract-v1`：主题装饰占位已进入 `ThemeLayoutMetrics` 和 `ResolvedStyleContract`，手绘主题 H1/H2/H3 占高装饰通过统一 CSS 变量进入画布预览、隐藏测量层和 HTML/PDF 导出；分页估算和分页测试算法1会计入这些占位，并让测量缓存随主题布局指标变化失效。后续新增占高装饰主题必须复用该契约。"
     }
   ]
 }

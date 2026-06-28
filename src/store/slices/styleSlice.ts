@@ -5,6 +5,10 @@ import {
   normalizeBlockSpacingParameters,
   normalizeStyleSettings,
 } from '@/engine/style/styleSettings';
+import {
+  mergeBlockSpacingPresetLibraryIntoStyleSettings,
+  saveBlockSpacingPresetLibrary,
+} from '@/services/BlockSpacingPresetLibraryService';
 import type {
   BlockSpacingParameters,
   BlockSpacingParameterKey,
@@ -17,6 +21,8 @@ const MIN_MARGIN_MM = 5;
 const MAX_MARGIN_MM = 80;
 const MIN_BLOCK_SPACING_PX = 0;
 const MAX_BLOCK_SPACING_PX = 240;
+const MIN_COLUMN_GAP_MM = 4;
+const MAX_COLUMN_GAP_MM = 30;
 
 function clampMarginValue(value: number): number {
   if (!Number.isFinite(value)) {
@@ -24,6 +30,14 @@ function clampMarginValue(value: number): number {
   }
 
   return Math.min(MAX_MARGIN_MM, Math.max(MIN_MARGIN_MM, Math.round(value)));
+}
+
+function clampColumnGapMm(value: number): number {
+  if (!Number.isFinite(value)) {
+    return defaultStyleSettings.columns.gapMm;
+  }
+
+  return Math.min(MAX_COLUMN_GAP_MM, Math.max(MIN_COLUMN_GAP_MM, Math.round(value)));
 }
 
 function cloneInsets(insets: BoxInsets): BoxInsets {
@@ -76,15 +90,15 @@ function clampBlockSpacingParameters(parameters: BlockSpacingParameters): BlockS
 }
 
 export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
-  styleSettings: cloneStyleSettings(defaultStyleSettings),
+  styleSettings: mergeBlockSpacingPresetLibraryIntoStyleSettings(cloneStyleSettings(defaultStyleSettings)),
   resetStyleSettings: () =>
     set((state) => {
-      state.styleSettings = cloneStyleSettings(defaultStyleSettings);
+      state.styleSettings = mergeBlockSpacingPresetLibraryIntoStyleSettings(cloneStyleSettings(defaultStyleSettings));
     }),
   replaceStyleSettings: (styleSettings) =>
     set((state) => {
       // 读取旧草稿或旧 .layout 数据时也统一走归一化，避免新字段缺失把状态带坏。
-      state.styleSettings = normalizeStyleSettings(styleSettings);
+      state.styleSettings = mergeBlockSpacingPresetLibraryIntoStyleSettings(normalizeStyleSettings(styleSettings));
     }),
   setPageSize: (pageSize) =>
     set((state) => {
@@ -171,6 +185,11 @@ export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
       }
       state.isDirty = true;
     }),
+  setHeaderFooterContentSlot: ({ area, slot, value }) =>
+    set((state) => {
+      state.styleSettings.headerFooterContent[area][slot] = value;
+      state.isDirty = true;
+    }),
   setHeaderFooterLinked: (linked) =>
     set((state) => {
       state.styleSettings.isHeaderFooterLinked = linked;
@@ -180,6 +199,30 @@ export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
       }
 
       state.styleSettings.customFooterReservedMm = state.styleSettings.customHeaderReservedMm;
+    }),
+  setPageColumnCount: (count) =>
+    set((state) => {
+      state.styleSettings.columns.count = count;
+      if (count === 1) {
+        state.styleSettings.columns.divider = false;
+        state.styleSettings.columns.headingsSpanAll = false;
+      }
+      state.isDirty = true;
+    }),
+  setPageColumnGapMm: (value) =>
+    set((state) => {
+      state.styleSettings.columns.gapMm = clampColumnGapMm(value);
+      state.isDirty = true;
+    }),
+  setPageColumnDivider: (value) =>
+    set((state) => {
+      state.styleSettings.columns.divider = state.styleSettings.columns.count > 1 ? value : false;
+      state.isDirty = true;
+    }),
+  setPageColumnHeadingsSpanAll: (value) =>
+    set((state) => {
+      state.styleSettings.columns.headingsSpanAll = state.styleSettings.columns.count > 1 ? value : false;
+      state.isDirty = true;
     }),
   setPaginationAlgorithmId: (algorithmId) =>
     set((state) => {
@@ -219,6 +262,9 @@ export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
         description: description.trim(),
         parameters: cloneBlockSpacingParameters(state.styleSettings.blockSpacing),
       });
+      state.styleSettings.customBlockSpacingPresets = saveBlockSpacingPresetLibrary(
+        state.styleSettings.customBlockSpacingPresets,
+      );
       state.styleSettings.blockSpacingPresetId = presetId;
       state.isDirty = true;
     });
@@ -245,6 +291,9 @@ export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
           state.styleSettings.blockSpacing = cloneBlockSpacingParameters(nextParameters);
         }
       }
+      state.styleSettings.customBlockSpacingPresets = saveBlockSpacingPresetLibrary(
+        state.styleSettings.customBlockSpacingPresets,
+      );
       state.isDirty = true;
     }),
 });

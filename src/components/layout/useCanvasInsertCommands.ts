@@ -17,6 +17,7 @@ interface CanvasInsertCommands {
   handleInsertTable: () => void;
   handleInsertList: (kind: InsertListBlockKind) => void;
   handleInsertParagraph: () => void;
+  handleInsertColumnBreak: () => void;
   handleInsertPageBreak: () => void;
   handleInsertToc: () => void;
 }
@@ -43,6 +44,7 @@ export function useCanvasInsertCommands({
   const insertLayoutTableBlock = useAppStore((state) => state.insertLayoutTableBlock);
   const insertLayoutListBlock = useAppStore((state) => state.insertLayoutListBlock);
   const insertLayoutParagraphBlock = useAppStore((state) => state.insertLayoutParagraphBlock);
+  const insertLayoutColumnBreakBlock = useAppStore((state) => state.insertLayoutColumnBreakBlock);
   const insertLayoutPageBreakBlock = useAppStore((state) => state.insertLayoutPageBreakBlock);
   const insertLayoutTocBlock = useAppStore((state) => state.insertLayoutTocBlock);
   const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
@@ -193,6 +195,25 @@ export function useCanvasInsertCommands({
     showMessage('已插入分页符');
   };
 
+  const handleInsertColumnBreak = (): void => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入分栏断点的文档');
+      return;
+    }
+
+    const insertedBlockId = insertLayoutColumnBreakBlock({
+      insertAfterNodeId: selectedNodeId,
+    });
+
+    if (!insertedBlockId) {
+      showMessage('分栏断点插入失败：当前文档不可写');
+      return;
+    }
+
+    selectInsertedNode(insertedBlockId);
+    showMessage('已插入分栏断点');
+  };
+
   const handleInsertToc = (): void => {
     if (!layoutDocument) {
       showMessage('当前没有可插入目录的文档');
@@ -218,6 +239,7 @@ export function useCanvasInsertCommands({
     handleInsertTable,
     handleInsertList,
     handleInsertParagraph,
+    handleInsertColumnBreak,
     handleInsertPageBreak,
     handleInsertToc,
   };

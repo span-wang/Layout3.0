@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FileText, Layers3, PanelBottom, PanelTop, SlidersHorizontal } from 'lucide-react';
+import { Columns2, FileText, Layers3, PanelBottom, PanelTop, SlidersHorizontal } from 'lucide-react';
 import { fontFamilyPlaceholderValue, textFontFamilyGroups } from '@/constants/fontFamilies';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import {
@@ -41,6 +41,7 @@ import {
   templateDefinitions,
   themeDefinitions,
 } from '@/engine/style/presets';
+import { headerFooterVariableLabels } from '@/engine/style/headerFooterContent';
 import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '@/engine/style/blockStyleResolution';
 import { listPaginationAlgorithms } from '@/engine/typesetting';
 import type { LayoutWarning } from '@/engine/typesetting/types';
@@ -48,9 +49,12 @@ import type {
   BlockSpacingParameterKey,
   BlockSpacingParameters,
   BlockSpacingPreset,
+  HeaderFooterArea,
   HeaderFooterPresetId,
+  HeaderFooterSlot,
   MarginPresetId,
   MarginSide,
+  PageColumnCount,
   PageOrientation,
   PageSizeId,
   PaginationAlgorithmId,
@@ -113,6 +117,7 @@ const pageSettingsTabs: Array<{
   { id: '页面规格', label: '页面规格', description: '纸张与方向', icon: FileText },
   { id: '页边距', label: '页边距', description: '预设与自定义边距', icon: PanelTop },
   { id: '页眉页脚预留', label: '页眉页脚预留', description: '控制预留区域高度', icon: PanelBottom },
+  { id: '分栏', label: '分栏', description: '正文栏数与栏间距', icon: Columns2 },
   { id: '块排版', label: '块排版', description: '块间距与预设', icon: SlidersHorizontal },
   { id: '模板起点', label: '模板起点', description: '结构模板与风格主题', icon: Layers3 },
   { id: '分页策略', label: '分页策略', description: '标题、代码块与图片保护', icon: SlidersHorizontal },
@@ -129,6 +134,7 @@ const blockTypeLabels: Record<LayoutBlock['type'], string> = {
   blockquote: '引用',
   code: '代码块',
   horizontalRule: '分隔线',
+  columnBreak: '分栏断点',
   pageBreak: '分页符',
 };
 
@@ -142,6 +148,7 @@ const topLevelBlockDeleteLabels: Partial<Record<LayoutBlock['type'], string>> = 
   equation: '公式',
   blockquote: '引用',
   code: '代码块',
+  columnBreak: '分栏断点',
   pageBreak: '分页符',
 };
 
@@ -168,6 +175,12 @@ const marginSideLabels: Record<MarginSide, string> = {
   bottom: '下',
   left: '左',
 };
+
+const pageColumnOptions: Array<{ id: PageColumnCount; label: string; description: string }> = [
+  { id: 1, label: '单栏', description: '适合常规阅读与打印' },
+  { id: 2, label: '双栏', description: '适合讲义、试卷和高信息密度排版' },
+  { id: 3, label: '三栏', description: '适合摘要、索引和更紧凑的信息布局' },
+];
 
 const paginationBehaviorOptions: Array<{
   id: PaginationBehaviorOption;
@@ -652,6 +665,16 @@ function renderObjectPropertiesPanel(
   updateLayoutTableColumnAlign: (payload: {
     cellId: string;
     align: TableColumnAlign;
+  }) => string | null,
+  autoFitLayoutTableSize: (payload: {
+    cellId: string;
+    contentWidthPx: number;
+    rowHeightPx: number;
+    headerRowHeightPx: number;
+    cellPaddingX: number;
+    cellPaddingY: number;
+    baseFontSizePx: number;
+    baseLineHeightPx: number;
   }) => string | null,
   mergeLayoutSelectedTableCells: () => {
     selectedNodeId: string | null;
@@ -1161,6 +1184,31 @@ function renderObjectPropertiesPanel(
 
     onTableStructureFeedback(
       nextSelectedNodeId ? `已将当前列设置为${alignLabel}` : '当前列对齐没有变化',
+    );
+  };
+
+  const handleTableAutoFitSize = () => {
+    if (!selectedTableCellPosition) {
+      onTableStructureFeedback('请先选中一个表格单元格');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const nextSelectedNodeId = autoFitLayoutTableSize({
+      cellId: selectedNodeInfo.nodeId,
+      contentWidthPx: resolvedStyleContract.singleColumnContentWidthPx,
+      rowHeightPx: resolvedStyleContract.blockStyles.table.rowHeight,
+      headerRowHeightPx: resolvedStyleContract.blockStyles.table.headerRowHeight,
+      cellPaddingX: resolvedStyleContract.blockStyles.table.cellPaddingX,
+      cellPaddingY: resolvedStyleContract.blockStyles.table.cellPaddingY,
+      baseFontSizePx: resolvedStyleContract.blockStyles.paragraph.fontSize,
+      baseLineHeightPx: resolvedStyleContract.blockStyles.paragraph.lineHeight,
+    });
+
+    onTableStructureFeedback(
+      nextSelectedNodeId
+        ? '已按内容适应最佳行高列宽'
+        : '当前表格尺寸已经是最佳适应结果',
     );
   };
 
@@ -1871,6 +1919,15 @@ function renderObjectPropertiesPanel(
                 ))}
               </select>
             </label>
+            <div className="table-structure-grid">
+              <button
+                type="button"
+                className="segment-chip table-structure-button"
+                onClick={handleTableAutoFitSize}
+              >
+                适应最佳行高列宽
+              </button>
+            </div>
           </div>
         </section>
       ) : null}
@@ -2603,6 +2660,7 @@ function renderHeaderFooterPanel({
   setHeaderFooterMode,
   setHeaderPreset,
   setFooterPreset,
+  setHeaderFooterContentSlot,
   setHeaderFooterLinked,
   handleHeaderFooterDraftChange,
   commitHeaderFooterDraft,
@@ -2612,15 +2670,30 @@ function renderHeaderFooterPanel({
   setHeaderFooterMode: (mode: 'preset' | 'custom') => void;
   setHeaderPreset: (preset: HeaderFooterPresetId) => void;
   setFooterPreset: (preset: HeaderFooterPresetId) => void;
+  setHeaderFooterContentSlot: (payload: {
+    area: HeaderFooterArea;
+    slot: HeaderFooterSlot;
+    value: string;
+  }) => void;
   setHeaderFooterLinked: (linked: boolean) => void;
   handleHeaderFooterDraftChange: (side: 'header' | 'footer', value: string) => void;
   commitHeaderFooterDraft: (side: 'header' | 'footer') => void;
 }): JSX.Element {
+  const slotLabels: Record<HeaderFooterSlot, string> = {
+    left: '左侧',
+    center: '中间',
+    right: '右侧',
+  };
+  const contentAreas: Array<{ area: HeaderFooterArea; title: string }> = [
+    { area: 'header', title: '页眉内容' },
+    { area: 'footer', title: '页脚内容' },
+  ];
+
   return (
     <section className="detail-panel">
       <div className="detail-panel-head">
-        <h3>页眉页脚预留</h3>
-        <span>只控制高度</span>
+        <h3>页眉页脚</h3>
+        <span>设置高度与显示内容</span>
       </div>
       <div className="segmented-group">
         <button
@@ -2724,8 +2797,134 @@ function renderHeaderFooterPanel({
           </div>
         </label>
       </div>
+      <div className="header-footer-content-stack">
+        {contentAreas.map((contentArea) => (
+          <div key={contentArea.area} className="header-footer-content-group">
+            <strong>{contentArea.title}</strong>
+            {(['left', 'center', 'right'] as HeaderFooterSlot[]).map((slot) => (
+              <label key={`${contentArea.area}-${slot}`}>
+                {slotLabels[slot]}
+                <input
+                  type="text"
+                  value={styleSettings.headerFooterContent[contentArea.area][slot]}
+                  onChange={(event) =>
+                    setHeaderFooterContentSlot({
+                      area: contentArea.area,
+                      slot,
+                      value: event.target.value,
+                    })
+                  }
+                  placeholder="可输入文字或变量"
+                />
+              </label>
+            ))}
+          </div>
+        ))}
+      </div>
       <div className="panel-note-list">
-        <p>当前先控制预留区域高度，后续再接入页眉页脚内容编辑。</p>
+        <p>可用变量：{headerFooterVariableLabels.join('、')}。</p>
+        <p>内容编辑不会自动改变预留高度，如显示拥挤可在上方调整高度。</p>
+      </div>
+    </section>
+  );
+}
+
+function renderColumnsPanel({
+  styleSettings,
+  resolvedStyleContract,
+  columnGapDraft,
+  setPageColumnCount,
+  setPageColumnGapMm,
+  setPageColumnDivider,
+  setPageColumnHeadingsSpanAll,
+  setColumnGapDraft,
+}: {
+  styleSettings: StyleSettings;
+  resolvedStyleContract: ReturnType<typeof useResolvedStyleContract>;
+  columnGapDraft: string;
+  setPageColumnCount: (count: PageColumnCount) => void;
+  setPageColumnGapMm: (value: number) => void;
+  setPageColumnDivider: (value: boolean) => void;
+  setPageColumnHeadingsSpanAll: (value: boolean) => void;
+  setColumnGapDraft: (value: string) => void;
+}): JSX.Element {
+  const commitColumnGapDraft = () => {
+    const nextValue = Number(columnGapDraft);
+    if (Number.isNaN(nextValue)) {
+      setColumnGapDraft(String(styleSettings.columns.gapMm));
+      return;
+    }
+
+    setPageColumnGapMm(nextValue);
+  };
+
+  return (
+    <section className="detail-panel">
+      <div className="detail-panel-head">
+        <h3>分栏</h3>
+        <span>整篇页面级正文布局</span>
+      </div>
+      <div className="option-card-grid option-card-grid-3">
+        {pageColumnOptions.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={option.id === styleSettings.columns.count ? 'option-card active' : 'option-card'}
+            onClick={() => setPageColumnCount(option.id)}
+            title={option.description}
+          >
+            <strong>{option.label}</strong>
+            <span>{option.description}</span>
+          </button>
+        ))}
+      </div>
+      <div className="property-stack">
+        <label>
+          栏间距
+          <div className="number-input-shell">
+            <input
+              type="number"
+              min={4}
+              max={30}
+              step={1}
+              value={columnGapDraft}
+              onChange={(event) => setColumnGapDraft(event.target.value)}
+              onBlur={commitColumnGapDraft}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  commitColumnGapDraft();
+                  (event.currentTarget as HTMLInputElement).blur();
+                }
+              }}
+              disabled={styleSettings.columns.count === 1}
+            />
+            <span>mm</span>
+          </div>
+        </label>
+      </div>
+      <label className="toggle-row">
+        <input
+          type="checkbox"
+          checked={styleSettings.columns.count > 1 && styleSettings.columns.divider}
+          onChange={(event) => setPageColumnDivider(event.target.checked)}
+          disabled={styleSettings.columns.count === 1}
+        />
+        <span>显示栏分割线</span>
+      </label>
+      <label className="toggle-row">
+        <input
+          type="checkbox"
+          checked={styleSettings.columns.count > 1 && styleSettings.columns.headingsSpanAll}
+          onChange={(event) => setPageColumnHeadingsSpanAll(event.target.checked)}
+          disabled={styleSettings.columns.count === 1}
+        />
+        <span>标题不参与分栏</span>
+      </label>
+      <div className="panel-note-list">
+        <p>
+          当前单栏正文宽度：约 {Math.round(resolvedStyleContract.singleColumnContentWidthMm)} mm
+        </p>
+        <p>默认二级及以下标题参与分栏，一级标题始终跨栏。</p>
       </div>
     </section>
   );
@@ -3118,7 +3317,12 @@ export function RightPanel({
   const setFooterPreset = useAppStore((state) => state.setFooterPreset);
   const setCustomHeaderReservedMm = useAppStore((state) => state.setCustomHeaderReservedMm);
   const setCustomFooterReservedMm = useAppStore((state) => state.setCustomFooterReservedMm);
+  const setHeaderFooterContentSlot = useAppStore((state) => state.setHeaderFooterContentSlot);
   const setHeaderFooterLinked = useAppStore((state) => state.setHeaderFooterLinked);
+  const setPageColumnCount = useAppStore((state) => state.setPageColumnCount);
+  const setPageColumnGapMm = useAppStore((state) => state.setPageColumnGapMm);
+  const setPageColumnDivider = useAppStore((state) => state.setPageColumnDivider);
+  const setPageColumnHeadingsSpanAll = useAppStore((state) => state.setPageColumnHeadingsSpanAll);
   const setPaginationAlgorithmId = useAppStore((state) => state.setPaginationAlgorithmId);
   const setPaginationBehaviorOption = useAppStore((state) => state.setPaginationBehaviorOption);
   const setBlockSpacingParameter = useAppStore((state) => state.setBlockSpacingParameter);
@@ -3135,6 +3339,7 @@ export function RightPanel({
   const updateLayoutTableStructure = useAppStore((state) => state.updateLayoutTableStructure);
   const updateLayoutTableHeaderRow = useAppStore((state) => state.updateLayoutTableHeaderRow);
   const updateLayoutTableColumnAlign = useAppStore((state) => state.updateLayoutTableColumnAlign);
+  const autoFitLayoutTableSize = useAppStore((state) => state.autoFitLayoutTableSize);
   const mergeLayoutSelectedTableCells = useAppStore((state) => state.mergeLayoutSelectedTableCells);
   const updateLayoutListStructure = useAppStore((state) => state.updateLayoutListStructure);
   const updateLayoutListOrdered = useAppStore((state) => state.updateLayoutListOrdered);
@@ -3165,6 +3370,7 @@ export function RightPanel({
     header: String(styleSettings.customHeaderReservedMm),
     footer: String(styleSettings.customFooterReservedMm),
   });
+  const [columnGapDraft, setColumnGapDraft] = useState(String(styleSettings.columns.gapMm));
   const [newBlockSpacingPresetName, setNewBlockSpacingPresetName] = useState('');
   const [newBlockSpacingPresetDescription, setNewBlockSpacingPresetDescription] = useState('');
   const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
@@ -3198,6 +3404,10 @@ export function RightPanel({
       footer: String(styleSettings.customFooterReservedMm),
     });
   }, [styleSettings.customFooterReservedMm, styleSettings.customHeaderReservedMm]);
+
+  useEffect(() => {
+    setColumnGapDraft(String(styleSettings.columns.gapMm));
+  }, [styleSettings.columns.gapMm]);
 
   const handleMarginDraftChange = (side: MarginSide, value: string) => {
     setMarginDrafts((current) => ({
@@ -3289,9 +3499,21 @@ export function RightPanel({
           setHeaderFooterMode,
           setHeaderPreset,
           setFooterPreset,
+          setHeaderFooterContentSlot,
           setHeaderFooterLinked,
           handleHeaderFooterDraftChange,
           commitHeaderFooterDraft,
+        });
+      case '分栏':
+        return renderColumnsPanel({
+          styleSettings,
+          resolvedStyleContract,
+          columnGapDraft,
+          setPageColumnCount,
+          setPageColumnGapMm,
+          setPageColumnDivider,
+          setPageColumnHeadingsSpanAll,
+          setColumnGapDraft,
         });
       case '块排版':
         return renderBlockSpacingPanel({
@@ -3349,6 +3571,7 @@ export function RightPanel({
             updateLayoutTableStructure,
             updateLayoutTableHeaderRow,
             updateLayoutTableColumnAlign,
+            autoFitLayoutTableSize,
             mergeLayoutSelectedTableCells,
             updateLayoutListStructure,
             updateLayoutListOrdered,

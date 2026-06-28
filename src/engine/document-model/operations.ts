@@ -2,6 +2,7 @@ import type {
   BlockStyleOverrides,
   BlockRangeSelection,
   LayoutBlock,
+  LayoutDocument,
   LayoutResource,
   LayoutListItem,
   LayoutTableCell,
@@ -32,7 +33,16 @@ import {
   getTableCellColSpan,
   getTableCellRowSpan,
   isCoveredTableCell,
+  resolveTableAutoFitSize,
+  type ResolveTableAutoFitSizeOptions,
 } from './tableLayout';
+import { defaultStyleSettings } from '@/engine/style/presets';
+import { resolveStyleContract } from '@/engine/style/resolveContract';
+import {
+  getEffectiveTableCellMaxFontSize,
+  resolveEffectiveTextLineHeight,
+} from '@/engine/style/quickTextStyle';
+import type { StyleSettings } from '@/engine/style/types';
 
 export type EditableLayoutTextBlockType = 'heading' | 'paragraph' | 'code' | 'image' | 'equation';
 
@@ -537,6 +547,26 @@ function createInsertedPageBreakBlock(blocks: LayoutBlock[]): LayoutBlock {
   };
 }
 
+function createInsertedColumnBreakBlock(blocks: LayoutBlock[]): LayoutBlock {
+  const blockId = createInsertedBlockId(blocks, 'columnBreak', '/columnbreak');
+
+  return {
+    id: blockId,
+    type: 'columnBreak',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {},
+    textRuns: [],
+    pagination: {
+      columnBreakAfter: true,
+    },
+    metadata: {
+      kind: 'columnBreak',
+      command: '/columnbreak',
+    },
+  };
+}
+
 function collectTableNodeIds(block: LayoutBlock): Set<string> {
   const ids = new Set<string>();
   if (block.type !== 'table' || block.metadata.kind !== 'table') {
@@ -973,6 +1003,25 @@ export function insertPageBreakBlockAfterNode(
   return {
     blocks: nextBlocks,
     insertedBlockId: pageBreakBlock.id,
+  };
+}
+
+export function insertColumnBreakBlockAfterNode(
+  blocks: LayoutBlock[],
+  payload: InsertPageBreakBlockPayload,
+): InsertPageBreakBlockResult {
+  const columnBreakBlock = createInsertedColumnBreakBlock(blocks);
+  const insertAfterIndex = getBlockIndexForNodeId(blocks, payload.insertAfterNodeId);
+  const insertIndex = insertAfterIndex >= 0 ? insertAfterIndex + 1 : blocks.length;
+  const nextBlocks = [
+    ...blocks.slice(0, insertIndex),
+    columnBreakBlock,
+    ...blocks.slice(insertIndex),
+  ];
+
+  return {
+    blocks: nextBlocks,
+    insertedBlockId: columnBreakBlock.id,
   };
 }
 
@@ -1939,6 +1988,185 @@ export function updateTableColumnWidthsByCell(
       },
     },
     selectedNodeId: cellId,
+    didUpdate: true,
+  };
+}
+
+export function updateTableAutoFitSizeByCell(
+  block: LayoutBlock,
+  cellId: string,
+  options: ResolveTableAutoFitSizeOptions,
+): TablePropertyEditResult {
+  if (block.type !== 'table' || block.metadata.kind !== 'table') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const position = findTableCellPosition(block, cellId);
+  if (!position) {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  return updateTableAutoFitSize(block, cellId, options);
+}
+
+export function updateTableAutoFitSize(
+  block: LayoutBlock,
+  selectedNodeId: string,
+  options: ResolveTableAutoFitSizeOptions,
+): TablePropertyEditResult {
+  if (block.type !== 'table' || block.metadata.kind !== 'table') {
+    return { block, selectedNodeId: null, didUpdate: false };
+  }
+
+  const autoFitSize = resolveTableAutoFitSize(block, options);
+  if (!autoFitSize) {
+    return { block, selectedNodeId, didUpdate: false };
+  }
+
+  const tableMetadata = block.metadata;
+  const columnCount = tableMetadata.rows[0]?.cells.length ?? 0;
+  const nextColumnWidths = normalizeTableColumnWidths(autoFitSize.columnWidthsPx, columnCount);
+  const currentColumnWidths = normalizeTableColumnWidths(tableMetadata.columnWidthsPx, columnCount);
+  const nextRows = tableMetadata.rows.map((row, rowIndex) => ({
+    ...row,
+    sourceRange: null,
+    heightPx: normalizeTableRowHeightPx(autoFitSize.rowHeightsPx[rowIndex]),
+  }));
+  const didColumnChange = nextColumnWidths.some((width, index) => width !== currentColumnWidths[index]);
+  const didRowChange = nextRows.some((row, rowIndex) => row.heightPx !== (tableMetadata.rows[rowIndex]?.heightPx ?? null));
+
+  if (!didColumnChange && !didRowChange) {
+    return { block, selectedNodeId, didUpdate: false };
+  }
+
+  return {
+    block: {
+      ...block,
+      sourceRange: null,
+      metadata: {
+        ...block.metadata,
+        columnWidthsPx: nextColumnWidths,
+        rows: nextRows,
+      },
+    },
+    selectedNodeId,
+    didUpdate: true,
+  };
+}
+
+function hasSavedTableSize(block: LayoutBlock): boolean {
+  if (block.type !== 'table' || block.metadata.kind !== 'table') {
+    return false;
+  }
+
+  const hasColumnWidth = block.metadata.columnWidthsPx?.some((width) => normalizeTableColumnWidthPx(width) !== null) ?? false;
+  const hasRowHeight = block.metadata.rows.some((row) => normalizeTableRowHeightPx(row.heightPx) !== null);
+  return hasColumnWidth || hasRowHeight;
+}
+
+function getFirstTableCellId(block: LayoutBlock): string | null {
+  if (block.type !== 'table' || block.metadata.kind !== 'table') {
+    return null;
+  }
+
+  return block.metadata.rows[0]?.cells[0]?.id ?? block.id;
+}
+
+export function autoFitTablesInLayoutDocument(
+  document: LayoutDocument,
+  styleSettings: StyleSettings = defaultStyleSettings,
+  options: { preserveSavedSize?: boolean } = {},
+): { document: LayoutDocument; didUpdate: boolean } {
+  const preserveSavedSize = options.preserveSavedSize ?? true;
+  const contract = resolveStyleContract(styleSettings);
+  const tableStyle = contract.blockStyles.table;
+  const baseFontSizePx = contract.blockStyles.paragraph.fontSize;
+  const baseLineHeightPx = contract.blockStyles.paragraph.lineHeight;
+  let didUpdate = false;
+
+  const visitBlocks = (blocks: LayoutBlock[]): { blocks: LayoutBlock[]; didUpdate: boolean } => {
+    let didUpdateBlocks = false;
+    const nextBlocks = blocks.map((block) => {
+      if (block.type === 'table' && block.metadata.kind === 'table') {
+        if (preserveSavedSize && hasSavedTableSize(block)) {
+          return block;
+        }
+
+        const selectedNodeId = getFirstTableCellId(block);
+        if (!selectedNodeId) {
+          return block;
+        }
+
+        const result = updateTableAutoFitSize(block, selectedNodeId, {
+          // 导入阶段只做一次预适应，宽度口径跟分栏分页和手动按钮保持一致。
+          contentWidthPx: contract.singleColumnContentWidthPx,
+          rowHeightPx: tableStyle.rowHeight,
+          headerRowHeightPx: tableStyle.headerRowHeight,
+          cellPaddingX: tableStyle.cellPaddingX,
+          cellPaddingY: tableStyle.cellPaddingY,
+          getCellMetrics: ({ cell }) => {
+            const fontSizePx = getEffectiveTableCellMaxFontSize({
+              cell,
+              block,
+              styles: document.styles,
+              fallback: baseFontSizePx,
+            });
+
+            return {
+              fontSizePx,
+              lineHeightPx: resolveEffectiveTextLineHeight({
+                fontSize: fontSizePx,
+                baseFontSize: baseFontSizePx,
+                baseLineHeight: block.blockStyleOverrides.lineHeight ?? baseLineHeightPx,
+              }),
+            };
+          },
+        });
+
+        if (result.didUpdate) {
+          didUpdateBlocks = true;
+          return result.block;
+        }
+
+        return block;
+      }
+
+      if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+        const nestedResult = visitBlocks(block.metadata.blocks);
+        if (nestedResult.didUpdate) {
+          didUpdateBlocks = true;
+          return {
+            ...block,
+            sourceRange: null,
+            metadata: {
+              ...block.metadata,
+              blocks: nestedResult.blocks,
+            },
+          };
+        }
+      }
+
+      return block;
+    });
+
+    return { blocks: nextBlocks, didUpdate: didUpdateBlocks };
+  };
+
+  const blockResult = visitBlocks(document.blocks);
+  didUpdate = blockResult.didUpdate;
+  if (!didUpdate) {
+    return { document, didUpdate: false };
+  }
+
+  return {
+    document: {
+      ...document,
+      blocks: blockResult.blocks,
+      meta: {
+        ...document.meta,
+        updatedAt: new Date().toISOString(),
+      },
+    },
     didUpdate: true,
   };
 }

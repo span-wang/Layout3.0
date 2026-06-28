@@ -71,6 +71,7 @@ export function AppShell(): JSX.Element {
   const recentFiles = useAppStore((state) => state.recentlyOpenedFiles);
   const isDirty = useAppStore((state) => state.isDirty);
   const source = useAppStore((state) => state.source);
+  const styleSettings = useAppStore((state) => state.styleSettings);
   const activeTab = useAppStore((state) => state.activeLeftPanelTab);
   const setActiveTab = useAppStore((state) => state.setActiveLeftPanelTab);
   const isLeftPanelOpen = useAppStore((state) => state.isLeftPanelOpen);
@@ -153,6 +154,7 @@ export function AppShell(): JSX.Element {
     handleInsertTable,
     handleInsertList,
     handleInsertParagraph,
+    handleInsertColumnBreak,
     handleInsertPageBreak,
     handleInsertToc,
   } = useCanvasInsertCommands({
@@ -540,6 +542,7 @@ export function AppShell(): JSX.Element {
         onInsertTable={handleInsertTable}
         onInsertList={handleInsertList}
         onInsertParagraph={handleInsertParagraph}
+        onInsertColumnBreak={handleInsertColumnBreak}
         onInsertPageBreak={handleInsertPageBreak}
         onInsertToc={handleInsertToc}
         onToggleLeftPanel={toggleLeftPanel}
@@ -633,6 +636,7 @@ export function AppShell(): JSX.Element {
                 parseError={parseError}
                 parseState={parseState}
                 resolvedStyleContract={resolvedStyleContract}
+                headerFooterContent={styleSettings.headerFooterContent}
                 selectedNodeId={selectedNodeId}
                 selectedBlockIds={selectedBlockIds}
                 onSelectNode={handleSelectLayoutNode}

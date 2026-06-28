@@ -6345,6 +6345,725 @@
         "progress/logs.json"
       ],
       "next": "撤销 `src/services/exportHtml.ts` 与 `scripts/m2-smoke.ts` 中本轮页底偏差修复相关改动，随后执行类型检查、冒烟、构建和进度校验。"
+    },
+    {
+      "id": "LOG-258",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-17"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认预览与 PDF 页底偏差修复 V1 第二轮收口边界",
+      "action": "边界收窄/进度登记/准备修复",
+      "result": "用户已确认按第二轮收口方案继续推进：本步只纳入导出页固定高度与正文裁切、表格导出结构和列宽/行高口径对齐，以及一处 H3 默认字号 fallback 差异修复；明确不纳入分页算法重写、表格跨页、打印适配新策略、图片/公式/目录问题或模板系统改造。这样后续代码修改会继续锁定在 `PH2-17` 的渲染一致性范围内，避免再次把问题修偏。",
+      "verification": [
+        "用户已明确回复“确定”，确认当前第二轮收口方案可以执行。",
+        "`progress/tasks/phase-2.json` 中 `PH2-17.executionBoundary` 已同步更新为第二轮收口边界。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修改 `src/services/exportHtml.ts` 和 `scripts/m2-smoke.ts`，收口页面高度、正文裁切和表格导出口径。"
+    },
+    {
+      "id": "LOG-259",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-17"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成预览与 PDF 页底偏差修复 V1 第二轮收口",
+      "action": "缺陷修复/导出对齐/回归验证/文档同步",
+      "result": "已完成 `PH2-17` 第二轮收口修复：1) 导出页内联样式显式补齐与预览一致的固定 `height`，并为 `page-body` 增加 `overflow: hidden`，避免 PDF 打印自然回流继续把页脚向下顶；2) 表格导出改为与预览一致的 `.table-shell / .preview-table / .table-cell-content / colgroup` 结构，统一 `table-layout: fixed`、列宽、默认行高、表头行高和单元格换行口径；3) 修复导出表格在跳过被合并覆盖单元格后，错误使用过滤后索引读取列宽和对齐的问题；4) 补齐导出 H3 默认字号 fallback 与预览不一致的问题；5) `smoke:m2` 已新增固定页高、正文裁切和表格结构关键片段断言，防止回退。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路验证通过：16 个结构块，3 页，5 个目录项。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/services/exportHtml.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；重新导出带表格页面后，可继续对比预览页与 PDF 页底位置是否已贴齐。"
+    },
+    {
+      "id": "LOG-260",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-18"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认页眉页脚内容编辑 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认下一步做页眉页脚，并确认本步按内容编辑 V1 推进。本步纳入：页眉左/中/右、页脚左/中/右 6 个位置的内容配置，支持 `{文档标题}`、`{本页标题}`、`{页码}`、`{总页数}`、`{页面规格}`、`{模板主题}` 基础变量，配置写入 `StyleSettings` 并被画布预览、HTML/PDF 导出和 `.layout` 保存恢复共同消费。本步明确不纳入：画布直接编辑、富文本页眉页脚、图片 Logo、奇偶页/首页不同、复杂页码格式或分页算法重写。后续归属任务：复杂页码系统继续归属 `PH2-11` 或新增页码任务，品牌页眉页脚和模板样式深化继续归属 `PH2-07` / `PH2-16`。",
+      "verification": [
+        "用户已回复“确定”，确认当前页眉页脚内容编辑 V1 方案可以执行。",
+        "`PH2-18` 已新增为 `进行中`，`executionBoundary` 已写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始扩展 `StyleSettings`、右侧页面设置、画布预览、HTML/PDF 导出和 M2 冒烟验证。"
+    },
+    {
+      "id": "LOG-261",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-18"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成页眉页脚内容编辑 V1",
+      "action": "功能增强/样式配置/预览导出对齐/验证/文档同步",
+      "result": "已完成 `PH2-18`：1) `StyleSettings` 新增 `headerFooterContent`，默认保留原有页眉/页脚视觉内容，旧 `.layout` 缺字段时自动回退默认配置；2) 右侧「页面设置 - 页眉页脚」新增页眉左/中/右与页脚左/中/右 6 个内容输入框，并显示可用中文变量；3) 新增共享变量替换工具，统一支持 `{文档标题}`、`{本页标题}`、`{页码}`、`{总页数}`、`{页面规格}`、`{模板主题}`；4) 画布预览和 HTML/PDF 导出共用三栏页眉页脚渲染口径，导出时会使用当前文档样式配置；5) 页眉页脚布局从两端对齐升级为左中右三栏，并补齐长文本省略，避免窄页面互相挤压。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，覆盖页眉页脚内容保存恢复、旧文件默认回退、store 写回和导出变量替换。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/engine/style/headerFooterContent.ts",
+        "src/store/types.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "progress/config.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可在「页面设置 - 页眉页脚」编辑 6 个位置内容并重新导出 PDF 验证。"
+    },
+    {
+      "id": "LOG-262",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-15"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认跨文件块排版预设库显示修复边界",
+      "action": "缺陷确认/边界登记/风险同步/准备修复",
+      "result": "用户反馈“块排版预设新增后更换文件就是看不到了”，并确认按小修复处理。本步纳入：为块排版自定义预设补齐本机用户级持久化；打开 Markdown、打开 `.layout`、新建空白文档、切换文件和恢复草稿时统一合并内置预设、当前文档预设和用户级预设库；新增、重命名、更新自定义预设时同步写入当前 `StyleSettings` 与本机预设库；补充跨文件恢复预设列表的回归验证。本步明确不纳入：云同步、完整模板编辑器、样式方案导入导出、删除、分组、搜索预设、分页算法重写或导出样式契约调整。",
+      "verification": [
+        "用户已回复“确认”，确认当前跨文件块排版预设库显示修复方案可以执行。",
+        "`PH2-15` 已在 `parallelExecutionBoundaries` 中写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-018` 已登记当前块排版自定义预设跨文件丢失可见性的影响范围与处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现本机块排版预设库、文件切换预设合并和跨文件回归验证。"
+    },
+    {
+      "id": "LOG-263",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-15"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成跨文件块排版预设库显示修复 V1",
+      "action": "缺陷修复/本机持久化/切换文件恢复/回归验证/文档同步",
+      "result": "已完成 `PH2-15-cross-file-preset-library-fix-v1`：1) 新增 `BlockSpacingPresetLibraryService`，将用户自定义块排版预设持久化到本机 `localStorage`；2) `styleSlice` 在初始化、重置样式和替换样式设置时，会自动把当前文档预设与本机预设库合并，当前文档优先，本机库只补齐跨文件可复用项；3) 新增、重命名和保存当前参数回预设时，会同步更新本机预设库；4) 切换到 Markdown、空白文档或其他文件后，右侧「块排版」面板仍能看到此前保存的自定义预设，但不会自动改掉当前文件的排版参数；5) `smoke:m2` 已新增跨文件恢复预设列表和“当前参数不被偷偷套用”的回归断言。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖跨文件块排版预设恢复验证。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/services/BlockSpacingPresetLibraryService.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/engine/style/styleSettings.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可新增一条块排版自定义预设，再切换到其他 Markdown 或空白文档确认该预设仍显示在「块排版」列表中。"
+    },
+    {
+      "id": "LOG-264",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-16"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认手绘札记主题 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户要求新增一个手绘风格排版主题，并补充确认可以使用 SVG 装饰。本步纳入：新增内置风格主题 `手绘札记`，在现有 `templateId + themeId` 组合链路中扩展 `themeId`，并用 CSS 变量与内联 SVG 装饰覆盖页面纸张纹理、页眉页脚、H1/H2/H3 标题装饰、表格、引用、代码块、图片、目录、分页符、分隔线、列表和任务勾选等稳定元素；画布预览、隐藏测量层和 HTML/PDF 导出需要共同消费同一套主题契约。本步明确不纳入：用户自定义主题编辑器、主题导入导出、外部素材包、手写字体下载、分页算法重写或 Markdown 源码反写。后续归属任务：完整主题库与模板缩略图归属 `PH2-07` 或新增模板系统任务，更多风格主题继续归属 `PH2-16` 扩展小步，更复杂对象深度主题化归属 `PH2-10` / `PH2-11`。",
+      "verification": [
+        "用户已回复“可以用svg装饰”，确认当前手绘主题方案可以执行。",
+        "`PH2-16` 已临时恢复为 `进行中`，并在 `parallelExecutionBoundaries` 中写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现手绘主题数据、SVG 装饰变量、画布预览样式、HTML/PDF 导出样式和最小回归验证。"
+    },
+    {
+      "id": "LOG-265",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-16"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成手绘札记主题 V1",
+      "action": "主题扩展/预览导出对齐/回归验证/文档同步",
+      "result": "已完成 `PH2-16-hand-drawn-theme-v1`：1) 新增 `handDrawn` 主题 ID 与「手绘札记」内置主题，主题选择继续写入 `StyleSettings.themeId` 并兼容旧文件未知主题回退默认；2) 主题 token 覆盖纸张底色、墨线色、页眉页脚、标题、表格、引用、代码块、分隔线、分页符、图片说明等视觉变量；3) 画布预览页和隐藏测量层新增 `data-theme-id`，手绘主题通过 CSS 与内联 SVG 装饰覆盖页面、标题、表格、引用、代码、图片、目录、分隔线、分页符、列表和任务勾选；4) HTML/PDF 导出同步输出 `data-theme-id=\"handDrawn\"` 与同款手绘 CSS，保证预览与导出风格一致；5) `smoke:m2` 已覆盖手绘主题保存恢复、未知主题回退、导出 HTML 主题标记与 SVG 装饰片段。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖手绘主题保存恢复与导出片段。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "progress/config.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可在「页面设置 - 模板起点 - 风格主题」选择 `手绘札记`，重新预览或导出 PDF 验证手绘风格。"
+    },
+    {
+      "id": "LOG-266",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认主题装饰参与分页测量契约 V1 边界",
+      "action": "缺陷确认/方案确认/边界登记/风险同步/准备修复",
+      "result": "用户反馈手绘风格主题下分页测量存在问题，特别是装饰高度没有纳入测量，且后续更多主题也可能遇到同类问题；用户已确认按系统方案推进。本步纳入：新增主题装饰占位契约字段，先覆盖 H1/H2/H3 标题装饰对高度和缩进的影响；把手绘主题占高装饰从纯 CSS 魔法数收口到统一契约变量；让画布预览、隐藏测量层、分页估算和 HTML/PDF 导出共同消费同一套变量；补充 M2 回归验证。本步明确不纳入：分页算法重写、完整孤寡行、主题编辑器、表格/图片/目录复杂分页或 `.layout` 文件结构变更。后续归属任务：更多主题继续归属 `PH2-16` 扩展，但占高装饰必须复用本步契约；更复杂分页质量继续归属 `PH2-09` 后续小步。",
+      "verification": [
+        "用户已回复“确定”，确认当前主题装饰测量契约方案可以执行。",
+        "`PH2-09` 已临时恢复为 `进行中`，并在 `parallelExecutionBoundaries` 中写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-019` 已登记主题装饰占位未进入分页测量/估算的影响范围与处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现主题装饰占位契约、手绘主题变量收口、分页估算补齐和 M2 回归验证。"
+    },
+    {
+      "id": "LOG-267",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成主题装饰参与分页测量契约 V1",
+      "action": "缺陷修复/样式契约/分页估算/预览导出对齐/验证/文档同步",
+      "result": "已完成 `PH2-09-theme-decoration-measure-contract-v1`：1) 新增 `ThemeLayoutMetrics`，把主题中会影响正文占位的标题装饰尺寸纳入 `ResolvedStyleContract`；2) 手绘主题 H1/H2/H3 的装饰底部留白、流内下划线高度、下划线间距和左侧标记缩进已从纯 CSS 魔法数收口为统一变量；3) `buildPageStyleVariables` 同步输出装饰变量，画布预览、隐藏测量层和 HTML/PDF 导出共用同一套口径；4) 普通估算分页和分页测试算法1在无真实测量结果时会计入标题装饰占位，并在算法1页尾标题分割时扣除装饰高度；5) 测量缓存签名和算法1块高缓存已纳入主题布局指标，避免切换主题后复用旧高度；6) `smoke:m2` 已覆盖手绘主题装饰占位进入样式契约与导出 HTML 变量。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖手绘主题装饰占位契约和导出片段。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/resolveContract.ts",
+        "src/engine/style/blockStyleResolution.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续新增占高装饰主题时继续复用 `ThemeLayoutMetrics`，更复杂分页质量仍按 `PH2-09` 后续小步另行确认。"
+    },
+    {
+      "id": "LOG-268",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-16"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认雪山静境 SVG 装饰增强 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户要求“雪山主题页要增加svg装饰”，并已确认按小步推进。本步纳入：在既有 `雪山静境` 主题上补充页面顶部雪峰/山脊氛围、页眉页脚冰雪分隔、H1/H2/H3 标题标记、引用块、表格表头、目录、图片边框和分隔线等轻量 SVG 装饰；画布预览、隐藏测量层和 HTML/PDF 导出共同消费 `data-theme-id=\"snowMountain\"` 主题选择器。本步明确不纳入：新增主题、雪山模板、模板库弹窗、主题编辑器、`.layout` 结构变化、外部素材包、分页算法重写或 Markdown 源码反写。后续归属任务：完整主题库继续归属 `PH2-07` / `PH2-16`，复杂对象深度主题化继续归属 `PH2-10` / `PH2-11`，占高装饰继续复用 `PH2-09` 主题装饰测量契约。",
+      "verification": [
+        "用户已回复“确认”，确认当前雪山 SVG 装饰增强方案可以执行。",
+        "`PH2-16` 已临时恢复为 `进行中`，并在 `parallelExecutionBoundaries` 中写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现雪山主题预览 CSS、HTML/PDF 导出 CSS 和 M2 最小回归验证。"
+    },
+    {
+      "id": "LOG-269",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-16"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成雪山静境 SVG 装饰增强 V1",
+      "action": "主题增强/预览导出对齐/回归验证/文档同步",
+      "result": "已完成 `PH2-16-snow-mountain-svg-decoration-v1`：1) 画布预览新增 `雪山静境` 专属 SVG 装饰，覆盖页面雪峰顶带、细雪纹理、页眉页脚冰雪分隔、H1/H2/H3 标题、引用块、表格表头、目录、图片边框、分隔线、分页符和公式壳层；2) HTML/PDF 导出同步输出同款 `data-theme-id=\"snowMountain\"` CSS，保证预览和导出风格一致；3) 装饰主要通过背景图层、outline、box-shadow 和伪元素叠加，不新增主题 ID、不改 `StyleSettings` 或 `.layout` 结构，也不让装饰进入正文流占位；4) `smoke:m2` 已覆盖雪山主题导出 HTML 中的主题标记、SVG 数据 URI、雪峰和冰晶关键片段。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖雪山 SVG 装饰导出片段。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/styles.css",
+        "src/services/exportHtml.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可在「页面设置 - 模板起点 - 风格主题」选择 `雪山静境`，刷新预览或重新导出 PDF 查看 SVG 装饰效果。"
+    },
+    {
+      "id": "LOG-270",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认页面分栏配置 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户提出“下一步做分栏”并确认按 V1 边界推进。本步纳入：在右侧「页面设置」新增整篇页面级分栏入口，支持单栏/双栏/三栏、栏间距和栏分割线开关；分栏配置写入 `StyleSettings` 并随 `.layout` 保存恢复；画布预览、分页估算和 HTML/PDF 导出共同消费同一套分栏口径，标题默认跨栏。本步明确不纳入：分栏断点、局部章节分栏、图片/表格/公式独立跨栏开关、真实多栏 DOM 测量分页和模板编辑器扩展。后续归属任务：分栏断点与局部分栏继续归属新增分栏深化任务，复杂对象跨栏继续归属 `PH2-10` 或新增对象排版任务，更精确多栏分页继续归属 `PH2-09` 后续小步。",
+      "verification": [
+        "用户已回复“确定”，确认当前页面分栏配置 V1 方案可以执行。",
+        "`PH2-19` 已新增到 `progress/tasks/phase-2.json`，并写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现 `StyleSettings` 分栏字段、右侧页面设置入口、画布预览、HTML/PDF 导出和分页估算的共同消费链路。"
+    },
+    {
+      "id": "LOG-271",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格最佳行高列宽自适应 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户提出“做表格的行高列宽自适应，保持最佳行高列宽”，并已确认按 `PH2-10` 表格增强小步推进。本步纳入：新增基于当前页面正文宽度、表格内容、有效字号、行高和单元格内边距的最佳列宽/行高计算能力；在右侧「对象属性」表格区域新增 `适应最佳行高列宽` 中文按钮；结果写回既有 `columnWidthsPx` 与 `rows[].heightPx` 字段；画布预览、隐藏测量层、HTML/PDF 导出和分页估算继续消费同一套结果。本步明确不纳入：表格跨页算法升级、真实 DOM 测量分页、表格内图片/公式、拆分单元格、复杂表格样式模板、每次输入实时重算、自动横向页面切换或整表缩放。后续归属任务：更完整分页质量继续归属暂缓的 `PH2-09`，复杂表格结构与样式继续归属 `PH2-10` 后续表格增强小步，宽表异常提示归属排版检查或导出体验增强任务。",
+      "verification": [
+        "用户已回复“确定”，确认当前表格最佳行高列宽自适应 V1 方案可以执行。",
+        "`PH2-10-table-auto-fit-v1` 已新增到 `progress/tasks/phase-2.json`，并写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现表格最佳尺寸计算工具函数、右侧按钮入口、模型写回和 M2 最小回归验证。"
+    },
+    {
+      "id": "LOG-272",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格最佳行高列宽自适应 V1",
+      "action": "功能增强/模型写回/预览导出分页口径复用/回归验证/文档同步",
+      "result": "已完成 `PH2-10-table-auto-fit-v1`：1) `tableLayout.ts` 新增统一的表格最佳尺寸计算能力，按正文宽度、表格内容、有效字号、有效行高和单元格内边距计算列宽与行高；2) `operations.ts` 与 `documentSlice.ts` 新增一次性表格自适应写回入口，结果写入既有 `columnWidthsPx` 与 `rows[].heightPx`，并只进入一次撤销历史；3) 右侧「对象属性 - 表格属性」新增 `适应最佳行高列宽` 按钮，点击前会同步当前正在编辑的单元格草稿；4) 画布预览、隐藏测量层、分页估算和 HTML/PDF 导出继续复用既有列宽/行高字段；5) `smoke:m2` 新增底层计算、模型写回、store 写回和导出 HTML 断言，并修正分栏契约后测试中手动窄高页面需要同步 `singleColumnContentWidthPx` 与 `columnPageCapacityPx` 的验证口径。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖表格最佳尺寸计算、模型写回、store 写回和导出 HTML 口径。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/tableLayout.ts",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "scripts/m2-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需表格跨页、拆分单元格、复杂表格样式或宽表异常提示，继续按 `PH2-10` / `PH2-09` 后续小步另行确认。"
+    },
+    {
+      "id": "LOG-273",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成页面分栏配置 V1",
+      "action": "样式契约/页面设置/预览导出对齐/分页估算/验证/文档同步",
+      "result": "已完成 `PH2-19` 页面分栏配置 V1：1) 扩展 `StyleSettings.columns` 与 `ResolvedStyleContract`，支持单栏/双栏/三栏、栏间距和栏分割线，并通过 `normalizeStyleSettings` 兼容旧 `.layout`；2) 右侧「页面设置」新增「分栏」面板，支持中文化配置整篇页面级分栏；3) 画布预览正文区新增多栏 CSS，标题默认跨栏，分栏变量通过 `buildPageStyleVariables` 与导出共享；4) HTML/PDF 导出同步支持分栏类名、栏间距、栏分割线和标题跨栏；5) 分页估算统一改为按单栏正文宽度和多栏页容量推导，目录、表格和分页测试算法1同时吃新的分栏口径；6) 多栏页面暂不使用旧单栏隐藏测量高度参与分页，避免测量缓存把双栏/三栏分页带偏；7) `smoke:m2` 已补充分栏配置保存恢复与样式契约断言。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖分栏配置保存恢复与样式契约。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/engine/style/resolveContract.ts",
+        "src/engine/style/blockStyleResolution.ts",
+        "src/store/types.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/types/workspace.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/hooks/usePagination.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/tocLayout.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "后续如继续深化分栏，可单独确认分栏断点、局部章节分栏、图片/表格/公式独立跨栏和更精确的多栏测量分页。"
+    },
+    {
+      "id": "LOG-274",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格最佳尺寸默认启用 V1 边界",
+      "action": "需求确认/边界登记/进度真相源同步",
+      "result": "用户在已完成一键 `适应最佳行高列宽` 后补充要求“默认启用”，并已确认按 `PH2-10-table-auto-fit-default-v1` 小步推进。本步纳入：表格单元格内容保存后自动重新计算最佳列宽和行高；表格增删行列、合并单元格后自动重新计算最佳列宽和行高；新插入表格默认初始化为最佳尺寸；右侧 `适应最佳行高列宽` 按钮继续保留；结果继续写回既有 `columnWidthsPx` 与 `rows[].heightPx` 字段。本步明确不纳入：每次键盘输入实时重算、取消用户拖拽列宽/行高、表格跨页算法、真实 DOM 测量、拆分单元格、复杂表格样式、宽表自动横向页面切换或整表缩放。",
+      "verification": [
+        "用户已回复“确认”，确认当前默认启用方案可以执行。",
+        "`PH2-10-table-auto-fit-default-v1` 已新增到 `progress/tasks/phase-2.json`，并写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始把表格默认自适应接入内容保存、结构变更、合并单元格和新表格插入链路，并补充 M2 最小回归验证。"
+    },
+    {
+      "id": "LOG-275",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认双栏挤出第三栏修复 V1 边界",
+      "action": "缺陷确认/边界登记/准备实现",
+      "result": "用户反馈“明明是双栏，但是有内容被挤到第三栏”的问题，并已确认按小步修复。本步纳入：把多栏分页从“总容量累加”改成“按栏顺序模拟剩余空间”的口径；让默认估算分页、目录分页和分页测试算法1共同按当前栏放不下就切下一栏的规则推进；补充最小回归验证覆盖双栏页面不再错误溢出到第三栏。本步明确不纳入：分栏断点、局部分栏、图片/表格/公式独立跨栏和真实 DOM 多栏测量系统。",
+      "verification": [
+        "用户已回复“确定”，确认当前双栏挤出第三栏修复方案可以执行。",
+        "`PH2-19-column-flow-overflow-fix-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修改多栏分页算法，让分页按栏顺序推进而不是只按总高度累加。"
+    },
+    {
+      "id": "LOG-276",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格最佳尺寸默认启用 V1",
+      "action": "功能增强/默认写回/撤销历史复用/回归验证/文档同步",
+      "result": "已完成 `PH2-10-table-auto-fit-default-v1`：1) `documentSlice.ts` 新增表格默认自适应写回辅助逻辑，按当前样式契约的单栏正文宽度、表格默认行高、单元格内边距、有效字号和有效行高计算最佳尺寸；2) 表格单元格内容保存、文字样式变更和清除格式等真实写回节点会自动重新适应当前表格尺寸，并与原变更共用一次撤销历史；3) 新插入表格会默认初始化列宽与行高；4) 表格增删行列、合并单元格后会自动重新适应列宽与行高；5) 右侧 `适应最佳行高列宽` 手动按钮继续保留，并统一改为使用单栏正文宽度口径，避免分栏页面中表格撑出当前栏；6) 自动适应结果继续写回既有 `columnWidthsPx` 与 `rows[].heightPx` 字段，画布预览、分页估算和 HTML/PDF 导出继续消费同一套结果。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖新表格默认初始化、单元格内容保存后默认自适应、结构变化后默认自适应、合并单元格后默认自适应和手动按钮回归。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "progress/config.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需列宽锁定、关闭自动适应开关、表格跨页、拆分单元格或宽表异常提示，继续按 `PH2-10` / `PH2-09` 后续小步另行确认。"
+    },
+    {
+      "id": "LOG-277",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认导入文件表格自动适应 V1 边界",
+      "action": "需求纠偏/边界登记/进度真相源同步",
+      "result": "用户纠正“默认开启”的真实含义：不是只在后续编辑表格时自动适应，而是导入一个新的文件时，只要存在表格，就要自动应用自适应行高列宽进行渲染。已按用户确认登记 `PH2-10-table-import-auto-fit-v1`。本步纳入：Markdown 导入生成 `LayoutDocument` 后自动扫描已有表格并写入最佳列宽和行高；打开 Markdown 文件、新建/导入 Markdown 文档和 AI/片段插入 Markdown 表格时，已有表格在进入渲染链路前拥有自适应尺寸；画布预览、分页估算和 HTML/PDF 导出直接消费同一套尺寸。本步明确不纳入：覆盖 `.layout` 文件中用户已保存的手动表格尺寸、每次渲染实时重算、表格跨页算法、真实 DOM 测量、拆分单元格、复杂表格样式或宽表自动横向页面。",
+      "verification": [
+        "用户已回复“确定”，确认当前导入文件表格自动适应方案可以执行。",
+        "`PH2-10-table-import-auto-fit-v1` 已新增到 `progress/tasks/phase-2.json`，并写回本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始把 Markdown 导入后的已有表格预适应接入文档进入 store 前的链路，并补充 M2 回归验证。"
+    },
+    {
+      "id": "LOG-278",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成导入文件表格自动适应 V1",
+      "action": "需求纠偏实现/导入预处理/模型写回/回归验证/文档同步",
+      "result": "已完成 `PH2-10-table-import-auto-fit-v1`：1) `operations.ts` 新增 `autoFitTablesInLayoutDocument`，可递归扫描 `LayoutDocument` 中已有表格，并在导入阶段一次性写入最佳 `columnWidthsPx` 与 `rows[].heightPx`；2) `FileService` 打开 Markdown 文件后会在 `loadDocument` 前执行表格预适应，让已有表格首次渲染就使用最佳尺寸；3) `insertLayoutMarkdownBlocks` 插入 Markdown 片段时也会先对片段中的表格预适应，再映射 ID 并写入当前文档；4) `.layout` 文件中已保存的用户列宽/行高会被识别并保留，不被导入预适应覆盖；5) 表格宽度继续使用单栏正文宽度口径，与分栏分页和右侧手动按钮保持一致；6) 修正 M2 测试中直接传入 `defaultStyleSettings` 给 store 造成默认对象被测试状态污染的问题，改为传入克隆后的样式设置。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路生成 16 个结构块、4 页、5 个目录项，并覆盖 Markdown 导入表格预适应、已保存表格尺寸保留、Markdown 片段插入表格预适应和既有表格手动/编辑默认适应回归。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/services/FileService.ts",
+        "src/store/slices/documentSlice.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "progress/config.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需 `.layout` 强制重新适应、列宽锁定、自动适应开关、表格跨页或宽表异常提示，继续按后续小步另行确认。"
+    },
+    {
+      "id": "LOG-279",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成双栏挤出第三栏修复 V1",
+      "action": "分页缺陷修复/栏位推进口径收口/回归验证/文档同步",
+      "result": "已完成 `PH2-19-column-flow-overflow-fix-v1`：1) 默认估算分页新增多栏栏位推进状态，不再只把当前页粗略视为“内容高度 x 栏数”的总量；2) 标题跨栏块会正确吃掉整行栏带高度，后续段落按当前栏、下一栏、新页顺序继续排版，避免双栏内容被错误挤到第三栏；3) 目录分页也改为按当前栏可用高度切片，保持和正文同一口径；4) `max-fill` 实验算法仅在多栏场景启用保守栏位判断，单栏保持原有尾部优化不回退；5) `m2-smoke` 新增双栏标题 + 连续段落回归断言，验证双栏分页结果顺序稳定且不会出现额外栏位导致的异常分页。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路生成 16 个结构块、4 页、5 个目录项，并覆盖双栏分页回归。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需继续深化分栏，可再拆分栏断点、局部分栏或更精确的多栏真实测量分页。"
+    },
+    {
+      "id": "LOG-280",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分栏断点 V1 边界",
+      "action": "需求确认/边界登记/准备实现",
+      "result": "用户确认推进分栏断点。本步纳入：新增一个只在多栏页面中生效的“分栏断点”结构块；顶部插入入口新增“分栏断点”按钮；画布预览、分页估算、HTML/PDF 导出和 `.layout` 保存恢复共同识别其换栏语义；若当前已在本页最后一栏，则后续内容进入下一页第一栏。本步明确不纳入：局部章节分栏、图片/表格/公式独立跨栏开关、拖拽调整断点位置、右键菜单和复杂快捷键系统。",
+      "verification": [
+        "用户已回复“确定”，确认当前分栏断点 V1 方案可以执行。",
+        "`PH2-19-column-break-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现分栏断点结构块、插入入口、预览/导出标记和分页估算中的换栏语义。"
+    },
+    {
+      "id": "LOG-281",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分栏断点 V1",
+      "action": "结构块扩展/插入入口/分页语义/导出对齐/回归验证/文档同步",
+      "result": "已完成 `PH2-19-column-break-v1`：1) 扩展 `LayoutBlockType` 与元数据定义，新增 `columnBreak` 结构块和 `columnBreakAfter` 分页语义；2) `operations.ts`、`documentSlice.ts`、`useCanvasInsertCommands.ts`、`Toolbar.tsx` 和 `AppShell.tsx` 已接通顶部“分栏断点”插入入口；3) 画布预览和 HTML/PDF 导出新增可见但不可编辑的分栏断点结构标记，并与分页符保持区分；4) 默认估算分页和 `max-fill` 算法在多栏模式下遇到分栏断点时，会把后续内容推进到下一栏起点，若当前已在最后一栏则推进到下一页第一栏；单栏模式下保留结构标记但不改变分页结果；5) `m2-smoke` 已补充分栏断点插入、保存恢复和多栏分页消费回归断言。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路生成 16 个结构块、4 页、5 个目录项，并覆盖分栏断点保存恢复与多栏分页消费。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/useCanvasInsertCommands.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需继续深化分栏，可再拆局部章节分栏、图片/表格/公式跨栏或更精确的多栏真实测量分页。"
+    },
+    {
+      "id": "LOG-282",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认标题参与分栏开关 V1 边界",
+      "action": "需求确认/边界登记/准备实现",
+      "result": "用户确认推进标题参与分栏开关。本步纳入：分栏默认改为二级及以下标题参与分栏，一级标题始终跨栏；右侧「页面设置 > 分栏」新增“标题不参与分栏”开关；开关关闭时二级及以下标题进入栏内流动，开启时二级及以下标题也跨栏；开关写入 `StyleSettings.columns`，并同步画布预览、分页估算、HTML/PDF 导出和 `.layout` 保存恢复。本步明确不纳入：每个标题级别单独开关、局部分栏、图片/表格/公式独立跨栏开关、真实 DOM 多栏测量分页重写。",
+      "verification": [
+        "用户已回复“确定”，确认当前标题参与分栏开关 V1 方案可以执行。",
+        "`PH2-19-heading-column-participation-toggle-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现标题参与分栏开关的数据结构、右侧面板入口、预览/导出跨栏规则和分页估算判断。"
+    },
+    {
+      "id": "LOG-283",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1分栏回归修复边界（列表/表格）",
+      "action": "缺陷确认/边界登记/准备实现",
+      "result": "用户确认修复“分栏改动把分页测试算法1逻辑改坏，特别是列表和表格”的问题。本步纳入：修复算法1拆分目录、表格和列表时误用循环外旧可用高度的问题；表格、列表每次换页或换栏后都按当前实时可用高度重新拆分；补充 M2 冒烟回归，覆盖页尾剩余高度很小时续页不再按旧小高度一行/一项一页拆。本步明确不纳入：重写分页算法、孤寡行完整控制、真实 DOM 行级测量、分栏 UI 扩展、分栏断点改造或 `.layout` 结构变化。",
+      "verification": [
+        "用户已回复“确定”，确认当前分页测试算法1分栏回归修复方案可以执行。",
+        "`PH2-09-max-fill-column-regression-list-table-fix-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修复 `estimatedMaxFill.ts` 中列表/表格拆分可用高度复用旧值的问题，并补充 `smoke:m2` 回归验证。"
+    },
+    {
+      "id": "LOG-284",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1分栏回归修复（列表/表格）",
+      "action": "分页缺陷修复/实时高度复算/回归验证/文档同步",
+      "result": "已完成 `PH2-09-max-fill-column-regression-list-table-fix-v1`：1) `estimatedMaxFill.ts` 新增片段实时可用高度辅助函数，单栏按当前页剩余高度计算，多栏按当前栏剩余高度计算；2) 目录、表格和列表拆分页片段不再复用循环外旧 `columnAvailableHeightForBlock`，每次换页或换栏后都会按当前实时可用高度重新生成片段；3) 修复第一页页尾只剩少量空间时，后续新页仍沿用这个小高度，导致列表一项一页、表格一行一页或目录异常碎片化的问题；4) `smoke:m2` 新增列表和表格续页回归断言，覆盖页尾剩余高度很小时第二页必须能正常容纳多项/多行。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路生成 16 个结构块、4 页、5 个目录项，并覆盖分页测试算法1列表/表格换页后实时可用高度回归。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可切换分页测试算法1重新检查截图中的列表/表格分页，不应再出现后续页面只放一项或一行的异常。"
+    },
+    {
+      "id": "LOG-285",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成标题参与分栏开关 V1",
+      "action": "功能增强/样式契约/预览导出分页口径统一/回归验证/文档同步",
+      "result": "已完成 `PH2-19-heading-column-participation-toggle-v1`：1) `StyleSettings.columns` 新增 `headingsSpanAll`，默认 false，让二级及以下标题参与分栏，并通过 `normalizeStyleSettings` 兼容旧 `.layout` 缺字段；2) 新增共享标题跨栏判断，一级标题始终跨栏，二级及以下标题仅在“标题不参与分栏”开启时跨栏；3) 右侧「页面设置 > 分栏」新增“标题不参与分栏”中文开关，单栏时禁用；4) 画布预览、默认估算分页、分页测试算法1和 HTML/PDF 导出统一消费同一套标题跨栏口径；5) `m2-smoke` 覆盖字段保存恢复、旧文件默认值、默认 H2 参与分栏、开关开启后 H2 跨栏和导出 class 差异。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路生成 16 个结构块、3 页、5 个目录项，并覆盖标题参与分栏开关回归。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/engine/style/resolveContract.ts",
+        "src/engine/style/columnLayout.ts",
+        "src/store/types.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需更细标题层级跨栏控制、局部分栏或对象跨栏，继续按 `PH2-19` / `PH2-10` 后续小步另行确认。"
+    },
+    {
+      "id": "LOG-286",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-02",
+        "PH2-03"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成第二阶段 M2 里程碑正式收尾",
+      "action": "收尾验收/任务卡更新/里程碑关闭",
+      "result": "已完成 `PH2-02` 和 `PH2-03` 主任务正式收尾，将状态从「进行中」更新为「已完成」：\n1) `PH2-02` 已梳理并行边界：结构化文档模型 V1 类型（LayoutDocument/LayoutBlock/TextRun/样式覆盖/答案标记/资源与视图状态）、Markdown 一次性导入、语法映射注册表、文字/段落局部样式编辑、字体导入、语法映射系统等均已完成。\n2) `PH2-03` 已梳理并行边界：.layout 工程文件读写、画布元素选择与模型定位、块内文字编辑、复杂块结构编辑、块多选合并与撤销重做、文件管理完整链路、AppShell 壳层职责解耦等均已完成。\n3) `config.json` 中 `M2` 里程碑状态已更新为「已完成」。\n4) 第二阶段 P1 任务（PH2-04 到 PH2-19）已全部完成，当前无进行中的第二阶段任务。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路生成 16 个结构块、3 页、5 个目录项。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "第二阶段 M2 里程碑已正式关闭。后续可按优先级推进第三阶段 AI 相关任务（PH3-01 及后续），或根据用户需求继续深化第二阶段相关功能的细化工作。"
     }
   ]
 }

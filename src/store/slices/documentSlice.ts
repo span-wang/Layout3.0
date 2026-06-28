@@ -2,6 +2,7 @@ import { starterMarkdown, starterTitle } from '@/constants/workspace';
 import {
   applyTextRunPatchToTextRuns,
   applyBlockStyleOverridesToBlock,
+  autoFitTablesInLayoutDocument,
   buildBlockRangeSelection,
   convertListItemTaskStateByItem,
   updateBlockquoteStructureByNode,
@@ -14,6 +15,7 @@ import {
   insertEquationBlockAfterNode,
   insertImageBlockAfterNode,
   insertListBlockAfterNode,
+  insertColumnBreakBlockAfterNode,
   insertPageBreakBlockAfterNode,
   insertParagraphBlockAfterNode,
   insertTableBlockAfterNode,
@@ -28,6 +30,8 @@ import {
   updateListStartByItem,
   updateListStructureByItem,
   updateTableColumnAlignByCell,
+  updateTableAutoFitSize,
+  updateTableAutoFitSizeByCell,
   updateTableColumnWidthsByCell,
   updateTableHeaderRowByCell,
   updateTableRowHeightByCell,
@@ -42,7 +46,13 @@ import {
   updateLayoutTableCellText,
 } from '@/engine/document-model';
 import { mergeFontResource } from '@/engine/document-model/fontResources';
-import { applyQuickTextStyleToStyleSheet } from '@/engine/style/quickTextStyle';
+import { resolveStyleContract } from '@/engine/style/resolveContract';
+import {
+  applyQuickTextStyleToStyleSheet,
+  getEffectiveTableCellMaxFontSize,
+  resolveEffectiveTextLineHeight,
+} from '@/engine/style/quickTextStyle';
+import type { StyleSettings } from '@/engine/style/types';
 import type {
   BlockStyleOverrides,
   BlockquoteStructureAction,
@@ -71,6 +81,8 @@ import { buildTableCellRangeSelection } from '@/engine/document-model/tableLayou
 import { loadRecentFiles } from '@/services/RecentFilesService';
 import type { DocumentSlice, StoreSlice } from '@/store/types';
 import { getDocumentFormatFromPath } from '@/utils/filePath';
+
+type DocumentSliceWithStyleSettings = DocumentSlice & { styleSettings: StyleSettings };
 
 function replaceNodeText(
   blocks: LayoutBlock[],
@@ -724,6 +736,108 @@ function replaceTableBlockById(
   return { blocks: nextBlocks, didUpdate };
 }
 
+function createTableAutoFitOptions(state: DocumentSliceWithStyleSettings) {
+  if (!state.layoutDocument) {
+    return null;
+  }
+
+  const contract = resolveStyleContract(state.styleSettings);
+  const tableStyle = contract.blockStyles.table;
+  const baseFontSizePx = contract.blockStyles.paragraph.fontSize;
+  const baseLineHeightPx = contract.blockStyles.paragraph.lineHeight;
+
+  return {
+    // 分栏页面中表格按单栏正文区排版，默认自适应也使用同一口径，避免新尺寸撑出当前栏。
+    contentWidthPx: contract.singleColumnContentWidthPx,
+    rowHeightPx: tableStyle.rowHeight,
+    headerRowHeightPx: tableStyle.headerRowHeight,
+    cellPaddingX: tableStyle.cellPaddingX,
+    cellPaddingY: tableStyle.cellPaddingY,
+    baseFontSizePx,
+    baseLineHeightPx,
+  };
+}
+
+function autoFitTableBlockForDefaultSize(
+  state: DocumentSliceWithStyleSettings,
+  block: LayoutBlock,
+  selectedNodeId: string,
+): LayoutBlock {
+  const options = createTableAutoFitOptions(state);
+  if (!options) {
+    return block;
+  }
+
+  const result = updateTableAutoFitSize(block, selectedNodeId, {
+    contentWidthPx: options.contentWidthPx,
+    rowHeightPx: options.rowHeightPx,
+    headerRowHeightPx: options.headerRowHeightPx,
+    cellPaddingX: options.cellPaddingX,
+    cellPaddingY: options.cellPaddingY,
+    getCellMetrics: ({ cell }) => {
+      const fontSizePx = getEffectiveTableCellMaxFontSize({
+        cell,
+        block,
+        styles: state.layoutDocument?.styles,
+        fallback: options.baseFontSizePx,
+      });
+
+      return {
+        fontSizePx,
+        // 默认自适应挂在真实写回节点上，让字号变化后的行高也能同步更新。
+        lineHeightPx: resolveEffectiveTextLineHeight({
+          fontSize: fontSizePx,
+          baseFontSize: options.baseFontSizePx,
+          baseLineHeight: block.blockStyleOverrides.lineHeight ?? options.baseLineHeightPx,
+        }),
+      };
+    },
+  });
+
+  return result.didUpdate ? result.block : block;
+}
+
+function autoFitTableBlocksByEditedNode(
+  state: DocumentSliceWithStyleSettings,
+  blocks: LayoutBlock[],
+  nodeId: string,
+): { blocks: LayoutBlock[]; didUpdate: boolean } {
+  let didUpdate = false;
+
+  const nextBlocks = blocks.map((block) => {
+    if (
+      block.type === 'table' &&
+      block.metadata.kind === 'table' &&
+      block.metadata.rows.some((row) => row.cells.some((cell) => cell.id === nodeId))
+    ) {
+      const nextBlock = autoFitTableBlockForDefaultSize(state, block, nodeId);
+      if (nextBlock !== block) {
+        didUpdate = true;
+      }
+      return nextBlock;
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedResult = autoFitTableBlocksByEditedNode(state, block.metadata.blocks, nodeId);
+      if (nestedResult.didUpdate) {
+        didUpdate = true;
+        return {
+          ...block,
+          sourceRange: null,
+          metadata: {
+            ...block.metadata,
+            blocks: nestedResult.blocks,
+          },
+        };
+      }
+    }
+
+    return block;
+  });
+
+  return { blocks: nextBlocks, didUpdate };
+}
+
 function replaceBlockquoteStructureByNode(
   blocks: LayoutBlock[],
   blockquoteId: string,
@@ -1138,7 +1252,7 @@ function refreshDocumentMeta(state: DocumentSlice, blocks: LayoutBlock[]): void 
 }
 
 function applyDocumentMutation(
-  state: DocumentSlice,
+  state: DocumentSliceWithStyleSettings,
   nodeId: string,
   result: { blocks: LayoutBlock[]; didUpdate: boolean },
 ): void {
@@ -1146,9 +1260,12 @@ function applyDocumentMutation(
     return;
   }
 
+  const autoFitResult = autoFitTableBlocksByEditedNode(state, result.blocks, nodeId);
+  const nextBlocks = autoFitResult.didUpdate ? autoFitResult.blocks : result.blocks;
+
   pushDocumentHistory(state);
-  state.layoutDocument.blocks = result.blocks;
-  const imageResourceSnapshot = getImageResourceSnapshotForNodeId(result.blocks, nodeId);
+  state.layoutDocument.blocks = nextBlocks;
+  const imageResourceSnapshot = getImageResourceSnapshotForNodeId(nextBlocks, nodeId);
   if (imageResourceSnapshot !== null) {
     state.layoutDocument.resources = syncImageResource(
       state.layoutDocument.resources,
@@ -1156,8 +1273,8 @@ function applyDocumentMutation(
       imageResourceSnapshot,
     );
   }
-  state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
-  refreshDocumentMeta(state, result.blocks);
+  state.layoutDocument.title = getFirstHeadingTitle(nextBlocks) ?? state.layoutDocument.title;
+  refreshDocumentMeta(state, nextBlocks);
   state.layoutDocument.viewState.selectedNodeId = nodeId;
   state.layoutDocument.viewState.tableSelection = null;
   state.layoutDocument.viewState.blockSelection = null;
@@ -1350,9 +1467,12 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
         insertAfterNodeId !== undefined
           ? insertAfterNodeId
           : state.layoutDocument.viewState.selectedNodeId;
+      const autoFitParsedDocument = autoFitTablesInLayoutDocument(parsedDocument, state.styleSettings, {
+        preserveSavedSize: true,
+      }).document;
       const remappedFragment = remapInsertedMarkdownFragment(
-        parsedDocument.blocks,
-        parsedDocument.resources,
+        autoFitParsedDocument.blocks,
+        autoFitParsedDocument.resources,
         state.layoutDocument.blocks,
         state.layoutDocument.resources,
         normalizedMarkdown,
@@ -1647,12 +1767,21 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
         columnCount,
         insertAfterNodeId,
       });
+      const insertedTableBlock = result.blocks.find((block) => block.id === result.insertedBlockId);
+      const nextTableBlock =
+        insertedTableBlock && insertedTableBlock.type === 'table' && insertedTableBlock.metadata.kind === 'table'
+          ? autoFitTableBlockForDefaultSize(state, insertedTableBlock, result.selectedNodeId ?? result.insertedBlockId)
+          : insertedTableBlock;
+      const nextBlocks =
+        nextTableBlock && nextTableBlock !== insertedTableBlock
+          ? result.blocks.map((block) => (block.id === result.insertedBlockId ? nextTableBlock : block))
+          : result.blocks;
 
       selectedNodeId = result.selectedNodeId;
       pushDocumentHistory(state);
-      state.layoutDocument.blocks = result.blocks;
-      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
-      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.blocks = nextBlocks;
+      state.layoutDocument.title = getFirstHeadingTitle(nextBlocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, nextBlocks);
       // 默认选中新表格的第一个单元格，让用户插入后能顺手进入单元格编辑。
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
       state.layoutDocument.viewState.blockSelection = null;
@@ -1764,6 +1893,33 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
       refreshDocumentMeta(state, result.blocks);
       // 分页符不进入编辑态，但插入后仍保持选中，方便用户确认位置。
+      state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
+      state.layoutDocument.viewState.blockSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return insertedBlockId;
+  },
+  insertLayoutColumnBreakBlock: ({ insertAfterNodeId }) => {
+    let insertedBlockId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = insertColumnBreakBlockAfterNode(state.layoutDocument.blocks, {
+        insertAfterNodeId,
+      });
+
+      insertedBlockId = result.insertedBlockId;
+      pushDocumentHistory(state);
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      // 分栏断点和分页符一样不进入编辑态，但插入后保持选中，方便用户确认位置。
       state.layoutDocument.viewState.selectedNodeId = result.insertedBlockId;
       state.layoutDocument.viewState.blockSelection = null;
       state.isDirty = true;
@@ -1931,11 +2087,14 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
         return;
       }
 
+      const autoFitResult = autoFitTableBlocksByEditedNode(state, result.blocks, result.selectedNodeId);
+      const nextBlocks = autoFitResult.didUpdate ? autoFitResult.blocks : result.blocks;
+
       selectedNodeId = result.selectedNodeId;
       pushDocumentHistory(state);
-      state.layoutDocument.blocks = result.blocks;
-      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
-      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.blocks = nextBlocks;
+      state.layoutDocument.title = getFirstHeadingTitle(nextBlocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, nextBlocks);
       state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
       state.layoutDocument.viewState.tableSelection = null;
       state.layoutDocument.viewState.blockSelection = null;
@@ -1986,6 +2145,69 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
 
       const result = replaceTablePropertyByCell(state.layoutDocument.blocks, cellId, (block, targetCellId) =>
         updateTableColumnAlignByCell(block, targetCellId, align),
+      );
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return selectedNodeId;
+  },
+  autoFitLayoutTableSize: ({
+    cellId,
+    contentWidthPx,
+    rowHeightPx,
+    headerRowHeightPx,
+    cellPaddingX,
+    cellPaddingY,
+    baseFontSizePx,
+    baseLineHeightPx,
+  }) => {
+    let selectedNodeId: string | null = null;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceTablePropertyByCell(state.layoutDocument.blocks, cellId, (block, targetCellId) =>
+        updateTableAutoFitSizeByCell(block, targetCellId, {
+          contentWidthPx,
+          rowHeightPx,
+          headerRowHeightPx,
+          cellPaddingX,
+          cellPaddingY,
+          getCellMetrics: ({ cell }) => {
+            const fontSizePx = getEffectiveTableCellMaxFontSize({
+              cell,
+              block,
+              styles: state.layoutDocument?.styles,
+              fallback: baseFontSizePx,
+            });
+
+            return {
+              fontSizePx,
+              // 行高跟随字体字号安全口径，避免自动适应后大字仍被行盒挤住。
+              lineHeightPx: resolveEffectiveTextLineHeight({
+                fontSize: fontSizePx,
+                baseFontSize: baseFontSizePx,
+                baseLineHeight: block.blockStyleOverrides.lineHeight ?? baseLineHeightPx,
+              }),
+            };
+          },
+        }),
       );
       if (!result.didUpdate || !result.selectedNodeId) {
         return;
@@ -2095,7 +2317,8 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
         return;
       }
 
-      const replaced = replaceTableBlockById(state.layoutDocument.blocks, tableBlock.id, result.block);
+      const nextTableBlock = autoFitTableBlockForDefaultSize(state, result.block, result.selectedNodeId);
+      const replaced = replaceTableBlockById(state.layoutDocument.blocks, tableBlock.id, nextTableBlock);
       if (!replaced.didUpdate) {
         state.layoutDocument.viewState.tableSelection = null;
         reason = 'invalidSelection';

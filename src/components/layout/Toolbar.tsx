@@ -29,6 +29,7 @@ import {
   Sparkles,
   SquareSplitHorizontal,
   StickyNote,
+  Columns2,
   Strikethrough,
   Table2,
   TextCursorInput,
@@ -83,6 +84,7 @@ interface ToolbarProps {
   onInsertTable: () => void;
   onInsertList: (kind: InsertListBlockKind) => void;
   onInsertParagraph: () => void;
+  onInsertColumnBreak: () => void;
   onInsertPageBreak: () => void;
   onInsertToc: () => void;
   onToggleLeftPanel: () => void;
@@ -262,6 +264,7 @@ export function Toolbar({
   onInsertTable,
   onInsertList,
   onInsertParagraph,
+  onInsertColumnBreak,
   onInsertPageBreak,
   onInsertToc,
   onToggleLeftPanel,
@@ -785,6 +788,16 @@ export function Toolbar({
               onClick={onInsertTable}
             >
               <Table2 size={17} />
+            </button>
+            <button
+              type="button"
+              className="format-select-button format-insert-text-button"
+              title="插入分栏断点"
+              aria-label="插入分栏断点"
+              onClick={onInsertColumnBreak}
+            >
+              <Columns2 size={17} />
+              <span>分栏断点</span>
             </button>
             <button
               type="button"

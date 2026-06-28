@@ -1,5 +1,34 @@
 import type { LayoutBlock, LayoutTableCell, LayoutTableRow, TableCellRangeSelection } from './types';
 import { normalizeTableColumnWidthPx, normalizeTableRowHeightPx } from './utils';
+import {
+  estimateTextLines,
+  resolveEstimatedTextCharWidthFactor,
+} from '../typesetting/textMetrics';
+
+export interface TableAutoFitCellMetrics {
+  fontSizePx: number;
+  lineHeightPx: number;
+}
+
+export interface ResolveTableAutoFitSizeOptions {
+  contentWidthPx: number;
+  rowHeightPx: number;
+  headerRowHeightPx: number;
+  cellPaddingX: number;
+  cellPaddingY: number;
+  getCellMetrics?: (payload: {
+    block: LayoutBlock;
+    row: LayoutTableRow;
+    cell: LayoutTableCell;
+    rowIndex: number;
+    columnIndex: number;
+  }) => Partial<TableAutoFitCellMetrics>;
+}
+
+export interface ResolvedTableAutoFitSize {
+  columnWidthsPx: number[];
+  rowHeightsPx: number[];
+}
 
 // 表格列宽和行高的运行时口径统一放在这里，画布、导出和分页都复用同一套结果。
 export function resolveTableColumnWidths(
@@ -72,6 +101,168 @@ export function isCoveredTableCell(cell: Pick<LayoutTableCell, 'coveredByCellId'
 
 export function getRenderableTableCells(row: LayoutTableRow): LayoutTableCell[] {
   return row.cells.filter((cell) => !isCoveredTableCell(cell));
+}
+
+function getTablePlainText(cell: LayoutTableCell): string {
+  return cell.textRuns.map((run) => run.text).join('');
+}
+
+function getCellMetrics(
+  payload: {
+    block: LayoutBlock;
+    row: LayoutTableRow;
+    cell: LayoutTableCell;
+    rowIndex: number;
+    columnIndex: number;
+  },
+  options: ResolveTableAutoFitSizeOptions,
+): TableAutoFitCellMetrics {
+  const customMetrics = options.getCellMetrics?.(payload) ?? {};
+  const fallbackFontSizePx = Math.max(1, Math.round(options.rowHeightPx * 0.55));
+
+  return {
+    fontSizePx: Math.max(1, Math.round(customMetrics.fontSizePx ?? fallbackFontSizePx)),
+    lineHeightPx: Math.max(1, Math.round(customMetrics.lineHeightPx ?? options.rowHeightPx)),
+  };
+}
+
+function estimateSingleLineTextWidthPx(text: string, fontSizePx: number): number {
+  const textLines = text.replace(/\r/g, '').split('\n');
+  return textLines.reduce((maxWidth, line) => {
+    if (!line) {
+      return maxWidth;
+    }
+
+    const charWidthFactor = resolveEstimatedTextCharWidthFactor(line);
+    return Math.max(maxWidth, Math.ceil(Array.from(line).length * fontSizePx * charWidthFactor));
+  }, 0);
+}
+
+function roundWidthsToTarget(widths: number[], targetWidthPx: number): number[] {
+  if (widths.length === 0) {
+    return [];
+  }
+
+  const roundedWidths = widths.map((width) => Math.max(1, Math.floor(width)));
+  let diff = Math.round(targetWidthPx - roundedWidths.reduce((total, width) => total + width, 0));
+  let index = 0;
+
+  while (diff > 0) {
+    roundedWidths[index % roundedWidths.length] += 1;
+    diff -= 1;
+    index += 1;
+  }
+
+  return roundedWidths;
+}
+
+function fitColumnWidthsToContentWidth(desiredWidths: number[], contentWidthPx: number): number[] {
+  const columnCount = desiredWidths.length;
+  if (columnCount === 0) {
+    return [];
+  }
+
+  const minColumnWidthPx = 48;
+  const safeContentWidthPx = Math.max(minColumnWidthPx * columnCount, Math.round(contentWidthPx));
+  const minWidths = Array.from({ length: columnCount }, () => minColumnWidthPx);
+  const flexibleWidths = desiredWidths.map((width) => Math.max(0, width - minColumnWidthPx));
+  const flexibleTotal = flexibleWidths.reduce((total, width) => total + width, 0);
+  const availableFlexibleWidth = Math.max(0, safeContentWidthPx - minColumnWidthPx * columnCount);
+
+  if (flexibleTotal <= 0) {
+    return roundWidthsToTarget(
+      Array.from({ length: columnCount }, () => safeContentWidthPx / columnCount),
+      safeContentWidthPx,
+    ).map((width) => normalizeTableColumnWidthPx(width) ?? minColumnWidthPx);
+  }
+
+  // 自动适应始终把列宽压进正文宽度，避免预览、导出和分页估算各自再做二次伸缩。
+  const fittedWidths = minWidths.map((minWidth, index) =>
+    minWidth + (flexibleWidths[index] / flexibleTotal) * availableFlexibleWidth,
+  );
+
+  return roundWidthsToTarget(fittedWidths, safeContentWidthPx)
+    .map((width) => normalizeTableColumnWidthPx(width) ?? minColumnWidthPx);
+}
+
+function getTableColumnCount(block: LayoutBlock): number {
+  if (block.type !== 'table' || block.metadata.kind !== 'table') {
+    return 0;
+  }
+
+  return block.metadata.rows.reduce(
+    (maxColumnCount, row) => Math.max(maxColumnCount, row.cells.length),
+    0,
+  );
+}
+
+export function resolveTableAutoFitSize(
+  block: LayoutBlock,
+  options: ResolveTableAutoFitSizeOptions,
+): ResolvedTableAutoFitSize | null {
+  if (block.type !== 'table' || block.metadata.kind !== 'table') {
+    return null;
+  }
+
+  const columnCount = getTableColumnCount(block);
+  if (columnCount <= 0 || block.metadata.rows.length === 0) {
+    return null;
+  }
+
+  const desiredWidths = Array.from({ length: columnCount }, () => 48);
+
+  block.metadata.rows.forEach((row, rowIndex) => {
+    row.cells.forEach((cell, columnIndex) => {
+      if (isCoveredTableCell(cell)) {
+        return;
+      }
+
+      const colSpan = getTableCellColSpan(cell);
+      const metrics = getCellMetrics({ block, row, cell, rowIndex, columnIndex }, options);
+      const textWidthPx = estimateSingleLineTextWidthPx(getTablePlainText(cell), metrics.fontSizePx);
+      const desiredCellWidthPx = Math.max(48, textWidthPx + options.cellPaddingX * 2);
+      const widthPerColumn = Math.ceil(desiredCellWidthPx / colSpan);
+
+      for (let offset = 0; offset < colSpan && columnIndex + offset < columnCount; offset += 1) {
+        desiredWidths[columnIndex + offset] = Math.max(desiredWidths[columnIndex + offset], widthPerColumn);
+      }
+    });
+  });
+
+  const columnWidthsPx = fitColumnWidthsToContentWidth(desiredWidths, options.contentWidthPx);
+  const rowHeightsPx = block.metadata.rows.map((row, rowIndex) => {
+    const isHeaderLikeRow = rowIndex === 0 || row.cells.some((cell) => cell.isHeader);
+    const fallbackHeightPx = isHeaderLikeRow ? options.headerRowHeightPx : options.rowHeightPx;
+    const estimatedContentHeightPx = row.cells.reduce((maxHeight, cell, columnIndex) => {
+      if (isCoveredTableCell(cell)) {
+        return maxHeight;
+      }
+
+      const colSpan = getTableCellColSpan(cell);
+      const mergedWidthPx = columnWidthsPx
+        .slice(columnIndex, columnIndex + colSpan)
+        .reduce((total, width) => total + width, 0);
+      const textWidthPx = Math.max(1, mergedWidthPx - options.cellPaddingX * 2);
+      const metrics = getCellMetrics({ block, row, cell, rowIndex, columnIndex }, options);
+      const text = getTablePlainText(cell);
+      const lineCount = text ? estimateTextLines(text, textWidthPx, metrics.fontSizePx) : 1;
+
+      return Math.max(
+        maxHeight,
+        lineCount * metrics.lineHeightPx + options.cellPaddingY * 2,
+      );
+    }, 0);
+
+    return resolveTableRowHeightPx(
+      { heightPx: Math.max(fallbackHeightPx, estimatedContentHeightPx) },
+      fallbackHeightPx,
+    );
+  });
+
+  return {
+    columnWidthsPx,
+    rowHeightsPx,
+  };
 }
 
 export function findTableCellPosition(

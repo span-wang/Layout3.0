@@ -2,6 +2,7 @@ import { starterMarkdown, starterMarkdownPlaceholder, starterTitle } from '@/con
 import {
   createEmptyLayoutDocument,
   createLayoutDocumentFromMarkdown,
+  autoFitTablesInLayoutDocument,
   parseLayoutProjectFile,
   serializeLayoutProjectFile,
   createFontResourceFromImportedFile,
@@ -115,7 +116,11 @@ async function mapOpenedDocument(result: { filePath: string; content: string }):
     };
   }
 
-  const layoutDocument = await createLayoutDocumentFromMarkdown(result.content);
+  const parsedDocument = await createLayoutDocumentFromMarkdown(result.content);
+  const autoFitResult = autoFitTablesInLayoutDocument(parsedDocument, defaultStyleSettings, {
+    preserveSavedSize: true,
+  });
+  const layoutDocument = autoFitResult.document;
 
   return {
     title: getBaseNameFromPath(result.filePath),

@@ -20,6 +20,7 @@ export type LayoutBlockType =
   | 'blockquote'
   | 'code'
   | 'horizontalRule'
+  | 'columnBreak'
   | 'pageBreak';
 
 export interface SourcePoint {
@@ -86,6 +87,7 @@ export interface BlockStyleOverrides {
 export interface BlockPagination {
   pageBreakBefore?: boolean;
   pageBreakAfter?: boolean;
+  columnBreakAfter?: boolean;
   keepWithNext?: boolean;
   keepLinesTogether?: boolean;
 }
@@ -218,6 +220,11 @@ export interface PageBreakBlockMetadata {
   command: string;
 }
 
+export interface ColumnBreakBlockMetadata {
+  kind: 'columnBreak';
+  command: string;
+}
+
 export type LayoutBlockMetadata =
   | ParagraphBlockMetadata
   | HeadingBlockMetadata
@@ -229,6 +236,7 @@ export type LayoutBlockMetadata =
   | BlockquoteBlockMetadata
   | CodeBlockMetadata
   | HorizontalRuleBlockMetadata
+  | ColumnBreakBlockMetadata
   | PageBreakBlockMetadata;
 
 export interface LayoutBlock {
