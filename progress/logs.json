@@ -5531,6 +5531,100 @@
         "progress/logs.json"
       ],
       "next": "用户在桌面端重新测试画布原位编辑、右侧图片属性、公式源码、左侧搜索和 AI 设置输入响应；若仍有明显等待，再单独拆 `CanvasPane` 渲染隔离深化或隐藏测量层降频任务。"
+    },
+    {
+      "id": "LOG-225",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1页尾误拆诊断与修复边界",
+      "action": "方案确认/准备修复/风险同步",
+      "result": "用户确认针对截图中的分页测试算法1页尾误拆问题开展单点缺陷修复。本步纳入：先复现并诊断为什么页面仍有视觉空白时把同一句或同一列表项提前拆到下一页，再根据高度估算、行宽估算、列表项续接渲染或断点选择的真实原因做最小修复，并补充 `smoke:m2` 回归。本步明确不纳入完整孤寡行、真实 DOM 行级测量、默认算法替换、调参 UI、分页引擎重写或 `.layout` 结构变更。",
+      "verification": [
+        "用户已确认按“算法1页尾文本/列表项误拆诊断与修复”范围执行。",
+        "`PH2-09` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-005` 已同步说明本次是用户确认的缺陷修复例外，不代表分页算法主线默认恢复推进。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始复现算法1页尾误拆并定位真实原因。"
+    },
+    {
+      "id": "LOG-226",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1页尾误拆诊断与修复",
+      "action": "修复/验证/文档同步",
+      "result": "已完成分页测试算法1页尾误拆单点修复：诊断确认问题不能简单归因为“甩几个字”，而是由实测高度轻微偏大触发过早拆分，以及文本断点缺少中文短尾保护共同造成。当前 `max-fill-v1` 对文本/列表块的实测高度轻微偏差增加一行内容忍，避免页面仍有视觉空白时提前拆分；普通文本、列表项和表格单元格拆分会保护短中文尾巴，避免把“初步印象。”拆成“初步 / 印象。”或更短续页。`PH2-09` 完成该缺陷修复后恢复为暂缓，不继续默认推进分页算法主线。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖算法1页尾误拆回归。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可重新用分页测试算法1查看截图中的学习计划列表项，确认页尾不再粗糙拆出“印象。”。"
+    },
+    {
+      "id": "LOG-227",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1页尾误拆返工 V2 边界",
+      "action": "方案确认/返工登记/风险同步",
+      "result": "用户确认上一轮分页测试算法1页尾误拆修复没有解决截图中的真实问题：算法1仍会在第一页正文区明显有空白时，把同一列表项的“初步印象。”拆到第二页。本步纳入：补充完整上下文回归，定位并修复列表项内部拆分前的可容纳空间复核问题，确保“法条体系建立初步印象。”在可容纳场景下不被提前拆分；本步明确不纳入孤寡行完整控制、真实 DOM 行级测量、默认算法替换、分页引擎重写或 `.layout` 结构变更。",
+      "verification": [
+        "用户已确认执行分页测试算法1页尾误拆返工 V2。",
+        "`PH2-09` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-005` 已同步说明上一轮单点修复不完整，本次返工仍不代表分页算法主线默认恢复推进。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始补充 `smoke:m2` 完整上下文回归并修复算法1列表项页尾误拆。"
+    },
+    {
+      "id": "LOG-228",
+      "date": "2026-06-27",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1页尾误拆返工 V2",
+      "action": "修复/验证/文档同步",
+      "result": "已完成分页测试算法1页尾误拆返工 V2：新增完整上下文回归，覆盖“二、各阶段详细规划 / 1. 预习阶段 / 核心任务...法条体系建立初步印象。 / 2. 基础阶段”场景，旧算法会把第一页列表项提前截到“法条体系建立”；当前 `max-fill-v1` 放置块时会记录每个块的上/下边距，并按浏览器相邻块 margin 折叠规则扣减同页标题、段落、列表之间被重复计算的空白，避免页面视觉上仍有可用空间时把“初步印象。”单独拆到第二页。完成后 `PH2-09` 仍恢复暂缓，不继续默认推进分页算法主线。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路仍可生成 16 个结构块、3 页、5 个目录项，并覆盖算法1完整上下文页尾误拆回归。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可重新用分页测试算法1查看截图中的学习计划列表项，确认“初步印象。”不再被单独拆到第二页。"
     }
   ]
 }

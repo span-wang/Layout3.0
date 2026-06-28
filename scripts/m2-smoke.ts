@@ -1252,6 +1252,193 @@ async function main(): Promise<void> {
     `M2 冒烟失败：分页测试算法1没有消费实测块高，实际页数 ${measuredHeightPages.length}`,
   );
 
+  const maxFillTailMisbreakText =
+    '核心任务：了解三科内容结构、分值分布、重点章节；攻克《中级会计实务》的长期股权投资、合并报表等前期难点；熟悉《财务管理》的计算公式逻辑；对《经济法》的法条体系建立初步印象。';
+  const maxFillTailMisbreakListBlock: LayoutBlock = {
+    id: 'm2-max-fill-tail-misbreak-list',
+    type: 'list',
+    sourceRange: null,
+    blockStyleRef: 'list',
+    blockStyleOverrides: {
+      lineHeight: 28,
+      spaceBefore: 0,
+      spaceAfter: 16,
+    },
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'list',
+      ordered: false,
+      start: null,
+      spread: false,
+      items: [
+        {
+          id: 'm2-max-fill-tail-misbreak-item',
+          sourceRange: null,
+          checked: null,
+          textRuns: [
+            {
+              id: 'm2-max-fill-tail-misbreak-run',
+              text: maxFillTailMisbreakText,
+              sourceRange: null,
+              marks: [],
+              charStyleRef: null,
+              styleOverrides: { fontSize: 16 },
+              annotations: [],
+            },
+          ],
+        },
+      ],
+    },
+  };
+  const tailMisbreakContract = {
+    ...resolveStyleContract(defaultStyleSettings),
+    contentWidthPx: 656,
+    contentHeightPx: 72,
+  };
+  const tailMisbreakPages = paginateBlocks([maxFillTailMisbreakListBlock], tailMisbreakContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  const tailMisbreakTexts = tailMisbreakPages.flatMap((page) =>
+    page.blocks.flatMap((block) =>
+      block.type === 'list' && block.metadata.kind === 'list'
+        ? block.metadata.items.map((item) => item.textRuns.map((run) => run.text).join(''))
+        : [],
+    ),
+  );
+  assert(
+    tailMisbreakTexts.join('') === maxFillTailMisbreakText,
+    'M2 冒烟失败：分页测试算法1页尾误拆修复后列表项文本顺序不正确',
+  );
+  assert(
+    tailMisbreakTexts[1] === '初步印象。',
+    `M2 冒烟失败：分页测试算法1仍把“初步印象。”拆成过短尾巴，实际续页为“${tailMisbreakTexts[1] ?? ''}”`,
+  );
+
+  const tailMeasuredTolerancePages = paginateBlocks(
+    [maxFillTailMisbreakListBlock],
+    {
+      ...resolveStyleContract(defaultStyleSettings),
+      contentWidthPx: 656,
+      contentHeightPx: 100,
+    },
+    {
+      algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+      measuredBlockHeights: {
+        [maxFillTailMisbreakListBlock.id]: 112,
+      },
+    },
+  );
+  assert(
+    tailMeasuredTolerancePages.length === 1,
+    `M2 冒烟失败：分页测试算法1把轻微实测高度偏差误判为需要拆页，实际页数 ${tailMeasuredTolerancePages.length}`,
+  );
+
+  const tailContextHeadingBlock: LayoutBlock = {
+    id: 'm2-max-fill-tail-context-heading',
+    type: 'heading',
+    sourceRange: null,
+    blockStyleRef: 'heading2',
+    blockStyleOverrides: {},
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-tail-context-heading-run',
+        text: '二、各阶段详细规划',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'heading',
+      depth: 2,
+      text: '二、各阶段详细规划',
+    },
+  };
+  const tailContextSubheadingBlock: LayoutBlock = {
+    id: 'm2-max-fill-tail-context-subheading',
+    type: 'heading',
+    sourceRange: null,
+    blockStyleRef: 'heading3',
+    blockStyleOverrides: {},
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-tail-context-subheading-run',
+        text: '1. 预习阶段',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'heading',
+      depth: 3,
+      text: '1. 预习阶段',
+    },
+  };
+  const tailContextNextHeadingBlock: LayoutBlock = {
+    id: 'm2-max-fill-tail-context-next-heading',
+    type: 'heading',
+    sourceRange: null,
+    blockStyleRef: 'heading3',
+    blockStyleOverrides: {},
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-tail-context-next-heading-run',
+        text: '2. 基础阶段',
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'heading',
+      depth: 3,
+      text: '2. 基础阶段',
+    },
+  };
+  const tailContextPages = paginateBlocks(
+    [
+      tailContextHeadingBlock,
+      tailContextSubheadingBlock,
+      maxFillTailMisbreakListBlock,
+      tailContextNextHeadingBlock,
+    ],
+    {
+      ...resolveStyleContract(defaultStyleSettings),
+      contentWidthPx: 656,
+      contentHeightPx: 212,
+    },
+    {
+      algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+    },
+  );
+  const tailContextFirstPageListText = tailContextPages[0]?.blocks
+    .filter((block) => block.type === 'list' && block.metadata.kind === 'list')
+    .flatMap((block) => (block.metadata.kind === 'list' ? block.metadata.items : []))
+    .map((item) => item.textRuns.map((run) => run.text).join(''))[0];
+  const tailContextSecondPageListText = tailContextPages[1]?.blocks
+    .filter((block) => block.type === 'list' && block.metadata.kind === 'list')
+    .flatMap((block) => (block.metadata.kind === 'list' ? block.metadata.items : []))
+    .map((item) => item.textRuns.map((run) => run.text).join(''))[0];
+  assert(
+    tailContextFirstPageListText === maxFillTailMisbreakText,
+    `M2 冒烟失败：分页测试算法1仍在完整上下文里提前拆分“初步印象。”，第一页列表实际为“${tailContextFirstPageListText ?? ''}”`,
+  );
+  assert(
+    tailContextSecondPageListText !== '初步印象。',
+    'M2 冒烟失败：分页测试算法1仍把“初步印象。”单独拆到第二页正文开头',
+  );
+
   // 验证混排文本（中文+英文+数字）使用字符级精确流式布局，不再按平均宽度估算
   const flowMixedText = '项目编号PROJ-2026-001，负责人张三负责预算审核，金额CNY150000.00元整备注信息。'.repeat(6);
   const mixedTextBlock: LayoutBlock = {

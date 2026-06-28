@@ -69,6 +69,8 @@ type ListLayoutBlock = LayoutBlock & {
 interface PlacedBlockEntry {
   block: LayoutBlock;
   height: number;
+  marginTop: number;
+  marginBottom: number;
 }
 
 interface TextFragmentInfo {
@@ -111,6 +113,12 @@ interface ListItemSplitResult {
   remainingItem: LayoutListItem;
   currentHeight: number;
 }
+
+const TINY_TRAILING_TEXT_MAX_CHARS = 8;
+const TINY_TRAILING_TEXT_MIN_MEANINGFUL_CHARS = 4;
+const TINY_TRAILING_TEXT_LOOKBACK_CHARS = 6;
+const MEANINGFUL_TEXT_IGNORE_PATTERN =
+  /[\s，。！？、；：,.!?;:"'“”‘’《》（）()【】\[\]{}<>]/gu;
 
 // ============== 块高度缓存 ==============
 
@@ -504,11 +512,14 @@ function splitListItemToFit(payload: {
     return null;
   }
 
-  const splitOffset = computeTextSplitOffsetForLineCount(
+  const splitOffset = adjustSplitOffsetForReadableTrailingText(
     itemText,
-    getListItemTextWidthPx(item, block, contract),
-    fontSize,
-    maxLines,
+    computeTextSplitOffsetForLineCount(
+      itemText,
+      getListItemTextWidthPx(item, block, contract),
+      fontSize,
+      maxLines,
+    ),
   );
 
   if (splitOffset <= 0 || splitOffset >= itemText.length) {
@@ -792,11 +803,14 @@ function splitTableRowToFit(payload: {
 
   row.cells.forEach((cell, cellIndex) => {
     const cellText = cell.textRuns.map((run) => run.text).join('');
-    const splitOffset = computeTextSplitOffsetForLineCount(
+    const splitOffset = adjustSplitOffsetForReadableTrailingText(
       cellText,
-      getTableCellTextWidthPx(block, row, cellIndex, contract),
-      getTableCellEffectiveFontSize(cell, block, styles, contract),
-      maxLines,
+      computeTextSplitOffsetForLineCount(
+        cellText,
+        getTableCellTextWidthPx(block, row, cellIndex, contract),
+        getTableCellEffectiveFontSize(cell, block, styles, contract),
+        maxLines,
+      ),
     );
     const { currentPageRuns, remainingRuns } = splitTextRunsByPlainTextLength(cell.textRuns, splitOffset);
 
@@ -1116,6 +1130,171 @@ function getMeasuredTopLevelBlockHeight(
   return measuredHeight;
 }
 
+function countMeaningfulTextCharacters(text: string): number {
+  return Array.from(text.replace(MEANINGFUL_TEXT_IGNORE_PATTERN, '')).length;
+}
+
+function isTinyTrailingText(text: string): boolean {
+  const trimmedText = text.trim();
+  if (trimmedText.length === 0) {
+    return false;
+  }
+
+  const totalChars = Array.from(trimmedText).length;
+  const meaningfulChars = countMeaningfulTextCharacters(trimmedText);
+
+  return (
+    meaningfulChars > 0 &&
+    meaningfulChars < TINY_TRAILING_TEXT_MIN_MEANINGFUL_CHARS &&
+    totalChars <= TINY_TRAILING_TEXT_MAX_CHARS
+  );
+}
+
+function resolveBlockVerticalMargins(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+): { marginTop: number; marginBottom: number } {
+  switch (block.type) {
+    case 'heading': {
+      const style = resolveTextBlockStyle(
+        block,
+        block.metadata.kind === 'heading' && block.metadata.depth === 1
+          ? contract.blockStyles.heading1
+          : block.metadata.kind === 'heading' && block.metadata.depth === 2
+            ? contract.blockStyles.heading2
+            : contract.blockStyles.heading3,
+        styles,
+      );
+      return { marginTop: style.marginTop, marginBottom: style.marginBottom };
+    }
+    case 'paragraph': {
+      const style = resolveTextBlockStyle(block, contract.blockStyles.paragraph, styles);
+      return { marginTop: style.marginTop, marginBottom: style.marginBottom };
+    }
+    case 'list': {
+      if (!isListBlock(block)) {
+        return { marginTop: 0, marginBottom: 0 };
+      }
+      const style = resolveListBlockStyle(block, contract);
+      return { marginTop: style.marginTop, marginBottom: style.marginBottom };
+    }
+    case 'table':
+      return isTableBlock(block)
+        ? {
+            marginTop: getTableMarginTop(block, contract),
+            marginBottom: getTableMarginBottom(block, contract),
+          }
+        : { marginTop: 0, marginBottom: 0 };
+    case 'blockquote':
+      return {
+        marginTop: block.blockStyleOverrides.spaceBefore ?? contract.blockStyles.blockquote.marginTop,
+        marginBottom: block.blockStyleOverrides.spaceAfter ?? contract.blockStyles.blockquote.marginBottom,
+      };
+    case 'code':
+      return {
+        marginTop: block.blockStyleOverrides.spaceBefore ?? contract.blockStyles.code.marginTop,
+        marginBottom: block.blockStyleOverrides.spaceAfter ?? contract.blockStyles.code.marginBottom,
+      };
+    case 'horizontalRule':
+      return {
+        marginTop: contract.blockStyles.horizontalRule.marginTop,
+        marginBottom: contract.blockStyles.horizontalRule.marginBottom,
+      };
+    case 'image':
+      return {
+        marginTop: contract.blockStyles.image.marginTop,
+        marginBottom: contract.blockStyles.image.marginBottom,
+      };
+    case 'toc':
+      return {
+        marginTop: block.blockStyleOverrides.spaceBefore ?? 16,
+        marginBottom: block.blockStyleOverrides.spaceAfter ?? 24,
+      };
+    default:
+      return { marginTop: 0, marginBottom: 0 };
+  }
+}
+
+function adjustSplitOffsetForReadableTrailingText(text: string, splitOffset: number): number {
+  if (splitOffset <= 0 || splitOffset >= text.length || !isTinyTrailingText(text.slice(splitOffset))) {
+    return splitOffset;
+  }
+
+  const prefixChars = Array.from(text.slice(0, splitOffset));
+  let movedChars = 0;
+
+  while (
+    prefixChars.length - movedChars > 0 &&
+    movedChars < TINY_TRAILING_TEXT_LOOKBACK_CHARS &&
+    countMeaningfulTextCharacters(prefixChars.slice(prefixChars.length - movedChars).join('') + text.slice(splitOffset)) <
+      TINY_TRAILING_TEXT_MIN_MEANINGFUL_CHARS
+  ) {
+    movedChars += 1;
+  }
+
+  if (movedChars === 0) {
+    return splitOffset;
+  }
+
+  const adjustedPrefix = prefixChars.slice(0, prefixChars.length - movedChars).join('');
+  return adjustedPrefix.trim().length > 0 ? adjustedPrefix.length : splitOffset;
+}
+
+function getMeasurementTolerancePx(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+): number {
+  if (isListBlock(block)) {
+    return resolveListBlockStyle(block, contract).lineHeight;
+  }
+
+  if (block.type === 'paragraph') {
+    return resolveTextBlockStyle(block, contract.blockStyles.paragraph, styles).lineHeight;
+  }
+
+  if (block.type === 'heading') {
+    return resolveTextBlockStyle(
+      block,
+      block.metadata.kind === 'heading' && block.metadata.depth === 1
+        ? contract.blockStyles.heading1
+        : block.metadata.kind === 'heading' && block.metadata.depth === 2
+          ? contract.blockStyles.heading2
+          : contract.blockStyles.heading3,
+      styles,
+    ).lineHeight;
+  }
+
+  return 0;
+}
+
+function resolvePlacementBlockHeight(payload: {
+  block: LayoutBlock;
+  estimatedHeight: number;
+  measuredHeight: number | null;
+  contract: ResolvedStyleContract;
+  styles?: LayoutStyleSheet;
+}): number {
+  const { block, estimatedHeight, measuredHeight, contract, styles } = payload;
+  if (measuredHeight === null) {
+    return estimatedHeight;
+  }
+
+  const tolerancePx = getMeasurementTolerancePx(block, contract, styles);
+  // 隐藏测量层按“单块包裹”测量，正文页按自然流排版；二者在 margin 折叠或运行时片段估算上可能差不到一行。
+  // 对这种轻微向上偏差继续使用估算高度，避免算法1过早进入页尾拆分，造成页面明明有空白却把短句尾巴推到下一页。
+  if (
+    tolerancePx > 0 &&
+    measuredHeight > estimatedHeight &&
+    measuredHeight - estimatedHeight <= tolerancePx
+  ) {
+    return estimatedHeight;
+  }
+
+  return measuredHeight;
+}
+
 /**
  * 估算块高度（主函数）
  */
@@ -1345,18 +1524,21 @@ function computeOptimalTextSplit(
       );
       const shouldSplitInsideCurrentLine = splitOffsetInLine > 0;
       const splitOffset = shouldSplitInsideCurrentLine
-        ? lineStartOffset + splitOffsetInLine
-        : lastSafeSplitOffset;
-      const usedLineCount = shouldSplitInsideCurrentLine
-        ? accumulatedLines + estimateTextLines(
-            lineText.slice(0, splitOffsetInLine),
-            lineWidths.followingLineWidthPx,
-            style.fontSize,
-            { firstLineWidthPx: lineFirstWidthPx },
+        ? adjustSplitOffsetForReadableTrailingText(
+            plainText,
+            lineStartOffset + splitOffsetInLine,
           )
-        : lastSafeLineCount;
+        : lastSafeSplitOffset;
       const currentPageText = plainText.slice(0, splitOffset);
       const remainingText = plainText.slice(splitOffset);
+      const usedLineCount = shouldSplitInsideCurrentLine
+        ? estimateTextLines(
+            currentPageText,
+            lineWidths.followingLineWidthPx,
+            style.fontSize,
+            { firstLineWidthPx: lineWidths.firstLineWidthPx },
+          )
+        : lastSafeLineCount;
 
       // 如果当前页文本为空，返回 null 让整个块翻页
       if (currentPageText.trim().length === 0) {
@@ -1450,8 +1632,86 @@ function syncPlacedBlocksToPage(
   page.blocks = placedBlocks.map((entry) => entry.block);
 }
 
+function createPlacedBlockEntry(
+  block: LayoutBlock,
+  height: number,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+): PlacedBlockEntry {
+  const margins = height > 0
+    ? resolveBlockVerticalMargins(block, contract, styles)
+    : { marginTop: 0, marginBottom: 0 };
+
+  return {
+    block,
+    height,
+    marginTop: margins.marginTop,
+    marginBottom: margins.marginBottom,
+  };
+}
+
+function getCollapsedAdjacentMarginReduction(
+  previousEntry: PlacedBlockEntry | undefined,
+  nextEntry: PlacedBlockEntry,
+): number {
+  if (!previousEntry) {
+    return 0;
+  }
+
+  // 画布里的标题、段落、列表等是普通块级流，浏览器会把相邻块的上下 margin 折叠。
+  // 分页算法的单块高度已经各自包含 margin，如果直接相加会把页尾剩余空间算得偏小。
+  return Math.min(
+    Math.max(0, previousEntry.marginBottom),
+    Math.max(0, nextEntry.marginTop),
+  );
+}
+
+function getPlacedBlockHeightDelta(
+  placedBlocks: PlacedBlockEntry[],
+  nextEntry: PlacedBlockEntry,
+): number {
+  const previousEntry = placedBlocks[placedBlocks.length - 1];
+  const reduction = getCollapsedAdjacentMarginReduction(previousEntry, nextEntry);
+
+  return Math.max(0, nextEntry.height - reduction);
+}
+
+function appendPlacedBlock(
+  placedBlocks: PlacedBlockEntry[],
+  currentHeight: number,
+  block: LayoutBlock,
+  height: number,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+): number {
+  const entry = createPlacedBlockEntry(block, height, contract, styles);
+  const delta = getPlacedBlockHeightDelta(placedBlocks, entry);
+  placedBlocks.push(entry);
+
+  return currentHeight + delta;
+}
+
+function getAvailableHeightForBlock(
+  placedBlocks: PlacedBlockEntry[],
+  currentHeight: number,
+  pageCapacity: number,
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+): number {
+  const entry = createPlacedBlockEntry(block, 1, contract, styles);
+  const previousEntry = placedBlocks[placedBlocks.length - 1];
+  const reduction = getCollapsedAdjacentMarginReduction(previousEntry, entry);
+
+  return pageCapacity - currentHeight + reduction;
+}
+
 function sumPlacedBlockHeights(placedBlocks: PlacedBlockEntry[]): number {
-  return placedBlocks.reduce((total, entry) => total + entry.height, 0);
+  return placedBlocks.reduce(
+    (total, entry, index) =>
+      total + getPlacedBlockHeightDelta(placedBlocks.slice(0, index), entry),
+    0,
+  );
 }
 
 function hasRemainingContent(blocks: LayoutBlock[], startIndex: number): boolean {
@@ -1536,23 +1796,45 @@ export function paginateMaxFillBlocks(
     const measuredBlockHeight = block.type === 'toc'
       ? null
       : getMeasuredTopLevelBlockHeight(block, measuredBlockHeights);
-    const blockHeight = measuredBlockHeight ??
-      (block.type === 'toc'
-        ? estimateBlockHeight(block, contract, tocItems, styles)
-        : getCachedBlockHeight(block, contract, tocItems, styles));
+    const estimatedBlockHeight = block.type === 'toc'
+      ? estimateBlockHeight(block, contract, tocItems, styles)
+      : getCachedBlockHeight(block, contract, tocItems, styles);
+    const blockHeight = resolvePlacementBlockHeight({
+      block,
+      estimatedHeight: estimatedBlockHeight,
+      measuredHeight: measuredBlockHeight,
+      contract,
+      styles,
+    });
+    const availableHeightForBlock = getAvailableHeightForBlock(
+      placedBlocks,
+      currentHeight,
+      pageCapacity,
+      block,
+      contract,
+      styles,
+    );
 
-    if (block.type === 'toc' && block.metadata.kind === 'toc' && blockHeight > pageCapacity - currentHeight) {
+    if (block.type === 'toc' && block.metadata.kind === 'toc' && blockHeight > availableHeightForBlock) {
       const maxDepth = block.metadata.maxDepth;
       const totalFilteredTocItems = tocItems.filter((item) => item.depth <= maxDepth).length;
       let startItemIndex = 0;
       let fragmentIndex = 1;
 
       while (startItemIndex < Math.max(1, totalFilteredTocItems)) {
+        const availableHeight = getAvailableHeightForBlock(
+          placedBlocks,
+          currentHeight,
+          pageCapacity,
+          block,
+          contract,
+          styles,
+        );
         const fragment = buildTocFragment({
           block,
           allTocItems: tocItems,
           startItemIndex,
-          availableHeight: pageCapacity - currentHeight,
+          availableHeight,
           fragmentIndex,
           isCurrentPageEmpty: placedBlocks.length === 0,
           contract,
@@ -1561,8 +1843,7 @@ export function paginateMaxFillBlocks(
         if (!fragment) {
           if (placedBlocks.length === 0) {
             currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
-            placedBlocks.push({ block, height: blockHeight });
-            currentHeight += blockHeight;
+            currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, blockHeight, contract, styles);
             shouldPushCurrentPage = true;
             break;
           }
@@ -1579,8 +1860,7 @@ export function paginateMaxFillBlocks(
           currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
         }
 
-        placedBlocks.push({ block: fragment.block, height: fragment.height });
-        currentHeight += fragment.height;
+        currentHeight = appendPlacedBlock(placedBlocks, currentHeight, fragment.block, fragment.height, contract, styles);
         startItemIndex = fragment.nextItemIndex;
         fragmentIndex += 1;
         shouldPushCurrentPage = true;
@@ -1602,10 +1882,9 @@ export function paginateMaxFillBlocks(
 
     // 处理表格块：整表放不下当前页时，优先把能容纳的表格行留在当前页。
     if (isTableBlock(block) && block.metadata.rows.length > 0) {
-      if (blockHeight <= pageCapacity - currentHeight) {
+      if (blockHeight <= availableHeightForBlock) {
         // 表格可以完整放入当前页时，不生成运行时片段，保留原始块结构。
-        placedBlocks.push({ block, height: blockHeight });
-        currentHeight += blockHeight;
+        currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, blockHeight, contract, styles);
         shouldPushCurrentPage = true;
         continue;
       }
@@ -1618,10 +1897,18 @@ export function paginateMaxFillBlocks(
       let fragmentIndex = 1;
 
       while (startRowIndex < tableBlock.metadata.rows.length) {
+        const availableHeight = getAvailableHeightForBlock(
+          placedBlocks,
+          currentHeight,
+          pageCapacity,
+          tableBlock,
+          contract,
+          styles,
+        );
         const fragment = buildTableFragment({
           block: tableBlock,
           startRowIndex,
-          availableHeight: pageCapacity - currentHeight,
+          availableHeight,
           fragmentIndex,
           isCurrentPageEmpty: placedBlocks.length === 0,
           rowHeights,
@@ -1634,8 +1921,7 @@ export function paginateMaxFillBlocks(
             // 极端数据兜底：空页仍无法生成片段时，强制放入并给出超高内容提示，避免分页死循环。
             currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
             const fallbackHeight = estimateTableBlockHeight(tableBlock, contract, styles);
-            placedBlocks.push({ block: tableBlock, height: fallbackHeight });
-            currentHeight += fallbackHeight;
+            currentHeight = appendPlacedBlock(placedBlocks, currentHeight, tableBlock, fallbackHeight, contract, styles);
             startRowIndex = tableBlock.metadata.rows.length;
             shouldPushCurrentPage = true;
             break;
@@ -1654,8 +1940,7 @@ export function paginateMaxFillBlocks(
           currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
         }
 
-        placedBlocks.push({ block: fragment.block, height: fragment.height });
-        currentHeight += fragment.height;
+        currentHeight = appendPlacedBlock(placedBlocks, currentHeight, fragment.block, fragment.height, contract, styles);
         if (fragment.remainingRow) {
           tableBlock = {
             ...tableBlock,
@@ -1687,9 +1972,8 @@ export function paginateMaxFillBlocks(
 
     // 处理列表块（按列表项分割，避免标题后整组列表翻页造成大空白）
     if (isListBlock(block) && block.metadata.items.length > 0) {
-      if (blockHeight <= pageCapacity - currentHeight) {
-        placedBlocks.push({ block, height: blockHeight });
-        currentHeight += blockHeight;
+      if (blockHeight <= availableHeightForBlock) {
+        currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, blockHeight, contract, styles);
         shouldPushCurrentPage = true;
         continue;
       }
@@ -1699,10 +1983,18 @@ export function paginateMaxFillBlocks(
       let fragmentIndex = 1;
 
       while (startItemIndex < listBlock.metadata.items.length) {
+        const availableHeight = getAvailableHeightForBlock(
+          placedBlocks,
+          currentHeight,
+          pageCapacity,
+          listBlock,
+          contract,
+          styles,
+        );
         const fragment = buildListFragment({
           block: listBlock,
           startItemIndex,
-          availableHeight: pageCapacity - currentHeight,
+          availableHeight,
           fragmentIndex,
           isCurrentPageEmpty: placedBlocks.length === 0,
           contract,
@@ -1713,8 +2005,7 @@ export function paginateMaxFillBlocks(
           if (placedBlocks.length === 0) {
             // 理论上空页至少会强制容纳一个列表项；这里兜底避免异常数据卡住分页。
             currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
-            placedBlocks.push({ block: listBlock, height: blockHeight });
-            currentHeight += blockHeight;
+            currentHeight = appendPlacedBlock(placedBlocks, currentHeight, listBlock, blockHeight, contract, styles);
             startItemIndex = listBlock.metadata.items.length;
             shouldPushCurrentPage = true;
             break;
@@ -1732,8 +2023,7 @@ export function paginateMaxFillBlocks(
           currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
         }
 
-        placedBlocks.push({ block: fragment.block, height: fragment.height });
-        currentHeight += fragment.height;
+        currentHeight = appendPlacedBlock(placedBlocks, currentHeight, fragment.block, fragment.height, contract, styles);
         if (fragment.remainingItem) {
           // 超长列表项拆分后，剩余文字替换回当前项位置，让下一页继续按同一列表顺序处理。
           listBlock = {
@@ -1765,9 +2055,17 @@ export function paginateMaxFillBlocks(
     // 处理图片块（超过可用高度直接翻页）
     if (block.type === 'image' && block.metadata.kind === 'image') {
       const imageHeight = estimateImageBlockHeight(block, contract);
+      const imageAvailableHeight = getAvailableHeightForBlock(
+        placedBlocks,
+        currentHeight,
+        pageCapacity,
+        block,
+        contract,
+        styles,
+      );
 
       // 图片超过当前可用高度，直接翻页
-      if (imageHeight > pageCapacity - currentHeight && placedBlocks.length > 0) {
+      if (imageHeight > imageAvailableHeight && placedBlocks.length > 0) {
         syncPlacedBlocksToPage(currentPage, placedBlocks);
         pages.push(currentPage);
         currentPage = createEmptyPage(pages.length + 1, contract);
@@ -1780,21 +2078,19 @@ export function paginateMaxFillBlocks(
         currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
       }
 
-      placedBlocks.push({ block, height: imageHeight });
-      currentHeight += imageHeight;
+      currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, imageHeight, contract, styles);
       shouldPushCurrentPage = true;
       continue;
     }
 
     // 处理文本块（标题、段落）
     if (block.type === 'heading' || block.type === 'paragraph') {
-      const availableHeight = pageCapacity - currentHeight;
+      const availableHeight = availableHeightForBlock;
 
       // 检查块是否能放入当前页
       if (blockHeight <= availableHeight) {
         // 可以完整放入
-        placedBlocks.push({ block, height: blockHeight });
-        currentHeight += blockHeight;
+        currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, blockHeight, contract, styles);
         shouldPushCurrentPage = true;
       } else {
         // 不能完整放入，尝试按行分割
@@ -1817,8 +2113,7 @@ export function paginateMaxFillBlocks(
               `frag-${pages.length}-${placedBlocks.length}`,
             );
 
-            placedBlocks.push({ block: fragmentBlock, height: splitInfo.height });
-            currentHeight += splitInfo.height;
+            currentHeight = appendPlacedBlock(placedBlocks, currentHeight, fragmentBlock, splitInfo.height, contract, styles);
             shouldPushCurrentPage = true;
 
             // 创建剩余文本块，并插到当前块之后，确保它紧跟原块继续分页。
@@ -1848,8 +2143,7 @@ export function paginateMaxFillBlocks(
             currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
           }
 
-          placedBlocks.push({ block, height: blockHeight });
-          currentHeight += blockHeight;
+          currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, blockHeight, contract, styles);
           shouldPushCurrentPage = true;
         }
       }
@@ -1857,12 +2151,11 @@ export function paginateMaxFillBlocks(
     }
 
     // 处理其他类型块（列表、引用、代码块、分隔线等）
-    if (currentHeight + blockHeight > pageCapacity) {
+    if (blockHeight > availableHeightForBlock) {
       if (placedBlocks.length === 0) {
         // 超大块警告
         currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
-        placedBlocks.push({ block, height: blockHeight });
-        currentHeight += blockHeight;
+        currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, blockHeight, contract, styles);
         shouldPushCurrentPage = true;
       } else {
         // 开启新页面
@@ -1872,13 +2165,11 @@ export function paginateMaxFillBlocks(
         currentHeight = 0;
         placedBlocks = [];
 
-        placedBlocks.push({ block, height: blockHeight });
-        currentHeight += blockHeight;
+        currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, blockHeight, contract, styles);
         shouldPushCurrentPage = true;
       }
     } else {
-      placedBlocks.push({ block, height: blockHeight });
-      currentHeight += blockHeight;
+      currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, blockHeight, contract, styles);
       shouldPushCurrentPage = true;
     }
   }
