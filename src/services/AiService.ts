@@ -291,6 +291,7 @@ function getTextMarkTypeLabel(markType: TextMarkType): string {
     strike: '删除线',
     code: '行内代码',
     link: '链接',
+    color: '文字颜色',
   };
 
   return labels[markType];

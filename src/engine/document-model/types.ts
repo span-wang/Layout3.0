@@ -33,7 +33,7 @@ export interface SourceRange {
   end: SourcePoint;
 }
 
-export type TextMarkType = 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'link';
+export type TextMarkType = 'bold' | 'italic' | 'underline' | 'strike' | 'code' | 'link' | 'color';
 
 export interface TextMark {
   type: TextMarkType;

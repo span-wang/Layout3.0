@@ -6173,6 +6173,178 @@
         "progress/logs.json"
       ],
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户刷新应用后可重新查看二次求根公式，确认根号连续且粗细一致。"
+    },
+    {
+      "id": "LOG-251",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-16"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认模板风格主题组合应用 V1 边界",
+      "action": "方案确认/边界登记/风险同步/准备实现",
+      "result": "用户确认本步按“模板负责结构、主题负责视觉皮肤”的方向推进。本步纳入：扩展 `StyleSettings` 为 `templateId + themeId` 组合口径；在现有模板起点面板中新增主题选择区；新增默认主题与 `雪山静境` 主题；让画布预览、隐藏测量层和 HTML/PDF 导出共同消费主题契约；至少支持 `默认（无模板）`、`讲义模板`、`笔记模板` 套用 `雪山静境`。本步明确不纳入：新增雪山模板、完整模板库弹窗、模板缩略图管理、用户自定义主题编辑器、主题导入导出、云同步、复杂对象深度主题化或分页算法重写。后续归属任务：更多风格主题、主题库与模板系统深化继续归属 `PH2-16` / `PH2-07`。",
+      "verification": [
+        "用户已确认执行模板风格主题组合应用 V1 方案。",
+        "`PH2-16` 已新增并标记为 `进行中`，`executionBoundary` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-016` 已登记模板与主题解耦的范围调整风险及当前处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现 `themeId`、主题选择 UI、雪山主题样式契约和导出口径。"
+    },
+    {
+      "id": "LOG-252",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH3-09"
+      ],
+      "phaseMilestone": "第三阶段 / M2",
+      "step": "补记 LaTeX 字体颜色语法解析边界",
+      "action": "治理修复/日志补齐",
+      "result": "为已存在的 `PH3-09` 任务补齐进度日志，和任务卡中的执行边界保持一致：本步围绕 `\\color{red}{文字}` 一类 LaTeX 字体颜色语法解析，目标是在 Markdown 导入链路中生成带 `styleOverrides.color` 的 TextRun；当前仍处于 `进行中`，尚未登记为完成。",
+      "verification": [
+        "`progress/tasks/phase-3.json` 中 `PH3-09` 已存在并带有 `executionBoundary`。",
+        "本条日志补齐后，`progress:build` 不再因 `PH3-09` 缺少日志而中断。"
+      ],
+      "affectedFiles": [
+        "progress/logs.json"
+      ],
+      "next": "继续按当前优先级推进已确认的小步；本条补记只用于修复进度数据一致性，不代表 `PH3-09` 已完成。"
+    },
+    {
+      "id": "LOG-253",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH3-09"
+      ],
+      "phaseMilestone": "第三阶段 / M2",
+      "step": "完成 LaTeX 字体颜色语法解析",
+      "action": "新增/集成/验证",
+      "result": "已完成 LaTeX \\color{red}{文字} 语法解析：扩展 `TextMarkType` 新增 `color` 类型；扩展 `TextMarkMapping` 接口新增 `colorGroupIndex` 字段；新增默认颜色映射规则；扩展 `remark-text-marks.ts` 新增 `colorSpan` mdast 节点类型处理颜色语法；扩展 `fromMarkdown.ts` 的 `buildTextRunsFromPhrasing` 函数支持 `colorSpan` 节点转换为带 `styleOverrides.color` 的 TextRun；支持颜色名（red/blue）、十六进制（#ff0000/#f00）、rgb/rgba 格式；支持与其他文本标记嵌套（如 \\color{red}{\\textbf{粗体红色}}）。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run progress:build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/syntaxMappingConfig.ts",
+        "src/engine/parser/syntax-mappings.ts",
+        "src/engine/parser/remark.ts",
+        "src/engine/parser/remark-text-marks.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/components/settings/SyntaxMappingPanel.tsx",
+        "src/services/AiService.ts",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json"
+      ],
+      "next": "用户可导入包含 \\color{red}{文字} 语法的 Markdown 验证颜色解析效果；其他颜色语法、背景色、颜色配置 UI 后续单独任务推进。"
+    },
+    {
+      "id": "LOG-254",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-16"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成模板风格主题组合应用 V1",
+      "action": "功能增强/样式契约/导出对齐/验证/文档同步",
+      "result": "已完成 `PH2-16`：1) `StyleSettings`、归一化、store 和样式契约新增独立 `themeId`，旧 `.layout` 缺少该字段时自动回退到默认主题；2) 右侧「页面设置 - 模板起点」新增“风格主题”选择区，模板继续单独选择，主题可在其上叠加；3) 内置默认主题与 `雪山静境`，雪山主题已覆盖页面背景、页眉页脚、标题、引用、代码、表格、分隔线、图片说明等核心视觉变量；4) 隐藏测量层、画布预览、状态栏和 HTML/PDF 导出已共同消费同一套主题变量；5) 导出页脚与画布状态已显示“模板 + 主题”组合标签。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，覆盖 `themeId` 保存恢复、旧文件缺 `themeId` 默认回退，以及雪山主题导出关键片段。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/engine/style/resolveContract.ts",
+        "src/engine/style/blockStyleResolution.ts",
+        "src/store/types.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/StatusBar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户刷新应用后可在「页面设置 - 模板起点」中选择 `雪山静境`，并将其套用到当前模板。"
+    },
+    {
+      "id": "LOG-255",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-17"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认预览与 PDF 页底偏差修复 V1 边界",
+      "action": "缺陷确认/边界登记/风险同步/准备修复",
+      "result": "用户反馈预览与导出 PDF 在页面底端存在偏差，并提供了带表格页面的对比截图。本步纳入：统一预览与导出对页面容器高度、正文可用区、表格布局、默认行高和表头行高的最终渲染口径；修复当前表格页底偏差问题；补充最小回归验证。本步明确不纳入：分页算法重写、表格跨页新能力、自动缩放表格、图片/公式/目录问题或模板系统改造。后续归属任务：更完整的分页质量和复杂表格跨页继续归属 `PH2-09` / `PH2-10`。",
+      "verification": [
+        "用户已确认执行预览与 PDF 页底偏差修复 V1。",
+        "`PH2-17` 已新增并标记为 `进行中`，`executionBoundary` 已写回本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-017` 已登记当前预览与导出页底偏差的影响范围与处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始统一导出页与预览页的页面高度、表格布局和默认行高口径。"
+    },
+    {
+      "id": "LOG-256",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-17"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成预览与 PDF 页底偏差修复 V1",
+      "action": "缺陷修复/导出对齐/回归验证/文档同步",
+      "result": "已完成 `PH2-17`：1) 导出页的页面容器从只依赖 `min-height` 收口为与预览一致的固定 `height + min-height` 口径，减少打印自然回流带来的页底漂移；2) 导出表格结构改为与预览一致的 `.table-shell + .preview-table + .table-cell-content`，不再直接裸渲染 `<table>`；3) 导出 CSS 补齐 `table-layout: fixed`、默认行高、表头行高、单元格 `height/min-height` 和文字换行口径；4) 当前带表格页面在 PDF 中比预览更矮、导致页底空白放大的问题已收口；5) `smoke:m2` 已新增导出 HTML 关键片段断言，防止回退。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，覆盖固定页高、表格壳层、固定表格布局和单元格内容壳层关键片段。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/services/exportHtml.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户重新导出当前文档后，可对比预览页与 PDF 页底的表格位置是否已经对齐。"
+    },
+    {
+      "id": "LOG-257",
+      "date": "2026-06-28",
+      "taskIds": [
+        "PH2-17"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "回退页底偏差修复 V1",
+      "action": "用户反馈/回退修复/恢复基线",
+      "result": "用户反馈上一轮“统一导出页固定高度与表格结构”的修复后结果更差，并明确要求退回修复前状态。当前已将 `PH2-17` 状态恢复为 `进行中`，准备撤销上一轮仅涉及 `exportHtml.ts` 和 `scripts/m2-smoke.ts` 的修复代码，先恢复原基线，再重新定位偏差来源。",
+      "verification": [
+        "用户已明确要求“退回修复前”。",
+        "本条日志已登记当前回退动作，避免把失败修复继续记作已完成。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "撤销 `src/services/exportHtml.ts` 与 `scripts/m2-smoke.ts` 中本轮页底偏差修复相关改动，随后执行类型检查、冒烟、构建和进度校验。"
     }
   ]
 }

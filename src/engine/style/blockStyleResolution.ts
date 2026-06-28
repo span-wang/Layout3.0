@@ -22,11 +22,49 @@ function hasBlockStyleOverrides(block: LayoutBlock): boolean {
   return Object.values(block.blockStyleOverrides).some((value) => value !== undefined);
 }
 
-// 预览、导出和右侧说明都统一从这一份模板基线变量取值，避免三处各写一套默认值。
+// 预览、导出和右侧说明都统一从这一份模板/主题基线变量取值，避免三处各写一套默认值。
 export function buildPageStyleVariables(contract: ResolvedStyleContract): Record<string, string> {
-  const { blockStyles } = contract;
+  const { blockStyles, themeTokens } = contract;
 
   return {
+    '--page-surface-bg': themeTokens.pageBackground,
+    '--page-surface-border': themeTokens.pageBorderColor,
+    '--page-surface-shadow': themeTokens.pageShadow,
+    '--page-surface-top-band': themeTokens.pageTopBandColor,
+    '--page-surface-pattern': themeTokens.pagePattern,
+    '--page-surface-pattern-size': themeTokens.pagePatternSize,
+    '--page-heading-font-family': themeTokens.headingFontFamily,
+    '--page-body-font-family': themeTokens.bodyFontFamily,
+    '--page-header-bg': themeTokens.headerBackground,
+    '--page-footer-bg': themeTokens.footerBackground,
+    '--page-header-footer-text': themeTokens.headerFooterText,
+    '--page-header-border': themeTokens.headerBorderColor,
+    '--page-footer-border': themeTokens.footerBorderColor,
+    '--page-body-outline': themeTokens.bodyOutlineColor,
+    '--page-heading1-color': themeTokens.heading1Color,
+    '--page-heading1-rule': themeTokens.heading1RuleColor,
+    '--page-heading2-color': themeTokens.heading2Color,
+    '--page-heading2-marker': themeTokens.heading2MarkerColor,
+    '--page-heading3-color': themeTokens.heading3Color,
+    '--page-paragraph-color': themeTokens.paragraphColor,
+    '--page-muted-text': themeTokens.mutedTextColor,
+    '--page-list-marker': themeTokens.listMarkerColor,
+    '--page-task-checkbox': themeTokens.taskCheckboxColor,
+    '--page-blockquote-bg': themeTokens.blockquoteBackground,
+    '--page-blockquote-border': themeTokens.blockquoteBorderColor,
+    '--page-blockquote-text': themeTokens.blockquoteTextColor,
+    '--page-code-bg': themeTokens.codeBackground,
+    '--page-code-border': themeTokens.codeBorderColor,
+    '--page-code-text': themeTokens.codeTextColor,
+    '--page-table-border': themeTokens.tableBorderColor,
+    '--page-table-header-bg': themeTokens.tableHeaderBackground,
+    '--page-table-header-text': themeTokens.tableHeaderTextColor,
+    '--page-rule-color': themeTokens.ruleColor,
+    '--page-break-line': themeTokens.pageBreakLineColor,
+    '--page-break-bg': themeTokens.pageBreakBackground,
+    '--page-break-border': themeTokens.pageBreakBorderColor,
+    '--page-break-text': themeTokens.pageBreakTextColor,
+    '--page-image-caption-color': themeTokens.imageCaptionColor,
     '--page-heading1-font-size': `${blockStyles.heading1.fontSize}px`,
     '--page-heading1-line-height': `${blockStyles.heading1.lineHeight}px`,
     '--page-heading1-margin-top': `${blockStyles.heading1.marginTop}px`,
@@ -213,9 +251,9 @@ export function getBlockStyleSourceSummary(
   contract: ResolvedStyleContract,
 ): string {
   const baseLabel =
-    contract.templateId === 'default'
+    contract.templateId === 'default' && contract.themeId === 'default'
       ? '默认基线'
-      : `模板基线（${contract.templateLabel}）`;
+      : `模板 / 主题基线（${contract.templateThemeLabel}）`;
 
   return hasBlockStyleOverrides(block)
     ? `${baseLabel} + 当前块局部覆盖`

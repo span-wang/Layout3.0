@@ -12,6 +12,11 @@ export interface SyntaxMapping {
   pattern: RegExp;
   /** 映射后的 mark 类型 */
   markType: TextMarkType;
+  /**
+   * 可选：颜色值提取的捕获组索引
+   * 用于 \color{red}{text} 这类语法，第一个捕获组是颜色值，第二个是文本内容
+   */
+  colorGroupIndex?: number;
 }
 
 /**

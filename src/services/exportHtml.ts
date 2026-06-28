@@ -450,7 +450,7 @@ function renderPages(pages: PageLayout[], styles?: LayoutStyleSheet): string {
       return `<section class="page" style="${escapeHtml(pageStyleDeclarations)}">
         <header class="page-header">${escapeHtml(pageTitle)}<span>${escapeHtml(page.contract.pageLabel)}</span></header>
         <article class="page-body">${bodyParts.join('')}</article>
-        <footer class="page-footer"><span>${escapeHtml(page.contract.templateLabel)}</span><span>${page.pageNumber}</span></footer>
+        <footer class="page-footer"><span>${escapeHtml(page.contract.templateThemeLabel)}</span><span>${page.pageNumber}</span></footer>
       </section>`;
     })
     .join('');
@@ -513,15 +513,35 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
 
       .page {
         display: grid;
+        position: relative;
+        isolation: isolate;
         margin: 0 auto 24px;
         color: #1f2937;
-        background: #ffffff;
-        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.10);
-        border: 1px solid #d8e1e8;
+        background-color: var(--page-surface-bg, #ffffff);
+        background-image: var(--page-surface-pattern, none);
+        background-size: var(--page-surface-pattern-size, 24px 24px);
+        box-shadow: var(--page-surface-shadow, 0 12px 32px rgba(15, 23, 42, 0.10));
+        border: 1px solid var(--page-surface-border, #d8e1e8);
       }
 
       .page:last-child {
         margin-bottom: 0;
+      }
+
+      .page::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 6px;
+        background: var(--page-surface-top-band, transparent);
+        z-index: 0;
+      }
+
+      .page-header,
+      .page-body,
+      .page-footer {
+        position: relative;
+        z-index: 1;
       }
 
       .toc-block-export {
@@ -577,18 +597,20 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
         display: flex;
         align-items: center;
         justify-content: space-between;
-        color: #6b7280;
+        color: var(--page-header-footer-text, #6b7280);
         font-size: 12px;
       }
 
       .page-header {
         padding: 0 24px;
-        border-bottom: 1px solid #edf1f5;
+        border-bottom: 1px solid var(--page-header-border, #edf1f5);
+        background: var(--page-header-bg, linear-gradient(180deg, rgb(243 248 252 / 90%) 0%, rgb(255 255 255 / 65%) 100%));
       }
 
       .page-footer {
         padding: 0 24px;
-        border-top: 1px solid #edf1f5;
+        border-top: 1px solid var(--page-footer-border, #edf1f5);
+        background: var(--page-footer-bg, linear-gradient(0deg, rgb(243 248 252 / 90%) 0%, rgb(255 255 255 / 65%) 100%));
       }
 
       .page-body {
@@ -596,40 +618,80 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
         padding-bottom: 0;
         padding-left: var(--page-padding-left, ${firstPage ? `${firstPage.contract.marginsPx.left}px` : '56px'});
         padding-right: var(--page-padding-right, ${firstPage ? `${firstPage.contract.marginsPx.right}px` : '56px'});
+        font-family: var(--page-body-font-family, inherit);
+        outline: 1px dashed var(--page-body-outline, #e4ecf2);
+        outline-offset: -1px;
       }
 
-      h1 {
+      .page h1,
+      .page h2,
+      .page h3,
+      .page h4,
+      .page h5,
+      .page h6 {
+        font-family: var(--page-heading-font-family, inherit);
+      }
+
+      .page h1 {
         box-sizing: border-box;
         margin: var(--page-heading1-margin-top, 0px) 0 var(--page-heading1-margin-bottom, 28px);
         padding-left: var(--page-heading1-inset-left, 0px);
         padding-right: var(--page-heading1-inset-right, 0px);
-        color: #102a43;
+        color: var(--page-heading1-color, #102a43);
         font-size: var(--page-heading1-font-size, 34px);
         line-height: var(--page-heading1-line-height, 40px);
+        background-image: linear-gradient(var(--page-heading1-rule, transparent), var(--page-heading1-rule, transparent));
+        background-repeat: no-repeat;
+        background-position: left bottom;
+        background-size: 100% 2px;
       }
 
-      h2 {
+      .page h2 {
+        position: relative;
         box-sizing: border-box;
         margin: var(--page-heading2-margin-top, 28px) 0 var(--page-heading2-margin-bottom, 16px);
         padding-left: var(--page-heading2-inset-left, 0px);
         padding-right: var(--page-heading2-inset-right, 0px);
-        color: #12314e;
+        color: var(--page-heading2-color, #12314e);
         font-size: var(--page-heading2-font-size, 24px);
         line-height: var(--page-heading2-line-height, 32px);
       }
 
-      h3, h4, h5, h6 {
+      .page h2::before {
+        content: "";
+        position: absolute;
+        left: -14px;
+        top: 6px;
+        bottom: 6px;
+        width: 4px;
+        border-radius: 999px;
+        background: var(--page-heading2-marker, transparent);
+      }
+
+      .page h3 {
         box-sizing: border-box;
         margin: var(--page-heading3-margin-top, 24px) 0 var(--page-heading3-margin-bottom, 12px);
         padding-left: var(--page-heading3-inset-left, 0px);
         padding-right: var(--page-heading3-inset-right, 0px);
-        color: #12314e;
+        color: var(--page-heading3-color, #12314e);
         font-size: var(--page-heading3-font-size, 18px);
         line-height: var(--page-heading3-line-height, 28px);
       }
 
+      .page h4,
+      .page h5,
+      .page h6 {
+        box-sizing: border-box;
+        margin: var(--page-heading3-margin-top, 24px) 0 var(--page-heading3-margin-bottom, 12px);
+        padding-left: var(--page-heading3-inset-left, 0px);
+        padding-right: var(--page-heading3-inset-right, 0px);
+        color: var(--page-heading3-color, #12314e);
+        font-size: var(--page-paragraph-font-size, 16px);
+        line-height: var(--page-paragraph-line-height, 28px);
+      }
+
       p, li {
-        color: #344054;
+        color: var(--page-paragraph-color, #344054);
         font-size: var(--page-paragraph-font-size, 16px);
         line-height: var(--page-paragraph-line-height, 28px);
       }
@@ -653,6 +715,11 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
         margin-top: var(--page-list-item-gap, 8px);
       }
 
+      ul li::marker,
+      ol li::marker {
+        color: var(--page-list-marker, currentColor);
+      }
+
       li.task-list-item {
         list-style: none;
       }
@@ -665,23 +732,27 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
         display: inline-block;
         width: 18px;
         min-width: 18px;
-        color: #0d5663;
+        color: var(--page-task-checkbox, #0d5663);
         font-weight: 700;
       }
 
       blockquote {
         margin: var(--page-blockquote-margin-top, 20px) 0 var(--page-blockquote-margin-bottom, 20px);
         padding: 4px 0 4px 16px;
-        border-left: 4px solid #b8d8dc;
+        color: var(--page-blockquote-text, #344054);
+        background: var(--page-blockquote-bg, transparent);
+        border-left: 4px solid var(--page-blockquote-border, #b8d8dc);
+        border-radius: 12px;
       }
 
       pre {
         margin: var(--page-code-margin-top, 20px) 0 var(--page-code-margin-bottom, 20px);
         padding: var(--page-code-padding-y, 14px) var(--page-code-padding-x, 16px);
-        color: #d7e3f4;
+        color: var(--page-code-text, #d7e3f4);
         font-size: var(--page-code-font-size, 14px);
         line-height: var(--page-code-line-height, 24px);
-        background: #173047;
+        background: var(--page-code-bg, #173047);
+        border: 1px solid var(--page-code-border, transparent);
         border-radius: 12px;
         white-space: pre-wrap;
       }
@@ -694,18 +765,18 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
 
       td, th {
         padding: var(--page-table-cell-padding-y, 10px) var(--page-table-cell-padding-x, 12px);
-        border: 1px solid #d5dde6;
+        border: 1px solid var(--page-table-border, #d5dde6);
       }
 
       th {
-        color: #213547;
+        color: var(--page-table-header-text, #213547);
         font-weight: 700;
-        background: #f3f7fb;
+        background: var(--page-table-header-bg, #f3f7fb);
       }
 
       hr {
         border: 0;
-        border-top: var(--page-rule-stroke-width, 1px) solid #d5dde6;
+        border-top: var(--page-rule-stroke-width, 1px) solid var(--page-rule-color, #d5dde6);
         margin: var(--page-rule-margin-top, 24px) 0 var(--page-rule-margin-bottom, 24px);
       }
 
@@ -763,7 +834,7 @@ export function buildExportHtml({ pages, title, resources, styles }: PdfExportPa
       }
 
       .image-shell figcaption {
-        color: #667788;
+        color: var(--page-image-caption-color, #667788);
         font-size: 13px;
         text-align: center;
       }

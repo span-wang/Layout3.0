@@ -39,6 +39,7 @@ import {
   marginPresetDefinitions,
   pageSizeDefinitions,
   templateDefinitions,
+  themeDefinitions,
 } from '@/engine/style/presets';
 import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '@/engine/style/blockStyleResolution';
 import { listPaginationAlgorithms } from '@/engine/typesetting';
@@ -56,6 +57,7 @@ import type {
   PaginationBehaviorOption,
   StyleSettings,
   TemplateId,
+  ThemeId,
 } from '@/engine/style/types';
 import { useResolvedStyleContract } from '@/hooks/useResolvedStyleContract';
 import { useAppStore } from '@/store';
@@ -112,7 +114,7 @@ const pageSettingsTabs: Array<{
   { id: '页边距', label: '页边距', description: '预设与自定义边距', icon: PanelTop },
   { id: '页眉页脚预留', label: '页眉页脚预留', description: '控制预留区域高度', icon: PanelBottom },
   { id: '块排版', label: '块排版', description: '块间距与预设', icon: SlidersHorizontal },
-  { id: '模板起点', label: '模板起点', description: '默认或模板套用', icon: Layers3 },
+  { id: '模板起点', label: '模板起点', description: '结构模板与风格主题', icon: Layers3 },
   { id: '分页策略', label: '分页策略', description: '标题、代码块与图片保护', icon: SlidersHorizontal },
 ];
 
@@ -2959,15 +2961,23 @@ function renderBlockSpacingPanel({
 function renderTemplatePanel({
   styleSettings,
   setTemplateId,
+  setThemeId,
 }: {
   styleSettings: StyleSettings;
   setTemplateId: (templateId: TemplateId) => void;
+  setThemeId: (themeId: ThemeId) => void;
 }): JSX.Element {
   return (
     <section className="detail-panel">
       <div className="detail-panel-head">
-        <h3>模板起点</h3>
-        <span>默认或预设模板</span>
+        <h3>模板起点与风格主题</h3>
+        <span>模板定结构，主题定视觉</span>
+      </div>
+      <div className="property-stack">
+        <div className="section-subtitle">
+          <strong>结构模板</strong>
+          <span>控制标题层级、排版节奏和基础阅读密度</span>
+        </div>
       </div>
       <div className="template-list template-list-single">
         {templateDefinitions.map((template) => (
@@ -2979,6 +2989,32 @@ function renderTemplatePanel({
           >
             <strong>{template.name}</strong>
             <span>{template.description}</span>
+          </button>
+        ))}
+      </div>
+      <div className="property-stack">
+        <div className="section-subtitle">
+          <strong>风格主题</strong>
+          <span>在当前模板之上叠加统一视觉皮肤</span>
+        </div>
+      </div>
+      <div className="template-list">
+        {themeDefinitions.map((theme) => (
+          <button
+            className={theme.id === styleSettings.themeId ? 'template-swatch active theme-swatch' : 'template-swatch theme-swatch'}
+            type="button"
+            key={theme.id}
+            onClick={() => setThemeId(theme.id)}
+          >
+            <div className="theme-swatch-head">
+              <strong>{theme.name}</strong>
+              <div className="theme-palette" aria-hidden="true">
+                {theme.palette.map((color) => (
+                  <span key={`${theme.id}-${color}`} className="theme-palette-swatch" style={{ backgroundColor: color }} />
+                ))}
+              </div>
+            </div>
+            <span>{theme.description}</span>
           </button>
         ))}
       </div>
@@ -3077,6 +3113,7 @@ export function RightPanel({
   const setMarginLinked = useAppStore((state) => state.setMarginLinked);
   const setHeaderFooterMode = useAppStore((state) => state.setHeaderFooterMode);
   const setTemplateId = useAppStore((state) => state.setTemplateId);
+  const setThemeId = useAppStore((state) => state.setThemeId);
   const setHeaderPreset = useAppStore((state) => state.setHeaderPreset);
   const setFooterPreset = useAppStore((state) => state.setFooterPreset);
   const setCustomHeaderReservedMm = useAppStore((state) => state.setCustomHeaderReservedMm);
@@ -3272,6 +3309,7 @@ export function RightPanel({
         return renderTemplatePanel({
           styleSettings,
           setTemplateId,
+          setThemeId,
         });
       case '分页策略':
         return renderPaginationPanel({
@@ -3401,6 +3439,7 @@ export function RightPanel({
           {renderSummaryCard('字符数', `${characterCount} 字符`)}
           {renderSummaryCard('纸张', resolvedStyleContract.pageLabel)}
           {renderSummaryCard('模板', resolvedStyleContract.templateLabel)}
+          {renderSummaryCard('主题', resolvedStyleContract.themeLabel)}
         </div>
       </section>
 

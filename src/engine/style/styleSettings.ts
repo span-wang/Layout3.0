@@ -12,6 +12,7 @@ import type {
   PaginationBehavior,
   StyleSettings,
   TemplateId,
+  ThemeId,
 } from './types';
 
 export const blockSpacingParameterKeys: BlockSpacingParameterKey[] = [
@@ -130,6 +131,10 @@ function isHeaderFooterPresetId(value: unknown): value is HeaderFooterPresetId {
 
 function isTemplateId(value: unknown): value is TemplateId {
   return value === 'default' || value === 'lecture' || value === 'notes';
+}
+
+function isThemeId(value: unknown): value is ThemeId {
+  return value === 'default' || value === 'snowMountain';
 }
 
 function normalizeNumber(value: unknown, fallback: number): number {
@@ -256,6 +261,7 @@ export function normalizeStyleSettings(value: unknown): StyleSettings {
       ? value.headerFooterMode
       : defaultStyleSettings.headerFooterMode,
     templateId: isTemplateId(value.templateId) ? value.templateId : defaultStyleSettings.templateId,
+    themeId: isThemeId(value.themeId) ? value.themeId : defaultStyleSettings.themeId,
     headerPreset: isHeaderFooterPresetId(value.headerPreset)
       ? value.headerPreset
       : defaultStyleSettings.headerPreset,

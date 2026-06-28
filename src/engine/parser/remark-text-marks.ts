@@ -13,6 +13,17 @@ export interface UnderlineNode {
 }
 
 /**
+ * 自定义颜色节点类型
+ * 用于在 mdast 树中表示带颜色的文本
+ * 颜色信息通过此节点传递到转换层，写入 TextRun.styleOverrides.color
+ */
+export interface ColorSpanNode {
+  type: 'colorSpan';
+  color: string;
+  children: PhrasingContent[];
+}
+
+/**
  * remark-math 扩展出的行内公式节点。
  * 本插件只在公式内容命中文本标记映射时才替换它，普通公式仍按原公式节点保留。
  */
@@ -134,17 +145,29 @@ interface MatchInterval {
   end: number;
   mapping: SyntaxMapping;
   content: string;
+  color?: string;
+}
+
+/**
+ * 创建颜色节点
+ */
+function createColorSpanNode(color: string, children: PhrasingContent[]): ColorSpanNode {
+  return {
+    type: 'colorSpan',
+    color,
+    children,
+  };
 }
 
 /**
  * 解析文本内容，处理所有已注册的语法映射
- * 返回 PhrasingContent 节点数组（可能包含 UnderlineNode）
+ * 返回 PhrasingContent 节点数组（可能包含 UnderlineNode 和 ColorSpanNode）
  */
 function parseTextWithMappings(
   text: string,
   mappings: SyntaxMapping[],
   position?: { start: { line: number; column: number; offset?: number | null }; end: { line: number; column: number; offset?: number | null } } | null,
-): (PhrasingContent | UnderlineNode)[] {
+): (PhrasingContent | UnderlineNode | ColorSpanNode)[] {
   if (!text || mappings.length === 0) {
     return [createTextNode(text, position)];
   }
@@ -157,42 +180,65 @@ function parseTextWithMappings(
 
     let match: RegExpExecArray | null;
     while ((match = mapping.pattern.exec(text)) !== null) {
-      let content: string;
-      let endPos: number;
+      // 如果映射配置了 colorGroupIndex，说明是颜色语法
+      if (mapping.colorGroupIndex !== undefined) {
+        const colorGroupIdx = mapping.colorGroupIndex;
+        const color = match[colorGroupIdx];
+        if (color) {
+          // content 是文本内容组（通常是第 colorGroupIndex + 1 个捕获组，除非有嵌套）
+          // 对于 \color{red}{text}，正则 \\color\{([\w#]+)\}\{(.+?)\}：
+          // match[1] = red (颜色), match[2] = text (内容)
+          const contentGroupIdx = colorGroupIdx === 1 ? 2 : (colorGroupIdx === 2 ? 1 : colorGroupIdx + 1);
+          const content = match[contentGroupIdx];
 
-      if (match[1] !== undefined) {
-        // 正则有捕获组，使用捕获组内容
-        content = match[1];
-        endPos = match.index + match[0].length;
+          if (content !== undefined) {
+            // 计算整个匹配的结束位置
+            const endPos = match.index + match[0].length;
+
+            intervals.push({
+              start: match.index,
+              end: endPos,
+              mapping,
+              content,
+              color,
+            });
+          }
+        }
       } else {
-        // 正则没有捕获组（如只有前缀 \underline{），手动提取大括号内容
-        // matchEnd 是正则匹配结束位置，我们需要找到匹配文本中 { 的位置
-        const matchText = match[0];
-        const braceInMatch = matchText.indexOf('{');
+        // 普通语法处理（无 colorGroupIndex）
+        let content: string;
+        let endPos: number;
 
-        if (braceInMatch !== -1) {
-          // 从 { 位置之后提取平衡内容
-          const contentStart = match.index + braceInMatch + 1;
-          const extracted = extractBalancedBraces(text, match.index, match.index + matchText.length);
-          if (extracted !== null) {
-            content = extracted;
-            // endPos 是 } 之后的位置
-            endPos = contentStart + content.length + 1;
+        if (match[1] !== undefined) {
+          // 正则有捕获组，使用捕获组内容
+          content = match[1];
+          endPos = match.index + match[0].length;
+        } else {
+          // 正则没有捕获组（如只有前缀 \underline{），手动提取大括号内容
+          const matchText = match[0];
+          const braceInMatch = matchText.indexOf('{');
+
+          if (braceInMatch !== -1) {
+            const extracted = extractBalancedBraces(text, match.index, match.index + matchText.length);
+            if (extracted !== null) {
+              content = extracted;
+              const contentStart = match.index + braceInMatch + 1;
+              endPos = contentStart + content.length + 1;
+            } else {
+              continue;
+            }
           } else {
             continue;
           }
-        } else {
-          // 没有找到 {，跳过
-          continue;
         }
-      }
 
-      intervals.push({
-        start: match.index,
-        end: endPos,
-        mapping,
-        content,
-      });
+        intervals.push({
+          start: match.index,
+          end: endPos,
+          mapping,
+          content,
+        });
+      }
     }
   }
 
@@ -215,7 +261,7 @@ function parseTextWithMappings(
   }
 
   // 根据区间切分文本
-  const result: PhrasingContent[] = [];
+  const result: (PhrasingContent | UnderlineNode | ColorSpanNode)[] = [];
   let currentIndex = 0;
 
   for (const interval of mergedIntervals) {
@@ -229,7 +275,14 @@ function parseTextWithMappings(
 
     // 创建标记节点
     const innerNodes = parseTextWithMappings(interval.content, mappings.filter((m) => m !== interval.mapping), position);
-    result.push(createMarkNode(interval.mapping.markType, innerNodes as PhrasingContent[]) as PhrasingContent);
+
+    // 如果是颜色语法，创建 ColorSpanNode
+    if (interval.color !== undefined) {
+      result.push(createColorSpanNode(interval.color, innerNodes as PhrasingContent[]));
+    } else {
+      // 普通标记节点
+      result.push(createMarkNode(interval.mapping.markType, innerNodes as PhrasingContent[]) as PhrasingContent);
+    }
 
     currentIndex = interval.end;
   }
@@ -248,12 +301,12 @@ function parseTextWithMappings(
 /**
  * 处理一个文本节点，返回解析后的节点数组
  */
-function processTextNode(node: Text, mappings: SyntaxMapping[]): PhrasingContent[] {
+function processTextNode(node: Text, mappings: SyntaxMapping[]): (PhrasingContent | UnderlineNode | ColorSpanNode)[] {
   if (!node.value) {
     return [node];
   }
 
-  // 检查是否有任何映射匹配
+  // 检查是否有任何映射匹配（包括颜色语法）
   let hasMatch = false;
   for (const mapping of mappings) {
     mapping.pattern.lastIndex = 0;
@@ -267,7 +320,7 @@ function processTextNode(node: Text, mappings: SyntaxMapping[]): PhrasingContent
     return [node];
   }
 
-  return parseTextWithMappings(node.value, mappings, node.position ?? null) as PhrasingContent[];
+  return parseTextWithMappings(node.value, mappings, node.position ?? null) as (PhrasingContent | UnderlineNode | ColorSpanNode)[];
 }
 
 /**
@@ -276,7 +329,7 @@ function processTextNode(node: Text, mappings: SyntaxMapping[]): PhrasingContent
  * 例如用户把 `$ \underline{\text{文字}} $` 当作“下划线文本语法”导入时，
  * remark-math 会先生成 inlineMath；这里仅在配置规则命中时把它转回 TextMark 节点。
  */
-function processInlineMathNode(node: InlineMathNode, mappings: SyntaxMapping[]): PhrasingContent[] {
+function processInlineMathNode(node: InlineMathNode, mappings: SyntaxMapping[]): (PhrasingContent | UnderlineNode | ColorSpanNode)[] {
   if (!node.value) {
     return [node as unknown as PhrasingContent];
   }
@@ -297,10 +350,10 @@ function processInlineMathNode(node: InlineMathNode, mappings: SyntaxMapping[]):
 }
 
 function collectReplacement(
-  replacements: Array<{ parent: PhrasingContent; index: number; newNodes: PhrasingContent[] }>,
+  replacements: Array<{ parent: PhrasingContent; index: number; newNodes: (PhrasingContent | UnderlineNode | ColorSpanNode)[] }>,
   parent: unknown,
   index: number | undefined | null,
-  newNodes: PhrasingContent[],
+  newNodes: (PhrasingContent | UnderlineNode | ColorSpanNode)[],
 ): typeof SKIP | undefined {
   if (index === null || index === undefined || !parent) {
     return undefined;
@@ -332,7 +385,7 @@ export function remarkTextMarks(mappings?: SyntaxMapping[]): () => (tree: Root) 
       interface TextNodeReplacement {
         parent: PhrasingContent;
         index: number;
-        newNodes: PhrasingContent[];
+        newNodes: (PhrasingContent | UnderlineNode | ColorSpanNode)[];
       }
 
       const replacements: TextNodeReplacement[] = [];
@@ -381,7 +434,12 @@ export function remarkTextMarks(mappings?: SyntaxMapping[]): () => (tree: Root) 
       for (const replacement of replacements) {
         const parentNode = replacement.parent;
         if ('children' in parentNode && Array.isArray(parentNode.children)) {
-          parentNode.children.splice(replacement.index, 1, ...replacement.newNodes);
+          // 使用类型断言将自定义节点（underline、colorSpan）添加到父节点的 children 中
+          (parentNode.children as unknown as (PhrasingContent | UnderlineNode | ColorSpanNode)[]).splice(
+            replacement.index,
+            1,
+            ...replacement.newNodes,
+          );
         }
       }
     };

@@ -4,8 +4,15 @@ import {
   marginPresetDefinitions,
   pageSizeDefinitions,
   templateDefinitions,
+  themeDefinitions,
 } from './presets';
-import type { BlockStyleContract, BoxInsets, ResolvedStyleContract, StyleSettings } from './types';
+import type {
+  BlockStyleContract,
+  BoxInsets,
+  ResolvedStyleContract,
+  StyleSettings,
+  ThemeVisualTokens,
+} from './types';
 
 const MM_TO_PX = 96 / 25.4;
 
@@ -34,6 +41,49 @@ function cloneBlockStyles(styles: BlockStyleContract): BlockStyleContract {
     table: { ...styles.table },
     horizontalRule: { ...styles.horizontalRule },
     image: { ...styles.image },
+  };
+}
+
+function cloneThemeTokens(tokens: ThemeVisualTokens): ThemeVisualTokens {
+  return {
+    pageBackground: tokens.pageBackground,
+    pageBorderColor: tokens.pageBorderColor,
+    pageShadow: tokens.pageShadow,
+    pageTopBandColor: tokens.pageTopBandColor,
+    pagePattern: tokens.pagePattern,
+    pagePatternSize: tokens.pagePatternSize,
+    headingFontFamily: tokens.headingFontFamily,
+    bodyFontFamily: tokens.bodyFontFamily,
+    headerBackground: tokens.headerBackground,
+    footerBackground: tokens.footerBackground,
+    headerFooterText: tokens.headerFooterText,
+    headerBorderColor: tokens.headerBorderColor,
+    footerBorderColor: tokens.footerBorderColor,
+    bodyOutlineColor: tokens.bodyOutlineColor,
+    heading1Color: tokens.heading1Color,
+    heading1RuleColor: tokens.heading1RuleColor,
+    heading2Color: tokens.heading2Color,
+    heading2MarkerColor: tokens.heading2MarkerColor,
+    heading3Color: tokens.heading3Color,
+    paragraphColor: tokens.paragraphColor,
+    mutedTextColor: tokens.mutedTextColor,
+    listMarkerColor: tokens.listMarkerColor,
+    taskCheckboxColor: tokens.taskCheckboxColor,
+    blockquoteBackground: tokens.blockquoteBackground,
+    blockquoteBorderColor: tokens.blockquoteBorderColor,
+    blockquoteTextColor: tokens.blockquoteTextColor,
+    codeBackground: tokens.codeBackground,
+    codeBorderColor: tokens.codeBorderColor,
+    codeTextColor: tokens.codeTextColor,
+    tableBorderColor: tokens.tableBorderColor,
+    tableHeaderBackground: tokens.tableHeaderBackground,
+    tableHeaderTextColor: tokens.tableHeaderTextColor,
+    ruleColor: tokens.ruleColor,
+    pageBreakLineColor: tokens.pageBreakLineColor,
+    pageBreakBackground: tokens.pageBreakBackground,
+    pageBreakBorderColor: tokens.pageBreakBorderColor,
+    pageBreakTextColor: tokens.pageBreakTextColor,
+    imageCaptionColor: tokens.imageCaptionColor,
   };
 }
 
@@ -191,6 +241,9 @@ export function resolveStyleContract(settings: StyleSettings): ResolvedStyleCont
       : headerFooterPresetDefinitions.find((item) => item.id === settings.footerPreset)?.reservedHeightMm ?? 0;
   const templateLabel =
     templateDefinitions.find((item) => item.id === settings.templateId)?.name ?? '默认（无模板）';
+  const themeDefinition = themeDefinitions.find((item) => item.id === settings.themeId) ?? themeDefinitions[0];
+  const themeLabel = themeDefinition?.name ?? '默认主题';
+  const templateThemeLabel = `${templateLabel} · ${themeLabel}`;
   const marginLabel =
     settings.marginMode === 'custom'
       ? `自定义 ${marginsMm.top}/${marginsMm.right}/${marginsMm.bottom}/${marginsMm.left} mm`
@@ -206,8 +259,11 @@ export function resolveStyleContract(settings: StyleSettings): ResolvedStyleCont
     pageSize: settings.pageSize,
     orientation: settings.orientation,
     templateId: settings.templateId,
+    themeId: settings.themeId,
     pageLabel: `${definition.label} / ${settings.orientation === 'portrait' ? '纵向' : '横向'}`,
     templateLabel,
+    themeLabel,
+    templateThemeLabel,
     marginLabel,
     pageWidthMm: widthMm,
     pageHeightMm: heightMm,
@@ -229,6 +285,7 @@ export function resolveStyleContract(settings: StyleSettings): ResolvedStyleCont
     contentWidthPx: mmToPx(contentWidthMm),
     contentHeightPx: mmToPx(contentHeightMm),
     blockStyles: cloneBlockStyles(defaultBlockStyles),
+    themeTokens: cloneThemeTokens(themeDefinition.tokens),
     paginationBehavior: { ...settings.paginationBehavior },
   };
 

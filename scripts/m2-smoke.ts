@@ -815,6 +815,7 @@ async function main(): Promise<void> {
   const styleSettings = cloneStyleSettings({
     ...defaultStyleSettings,
     templateId: 'lecture',
+    themeId: 'snowMountain',
     marginMode: 'custom',
     customMarginsMm: {
       top: 18,
@@ -838,9 +839,26 @@ async function main(): Promise<void> {
   const restoredProject = parseLayoutProjectFile(serialized);
   assert(restoredProject.document.blocks.length === document.blocks.length, 'M2 冒烟失败：layout 工程文件没有恢复完整块数量');
   assert(restoredProject.styleSettings.templateId === 'lecture', 'M2 冒烟失败：layout 工程文件没有恢复模板设置');
+  assert(restoredProject.styleSettings.themeId === 'snowMountain', 'M2 冒烟失败：layout 工程文件没有恢复风格主题设置');
   assert(
     restoredProject.styleSettings.paginationAlgorithmId === ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
     'M2 冒烟失败：layout 工程文件没有恢复分页算法选择',
+  );
+  const legacyThemeProjectFile = JSON.stringify(
+    {
+      ...JSON.parse(serialized),
+      styleSettings: {
+        ...JSON.parse(serialized).styleSettings,
+        themeId: undefined,
+      },
+    },
+    null,
+    2,
+  );
+  const restoredLegacyThemeProject = parseLayoutProjectFile(legacyThemeProjectFile);
+  assert(
+    restoredLegacyThemeProject.styleSettings.themeId === 'default',
+    'M2 冒烟失败：旧工程文件缺少 themeId 时没有回退到默认主题',
   );
   assert(
     restoredProject.styleSettings.blockSpacingPresetId === 'm2-smoke-spacing' &&
@@ -1033,6 +1051,10 @@ async function main(): Promise<void> {
     'equation-shell',
     'toc-entry-export',
     '讲义模板',
+    '雪山静境',
+    '--page-surface-bg:#FAFDFF',
+    '--page-heading1-rule:#F2B84B',
+    '--page-heading2-marker:#2F6F64',
   ];
 
   for (const fragment of expectedHtmlFragments) {

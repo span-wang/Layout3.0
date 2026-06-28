@@ -37,6 +37,12 @@ export interface TextMarkMapping {
   description?: string;
   /** 可选：优先级，数字越小优先级越高 */
   priority?: number;
+  /**
+   * 可选：颜色值提取的捕获组索引
+   * 用于 \color{red}{text} 这类语法，第一个捕获组是颜色值 red，第二个是文本内容
+   * 当 markType 为 'color' 时必须提供此字段
+   */
+  colorGroupIndex?: number;
 }
 
 /**
@@ -93,7 +99,7 @@ export interface SyntaxMappingConfig {
   blockCommandMappings: BlockCommandMapping[];
 }
 
-const validTextMarkTypes: TextMarkType[] = ['bold', 'italic', 'underline', 'strike', 'code', 'link'];
+const validTextMarkTypes: TextMarkType[] = ['bold', 'italic', 'underline', 'strike', 'code', 'link', 'color'];
 const validTargetBlockTypes: BlockCommandMapping['targetBlockType'][] = ['blockquote', 'code', 'paragraph'];
 
 // ===================== 默认预置映射 =====================
@@ -148,6 +154,16 @@ export const DEFAULT_TEXT_MARK_MAPPINGS: TextMarkMapping[] = [
     markType: 'strike',
     description: '将 \\sout{text} 映射为删除线文本',
     priority: 22,
+  },
+  {
+    id: 'latex-color',
+    name: 'LaTeX 颜色 \\color{}{}',
+    enabled: true,
+    pattern: '\\\\color\\{([\\w#]+)\\}\\{(.+?)\\}',
+    markType: 'color',
+    colorGroupIndex: 1,
+    description: '将 \\color{red}{文字} 映射为带颜色的文字',
+    priority: 5,
   },
 ];
 
@@ -283,6 +299,10 @@ function normalizeTextMarkMapping(value: unknown): TextMarkMapping | null {
 
   if (typeof value.priority === 'number') {
     mapping.priority = value.priority;
+  }
+
+  if (typeof value.colorGroupIndex === 'number') {
+    mapping.colorGroupIndex = value.colorGroupIndex;
   }
 
   return mapping;

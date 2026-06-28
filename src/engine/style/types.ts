@@ -10,6 +10,8 @@ export type HeaderFooterPresetId = 'none' | 'compact' | 'standard';
 
 export type TemplateId = 'default' | 'lecture' | 'notes';
 
+export type ThemeId = 'default' | 'snowMountain';
+
 export type ImageAlign = 'left' | 'center' | 'right';
 
 export interface BoxInsets {
@@ -89,6 +91,47 @@ export interface BlockStyleContract {
   image: ImageBlockStyleRule;
 }
 
+export interface ThemeVisualTokens {
+  pageBackground: string;
+  pageBorderColor: string;
+  pageShadow: string;
+  pageTopBandColor: string;
+  pagePattern: string;
+  pagePatternSize: string;
+  headingFontFamily: string;
+  bodyFontFamily: string;
+  headerBackground: string;
+  footerBackground: string;
+  headerFooterText: string;
+  headerBorderColor: string;
+  footerBorderColor: string;
+  bodyOutlineColor: string;
+  heading1Color: string;
+  heading1RuleColor: string;
+  heading2Color: string;
+  heading2MarkerColor: string;
+  heading3Color: string;
+  paragraphColor: string;
+  mutedTextColor: string;
+  listMarkerColor: string;
+  taskCheckboxColor: string;
+  blockquoteBackground: string;
+  blockquoteBorderColor: string;
+  blockquoteTextColor: string;
+  codeBackground: string;
+  codeBorderColor: string;
+  codeTextColor: string;
+  tableBorderColor: string;
+  tableHeaderBackground: string;
+  tableHeaderTextColor: string;
+  ruleColor: string;
+  pageBreakLineColor: string;
+  pageBreakBackground: string;
+  pageBreakBorderColor: string;
+  pageBreakTextColor: string;
+  imageCaptionColor: string;
+}
+
 export interface StyleSettings {
   pageSize: PageSizeId;
   orientation: PageOrientation;
@@ -98,6 +141,7 @@ export interface StyleSettings {
   isMarginLinked: boolean;
   headerFooterMode: MarginMode;
   templateId: TemplateId;
+  themeId: ThemeId;
   headerPreset: HeaderFooterPresetId;
   footerPreset: HeaderFooterPresetId;
   customHeaderReservedMm: number;
@@ -178,12 +222,23 @@ export interface TemplateDefinition {
   description: string;
 }
 
+export interface ThemeDefinition {
+  id: ThemeId;
+  name: string;
+  description: string;
+  palette: string[];
+  tokens: ThemeVisualTokens;
+}
+
 export interface ResolvedStyleContract {
   pageSize: PageSizeId;
   orientation: PageOrientation;
   templateId: TemplateId;
+  themeId: ThemeId;
   pageLabel: string;
   templateLabel: string;
+  themeLabel: string;
+  templateThemeLabel: string;
   marginLabel: string;
   pageWidthMm: number;
   pageHeightMm: number;
@@ -200,5 +255,6 @@ export interface ResolvedStyleContract {
   contentWidthPx: number;
   contentHeightPx: number;
   blockStyles: BlockStyleContract;
+  themeTokens: ThemeVisualTokens;
   paginationBehavior: PaginationBehavior;
 }

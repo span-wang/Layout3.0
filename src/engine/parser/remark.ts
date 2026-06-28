@@ -42,6 +42,7 @@ export function createConfiguredRemarkProcessor(config?: LayoutDocument['meta'][
       name: m.name,
       pattern: createGlobalTextMarkPattern(m.pattern),
       markType: m.markType,
+      colorGroupIndex: m.colorGroupIndex,
     }));
 
   // 创建文本标记插件实例

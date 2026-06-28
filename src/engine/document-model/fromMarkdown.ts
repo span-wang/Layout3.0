@@ -33,6 +33,7 @@ import type {
   SourceRange,
   TextMark,
   TextRun,
+  TextStyleOverrides,
 } from './types';
 import { createStableHash, createTextFragment } from './utils';
 
@@ -53,6 +54,17 @@ interface MathBlockNode {
  */
 interface UnderlineNode {
   type: 'underline';
+  children: PhrasingContent[];
+}
+
+/**
+ * 自定义颜色节点类型
+ * 由 remark-text-marks 插件从 \color{red}{text} 语法转换而来
+ * 颜色信息通过此节点传递到转换层，写入 TextRun.styleOverrides.color
+ */
+interface ColorSpanNode {
+  type: 'colorSpan';
+  color: string;
   children: PhrasingContent[];
 }
 
@@ -113,6 +125,7 @@ function createTextRun(
   text: string,
   sourceRange: SourceRange | null,
   marks: TextMark[],
+  styleOverrides: TextStyleOverrides = {},
 ): TextRun {
   return {
     id: createRunId(blockId, index, text),
@@ -120,7 +133,7 @@ function createTextRun(
     sourceRange,
     marks,
     charStyleRef: null,
-    styleOverrides: {},
+    styleOverrides,
     annotations: [],
   };
 }
@@ -143,9 +156,15 @@ function appendMark(marks: TextMark[], mark: TextMark): TextMark[] {
   return dedupeMarks([...marks, mark]);
 }
 
-function extractPlainTextFromPhrasing(nodes: PhrasingContent[]): string {
+function extractPlainTextFromPhrasing(nodes: PhrasingContent[] | (PhrasingContent | ColorSpanNode)[]): string {
   return nodes
     .map((node) => {
+      // 处理自定义节点类型（TypeScript 无法推断这些节点类型，直接断言）
+      const nodeAny = node as unknown as { type: string; children?: PhrasingContent[] };
+      if (nodeAny.type === 'underline' || nodeAny.type === 'colorSpan') {
+        return extractPlainTextFromPhrasing(nodeAny.children ?? []);
+      }
+
       switch (node.type) {
         case 'text':
           return node.value;
@@ -171,8 +190,9 @@ function extractPlainTextFromPhrasing(nodes: PhrasingContent[]): string {
 
 function buildTextRunsFromPhrasing(
   blockId: string,
-  nodes: (PhrasingContent | UnderlineNode)[],
+  nodes: (PhrasingContent | UnderlineNode | ColorSpanNode)[],
   inheritedMarks: TextMark[] = [],
+  inheritedStyleOverrides: TextStyleOverrides = {},
 ): TextRun[] {
   const runs: TextRun[] = [];
 
@@ -180,7 +200,7 @@ function buildTextRunsFromPhrasing(
     switch (node.type) {
       case 'text':
         runs.push(
-          createTextRun(blockId, runs.length, node.value, createSourceRange(node.position), inheritedMarks),
+          createTextRun(blockId, runs.length, node.value, createSourceRange(node.position), inheritedMarks, inheritedStyleOverrides),
         );
         break;
       case 'inlineCode':
@@ -191,11 +211,12 @@ function buildTextRunsFromPhrasing(
             node.value,
             createSourceRange(node.position),
             appendMark(inheritedMarks, { type: 'code' }),
+            inheritedStyleOverrides,
           ),
         );
         break;
       case 'break':
-        runs.push(createTextRun(blockId, runs.length, '\n', createSourceRange(node.position), inheritedMarks));
+        runs.push(createTextRun(blockId, runs.length, '\n', createSourceRange(node.position), inheritedMarks, inheritedStyleOverrides));
         break;
       case 'inlineMath':
         runs.push(
@@ -205,22 +226,23 @@ function buildTextRunsFromPhrasing(
             `$${(node as PhrasingContent & { value: string }).value}$`,
             createSourceRange(node.position),
             inheritedMarks,
+            inheritedStyleOverrides,
           ),
         );
         break;
       case 'strong':
         runs.push(
-          ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'bold' })),
+          ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'bold' }), inheritedStyleOverrides),
         );
         break;
       case 'emphasis':
         runs.push(
-          ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'italic' })),
+          ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'italic' }), inheritedStyleOverrides),
         );
         break;
       case 'delete':
         runs.push(
-          ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'strike' })),
+          ...buildTextRunsFromPhrasing(blockId, node.children, appendMark(inheritedMarks, { type: 'strike' }), inheritedStyleOverrides),
         );
         break;
       case 'underline':
@@ -230,6 +252,23 @@ function buildTextRunsFromPhrasing(
             blockId,
             (node as UnderlineNode).children,
             appendMark(inheritedMarks, { type: 'underline' }),
+            inheritedStyleOverrides,
+          ),
+        );
+        break;
+      case 'colorSpan':
+        // 处理自定义颜色节点（由 remark-text-marks 插件从 \color{red}{text} 语法转换而来）
+        // 颜色作为 styleOverrides.color 传递
+        const colorStyleOverrides: TextStyleOverrides = {
+          ...inheritedStyleOverrides,
+          color: (node as ColorSpanNode).color,
+        };
+        runs.push(
+          ...buildTextRunsFromPhrasing(
+            blockId,
+            (node as ColorSpanNode).children,
+            inheritedMarks,
+            colorStyleOverrides,
           ),
         );
         break;
@@ -239,6 +278,7 @@ function buildTextRunsFromPhrasing(
             blockId,
             node.children,
             appendMark(inheritedMarks, { type: 'link', href: node.url, title: node.title ?? null }),
+            inheritedStyleOverrides,
           ),
         );
         break;
@@ -250,6 +290,7 @@ function buildTextRunsFromPhrasing(
             node.alt ? `[图片：${node.alt}]` : '[图片]',
             createSourceRange(node.position),
             inheritedMarks,
+            inheritedStyleOverrides,
           ),
         );
         break;

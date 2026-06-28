@@ -119,6 +119,22 @@
       "description": "自定义语法映射重新打开 `.layout` 文件后不在「语法映射」面板显示，但已解析到正文模型中的样式仍然生效，容易让用户误以为规则丢失或无法继续维护。",
       "impactScope": "PH2-13 前端可配置语法映射系统、SyntaxMappingPanel 面板显示、LayoutDocument.meta.syntaxMappingConfig 持久化、`.layout` 打开恢复、自动草稿恢复",
       "currentHandling": "已完成 `PH2-13-custom-mapping-reopen-display-fix-v1` 小修复：语法映射配置会在新建、Markdown 导入、`.layout` 保存/打开、草稿恢复、store 写回和面板展示入口统一规范化；默认映射补齐、自定义映射保留，历史 `metadata.syntaxMappingConfig` 会迁移到 `meta.syntaxMappingConfig`。已通过保存重开和旧字段迁移回归验证；本步不尝试从旧文件已解析样式中反推原始正则。"
+    },
+    {
+      "id": "RISK-016",
+      "date": "2026-06-28",
+      "type": "范围调整",
+      "description": "当前样式设置只有 `templateId`，若把雪山风格继续作为新模板落地，会把“结构模板”和“视觉主题”耦合在一起，后续每新增一个主题都可能复制多套模板基线并放大维护成本。",
+      "impactScope": "PH2-16 模板风格主题组合应用、StyleSettings、ResolvedStyleContract、RightPanel 模板起点面板、CanvasPane 预览、HTML/PDF 导出、`.layout` 保存恢复",
+      "currentHandling": "已完成 `PH2-16`：模板与主题已解耦为 `templateId + themeId` 组合口径，模板继续负责结构与排版基线，主题独立为 `themeId` 负责视觉皮肤。当前已落地默认主题与 `雪山静境`，并让 `.layout` 保存恢复、隐藏测量层、画布预览和 HTML/PDF 导出共同消费同一套主题变量，避免后续新增主题时复制整套模板。"
+    },
+    {
+      "id": "RISK-017",
+      "date": "2026-06-28",
+      "type": "缺陷",
+      "description": "当前预览页与 PDF 导出页在页面底端存在可见偏差，尤其带表格的页面更明显；若预览和导出继续使用不同的页面高度与表格行高口径，用户会误以为分页结果不可靠。",
+      "impactScope": "PH2-17 预览与 PDF 一致性、CanvasPane 页面渲染、ExportHtml 导出样式、带表格页面的页底位置",
+      "currentHandling": "已尝试通过统一页面固定高度和导出表格结构来修复，但用户反馈“更不对了”。当前先回退该轮修复，恢复到修复前状态，再继续排查真实偏差源；暂不宣称该缺陷已解决。"
     }
   ]
 }

@@ -374,6 +374,7 @@ function buildMeasurementStyleSignature(
     contentWidthPx: contract.contentWidthPx,
     blockStyles: contract.blockStyles,
     templateId: contract.templateId,
+    themeId: contract.themeId,
     textStyles: styles.textStyles,
   });
 }
@@ -4634,7 +4635,7 @@ function CanvasPaneComponent({
         </div>
         <div className="canvas-pane-meta">
           <span>
-            {resolvedStyleContract.pageLabel} · {resolvedStyleContract.templateLabel} · {documentBlockCount} 个结构块
+            {resolvedStyleContract.pageLabel} · {resolvedStyleContract.templateThemeLabel} · {documentBlockCount} 个结构块
           </span>
         </div>
       </div>
@@ -4893,7 +4894,7 @@ function CanvasPaneComponent({
                       })()}
                     </article>
                     <div className="page-footer">
-                      <span>{page.contract.templateLabel}</span>
+                      <span>{page.contract.templateThemeLabel}</span>
                       <span>{page.pageNumber}</span>
                     </div>
                   </div>

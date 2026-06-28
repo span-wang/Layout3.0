@@ -37,6 +37,7 @@ import type {
   PaginationBehaviorOption,
   StyleSettings,
   TemplateId,
+  ThemeId,
 } from '@/engine/style/types';
 import type { QuickTextStylePatch, QuickTextStyleScope } from '@/engine/style/quickTextStyle';
 import type { PageLayout } from '@/engine/typesetting/types';
@@ -304,6 +305,7 @@ export interface StyleSlice {
   setMarginLinked: (linked: boolean) => void;
   setHeaderFooterMode: (mode: MarginMode) => void;
   setTemplateId: (templateId: TemplateId) => void;
+  setThemeId: (themeId: ThemeId) => void;
   setHeaderPreset: (headerPreset: HeaderFooterPresetId) => void;
   setFooterPreset: (footerPreset: HeaderFooterPresetId) => void;
   setCustomHeaderReservedMm: (value: number) => void;

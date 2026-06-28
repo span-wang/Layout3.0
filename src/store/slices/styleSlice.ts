@@ -138,6 +138,11 @@ export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
       state.styleSettings.templateId = templateId;
       state.isDirty = true;
     }),
+  setThemeId: (themeId) =>
+    set((state) => {
+      state.styleSettings.themeId = themeId;
+      state.isDirty = true;
+    }),
   setHeaderPreset: (headerPreset) =>
     set((state) => {
       state.styleSettings.headerPreset = headerPreset;

@@ -8,7 +8,7 @@ interface StatusBarProps {
   workspaceViewMode: WorkspaceViewMode;
   saveStatusLabel: string;
   pageLabel: string;
-  templateLabel: string;
+  templateThemeLabel: string;
   layoutWarningCount: number;
 }
 
@@ -43,7 +43,7 @@ export function StatusBar({
   workspaceViewMode,
   saveStatusLabel,
   pageLabel,
-  templateLabel,
+  templateThemeLabel,
   layoutWarningCount,
 }: StatusBarProps): JSX.Element {
   return (
@@ -55,7 +55,7 @@ export function StatusBar({
       </div>
       <div className="statusbar-group">
         <span>{saveStatusLabel}</span>
-        <span>{templateLabel}</span>
+        <span>{templateThemeLabel}</span>
         <span>{getViewModeLabel(workspaceViewMode)}</span>
         <span className={layoutWarningCount > 0 ? 'statusbar-warning is-alert' : 'statusbar-warning'}>
           {layoutWarningCount > 0 ? `排版异常 ${layoutWarningCount} 条` : '排版正常'}

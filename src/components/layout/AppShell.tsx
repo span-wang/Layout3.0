@@ -676,7 +676,7 @@ export function AppShell(): JSX.Element {
         workspaceViewMode={workspaceViewMode}
         saveStatusLabel={saveStatusLabel}
         pageLabel={resolvedStyleContract.pageLabel}
-        templateLabel={resolvedStyleContract.templateLabel}
+        templateThemeLabel={resolvedStyleContract.templateThemeLabel}
         layoutWarningCount={layoutWarnings.length}
       />
     </div>

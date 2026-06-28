@@ -248,6 +248,52 @@
           "`npm run build` 成功"
         ]
       }
+    },
+    {
+      "id": "PH3-09",
+      "sequence": "9",
+      "order": 90,
+      "title": "LaTeX 字体颜色语法解析",
+      "priority": "P2",
+      "moduleIds": [
+        "parser-module",
+        "document-model"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "Markdown 源码中的 `\\color{red}{文字}` 可被正确解析为带 `styleOverrides.color` 的 TextRun。",
+      "executionBoundary": {
+        "confirmed": true,
+        "statusLabel": "已完成：LaTeX 字体颜色语法解析",
+        "confirmedOn": "2026-06-28",
+        "completedOn": "2026-06-28",
+        "summary": "已完成 LaTeX 字体颜色语法解析：通过 mdast 自定义节点 colorSpan 传递颜色信息，\\color{red}{文字} 可被正确解析为带 TextRun.styleOverrides.color 的 TextRun，支持颜色名、十六进制和 rgb/rgba 格式，支持与其他文本标记嵌套。",
+        "summary": "扩展结构化文档模型支持 LaTeX 字体颜色语法解析：`\\color{red}{文字}` 可被正确解析为带 `TextRun.styleOverrides.color` 的 TextRun，通过 mdast 自定义节点 colorSpan 传递颜色信息，不扩展 TextMarkType 枚举。",
+        "inScope": [
+          "扩展 types.ts 中 TextMarkMapping 接口，新增 colorGroupIndex 字段支持颜色值提取",
+          "扩展 syntaxMappingConfig.ts，新增 color 到有效 TextMarkType，并添加默认 LaTeX \\color{}{} 映射",
+          "扩展 remark-text-marks.ts，新增 colorSpan mdast 节点类型和 LaTeX 颜色语法处理",
+          "扩展 fromMarkdown.ts 的 mdast → LayoutDocument 转换逻辑，处理 colorSpan 节点转换为带颜色的 TextRun",
+          "支持颜色格式：颜色名（red/blue）、十六进制（#ff0000/#f00）、rgb/rgba",
+          "支持颜色与其他文本标记嵌套（如 \\color{red}{\\textbf{粗体红色}}）",
+          "运行 `npm run typecheck` 和 `npm run progress:build` 验证"
+        ],
+        "outOfScope": [
+          "其他颜色语法支持（如 HTML <span> 标签、{.red}text{/red} 等）",
+          "背景色（highlightColor）支持",
+          "渐变色、透明度等高级颜色",
+          "颜色选择器 UI",
+          "SyntaxMappingPanel 颜色配置 UI"
+        ],
+        "deferredTo": [
+          "其他颜色语法支持：后续单独语法增强任务",
+          "背景色支持：后续归属样式增强任务",
+          "颜色配置面板 UI：后续归属 PH3-?? 语法映射面板增强任务",
+          "渐变色、透明度等高级颜色：后续归属高级样式任务"
+        ]
+      }
     }
   ]
 }
