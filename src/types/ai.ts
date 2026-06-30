@@ -169,7 +169,134 @@ export type AiOperationStatus = 'idle' | 'loading' | 'success' | 'error';
 /**
  * AI 面板 Tab 类型
  */
-export type AiPanelTab = 'generate' | 'optimize' | 'check' | 'settings';
+export type AiPanelTab = 'generate' | 'optimize' | 'check' | 'pagination' | 'settings';
+
+/**
+ * 分页审核判断结果
+ */
+export type PaginationReviewVerdict = 'correct' | 'incorrect' | 'unsure';
+
+/**
+ * 分页问题标签
+ */
+export type PaginationProblemTag =
+  | 'blankSpaceTooLarge'
+  | 'headingOrphan'
+  | 'paragraphShortTail'
+  | 'nextPageShortHead'
+  | 'tableJumpedWhole'
+  | 'tableCrossPageHardToRead'
+  | 'imagePositionBad'
+  | 'equationPositionBad'
+  | 'columnUnbalanced'
+  | 'pageJumpTooLarge'
+  | 'bottomContentClipped';
+
+/**
+ * 分页问题严重度
+ */
+export type PaginationProblemSeverity = 'low' | 'medium' | 'high';
+
+/**
+ * 分页根因分类
+ */
+export type PaginationRootCause =
+  | 'heightEstimationError'
+  | 'lineBreakMismatch'
+  | 'bottomSafeAreaTooSmall'
+  | 'headingBindingTooWeak'
+  | 'tailSplitPenaltyTooWeak'
+  | 'tableSplitStrategyTooConservative'
+  | 'columnBalanceStrategyWeak';
+
+/**
+ * 单侧分页摘要
+ */
+export interface PaginationReviewSide {
+  blockId: string;
+  blockType: string;
+  textPreview: string;
+}
+
+/**
+ * 分页点审核项
+ */
+export interface PaginationReviewItem {
+  breakId: string;
+  pageNumber: number;
+  breakIndex: number;
+  pageRemainingHeightPx: number;
+  pageFillRatio: number;
+  before: PaginationReviewSide;
+  after: PaginationReviewSide;
+  verdict: PaginationReviewVerdict | null;
+  problemTags: PaginationProblemTag[];
+  severity: PaginationProblemSeverity | null;
+}
+
+/**
+ * 分页训练样本
+ */
+export interface PaginationTrainingSample {
+  sampleId: string;
+  breakId: string;
+  documentId: string;
+  documentTitle: string;
+  pageNumber: number;
+  breakIndex: number;
+  verdict: PaginationReviewVerdict;
+  problemTags: PaginationProblemTag[];
+  severity: PaginationProblemSeverity | null;
+  pageRemainingHeightPx: number;
+  pageFillRatio: number;
+  before: PaginationReviewSide;
+  after: PaginationReviewSide;
+  rootCauses: PaginationRootCause[];
+}
+
+/**
+ * 分页批次中的文章记录
+ */
+export interface PaginationBatchDocumentEntry {
+  documentId: string;
+  documentTitle: string;
+  addedAt: string;
+  samples: PaginationTrainingSample[];
+}
+
+/**
+ * 分页批次根因统计项
+ */
+export interface PaginationBatchRootCauseStat {
+  cause: PaginationRootCause;
+  sampleCount: number;
+  severityScore: number;
+  affectedBreakCount: number;
+}
+
+/**
+ * 分页批次分析结果
+ */
+export interface PaginationBatchAnalysis {
+  batchId: string;
+  documentCount: number;
+  isReady: boolean;
+  documents: PaginationBatchDocumentEntry[];
+  rootCauseStats: PaginationBatchRootCauseStat[];
+}
+
+/**
+ * 分页运行时优化参数
+ */
+export interface PaginationOptimizationSettings {
+  bottomSafeAreaPx: number;
+  heightReserveFactor: number;
+  measuredLineBreakPriorityBoost: number;
+  headingKeepWithNextBoost: number;
+  shortTailPenaltyBoost: number;
+  tableRowSplitPriorityBoost: number;
+  columnBalancePenaltyBoost: number;
+}
 
 /**
  * AI 操作类型（用于日志记录）
@@ -245,6 +372,45 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   optimize: '文本优化',
   check: '文档检查',
   regexRecognition: 'AI 正则识别',
+};
+
+/**
+ * 分页问题标签中文映射
+ */
+export const PAGINATION_PROBLEM_TAG_LABELS: Record<PaginationProblemTag, string> = {
+  blankSpaceTooLarge: '页尾留白过大',
+  headingOrphan: '标题孤立',
+  paragraphShortTail: '段落短尾',
+  nextPageShortHead: '下一页开头过短',
+  tableJumpedWhole: '表格整块跳页',
+  tableCrossPageHardToRead: '表格跨页难读',
+  imagePositionBad: '图片位置不合理',
+  equationPositionBad: '公式位置不合理',
+  columnUnbalanced: '多栏不均衡',
+  pageJumpTooLarge: '页码跳动过大',
+  bottomContentClipped: '页底内容被裁切',
+};
+
+/**
+ * 分页问题严重度中文映射
+ */
+export const PAGINATION_PROBLEM_SEVERITY_LABELS: Record<PaginationProblemSeverity, string> = {
+  low: '轻微',
+  medium: '中等',
+  high: '严重',
+};
+
+/**
+ * 分页根因中文映射
+ */
+export const PAGINATION_ROOT_CAUSE_LABELS: Record<PaginationRootCause, string> = {
+  heightEstimationError: '高度计算不正确',
+  lineBreakMismatch: '真实换行与估算换行不一致',
+  bottomSafeAreaTooSmall: '页底安全边界不足',
+  headingBindingTooWeak: '标题与下文绑定过弱',
+  tailSplitPenaltyTooWeak: '短尾惩罚不足',
+  tableSplitStrategyTooConservative: '表格拆分策略过保守',
+  columnBalanceStrategyWeak: '多栏平衡策略不足',
 };
 
 /**

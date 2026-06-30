@@ -10,6 +10,10 @@ import {
   type LayoutFontResource,
   type LayoutDocument,
 } from '@/engine/document-model';
+import { createFontResourceFromImportedFile as createFontResourceFromImportedFileOrigin } from '@/engine/document-model/fontResources';
+
+// 重新导出，保持 FileService 导出接口的完整性
+export { createFontResourceFromImportedFileOrigin as createFontResourceFromImportedFile };
 import { defaultStyleSettings } from '@/engine/style/presets';
 import { cloneStyleSettings } from '@/engine/style/styleSettings';
 import type { StyleSettings } from '@/engine/style/types';
@@ -47,6 +51,7 @@ type LayoutApiMethodName =
   | 'openFileAtPath'
   | 'selectImageFile'
   | 'importFontFile'
+  | 'importFontToWorkspace'
   | 'openFolder'
   | 'readDirectory'
   | 'createFolder'
@@ -153,6 +158,22 @@ export async function importLocalFontFile(): Promise<LayoutFontResource> {
   const importFontFile = requireLayoutApiMethod('importFontFile');
   const result = await importFontFile();
   return createFontResourceFromImportedFile(result);
+}
+
+export interface WorkspaceFontImportResult {
+  relativePath: string;
+  fileName: string;
+}
+
+export async function importFontToWorkspace(
+  workspaceRootPath: string,
+): Promise<WorkspaceFontImportResult> {
+  const importFontToWorkspaceApi = requireLayoutApiMethod('importFontToWorkspace');
+  const result = await importFontToWorkspaceApi({ workspaceRootPath, relativeFontPath: '.fonts' });
+  return {
+    relativePath: result.filePath,
+    fileName: result.fileName,
+  };
 }
 
 async function resolveLayoutDocumentForSave(payload: {

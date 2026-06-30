@@ -20,5 +20,6 @@ export function paginateBlocks(
     styles: options.styles,
     measuredBlockHeights: options.measuredBlockHeights,
     measuredTextLineBreaks: options.measuredTextLineBreaks,
+    optimizationSettings: options.optimizationSettings,
   });
 }

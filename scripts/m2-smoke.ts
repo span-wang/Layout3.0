@@ -50,9 +50,7 @@ import {
   loadBlockSpacingPresetLibrary,
 } from '../src/services/BlockSpacingPresetLibraryService.ts';
 import {
-  ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
   MAX_FILL_PAGINATION_ALGORITHM_ID,
-  MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID,
   paginateBlocks,
 } from '../src/engine/typesetting/index.ts';
 import { clearAllBlockHeightCache } from '../src/engine/typesetting/algorithms/estimatedMaxFill.ts';
@@ -1197,6 +1195,12 @@ async function main(): Promise<void> {
     ...defaultStyleSettings,
     templateId: 'lecture',
     themeId: 'snowMountain',
+    pageBackground: {
+      mode: 'image',
+      color: '#f7fbff',
+      imageSrc: 'C:\\测试背景\\paper.png',
+      imageFit: 'cover',
+    },
     marginMode: 'custom',
     customMarginsMm: {
       top: 18,
@@ -1222,7 +1226,7 @@ async function main(): Promise<void> {
       divider: true,
       headingsSpanAll: false,
     },
-    paginationAlgorithmId: ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
+    paginationAlgorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
     blockSpacingPresetId: 'm2-smoke-spacing',
     blockSpacing: smokeBlockSpacing,
     customBlockSpacingPresets: [
@@ -1239,6 +1243,13 @@ async function main(): Promise<void> {
   assert(restoredProject.document.blocks.length === document.blocks.length, 'M2 冒烟失败：layout 工程文件没有恢复完整块数量');
   assert(restoredProject.styleSettings.templateId === 'lecture', 'M2 冒烟失败：layout 工程文件没有恢复模板设置');
   assert(restoredProject.styleSettings.themeId === 'snowMountain', 'M2 冒烟失败：layout 工程文件没有恢复风格主题设置');
+  assert(
+    restoredProject.styleSettings.pageBackground.mode === 'image' &&
+      restoredProject.styleSettings.pageBackground.color === '#f7fbff' &&
+      restoredProject.styleSettings.pageBackground.imageSrc === 'C:\\测试背景\\paper.png' &&
+      restoredProject.styleSettings.pageBackground.imageFit === 'cover',
+    'M2 冒烟失败：layout 工程文件没有恢复页面背景配置',
+  );
   assert(
     restoredProject.styleSettings.headerFooterContent.header.left === '讲义：{文档标题}' &&
       restoredProject.styleSettings.headerFooterContent.header.right === '{页码}/{总页数}' &&
@@ -1269,8 +1280,25 @@ async function main(): Promise<void> {
     'M2 冒烟失败：标题不参与分栏开关没有随 layout 工程文件保存恢复',
   );
   assert(
-    restoredProject.styleSettings.paginationAlgorithmId === ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
+    restoredProject.styleSettings.paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID,
     'M2 冒烟失败：layout 工程文件没有恢复分页算法选择',
+  );
+  const restoredLegacyAlgorithmProject = parseLayoutProjectFile(
+    JSON.stringify(
+      {
+        ...JSON.parse(serialized),
+        styleSettings: {
+          ...JSON.parse(serialized).styleSettings,
+          paginationAlgorithmId: 'estimated-cost-v1',
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  assert(
+    restoredLegacyAlgorithmProject.styleSettings.paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID,
+    'M2 冒烟失败：旧分页算法 ID 没有回退到分页测试算法1',
   );
   const legacyThemeProjectFile = JSON.stringify(
     {
@@ -1365,6 +1393,23 @@ async function main(): Promise<void> {
       restoredLegacyHeaderFooterProject.styleSettings.headerFooterContent.footer.right === '{页码}',
     'M2 冒烟失败：旧工程文件缺少页眉页脚内容时没有回退到默认配置',
   );
+  const legacyPageBackgroundProjectFile = JSON.stringify(
+    {
+      ...JSON.parse(serialized),
+      styleSettings: {
+        ...JSON.parse(serialized).styleSettings,
+        pageBackground: undefined,
+      },
+    },
+    null,
+    2,
+  );
+  const restoredLegacyPageBackgroundProject = parseLayoutProjectFile(legacyPageBackgroundProjectFile);
+  assert(
+    restoredLegacyPageBackgroundProject.styleSettings.pageBackground.mode === 'theme' &&
+      restoredLegacyPageBackgroundProject.styleSettings.pageBackground.imageSrc === '',
+    'M2 冒烟失败：旧工程文件缺少页面背景配置时没有回退到跟随主题',
+  );
   assert(
     restoredProject.styleSettings.blockSpacingPresetId === 'm2-smoke-spacing' &&
       restoredProject.styleSettings.customBlockSpacingPresets[0]?.name === 'M2 冒烟排版' &&
@@ -1443,6 +1488,12 @@ async function main(): Promise<void> {
 
   const contract = resolveStyleContract(restoredProject.styleSettings);
   assert(contract.templateLabel.includes('讲义'), 'M2 冒烟失败：模板设置没有进入样式契约');
+  assert(
+    contract.pageBackground.mode === 'image' &&
+      contract.pageBackground.imageFit === 'cover' &&
+      contract.pageBackground.imageSrc === 'C:\\测试背景\\paper.png',
+    'M2 冒烟失败：页面背景配置没有进入样式契约',
+  );
   assert(
     contract.columnCount === 2 &&
       contract.columnGapMm === 10 &&
@@ -1601,6 +1652,10 @@ async function main(): Promise<void> {
     '讲义模板',
     '雪山静境',
     '--page-surface-bg:#FAFDFF',
+    '--page-user-background-color:#f7fbff',
+    '--page-user-background-image:url(&quot;layout-asset://local/C%3A%5C%E6%B5%8B%E8%AF%95%E8%83%8C%E6%99%AF%5Cpaper.png&quot;)',
+    '--page-user-background-size:cover',
+    'background-image:var(--page-user-background-image)',
     '--page-heading1-rule:#F2B84B',
     '--page-heading2-marker:#2F6F64',
     'data-theme-id="snowMountain"',
@@ -1753,14 +1808,14 @@ async function main(): Promise<void> {
     contentHeightPx: 100,
   });
   const measuredPages = paginateBlocks([measuredBlockA, measuredBlockB], measuredContract, {
-    algorithmId: MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID,
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
     measuredBlockHeights: {
       [measuredBlockA.id]: 80,
       [measuredBlockB.id]: 40,
     },
   });
   const remeasuredPages = paginateBlocks([measuredBlockA, measuredBlockB], measuredContract, {
-    algorithmId: MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID,
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
     measuredBlockHeights: {
       [measuredBlockA.id]: 40,
       [measuredBlockB.id]: 40,
@@ -1770,13 +1825,13 @@ async function main(): Promise<void> {
     measuredPages.length === 2 &&
       measuredPages[0]?.blocks.length === 1 &&
       measuredPages[1]?.blocks[0]?.id === measuredBlockB.id,
-    'M2 冒烟失败：真实测量块缓存算法没有优先使用测量高度进行分页',
+    'M2 冒烟失败：分页测试算法1没有优先使用测量高度进行分页',
   );
   assert(
     remeasuredPages.length === 1 &&
       remeasuredPages[0]?.blocks.map((block) => block.id).join('|') ===
         `${measuredBlockA.id}|${measuredBlockB.id}`,
-    'M2 冒烟失败：真实测量块缓存算法没有响应测量高度变化',
+    'M2 冒烟失败：分页测试算法1没有响应测量高度变化',
   );
 
   const dualColumnHeadingBlock: LayoutBlock = {
@@ -1803,7 +1858,7 @@ async function main(): Promise<void> {
       text: '双栏分页回归',
     },
   };
-  const dualColumnParagraphBlocks: LayoutBlock[] = Array.from({ length: 14 }, (_, index) => ({
+  const dualColumnParagraphBlocks: LayoutBlock[] = Array.from({ length: 18 }, (_, index) => ({
     id: `m2-dual-column-paragraph-${index + 1}`,
     type: 'paragraph',
     sourceRange: null,
@@ -1813,7 +1868,7 @@ async function main(): Promise<void> {
     textRuns: [
       {
         id: `m2-dual-column-paragraph-${index + 1}-run`,
-        text: `词条 ${index + 1} adj. 回归验证内容`,
+        text: `词条 ${index + 1} adj. 回归验证内容，需要在双栏分页里继续保持片段顺序和原始块顺序稳定。`,
         sourceRange: null,
         marks: [],
         charStyleRef: null,
@@ -1823,7 +1878,7 @@ async function main(): Promise<void> {
     ],
     metadata: {
       kind: 'paragraph',
-      text: `词条 ${index + 1} adj. 回归验证内容`,
+      text: `词条 ${index + 1} adj. 回归验证内容，需要在双栏分页里继续保持片段顺序和原始块顺序稳定。`,
     },
   }));
   const dualColumnContract = withTestPageMetrics({
@@ -1842,13 +1897,18 @@ async function main(): Promise<void> {
     columnGapPx: 30,
   });
   const dualColumnPages = paginateBlocks([dualColumnHeadingBlock, ...dualColumnParagraphBlocks], dualColumnContract);
+  const dualColumnBlockBaseIds = dualColumnPages
+    .flatMap((page) => page.blocks)
+    .map((block) => block.id.replace(/-(?:frag|rest)-\d+-\d+$/, ''));
+  const dualColumnAllBlockIds = dualColumnPages.flatMap((page) => page.blocks.map((block) => block.id));
   assert(
-    dualColumnPages.length === 2 &&
+    dualColumnPages.length >= 2 &&
       dualColumnPages[0]?.blocks[0]?.id === dualColumnHeadingBlock.id &&
-      dualColumnPages[1]?.blocks[0]?.id === 'm2-dual-column-paragraph-13' &&
-      dualColumnPages.flatMap((page) => page.blocks).map((block) => block.id).join('|') ===
+      dualColumnAllBlockIds.some((id) => id.includes('-frag-')) &&
+      dualColumnAllBlockIds.some((id) => id.includes('-rest-')) &&
+      Array.from(new Set(dualColumnBlockBaseIds)).join('|') ===
         [dualColumnHeadingBlock.id, ...dualColumnParagraphBlocks.map((block) => block.id)].join('|'),
-    'M2 冒烟失败：双栏分页没有按两栏容量正确换页，仍可能挤出额外栏位',
+    'M2 冒烟失败：分页测试算法1双栏分页没有按两栏容量正确换页或运行时片段顺序异常',
   );
 
   const createColumnHeadingBlock = (id: string, depth: 1 | 2 | 3, text: string): LayoutBlock => ({
@@ -1965,6 +2025,45 @@ async function main(): Promise<void> {
       headingSpanExportHtml.includes('<h2>') &&
       headingSpanExportHtml.includes('<h2 class="column-span-all"'),
     'M2 冒烟失败：导出 HTML 没有按一级标题固定跨栏、二级标题默认入栏和开关跨栏输出 class',
+  );
+  assert(
+    headingSpanExportHtml.includes('class="page-body page-body-columns"><div class="page-column-flow">'),
+    'M2 冒烟失败：导出 HTML 没有输出多栏正文分栏流结构',
+  );
+  const columnOverflowText = Array.from({ length: 26 }, (_, index) => `双栏长段落内容${index + 1}`).join('，');
+  const columnOverflowPages = paginateBlocks(
+    [
+      createColumnParagraphBlock('m2-column-overflow-fill', '先占住第一栏高度'),
+      createColumnParagraphBlock('m2-column-overflow-long-text', columnOverflowText),
+    ],
+    withTestPageMetrics({
+      ...dualColumnContract,
+      contentWidthPx: 260,
+      contentHeightPx: 120,
+      columnCount: 2,
+      columnGapPx: 20,
+      blockStyles: {
+        ...dualColumnContract.blockStyles,
+        paragraph: {
+          ...dualColumnContract.blockStyles.paragraph,
+          marginTop: 0,
+          marginBottom: 0,
+          lineHeight: 24,
+        },
+      },
+    }),
+  );
+  const columnOverflowFragments = columnOverflowPages
+    .flatMap((page) => page.blocks)
+    .filter((block) => block.id.startsWith('m2-column-overflow-long-text'));
+  const restoredColumnOverflowText = columnOverflowFragments
+    .map((block) => block.textRuns.map((run) => run.text).join(''))
+    .join('');
+  assert(
+    columnOverflowPages.length >= 2 &&
+      columnOverflowFragments.length >= 2 &&
+      restoredColumnOverflowText === columnOverflowText,
+    'M2 冒烟失败：双栏长段落没有按当前栏高度续排，可能仍依赖第三栏或裁掉内容',
   );
   const dualColumnBreakPages = paginateBlocks(
     [
@@ -2124,6 +2223,67 @@ async function main(): Promise<void> {
   assert(
     visualLinePages.length === 2 && visualLineTexts[0] === maxFillVisualLineText.slice(0, 12),
     `M2 冒烟失败：分页测试算法1没有按视觉行边界拆分，第一页实际为“${visualLineTexts[0] ?? ''}”`,
+  );
+
+  const maxFillEnglishTailText = [
+    'Intellectual clarity and political will to act.',
+    'In other words, structural unemployment is a fake problem.',
+    'It mainly serves as an excuse for',
+  ].join(' ');
+  const maxFillEnglishTailBlock: LayoutBlock = {
+    id: 'm2-max-fill-english-tail-paragraph',
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 16,
+    },
+    pagination: {},
+    textRuns: [
+      {
+        id: 'm2-max-fill-english-tail-run',
+        text: maxFillEnglishTailText,
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: { fontSize: 16 },
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: maxFillEnglishTailText,
+    },
+  };
+  const englishTailContract = withTestPageMetrics({
+    ...resolveStyleContract(defaultStyleSettings),
+    contentWidthPx: 260,
+    contentHeightPx: 96,
+  });
+  const englishTailPages = paginateBlocks([maxFillEnglishTailBlock], englishTailContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  const englishTailTexts = englishTailPages.flatMap((page) =>
+    page.blocks.map((block) => block.textRuns.map((run) => run.text).join('')),
+  );
+  assert(
+    englishTailTexts.join('') === maxFillEnglishTailText,
+    'M2 冒烟失败：分页测试算法1英文段落跨页后文本顺序不正确',
+  );
+  assert(
+    englishTailPages.length === 1,
+    `M2 冒烟失败：分页测试算法1英文段落仍因重复段后距误分页，实际页数 ${englishTailPages.length}`,
+  );
+  assert(
+    englishTailPages[0]?.blocks[0]?.metadata.kind === 'paragraph' &&
+      englishTailPages[0].blocks[0].metadata.text === maxFillEnglishTailText,
+    `M2 冒烟失败：分页测试算法1英文段落未保持整段留在当前页，第一页实际为“${
+      englishTailPages[0]?.blocks[0]?.metadata.kind === 'paragraph'
+        ? englishTailPages[0].blocks[0].metadata.text
+        : ''
+    }”`,
   );
 
   const maxFillLargeFontText = '大字号第一页\n大字号第二页';

@@ -497,6 +497,12 @@ export const defaultStyleSettings: StyleSettings = {
   footerPreset: 'none',
   customHeaderReservedMm: 10,
   customFooterReservedMm: 10,
+  pageBackground: {
+    mode: 'theme',
+    color: '#ffffff',
+    imageSrc: '',
+    imageFit: 'cover',
+  },
   headerFooterContent: {
     header: {
       left: '{本页标题}',

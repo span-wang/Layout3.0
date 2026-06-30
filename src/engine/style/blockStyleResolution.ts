@@ -10,6 +10,7 @@ import {
   resolveEffectiveTextLineHeight,
 } from './quickTextStyle';
 import type { ResolvedStyleContract } from './types';
+import { resolveAssetSrc } from '@/utils/filePath';
 
 export interface BlockDefaultTextMetrics {
   fontSize: number;
@@ -20,6 +21,75 @@ export interface BlockDefaultTextMetrics {
 
 function hasBlockStyleOverrides(block: LayoutBlock): boolean {
   return Object.values(block.blockStyleOverrides).some((value) => value !== undefined);
+}
+
+function escapeCssUrl(value: string): string {
+  return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+}
+
+function resolveUserPageBackgroundVariables(contract: ResolvedStyleContract): Record<string, string> {
+  const background = contract.pageBackground;
+
+  if (background.mode === 'color') {
+    return {
+      '--page-user-background-color': background.color,
+      '--page-user-background-image': 'none',
+      '--page-user-background-size': 'auto',
+      '--page-user-background-repeat': 'repeat',
+      '--page-user-background-position': 'center',
+    };
+  }
+
+  if (background.mode === 'image' && background.imageSrc.trim()) {
+    const resolvedSrc = resolveAssetSrc(background.imageSrc);
+    const backgroundSize = background.imageFit === 'cover'
+      ? 'cover'
+      : background.imageFit === 'contain'
+        ? 'contain'
+        : 'auto';
+
+    return {
+      // 用户背景是主题背景之上的显式覆盖层，预览和导出都通过这些变量压过主题纹理。
+      '--page-user-background-color': background.color,
+      '--page-user-background-image': `url("${escapeCssUrl(resolvedSrc)}")`,
+      '--page-user-background-size': backgroundSize,
+      '--page-user-background-repeat': background.imageFit === 'repeat' ? 'repeat' : 'no-repeat',
+      '--page-user-background-position': 'center',
+    };
+  }
+
+  return {
+    '--page-user-background-color': themeSafeBackground(contract),
+    '--page-user-background-image': 'var(--page-surface-pattern, none)',
+    '--page-user-background-size': 'var(--page-surface-pattern-size, 24px 24px)',
+    '--page-user-background-repeat': 'repeat',
+    '--page-user-background-position': 'left top',
+  };
+}
+
+function themeSafeBackground(contract: ResolvedStyleContract): string {
+  return contract.themeTokens.pageBackground;
+}
+
+export function resolvePageBackgroundOverride(contract: ResolvedStyleContract): {
+  color: string;
+  image: string;
+  size: string;
+  repeat: string;
+  position: string;
+} | null {
+  const background = contract.pageBackground;
+  if (background.mode === 'theme' || (background.mode === 'image' && !background.imageSrc.trim())) {
+    return null;
+  }
+
+  return {
+    color: 'var(--page-user-background-color)',
+    image: 'var(--page-user-background-image)',
+    size: 'var(--page-user-background-size)',
+    repeat: 'var(--page-user-background-repeat)',
+    position: 'var(--page-user-background-position)',
+  };
 }
 
 // 预览、导出和右侧说明都统一从这一份模板/主题基线变量取值，避免三处各写一套默认值。
@@ -33,6 +103,7 @@ export function buildPageStyleVariables(contract: ResolvedStyleContract): Record
     '--page-surface-top-band': themeTokens.pageTopBandColor,
     '--page-surface-pattern': themeTokens.pagePattern,
     '--page-surface-pattern-size': themeTokens.pagePatternSize,
+    ...resolveUserPageBackgroundVariables(contract),
     '--page-heading-font-family': themeTokens.headingFontFamily,
     '--page-body-font-family': themeTokens.bodyFontFamily,
     '--page-header-bg': themeTokens.headerBackground,
@@ -46,6 +117,7 @@ export function buildPageStyleVariables(contract: ResolvedStyleContract): Record
     '--page-column-rule-width': contract.columnDivider && contract.columnCount > 1 ? '1px' : '0px',
     '--page-column-rule-color': themeTokens.bodyOutlineColor,
     '--page-column-single-width': `${contract.singleColumnContentWidthPx}px`,
+    '--page-content-height': `${contract.contentHeightPx}px`,
     '--page-heading1-color': themeTokens.heading1Color,
     '--page-heading1-rule': themeTokens.heading1RuleColor,
     '--page-heading2-color': themeTokens.heading2Color,

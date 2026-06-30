@@ -41,10 +41,7 @@ import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '../s
 import { buildExportHtml } from '../src/services/exportHtml.ts';
 import { getBlockStyleControlSupportByBlockType } from '../src/components/layout/objectStyleSupport.ts';
 import {
-  ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
-  ESTIMATED_GREEDY_BALANCED_PAGINATION_ALGORITHM_ID,
-  ESTIMATED_GREEDY_BALANCED_V2_PAGINATION_ALGORITHM_ID,
-  ESTIMATED_GREEDY_PAGINATION_ALGORITHM_ID,
+  MAX_FILL_PAGINATION_ALGORITHM_ID,
   DEFAULT_CODE_CHAR_WIDTH_FACTOR,
   listPaginationAlgorithms,
   estimateTextLines,
@@ -282,12 +279,25 @@ async function main(): Promise<void> {
   customizedStyleSettings.customMarginsMm.top = 26;
   customizedStyleSettings.customMarginsMm.right = 18;
   customizedStyleSettings.templateId = 'lecture';
-  customizedStyleSettings.paginationAlgorithmId = ESTIMATED_COST_PAGINATION_ALGORITHM_ID;
+  customizedStyleSettings.paginationAlgorithmId = MAX_FILL_PAGINATION_ALGORITHM_ID;
   const serializedProjectFile = serializeLayoutProjectFile({
     document: layoutDocument,
     styleSettings: customizedStyleSettings,
   });
   const restoredProject = parseLayoutProjectFile(serializedProjectFile);
+  const restoredLegacyAlgorithmProject = parseLayoutProjectFile(
+    JSON.stringify(
+      {
+        ...JSON.parse(serializedProjectFile),
+        styleSettings: {
+          ...JSON.parse(serializedProjectFile).styleSettings,
+          paginationAlgorithmId: 'estimated-cost-v1',
+        },
+      },
+      null,
+      2,
+    ),
+  );
 
   if (restoredProject.document.title !== layoutDocument.title) {
     throw new Error('layout 工程文件验证失败：文档标题没有被正确恢复');
@@ -322,13 +332,12 @@ async function main(): Promise<void> {
   }
 
   const algorithmIds = listPaginationAlgorithms().map((algorithm) => algorithm.id);
-  if (
-    !algorithmIds.includes(ESTIMATED_COST_PAGINATION_ALGORITHM_ID) ||
-    !algorithmIds.includes(ESTIMATED_GREEDY_PAGINATION_ALGORITHM_ID) ||
-    !algorithmIds.includes(ESTIMATED_GREEDY_BALANCED_PAGINATION_ALGORITHM_ID) ||
-    !algorithmIds.includes(ESTIMATED_GREEDY_BALANCED_V2_PAGINATION_ALGORITHM_ID)
-  ) {
-    throw new Error('分页算法注册验证失败：内置算法没有正确注册到算法列表');
+  if (algorithmIds.length !== 1 || algorithmIds[0] !== MAX_FILL_PAGINATION_ALGORITHM_ID) {
+    throw new Error(`分页算法注册验证失败：当前应只保留分页测试算法1，实际为 ${algorithmIds.join(', ') || '空'}`);
+  }
+
+  if (restoredLegacyAlgorithmProject.styleSettings.paginationAlgorithmId !== MAX_FILL_PAGINATION_ALGORITHM_ID) {
+    throw new Error('layout 工程文件验证失败：旧分页算法 ID 没有回退到分页测试算法1');
   }
 
   const pureCjkFactor = resolveEstimatedTextCharWidthFactor('纯中文分页校准');
@@ -1871,177 +1880,14 @@ async function main(): Promise<void> {
     throw new Error('排版告警验证失败：缺少“强制溢出”告警');
   }
 
-  const balancedPages = paginateBlocks(layoutDocument.blocks, contract, {
-    algorithmId: ESTIMATED_GREEDY_BALANCED_PAGINATION_ALGORITHM_ID,
+  const unknownAlgorithmPages = paginateBlocks(layoutDocument.blocks, contract, {
+    algorithmId: 'estimated-cost-v1',
   });
-  if (balancedPages.length < 2) {
-    throw new Error('分页算法切换验证失败：平衡算法未能正常输出分页结果');
-  }
-
-  const balancingStyleSettings = cloneStyleSettings(defaultStyleSettings);
-  balancingStyleSettings.pageSize = 'B5';
-  balancingStyleSettings.marginMode = 'custom';
-  balancingStyleSettings.customMarginsMm = { top: 36, right: 24, bottom: 36, left: 24 };
-  balancingStyleSettings.headerFooterMode = 'custom';
-  balancingStyleSettings.customHeaderReservedMm = 24;
-  balancingStyleSettings.customFooterReservedMm = 24;
-  const balancingContract = resolveStyleContract(balancingStyleSettings);
-  const balancingTestDocument = await createLayoutDocumentFromMarkdown([
-    '# 页尾平衡测试',
-    '',
-    '这是一段比较长的中文文本，用来让分页算法进入页尾平衡判断。'.repeat(4),
-    '',
-    '这是一段比较长的中文文本，用来让分页算法进入页尾平衡判断。'.repeat(4),
-    '',
-    '这是一段比较长的中文文本，用来让分页算法进入页尾平衡判断。'.repeat(4),
-    '',
-    '这是一段比较长的中文文本，用来让分页算法进入页尾平衡判断。'.repeat(4),
-  ].join('\n'));
-  const greedyPages = paginateBlocks(balancingTestDocument.blocks, balancingContract, {
-    algorithmId: ESTIMATED_GREEDY_PAGINATION_ALGORITHM_ID,
+  const maxFillAlgorithmPages = paginateBlocks(layoutDocument.blocks, contract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
   });
-  const balancedV1Pages = paginateBlocks(balancingTestDocument.blocks, balancingContract, {
-    algorithmId: ESTIMATED_GREEDY_BALANCED_PAGINATION_ALGORITHM_ID,
-  });
-  const balancedV2Pages = paginateBlocks(balancingTestDocument.blocks, balancingContract, {
-    algorithmId: ESTIMATED_GREEDY_BALANCED_V2_PAGINATION_ALGORITHM_ID,
-  });
-
-  if (balancedV2Pages.length < 2) {
-    throw new Error('页尾平衡 V2 验证失败：未能正常输出分页结果');
-  }
-
-  if (balancedV2Pages.length > greedyPages.length + 1) {
-    throw new Error('页尾平衡 V2 验证失败：分页页数异常增加');
-  }
-
-  const greedyLastPageFill = greedyPages[greedyPages.length - 1]?.blocks.length ?? 0;
-  const balancedV2LastPageFill = balancedV2Pages[balancedV2Pages.length - 1]?.blocks.length ?? 0;
-  if (balancedV2LastPageFill < greedyLastPageFill) {
-    throw new Error(
-      `页尾平衡 V2 验证失败：V2 的最后一页不应比 greedy 更空，greedy=${greedyLastPageFill}，V2=${balancedV2LastPageFill}`,
-    );
-  }
-
-  if (balancedV2Pages.length !== balancedV1Pages.length && balancedV2LastPageFill === greedyLastPageFill) {
-    throw new Error(
-      `页尾平衡 V2 验证失败：当页数未改善时，V2 不应仅增加复杂度，V1=${balancedV1Pages.length}，V2=${balancedV2Pages.length}`,
-    );
-  }
-
-  // 这一组用例专门卡住“页尾是图片、下一页起始是整块表格”时 V2 过度保守的问题。
-  const complexTailBalanceDocument = await createLayoutDocumentFromMarkdown([
-    '![图示一](example-1.png)',
-    '',
-    '![图示二](example-2.png)',
-    '',
-    '![图示三](example-3.png)',
-    '',
-    '| A | B |',
-    '| --- | --- |',
-    '| 1 | 2 |',
-    '| 3 | 4 |',
-  ].join('\n'));
-  const complexTailGreedyPages = paginateBlocks(complexTailBalanceDocument.blocks, contract, {
-    algorithmId: ESTIMATED_GREEDY_PAGINATION_ALGORITHM_ID,
-  });
-  const complexTailBalancedV1Pages = paginateBlocks(complexTailBalanceDocument.blocks, contract, {
-    algorithmId: ESTIMATED_GREEDY_BALANCED_PAGINATION_ALGORITHM_ID,
-  });
-  const complexTailBalancedV2Pages = paginateBlocks(complexTailBalanceDocument.blocks, contract, {
-    algorithmId: ESTIMATED_GREEDY_BALANCED_V2_PAGINATION_ALGORITHM_ID,
-  });
-
-  const complexTailGreedyFirstPageFill = complexTailGreedyPages[0]?.blocks.length ?? 0;
-  const complexTailV1FirstPageFill = complexTailBalancedV1Pages[0]?.blocks.length ?? 0;
-  const complexTailV2FirstPageFill = complexTailBalancedV2Pages[0]?.blocks.length ?? 0;
-  const complexTailV2SecondPageSignature =
-    complexTailBalancedV2Pages[1]?.blocks.map((block) => `${block.type}:${block.metadata.kind}`).join('|') ?? '';
-
-  if (complexTailBalancedV2Pages.length !== complexTailBalancedV1Pages.length) {
-    throw new Error(
-      `页尾平衡 V2 回归验证失败：复杂尾块场景页数应与 V1 保持一致，V1=${complexTailBalancedV1Pages.length}，V2=${complexTailBalancedV2Pages.length}`,
-    );
-  }
-
-  if (complexTailV2FirstPageFill !== complexTailV1FirstPageFill) {
-    throw new Error(
-      `页尾平衡 V2 回归验证失败：复杂尾块场景首屏填充应与 V1 一致，V1=${complexTailV1FirstPageFill}，V2=${complexTailV2FirstPageFill}`,
-    );
-  }
-
-  if (complexTailV2FirstPageFill >= complexTailGreedyFirstPageFill) {
-    throw new Error(
-      `页尾平衡 V2 回归验证失败：复杂尾块场景下 V2 不应退回 greedy 的过满首页，greedy=${complexTailGreedyFirstPageFill}，V2=${complexTailV2FirstPageFill}`,
-    );
-  }
-
-  if (complexTailV2SecondPageSignature !== 'image:image|table:table') {
-    throw new Error(
-      `页尾平衡 V2 回归验证失败：复杂尾块场景第二页应保留“图片 + 表格”组合，实际得到 ${complexTailV2SecondPageSignature || '空页'}`,
-    );
-  }
-
-  const costStyleSettings = cloneStyleSettings(defaultStyleSettings);
-  costStyleSettings.pageSize = 'B5';
-  costStyleSettings.marginMode = 'custom';
-  costStyleSettings.customMarginsMm = { top: 34, right: 24, bottom: 34, left: 24 };
-  costStyleSettings.headerFooterMode = 'custom';
-  costStyleSettings.customHeaderReservedMm = 20;
-  costStyleSettings.customFooterReservedMm = 20;
-  const costContract = resolveStyleContract(costStyleSettings);
-  const costBreakDocument = await createLayoutDocumentFromMarkdown([
-    '# 分页代价函数测试',
-    '',
-    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
-    '',
-    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
-    '',
-    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
-    '',
-    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
-    '',
-    '这是一段用于分页代价函数验证的中文段落。'.repeat(10),
-  ].join('\n'));
-  const costGreedyPages = paginateBlocks(costBreakDocument.blocks, costContract, {
-    algorithmId: ESTIMATED_GREEDY_PAGINATION_ALGORITHM_ID,
-  });
-  const costScoredPages = paginateBlocks(costBreakDocument.blocks, costContract, {
-    algorithmId: ESTIMATED_COST_PAGINATION_ALGORITHM_ID,
-  });
-  const costGreedyFirstPageFill = costGreedyPages[0]?.blocks.length ?? 0;
-  const costGreedySecondPageFill = costGreedyPages[1]?.blocks.length ?? 0;
-  const costScoredFirstPageFill = costScoredPages[0]?.blocks.length ?? 0;
-  const costScoredSecondPageFill = costScoredPages[1]?.blocks.length ?? 0;
-  const costGreedyLastPageFill = costGreedyPages[costGreedyPages.length - 1]?.blocks.length ?? 0;
-  const costScoredLastPageFill = costScoredPages[costScoredPages.length - 1]?.blocks.length ?? 0;
-
-  if (costScoredPages.length < 2) {
-    throw new Error('分页代价函数验证失败：estimated-cost-v1 未能正常输出多页结果');
-  }
-
-  if (costScoredPages.length !== costGreedyPages.length) {
-    throw new Error(
-      `分页代价函数验证失败：estimated-cost-v1 不应凭空改变页数，greedy=${costGreedyPages.length}，cost=${costScoredPages.length}`,
-    );
-  }
-
-  if (costScoredFirstPageFill >= costGreedyFirstPageFill) {
-    throw new Error(
-      `分页代价函数验证失败：estimated-cost-v1 应适度回收首屏尾块，greedy=${costGreedyFirstPageFill}，cost=${costScoredFirstPageFill}`,
-    );
-  }
-
-  if (costScoredSecondPageFill < costGreedySecondPageFill) {
-    throw new Error(
-      `分页代价函数验证失败：estimated-cost-v1 不应让第二页比 greedy 更空，greedy=${costGreedySecondPageFill}，cost=${costScoredSecondPageFill}`,
-    );
-  }
-
-  if (costScoredLastPageFill < costGreedyLastPageFill) {
-    throw new Error(
-      `分页代价函数验证失败：estimated-cost-v1 不应让最后一页比 greedy 更空，greedy=${costGreedyLastPageFill}，cost=${costScoredLastPageFill}`,
-    );
+  if (unknownAlgorithmPages.length !== maxFillAlgorithmPages.length) {
+    throw new Error('分页算法回退验证失败：旧算法 ID 没有回退到分页测试算法1');
   }
 
   await fs.mkdir(outputDir, { recursive: true });

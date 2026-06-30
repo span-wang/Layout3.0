@@ -70,7 +70,11 @@ export function createFontResourceFromImportedFile(payload: ImportedFontFilePayl
 
 export function mergeFontResource(resources: LayoutResource[], fontResource: LayoutFontResource): LayoutResource[] {
   const existingFontIndex = resources.findIndex(
-    (resource) => resource.type === 'font' && resource.src === fontResource.src,
+    (resource) =>
+      resource.type === 'font' &&
+      (resource.id === fontResource.id ||
+        resource.src === fontResource.src ||
+        resource.fontFamily === fontResource.fontFamily),
   );
 
   if (existingFontIndex < 0) {
@@ -78,6 +82,16 @@ export function mergeFontResource(resources: LayoutResource[], fontResource: Lay
   }
 
   return resources.map((resource, index) => (index === existingFontIndex ? fontResource : resource));
+}
+
+export function mergeFontResources(
+  resources: LayoutResource[],
+  fontResources: LayoutFontResource[],
+): LayoutResource[] {
+  return fontResources.reduce(
+    (nextResources, fontResource) => mergeFontResource(nextResources, fontResource),
+    resources,
+  );
 }
 
 export function getFontResources(resources: LayoutResource[] | undefined | null): LayoutFontResource[] {
@@ -109,10 +123,24 @@ function escapeCssString(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
-export function buildFontFaceCss(resources: LayoutResource[] | undefined | null): string {
+/**
+ * 构建字体 CSS 声明。
+ *
+ * @param resources 文档资源列表
+ * @param workspaceRootPath 工作区根路径（可选），用于解析相对字体路径
+ */
+export function buildFontFaceCss(
+  resources: LayoutResource[] | undefined | null,
+  workspaceRootPath?: string | null,
+): string {
   return getFontResources(resources)
     .map((font) => {
-      const fontUrl = resolveAssetSrc(font.src);
+      // 如果是相对路径，拼凑完整路径
+      let fontSrc = font.src;
+      if (workspaceRootPath && !/^[a-zA-Z]:[\\/]/.test(fontSrc) && !fontSrc.startsWith('/') && !fontSrc.startsWith('\\\\')) {
+        fontSrc = `${workspaceRootPath}/${fontSrc}`;
+      }
+      const fontUrl = resolveAssetSrc(fontSrc);
       return [
         '@font-face {',
         `  font-family: "${escapeCssString(font.fontFamily)}";`,

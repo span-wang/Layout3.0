@@ -33,6 +33,7 @@ import type {
   MarginMode,
   MarginPresetId,
   MarginSide,
+  PageBackgroundSettings,
   PageColumnCount,
   PageOrientation,
   PageSizeId,
@@ -322,6 +323,7 @@ export interface StyleSlice {
   setHeaderFooterMode: (mode: MarginMode) => void;
   setTemplateId: (templateId: TemplateId) => void;
   setThemeId: (themeId: ThemeId) => void;
+  setPageBackground: (background: PageBackgroundSettings) => void;
   setHeaderPreset: (headerPreset: HeaderFooterPresetId) => void;
   setFooterPreset: (footerPreset: HeaderFooterPresetId) => void;
   setCustomHeaderReservedMm: (value: number) => void;

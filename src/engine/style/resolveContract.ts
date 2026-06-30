@@ -319,6 +319,7 @@ export function resolveStyleContract(settings: StyleSettings): ResolvedStyleCont
     blockStyles: cloneBlockStyles(defaultBlockStyles),
     themeTokens: cloneThemeTokens(themeDefinition.tokens),
     themeLayoutMetrics: cloneThemeLayoutMetrics(themeDefinition.layoutMetrics),
+    pageBackground: { ...settings.pageBackground },
     paginationBehavior: { ...settings.paginationBehavior },
   };
 

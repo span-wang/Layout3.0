@@ -63,6 +63,7 @@ import {
 } from '@/engine/document-model/tableLayout';
 import {
   buildPageStyleVariables,
+  resolvePageBackgroundOverride,
   resolveBlockDefaultTextMetrics,
   resolveBlockEffectiveTextMetrics,
 } from '@/engine/style/blockStyleResolution';
@@ -94,6 +95,7 @@ interface CanvasPaneProps {
   headerFooterContent: HeaderFooterContent;
   selectedNodeId: string | null;
   selectedBlockIds: string[];
+  workspaceRootPath?: string | null;
   onSelectNode: (nodeId: string) => void;
   onSelectBlock: (blockId: string, extendRange: boolean) => void;
   onSelectTableCell: (cellId: string, extendRange: boolean) => void;
@@ -3127,6 +3129,7 @@ function createPageDisplayStyles(
   const displayHeight = page.contract.pageHeightPx * displayScale;
   const headerHeight = page.contract.marginsPx.top + page.contract.headerReservedPx;
   const footerHeight = page.contract.marginsPx.bottom + page.contract.footerReservedPx;
+  const backgroundOverride = resolvePageBackgroundOverride(page.contract);
 
   return {
     frameStyle: {
@@ -3142,6 +3145,15 @@ function createPageDisplayStyles(
       '--page-footer-height': `${footerHeight}px`,
       '--page-padding-left': `${page.contract.marginsPx.left}px`,
       '--page-padding-right': `${page.contract.marginsPx.right}px`,
+      ...(backgroundOverride
+        ? {
+            backgroundColor: backgroundOverride.color,
+            backgroundImage: backgroundOverride.image,
+            backgroundSize: backgroundOverride.size,
+            backgroundRepeat: backgroundOverride.repeat,
+            backgroundPosition: backgroundOverride.position,
+          }
+        : {}),
     } as CSSProperties,
   };
 }
@@ -3176,8 +3188,9 @@ function CanvasPaneComponent({
   isCondensed = false,
   onMeasuredBlockHeightsChange,
   onMeasuredTextLineBreaksChange,
+  workspaceRootPath,
 }: CanvasPaneProps): JSX.Element {
-  const fontFaceCss = buildFontFaceCss(documentResources);
+  const fontFaceCss = buildFontFaceCss(documentResources, workspaceRootPath);
   const updateLayoutImageAttributes = useAppStore((state) => state.updateLayoutImageAttributes);
   const tableSelection = useAppStore((state) => state.layoutDocument?.viewState.tableSelection ?? null);
   const updateLayoutTableColumnWidths = useAppStore((state) => state.updateLayoutTableColumnWidths);
@@ -3252,8 +3265,8 @@ function CanvasPaneComponent({
     '--page-padding-right': '0px',
     width: `${resolvedStyleContract.contentWidthPx}px`,
   } as CSSProperties;
-  const pageBodyClassName =
-    resolvedStyleContract.columnCount > 1 ? 'page-body page-body-columns' : 'page-body';
+  const isMultiColumnPage = resolvedStyleContract.columnCount > 1;
+  const pageBodyClassName = isMultiColumnPage ? 'page-body page-body-columns' : 'page-body';
 
   useLayoutEffect(() => {
     const pageStack = pageStackRef.current;
@@ -4887,7 +4900,7 @@ function CanvasPaneComponent({
 
                         for (let index = 0; index < page.blocks.length; index += 1) {
                           const block = page.blocks[index];
-                          
+
 
                           renderedBlocks.push(
                             renderBlock(
@@ -4947,7 +4960,11 @@ function CanvasPaneComponent({
                           );
                         }
 
-                        return renderedBlocks;
+                        // 多栏内容放进无内边距的真实分栏流里，让栏宽只按正文区计算；
+                        // 放不下的文本必须由分页算法切到后续栏或下一页，不能靠隐藏溢出来解决。
+                        return isMultiColumnPage
+                          ? <div className="page-column-flow">{renderedBlocks}</div>
+                          : renderedBlocks;
                       })()}
                     </article>
                     <div className="page-footer">

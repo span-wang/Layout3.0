@@ -54,6 +54,11 @@ const layoutAPI = {
     ipcRenderer.invoke('file:openAtPath', filePath),
   selectImageFile: (): Promise<{ filePath: string }> => ipcRenderer.invoke('file:selectImage'),
   importFontFile: (): Promise<{ filePath: string; fileName: string }> => ipcRenderer.invoke('file:importFont'),
+  importFontToWorkspace: (payload: {
+    workspaceRootPath: string;
+    relativeFontPath: string;
+  }): Promise<{ filePath: string; fileName: string }> =>
+    ipcRenderer.invoke('file:importFontToWorkspace', payload),
   openFolder: (): Promise<{
     directoryPath: string;
     entries: LayoutDirectoryEntry[];

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Columns2, FileText, Layers3, PanelBottom, PanelTop, SlidersHorizontal } from 'lucide-react';
+import { Columns2, FileText, Image as ImageIcon, Layers3, PanelBottom, PanelTop, SlidersHorizontal } from 'lucide-react';
 import { fontFamilyPlaceholderValue, textFontFamilyGroups } from '@/constants/fontFamilies';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import {
@@ -41,6 +41,7 @@ import {
   templateDefinitions,
   themeDefinitions,
 } from '@/engine/style/presets';
+import { selectLocalImageFile } from '@/services/FileService';
 import { headerFooterVariableLabels } from '@/engine/style/headerFooterContent';
 import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '@/engine/style/blockStyleResolution';
 import { listPaginationAlgorithms } from '@/engine/typesetting';
@@ -54,6 +55,9 @@ import type {
   HeaderFooterSlot,
   MarginPresetId,
   MarginSide,
+  PageBackgroundImageFit,
+  PageBackgroundMode,
+  PageBackgroundSettings,
   PageColumnCount,
   PageOrientation,
   PageSizeId,
@@ -119,6 +123,7 @@ const pageSettingsTabs: Array<{
   { id: '页眉页脚预留', label: '页眉页脚预留', description: '控制预留区域高度', icon: PanelBottom },
   { id: '分栏', label: '分栏', description: '正文栏数与栏间距', icon: Columns2 },
   { id: '块排版', label: '块排版', description: '块间距与预设', icon: SlidersHorizontal },
+  { id: '页面背景', label: '页面背景', description: '纯色与图片背景', icon: ImageIcon },
   { id: '模板起点', label: '模板起点', description: '结构模板与风格主题', icon: Layers3 },
   { id: '分页策略', label: '分页策略', description: '标题、代码块与图片保护', icon: SlidersHorizontal },
 ];
@@ -180,6 +185,18 @@ const pageColumnOptions: Array<{ id: PageColumnCount; label: string; description
   { id: 1, label: '单栏', description: '适合常规阅读与打印' },
   { id: 2, label: '双栏', description: '适合讲义、试卷和高信息密度排版' },
   { id: 3, label: '三栏', description: '适合摘要、索引和更紧凑的信息布局' },
+];
+
+const pageBackgroundModeOptions: Array<{ id: PageBackgroundMode; label: string; description: string }> = [
+  { id: 'theme', label: '跟随主题', description: '使用当前风格主题自带背景' },
+  { id: 'color', label: '纯色背景', description: '用单一颜色覆盖页面背景' },
+  { id: 'image', label: '图片背景', description: '使用本地图片作为页面背景' },
+];
+
+const pageBackgroundFitOptions: Array<{ id: PageBackgroundImageFit; label: string; description: string }> = [
+  { id: 'cover', label: '铺满页面', description: '图片裁切铺满整页' },
+  { id: 'contain', label: '居中包含', description: '完整显示图片并居中' },
+  { id: 'repeat', label: '平铺', description: '按原图尺寸重复铺开' },
 ];
 
 const paginationBehaviorOptions: Array<{
@@ -3157,6 +3174,165 @@ function renderBlockSpacingPanel({
   );
 }
 
+function renderPageBackgroundPanel({
+  styleSettings,
+  setPageBackground,
+  backgroundFeedback,
+  setBackgroundFeedback,
+  backgroundColorDraft,
+  setBackgroundColorDraft,
+}: {
+  styleSettings: StyleSettings;
+  setPageBackground: (background: PageBackgroundSettings) => void;
+  backgroundFeedback: string | null;
+  setBackgroundFeedback: (message: string | null) => void;
+  backgroundColorDraft: string;
+  setBackgroundColorDraft: (value: string) => void;
+}): JSX.Element {
+  const currentBackground = styleSettings.pageBackground;
+  const updateBackground = (patch: Partial<PageBackgroundSettings>): void => {
+    setBackgroundFeedback(null);
+    setPageBackground({
+      ...currentBackground,
+      ...patch,
+    });
+  };
+
+  const handleSelectBackgroundImage = async (): Promise<void> => {
+    try {
+      const imagePath = await selectLocalImageFile();
+      // 用户背景是主题之上的显式覆盖层；选择图片时自动切到图片模式。
+      setPageBackground({
+        ...currentBackground,
+        mode: 'image',
+        imageSrc: imagePath,
+      });
+      setBackgroundFeedback('已选择背景图片');
+    } catch (error) {
+      if (error instanceof Error && error.message === '已取消选择图片') {
+        setBackgroundFeedback('已取消选择图片');
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : '选择背景图片失败';
+      setBackgroundFeedback(message);
+    }
+  };
+
+  const commitColorDraft = (): void => {
+    if (!/^#[0-9a-fA-F]{6}$/.test(backgroundColorDraft.trim())) {
+      setBackgroundColorDraft(currentBackground.color);
+      setBackgroundFeedback('请输入 6 位十六进制颜色，例如 #ffffff');
+      return;
+    }
+
+    updateBackground({ color: backgroundColorDraft.trim() });
+  };
+
+  return (
+    <section className="detail-panel">
+      <div className="detail-panel-head">
+        <h3>页面背景</h3>
+        <span>背景只改变页面视觉，不改变分页容量</span>
+      </div>
+      <div className="template-list">
+        {pageBackgroundModeOptions.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={currentBackground.mode === option.id ? 'template-swatch active' : 'template-swatch'}
+            onClick={() => updateBackground({ mode: option.id })}
+          >
+            <strong>{option.label}</strong>
+            <span>{option.description}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="property-stack">
+        <label>
+          背景颜色
+          <div className="background-color-row">
+            <input
+              type="color"
+              value={currentBackground.color}
+              onChange={(event) => {
+                setBackgroundColorDraft(event.target.value);
+                updateBackground({ color: event.target.value });
+              }}
+              aria-label="选择页面背景颜色"
+            />
+            <input
+              className="style-text-input"
+              type="text"
+              value={backgroundColorDraft}
+              onChange={(event) => setBackgroundColorDraft(event.target.value)}
+              onBlur={commitColorDraft}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.currentTarget.blur();
+                }
+              }}
+            />
+          </div>
+        </label>
+      </div>
+
+      {currentBackground.mode === 'image' ? (
+        <>
+          <div className="property-stack">
+            <label>
+              背景图片
+              <input
+                className="style-text-input"
+                type="text"
+                value={currentBackground.imageSrc}
+                onChange={(event) => updateBackground({ imageSrc: event.target.value })}
+                placeholder="请选择本地图片"
+              />
+            </label>
+          </div>
+          <div className="segmented-group">
+            <button type="button" className="segment-chip table-structure-button" onClick={handleSelectBackgroundImage}>
+              选择图片
+            </button>
+            <button
+              type="button"
+              className="segment-chip"
+              onClick={() => updateBackground({ imageSrc: '' })}
+              disabled={!currentBackground.imageSrc}
+            >
+              清除图片
+            </button>
+          </div>
+          <div className="template-list">
+            {pageBackgroundFitOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={currentBackground.imageFit === option.id ? 'template-swatch active' : 'template-swatch'}
+                onClick={() => updateBackground({ imageFit: option.id })}
+              >
+                <strong>{option.label}</strong>
+                <span>{option.description}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      <div className="panel-note-list">
+        <p>
+          当前背景：
+          <strong>{pageBackgroundModeOptions.find((option) => option.id === currentBackground.mode)?.label ?? '跟随主题'}</strong>
+        </p>
+        {currentBackground.mode === 'image' && currentBackground.imageSrc ? <p>{currentBackground.imageSrc}</p> : null}
+      </div>
+      {backgroundFeedback ? <p className="table-structure-feedback">{backgroundFeedback}</p> : null}
+    </section>
+  );
+}
+
 function renderTemplatePanel({
   styleSettings,
   setTemplateId,
@@ -3313,6 +3489,7 @@ export function RightPanel({
   const setHeaderFooterMode = useAppStore((state) => state.setHeaderFooterMode);
   const setTemplateId = useAppStore((state) => state.setTemplateId);
   const setThemeId = useAppStore((state) => state.setThemeId);
+  const setPageBackground = useAppStore((state) => state.setPageBackground);
   const setHeaderPreset = useAppStore((state) => state.setHeaderPreset);
   const setFooterPreset = useAppStore((state) => state.setFooterPreset);
   const setCustomHeaderReservedMm = useAppStore((state) => state.setCustomHeaderReservedMm);
@@ -3360,6 +3537,7 @@ export function RightPanel({
   const [tocRefreshFeedback, setTocRefreshFeedback] = useState<string | null>(null);
   const [blockquoteStructureFeedback, setBlockquoteStructureFeedback] = useState<string | null>(null);
   const [topLevelBlockFeedback, setTopLevelBlockFeedback] = useState<string | null>(null);
+  const [backgroundFeedback, setBackgroundFeedback] = useState<string | null>(null);
   const [marginDrafts, setMarginDrafts] = useState<Record<MarginSide, string>>({
     top: String(styleSettings.customMarginsMm.top),
     right: String(styleSettings.customMarginsMm.right),
@@ -3371,6 +3549,7 @@ export function RightPanel({
     footer: String(styleSettings.customFooterReservedMm),
   });
   const [columnGapDraft, setColumnGapDraft] = useState(String(styleSettings.columns.gapMm));
+  const [backgroundColorDraft, setBackgroundColorDraft] = useState(styleSettings.pageBackground.color);
   const [newBlockSpacingPresetName, setNewBlockSpacingPresetName] = useState('');
   const [newBlockSpacingPresetDescription, setNewBlockSpacingPresetDescription] = useState('');
   const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
@@ -3408,6 +3587,10 @@ export function RightPanel({
   useEffect(() => {
     setColumnGapDraft(String(styleSettings.columns.gapMm));
   }, [styleSettings.columns.gapMm]);
+
+  useEffect(() => {
+    setBackgroundColorDraft(styleSettings.pageBackground.color);
+  }, [styleSettings.pageBackground.color]);
 
   const handleMarginDraftChange = (side: MarginSide, value: string) => {
     setMarginDrafts((current) => ({
@@ -3526,6 +3709,15 @@ export function RightPanel({
           setNewPresetName: setNewBlockSpacingPresetName,
           newPresetDescription: newBlockSpacingPresetDescription,
           setNewPresetDescription: setNewBlockSpacingPresetDescription,
+        });
+      case '页面背景':
+        return renderPageBackgroundPanel({
+          styleSettings,
+          setPageBackground,
+          backgroundFeedback,
+          setBackgroundFeedback,
+          backgroundColorDraft,
+          setBackgroundColorDraft,
         });
       case '模板起点':
         return renderTemplatePanel({

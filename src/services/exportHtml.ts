@@ -32,6 +32,7 @@ import {
 } from '@/engine/style/quickTextStyle';
 import {
   buildPageStyleVariables,
+  resolvePageBackgroundOverride,
   resolveBlockDefaultTextMetrics,
   resolveBlockEffectiveTextMetrics,
 } from '@/engine/style/blockStyleResolution';
@@ -419,6 +420,7 @@ function getPageMetrics(page: PageLayout) {
     pageHeightPx: page.contract.pageHeightPx,
     headerHeight,
     footerHeight,
+    contentHeight: page.contract.contentHeightPx,
     paddingLeft: page.contract.marginsPx.left,
     paddingRight: page.contract.marginsPx.right,
   };
@@ -492,17 +494,31 @@ function renderPages(
         ...Object.entries(buildPageStyleVariables(page.contract)).map(([name, value]) => `${name}:${value}`),
         `--page-padding-left:${metrics.paddingLeft}px`,
         `--page-padding-right:${metrics.paddingRight}px`,
+        `--page-content-height:${metrics.contentHeight}px`,
         `width:${metrics.pageWidthPx}px`,
         // 预览用固定页面高度配合正文裁切；导出这里也要显式锁住高度，避免打印自然回流把页脚继续往下顶。
         `height:${metrics.pageHeightPx}px`,
         `min-height:${metrics.pageHeightPx}px`,
         `grid-template-rows:${metrics.headerHeight}px 1fr ${metrics.footerHeight}px`,
-      ].join(';');
+      ];
+      const backgroundOverride = resolvePageBackgroundOverride(page.contract);
+      if (backgroundOverride) {
+        pageStyleDeclarations.push(
+          `background-color:${backgroundOverride.color}`,
+          `background-image:${backgroundOverride.image}`,
+          `background-size:${backgroundOverride.size}`,
+          `background-repeat:${backgroundOverride.repeat}`,
+          `background-position:${backgroundOverride.position}`,
+        );
+      }
       const pageBodyClassName = page.contract.columnCount > 1 ? 'page-body page-body-columns' : 'page-body';
+      const bodyHtml = page.contract.columnCount > 1
+        ? `<div class="page-column-flow">${bodyParts.join('')}</div>`
+        : bodyParts.join('');
 
-      return `<section class="page" data-theme-id="${escapeHtml(page.contract.themeId)}" style="${escapeHtml(pageStyleDeclarations)}">
+      return `<section class="page" data-theme-id="${escapeHtml(page.contract.themeId)}" style="${escapeHtml(pageStyleDeclarations.join(';'))}">
         <header class="page-header"><span>${escapeHtml(renderedHeaderFooter.header.left)}</span><span>${escapeHtml(renderedHeaderFooter.header.center)}</span><span>${escapeHtml(renderedHeaderFooter.header.right)}</span></header>
-        <article class="${pageBodyClassName}">${bodyParts.join('')}</article>
+        <article class="${pageBodyClassName}">${bodyHtml}</article>
         <footer class="page-footer"><span>${escapeHtml(renderedHeaderFooter.footer.left)}</span><span>${escapeHtml(renderedHeaderFooter.footer.center)}</span><span>${escapeHtml(renderedHeaderFooter.footer.right)}</span></footer>
       </section>`;
     })
@@ -570,9 +586,11 @@ export function buildExportHtml({ pages, title, resources, styles, styleSettings
         isolation: isolate;
         margin: 0 auto 24px;
         color: #1f2937;
-        background-color: var(--page-surface-bg, #ffffff);
-        background-image: var(--page-surface-pattern, none);
-        background-size: var(--page-surface-pattern-size, 24px 24px);
+        background-color: var(--page-user-background-color, var(--page-surface-bg, #ffffff));
+        background-image: var(--page-user-background-image, var(--page-surface-pattern, none));
+        background-size: var(--page-user-background-size, var(--page-surface-pattern-size, 24px 24px));
+        background-repeat: var(--page-user-background-repeat, repeat);
+        background-position: var(--page-user-background-position, left top);
         box-shadow: var(--page-surface-shadow, 0 12px 32px rgba(15, 23, 42, 0.10));
         border: 1px solid var(--page-surface-border, #d8e1e8);
         box-sizing: border-box;
@@ -698,28 +716,36 @@ export function buildExportHtml({ pages, title, resources, styles, styleSettings
       }
 
       .page-body.page-body-columns {
+        min-height: 0;
+        contain: layout paint;
+      }
+
+      .page-body.page-body-columns > .page-column-flow {
+        width: 100%;
+        max-width: 100%;
         column-count: var(--page-column-count, 1);
         column-gap: var(--page-column-gap, 0px);
         column-rule: var(--page-column-rule-width, 0px) solid var(--page-column-rule-color, #e4ecf2);
       }
 
-      .page-body.page-body-columns > h1,
-      .page-body.page-body-columns > h2,
-      .page-body.page-body-columns > h3,
-      .page-body.page-body-columns > h4,
-      .page-body.page-body-columns > .toc-block-export,
-      .page-body.page-body-columns > .table-shell,
-      .page-body.page-body-columns > blockquote,
-      .page-body.page-body-columns > pre,
-      .page-body.page-body-columns > p,
-      .page-body.page-body-columns > ul,
-      .page-body.page-body-columns > ol,
-      .page-body.page-body-columns > hr,
-      .page-body.page-body-columns > .equation-shell {
+      /* 多栏流只负责按分页结果渲染当前页内容；放不下的文本必须由分页算法切到后续栏或下一页。 */
+      .page-body.page-body-columns > .page-column-flow > h1,
+      .page-body.page-body-columns > .page-column-flow > h2,
+      .page-body.page-body-columns > .page-column-flow > h3,
+      .page-body.page-body-columns > .page-column-flow > h4,
+      .page-body.page-body-columns > .page-column-flow > .toc-block-export,
+      .page-body.page-body-columns > .page-column-flow > .table-shell,
+      .page-body.page-body-columns > .page-column-flow > blockquote,
+      .page-body.page-body-columns > .page-column-flow > pre,
+      .page-body.page-body-columns > .page-column-flow > p,
+      .page-body.page-body-columns > .page-column-flow > ul,
+      .page-body.page-body-columns > .page-column-flow > ol,
+      .page-body.page-body-columns > .page-column-flow > hr,
+      .page-body.page-body-columns > .page-column-flow > .equation-shell {
         break-inside: avoid-column;
       }
 
-      .page-body.page-body-columns > .column-span-all {
+      .page-body.page-body-columns > .page-column-flow > .column-span-all {
         column-span: all;
       }
 
@@ -1000,9 +1026,11 @@ export function buildExportHtml({ pages, title, resources, styles, styleSettings
       .page[data-theme-id='snowMountain'] {
         color: var(--page-paragraph-color, #24313a);
         background-image:
-          var(--page-surface-pattern, none),
+          var(--page-user-background-image, var(--page-surface-pattern, none)),
           url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%238fb7c6' stroke-width='1' stroke-linecap='round' opacity='.22'%3E%3Cpath d='M24 16v12M18 22h12M19 17l10 10M29 17L19 27M72 58v10M67 63h10M68 59l8 8M76 59l-8 8'/%3E%3C/g%3E%3Ccircle cx='50' cy='34' r='1.2' fill='%23d8eef7' opacity='.7'/%3E%3Ccircle cx='18' cy='70' r='1' fill='%238fb7c6' opacity='.45'/%3E%3C/svg%3E");
-        background-size: var(--page-surface-pattern-size, 24px 24px), 96px 96px;
+        background-size: var(--page-user-background-size, var(--page-surface-pattern-size, 24px 24px)), 96px 96px;
+        background-repeat: var(--page-user-background-repeat, repeat), repeat;
+        background-position: var(--page-user-background-position, left top), left top;
       }
 
       .page[data-theme-id='snowMountain']::before {
@@ -1143,9 +1171,11 @@ export function buildExportHtml({ pages, title, resources, styles, styleSettings
         border-width: 2px;
         border-radius: 10px 14px 12px 9px;
         background-image:
-          var(--page-surface-pattern, none),
+          var(--page-user-background-image, var(--page-surface-pattern, none)),
           url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%236b4f2a' stroke-width='1' stroke-linecap='round' opacity='.13'%3E%3Cpath d='M12 22c18-4 31 2 47-2s31-8 49-3'/%3E%3Cpath d='M8 83c20 5 37-3 56 1s29 7 48 2'/%3E%3Cpath d='M24 10c-3 18 2 31-1 47s-7 33-2 52'/%3E%3Cpath d='M91 7c4 20-3 33 0 50s7 34 2 54'/%3E%3C/g%3E%3C/svg%3E");
-        background-size: var(--page-surface-pattern-size, 22px 22px), 120px 120px;
+        background-size: var(--page-user-background-size, var(--page-surface-pattern-size, 22px 22px)), 120px 120px;
+        background-repeat: var(--page-user-background-repeat, repeat), repeat;
+        background-position: var(--page-user-background-position, left top), left top;
       }
 
       .page[data-theme-id='handDrawn']::before {

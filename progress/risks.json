@@ -38,7 +38,7 @@
       "type": "范围调整",
       "description": "用户明确要求后续不要再继续分页算法开发，当前开发重心需要从 `PH2-09` 切回非分页产品功能收尾。",
       "impactScope": "PH2-09 精细分页算法（二次推进）、第二阶段下一步推荐顺序、当前执行看板",
-      "currentHandling": "已完成 `PH2-09-max-fill-tail-misbreak-v2` 返工：短尾断点 V1 不完整的问题已通过完整上下文回归固化，算法1现在按浏览器相邻块 margin 折叠口径累计同页块高度，避免标题/列表之间空白被重复计算后把“初步印象。”提前拆到第二页。2026-06-28 已完成单点缺陷修复 `PH2-09-max-fill-list-item-continuation-marker-fix-v1`：同一列表项内部跨页后，续页片段不再重复显示有序编号、无序项目符号或任务勾选框。2026-06-28 已完成 `PH2-09-max-fill-real-line-break-measure-v1` 返工：当前问题明确不是孤字保护，而是纯估算在字体、字号、字重、字体回退和列表缩进变化后会偏离浏览器真实换行；隐藏测量层已产出真实换行索引，算法1页尾切分文本块、列表项和表格单元格时优先使用真实行尾。完成后 `PH2-09` 仍恢复暂缓，不自动继续推进孤寡行、默认算法替换或其他分页算法主线能力。"
+      "currentHandling": "已完成 `PH2-09-max-fill-tail-misbreak-v2` 返工：短尾断点 V1 不完整的问题已通过完整上下文回归固化，算法1现在按浏览器相邻块 margin 折叠口径累计同页块高度，避免标题/列表之间空白被重复计算后把“初步印象。”提前拆到第二页。2026-06-28 已完成单点缺陷修复 `PH2-09-max-fill-list-item-continuation-marker-fix-v1`：同一列表项内部跨页后，续页片段不再重复显示有序编号、无序项目符号或任务勾选框。2026-06-28 已完成 `PH2-09-max-fill-real-line-break-measure-v1` 返工：当前问题明确不是孤字保护，而是纯估算在字体、字号、字重、字体回退和列表缩进变化后会偏离浏览器真实换行；隐藏测量层已产出真实换行索引，算法1页尾切分文本块、列表项和表格单元格时优先使用真实行尾。完成后 `PH2-09` 仍恢复暂缓，不自动继续推进孤寡行、默认算法替换或其他分页算法主线能力。2026-06-29 用户已确认恢复一个设计型小步 `PH2-09-pagination-feedback-training-design-v1`，本步仅设计分页点反馈训练闭环，不恢复分页算法代码主线默认推进。"
     },
     {
       "id": "RISK-006",
@@ -151,6 +151,22 @@
       "description": "手绘主题的标题装饰存在额外占位高度和缩进，但当前分页测量/估算缺少统一的主题装饰占位契约，后续更多主题如果继续用 CSS 装饰也可能让分页结果低估块高或切页不稳定。",
       "impactScope": "PH2-09 分页测量与估算、PH2-16 主题系统、CanvasPane 隐藏测量层、HTML/PDF 导出、手绘主题及后续占高装饰主题",
       "currentHandling": "已完成 `PH2-09-theme-decoration-measure-contract-v1`：主题装饰占位已进入 `ThemeLayoutMetrics` 和 `ResolvedStyleContract`，手绘主题 H1/H2/H3 占高装饰通过统一 CSS 变量进入画布预览、隐藏测量层和 HTML/PDF 导出；分页估算和分页测试算法1会计入这些占位，并让测量缓存随主题布局指标变化失效。后续新增占高装饰主题必须复用该契约。"
+    },
+    {
+      "id": "RISK-020",
+      "date": "2026-06-29",
+      "type": "缺陷",
+      "description": "字体上传后依赖当前文档 `resources` 展示，重新导入或打开另一个文档时资源列表被新文档替换，导致工作区已上传字体从顶端工具栏字体下拉中消失。",
+      "impactScope": "PH2-06A 字体导入与工程内字体资产、Toolbar 顶端快捷格式工具栏、useWorkspaceFileCommands 文档打开链路、FontLibraryService 工作区字体库、CanvasPane 预览、HTML/PDF 导出",
+      "currentHandling": "已完成 `PH2-06A-workspace-font-visibility-fix-v1`：工作区字体在打开、导入或新建文档后会合并回当前文档资源，顶端字体下拉、画布预览和 HTML/PDF 导出继续消费同一套字体资源；字体导入返回字段已统一；`typecheck`、`smoke:m2` 和 `build` 已通过。本步未扩展字体管理器、全局字体库或分页算法。"
+    },
+    {
+      "id": "RISK-021",
+      "date": "2026-06-29",
+      "type": "返工",
+      "description": "`PH2-19-column-css-overflow-clip-fix-v1` 通过多栏容器硬裁切阻止第三栏露出，但会把放不下的内容隐藏掉，违反排版必须完整显示内容的验收标准。",
+      "impactScope": "PH2-19 页面分栏配置、CanvasPane 多栏预览、HTML/PDF 导出、多栏文本分页、Typesetting Engine 分页测试算法1",
+      "currentHandling": "已完成 `PH2-19-column-overflow-pagination-fix-v2` 返工：撤掉 V1 中依赖 `overflow: hidden`、`max-height` 和 `column-fill: auto` 裁掉内容的修复思路；分页测试算法1多栏文本拆分已改为使用当前可用栏高度，当前页片段放入后重建栏位状态，剩余文本继续进入后续栏或下一页；`smoke:m2` 已覆盖双栏长段落完整拼回原文，避免内容丢失。"
     }
   ]
 }

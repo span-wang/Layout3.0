@@ -639,6 +639,7 @@ export function AppShell(): JSX.Element {
                 headerFooterContent={styleSettings.headerFooterContent}
                 selectedNodeId={selectedNodeId}
                 selectedBlockIds={selectedBlockIds}
+                workspaceRootPath={workspaceRootPath}
                 onSelectNode={handleSelectLayoutNode}
                 onSelectBlock={handleSelectLayoutBlock}
                 onSelectTableCell={handleSelectLayoutTableCell}

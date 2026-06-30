@@ -5,6 +5,7 @@ import {
   createLayoutFile,
   getDefaultWorkspace,
   importFontFile,
+  importFontToWorkspace,
   moveEntry,
   openDocument,
   openDocumentAtPath,
@@ -27,6 +28,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('file:openAtPath', (_event, filePath: string) => openDocumentAtPath(filePath));
   ipcMain.handle('file:selectImage', () => selectImageFile());
   ipcMain.handle('file:importFont', () => importFontFile());
+  ipcMain.handle(
+    'file:importFontToWorkspace',
+    (_event, payload: { workspaceRootPath: string; relativeFontPath: string }) =>
+      importFontToWorkspace(payload),
+  );
   ipcMain.handle('file:openFolder', () => openFolder());
   ipcMain.handle('file:readDirectory', (_event, directoryPath: string) => readDirectory(directoryPath));
   ipcMain.handle(

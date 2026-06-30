@@ -157,6 +157,16 @@ export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
       state.styleSettings.themeId = themeId;
       state.isDirty = true;
     }),
+  setPageBackground: (background) =>
+    set((state) => {
+      state.styleSettings.pageBackground = {
+        mode: background.mode,
+        color: background.color,
+        imageSrc: background.imageSrc,
+        imageFit: background.imageFit,
+      };
+      state.isDirty = true;
+    }),
   setHeaderPreset: (headerPreset) =>
     set((state) => {
       state.styleSettings.headerPreset = headerPreset;
@@ -226,7 +236,11 @@ export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
     }),
   setPaginationAlgorithmId: (algorithmId) =>
     set((state) => {
-      state.styleSettings.paginationAlgorithmId = algorithmId;
+      // 当前只保留“分页测试算法1”，旧算法 ID 或异常输入统一收口到默认算法。
+      state.styleSettings.paginationAlgorithmId =
+        algorithmId === defaultStyleSettings.paginationAlgorithmId
+          ? algorithmId
+          : defaultStyleSettings.paginationAlgorithmId;
       state.isDirty = true;
     }),
   setPaginationBehaviorOption: (option, value) =>

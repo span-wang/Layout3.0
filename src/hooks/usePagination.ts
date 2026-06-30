@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import {
   MAX_FILL_PAGINATION_ALGORITHM_ID,
-  MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID,
   paginateBlocks,
 } from '@/engine/typesetting';
 import type { ResolvedStyleContract } from '@/engine/style/types';
@@ -17,6 +16,7 @@ export function usePagination(
   const layoutBlocks = useAppStore((state) => state.layoutDocument?.blocks ?? null);
   const layoutStyles = useAppStore((state) => state.layoutDocument?.styles ?? null);
   const paginationAlgorithmId = useAppStore((state) => state.styleSettings.paginationAlgorithmId);
+  const paginationOptimizationSettings = useAppStore((state) => state.paginationOptimizationSettings);
   const setPageLayouts = useAppStore((state) => state.setPageLayouts);
 
   useEffect(() => {
@@ -29,14 +29,14 @@ export function usePagination(
 
     const shouldUseMeasuredHeights =
       resolvedStyleContract.columnCount === 1 &&
-      (paginationAlgorithmId === MEASURED_BLOCK_CACHE_PAGINATION_ALGORITHM_ID ||
-        paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID);
+      paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID;
     const nextPages = paginateBlocks(layoutBlocks, resolvedStyleContract, {
       algorithmId: paginationAlgorithmId,
       styles: layoutStyles ?? undefined,
       measuredBlockHeights: shouldUseMeasuredHeights ? measuredBlockHeights : undefined,
       measuredTextLineBreaks: shouldUseMeasuredHeights ? measuredTextLineBreaks : undefined,
+      optimizationSettings: paginationOptimizationSettings,
     });
     setPageLayouts(nextPages);
-  }, [layoutBlocks, layoutStyles, measuredBlockHeights, measuredTextLineBreaks, paginationAlgorithmId, parseState, resolvedStyleContract, setPageLayouts]);
+  }, [layoutBlocks, layoutStyles, measuredBlockHeights, measuredTextLineBreaks, paginationAlgorithmId, paginationOptimizationSettings, parseState, resolvedStyleContract, setPageLayouts]);
 }

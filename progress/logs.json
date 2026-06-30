@@ -7064,6 +7064,606 @@
         "progress/logs.json"
       ],
       "next": "第二阶段 M2 里程碑已正式关闭。后续可按优先级推进第三阶段 AI 相关任务（PH3-01 及后续），或根据用户需求继续深化第二阶段相关功能的细化工作。"
+    },
+    {
+      "id": "LOG-287",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-16"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认页面背景 V1 边界",
+      "action": "需求确认/边界登记/准备实现",
+      "result": "用户确认推进页面背景 V1。本步纳入：右侧「页面设置」新增「页面背景」页签；支持跟随主题、纯色背景和自定义图片背景；纯色背景写入 `.layout` 并同步预览、保存恢复和 HTML/PDF 导出；自定义图片背景从本地选择图片并复用现有 `layout-asset://` 协议显示和导出；图片背景先支持铺满页面、居中包含、平铺三种显示方式；背景只作为页面视觉覆盖层，不改变页边距、正文容量和分页算法。本步明确不纳入：背景透明度、模糊、滤镜、裁剪定位微调、每页不同背景、图片复制进工程资源目录、主题编辑器或自定义主题库。",
+      "verification": [
+        "用户已回复“确定”，确认当前页面背景 V1 方案可以执行。",
+        "`PH2-16-page-background-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现页面背景设置的数据结构、右侧面板入口、预览/导出背景样式和保存恢复归一化。"
+    },
+    {
+      "id": "LOG-288",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-16"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成页面背景 V1",
+      "action": "功能增强/样式契约扩展/右侧面板接入/预览导出对齐/回归验证/文档同步",
+      "result": "已完成 `PH2-16-page-background-v1`：1) `StyleSettings` 新增 `pageBackground` 配置，支持 `theme/color/image` 三种模式、背景颜色、本地图片路径和 `cover/contain/repeat` 三种图片显示方式，并通过归一化兼容旧 `.layout` 缺字段场景；2) 右侧「页面设置」新增「页面背景」页签，提供跟随主题、纯色背景、图片背景、颜色选择、图片选择、清除图片和显示方式切换；3) 背景配置进入 `ResolvedStyleContract` 与共享页面样式变量，画布预览、隐藏测量层和 HTML/PDF 导出共用同一套解析口径；4) 自定义本地图片背景复用既有 `layout-asset://` 协议，导出 HTML 会把本地路径转换为可读取的资源 URL；5) 背景只作为视觉覆盖层，不改变页边距、正文容量和分页算法。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，M2 主链路生成 16 个结构块、3 页、5 个目录项，并覆盖页面背景保存恢复、旧文件回退、样式契约和导出 HTML 背景 URL。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/types.ts",
+        "src/engine/style/presets.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/engine/style/resolveContract.ts",
+        "src/engine/style/blockStyleResolution.ts",
+        "src/store/types.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/types/workspace.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需背景透明度、滤镜、位置微调、章节级背景或背景图片打包进工程资源目录，继续按后续小步另行确认。"
+    },
+    {
+      "id": "LOG-289",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-06A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认工作区字体跨文档可见修复边界",
+      "action": "缺陷确认/边界登记/准备修复",
+      "result": "用户已确认修复“字体上传后重新导入文档就从顶端工具栏消失”的问题。本步纳入：打开、导入或新建文档后将当前工作区已上传字体合并回 `LayoutDocument.resources`；修复字体导入 IPC 返回字段不一致导致的元数据保存不稳；保持画布预览、隐藏测量层和 HTML/PDF 导出继续通过文档字体资源生成 `@font-face`；补充已有工作区字体在新导入文档后仍可见的最小回归验证。本步明确不纳入系统字体扫描、字体管理器、跨工作区全局字体库、分页算法和 `.layout` 顶层结构变更。",
+      "verification": [
+        "用户已回复“确定”，确认当前缺陷修复方案可以执行。",
+        "`PH2-06A-workspace-font-visibility-fix-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-020` 已登记字体跨文档可见性缺陷和处理方式。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修复工作区字体合并、字体导入返回字段和回归验证。"
+    },
+    {
+      "id": "LOG-290",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-06A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成工作区字体跨文档可见修复",
+      "action": "缺陷修复/字体资源合并/IPC 字段收口/回归验证/文档同步",
+      "result": "已修复字体上传后重新导入或打开另一个文档就在顶端工具栏消失的问题：1) 新增工作区字体库到文档资源的统一合并入口，文档打开、Markdown 导入、新建空白文档和删除当前文档后的空白回退都会把当前工作区字体合并回 `LayoutDocument.resources`；2) 顶端字体下拉继续从文档资源读取，但新文档载入时已自动补入工作区字体，因此跨文档持续可见；3) 字体导入 IPC 返回字段统一为 `filePath`，前端使用该相对路径生成稳定字体资源元数据；4) 字体资源合并按 id、src、fontFamily 去重，避免重复出现；5) 画布预览、隐藏测量层和 HTML/PDF 导出继续通过合并后的文档字体资源生成 `@font-face`。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`，并覆盖工作区字体在新导入文档后仍进入字体下拉和 `@font-face`。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "electron/preload/index.ts",
+        "src/services/FileService.ts",
+        "src/services/FontLibraryService.ts",
+        "src/engine/document-model/fontResources.ts",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "用户可重新上传字体后打开或导入另一个文档，确认顶端工具栏字体下拉仍保留该工作区字体；后续如需字体删除、重命名、授权提示或全局字体库，另拆字体资源管理任务。"
+    },
+    {
+      "id": "LOG-291",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认只保留分页测试算法1边界",
+      "action": "边界登记/准备收口/进度同步",
+      "result": "用户已确认删除除“分页测试算法1”之外的分页算法。本步纳入：分页算法注册表只保留 `分页测试算法1 / max-fill-v1`，默认分页算法改为 `max-fill-v1`，旧 `.layout` 保存的其他算法 ID 读取后归一到 `max-fill-v1`，并清理由本次删除造成的无用 import、常量和算法文件引用。本步明确不纳入分页测试算法1逻辑重写、分页策略 UI 整体重做、分页质量新问题、孤寡行、复杂表格跨页或真实 DOM 行级分页深化。",
+      "verification": [
+        "用户已回复“确定”，确认当前收口方案可以执行。",
+        "`PH2-09-keep-only-max-fill-algorithm-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始收口分页算法注册、默认算法和旧算法 ID 兼容。"
+    },
+    {
+      "id": "LOG-292",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成只保留分页测试算法1",
+      "action": "算法收口/默认值调整/旧文件兼容/回归验证/文档同步",
+      "result": "已完成删除除“分页测试算法1”之外的分页算法：1) `algorithmIds` 只保留 `MAX_FILL_PAGINATION_ALGORITHM_ID`，默认分页算法切换为 `max-fill-v1`；2) 分页注册表只注册 `estimatedMaxFillPaginationAlgorithm`，右侧算法列表因此只剩“分页测试算法1”；3) 删除估算紧凑、估算平衡 V1/V2、估算代价 V1、真实测量块缓存 V1 及旧公共估算算法文件；4) `normalizeStyleSettings` 和 `setPaginationAlgorithmId` 会把旧算法 ID 或异常输入统一归一到 `max-fill-v1`，旧 `.layout` 文件不会残留不可选算法；5) `usePagination` 继续只在分页测试算法1单栏场景传入隐藏 DOM 实测高度和真实换行结果；6) 补充分页测试算法1多栏跨栏块保护，跨栏标题放不进当前页剩余栏带时整体换页，不再被拆成页尾文本片段。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`，并覆盖唯一算法、旧算法 ID 回退、分页测试算法1消费实测高度和多栏跨栏标题保护。",
+        "`npm run smoke:m1` 未通过，但失败点为既有样式来源摘要断言：`样式优先级验证失败：块级样式来源摘要没有清楚说明模板与局部覆盖关系`，不属于本次分页算法收口改动。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithmIds.ts",
+        "src/engine/typesetting/registry.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/estimatedCommon.ts",
+        "src/engine/typesetting/algorithms/estimatedCost.ts",
+        "src/engine/typesetting/algorithms/estimatedGreedy.ts",
+        "src/engine/typesetting/algorithms/estimatedGreedyBalanced.ts",
+        "src/engine/typesetting/algorithms/estimatedGreedyBalancedV2.ts",
+        "src/engine/typesetting/algorithms/measuredBlockCache.ts",
+        "src/hooks/usePagination.ts",
+        "src/engine/style/styleSettings.ts",
+        "src/store/slices/styleSlice.ts",
+        "scripts/m1-smoke.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可打开右侧“分页策略”确认算法列表只剩“分页测试算法1”，旧工程文件会自动回退到该算法。"
+    },
+    {
+      "id": "LOG-293",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "修复分页测试算法1标题/段落跨页片段重复段距",
+      "action": "边界登记/缺陷修复/回归验证/文档同步",
+      "result": "已按用户确认完成 `PH2-09-max-fill-paragraph-fragment-spacing-fix-v1`：1) `estimatedMaxFill.ts` 现在会在标题/段落跨页时把当前页运行时文本片段的整段段后距清零，并把续页片段的整段段前距清零，避免同一段文字跨页后重复占用 `spaceBefore / spaceAfter`；2) 当整段文字只是借用原段后距才刚好能放入当前页时，分页测试算法1会优先保留整段在当前页，不再因为重复段后距误分页；3) 同步保留原有 `TextRun` 样式、`metadata.text`、片段顺序和多栏分页回归能力；4) `smoke:m2` 已补充英文段落页尾边界不误分页回归，并将双栏分页断言从写死具体断点收口为验证多页、片段顺序和原始块顺序。当前这类段落不再容易出现“正文最后一行被下边距吞掉”的提前换页。",
+      "verification": [
+        "`PH2-09-max-fill-paragraph-fragment-spacing-fix-v1` 已先写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`，并覆盖英文段落页尾边界不误分页与双栏分页片段顺序。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/logs.json"
+      ],
+      "next": "用户可继续用同一类英文或长段落页尾场景复查分页测试算法1；如果仍有被页脚吞行的页面，再继续定位是否属于列表、表格或真实 DOM 换行测量口径。"
+    },
+    {
+      "id": "LOG-294",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分栏 CSS 溢出第三栏修复边界",
+      "action": "缺陷确认/边界登记/准备修复",
+      "result": "用户反馈双栏预览时内容直接被分到第三栏，并已确认当前最小修复方案。本步纳入：修复画布预览双栏/三栏时 CSS 多栏横向溢出生成额外栏的问题；同步修复 HTML/PDF 导出里的同类多栏溢出风险；优先通过多栏正文渲染样式收口固定页面高度、最大高度、填充方式和裁切边界；保留现有分栏配置、标题跨栏判断、分栏断点和分页算法主逻辑；补充最小回归验证。本步明确不纳入：真实 DOM 多栏测量分页重写、局部分栏、分节分栏、图片/表格/公式独立跨栏、“标题不参与分栏”逻辑调整或其他分页质量问题。",
+      "verification": [
+        "用户已回复“确定”，确认当前缺陷修复方案可以执行。",
+        "`PH2-19-column-css-overflow-clip-fix-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修复画布预览与 HTML/PDF 导出的多栏 CSS 溢出。"
+    },
+    {
+      "id": "LOG-295",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分栏 CSS 溢出第三栏修复",
+      "action": "缺陷修复/预览导出对齐/回归验证/文档同步",
+      "result": "已完成 `PH2-19-column-css-overflow-clip-fix-v1`：1) 画布预览多栏页新增 `page-column-flow` 内层分栏流，外层 `page-body` 继续负责页边距和页面正文裁切；2) 多栏真实流现在显式设置 `height: 100%`、`max-height: var(--page-content-height, 100%)`、`overflow: hidden`、`column-fill: auto`、栏数、栏距和栏分割线，避免浏览器在固定页高下横向续出额外第三栏；3) HTML/PDF 导出使用同一 `page-column-flow` 结构和同类 CSS 约束，避免预览修复但导出复现；4) 页面样式变量新增 `--page-content-height`，由排版契约统一提供正文高度；5) 本步未改变分页算法主逻辑，未改 `.layout` 数据结构，未新增右侧配置。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`，并覆盖导出 HTML 的多栏裁切结构和正文高度约束。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/style/blockStyleResolution.ts",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可重新打开截图中的双栏词表检查右侧不再露出第三栏。"
+    },
+    {
+      "id": "LOG-296",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分栏溢出分页修复 V2 边界",
+      "action": "返工确认/边界登记/风险登记/准备修复",
+      "result": "用户指出 V1 方案只是把放不下的第三栏内容隐藏掉，验收不成立，并已确认按 V2 返工。本步纳入：撤掉把放不下内容隐藏为修复手段的做法；修复分页测试算法1多栏文本块放不下时仍按整页剩余总高度拆分的问题；多栏文本拆分应按当前可用栏高度生成当前页片段，并把剩余文本继续进入后续栏或下一页；保留现有分栏配置、标题跨栏判断、分栏断点、导出入口和 `.layout` 数据结构；补充回归验证，覆盖“总高度看似够、单栏实际放不下”的双栏长文本场景，确认内容完整展示而不是被裁掉。本步明确不纳入：完整真实 DOM 多栏测量分页、局部分栏、分节分栏、对象跨栏、“标题不参与分栏”逻辑调整或其他非文本块分页质量问题。",
+      "verification": [
+        "用户已回复“确定”，确认当前 V2 返工方案可以执行。",
+        "`PH2-19-column-overflow-pagination-fix-v2` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-021` 已登记 V1 硬裁切会导致内容丢失的返工风险。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始撤掉裁切吞内容逻辑并修复多栏文本分页。"
+    },
+    {
+      "id": "LOG-297",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-19"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分栏溢出分页修复 V2",
+      "action": "返工修复/分页算法修正/裁切逻辑撤回/回归验证/文档同步",
+      "result": "已完成 `PH2-19-column-overflow-pagination-fix-v2`：1) 撤掉 V1 中依赖 `overflow: hidden`、`max-height` 和 `column-fill: auto` 把放不下内容裁掉的修复思路，保留 `page-column-flow` 作为正文宽度内的分栏结构；2) 分页测试算法1在多栏文本块放不下时，改为按当前可用栏高度进行文本切片，而不是按整页总剩余高度切片；3) 当前页文本片段放入后会重建多栏栏位状态，剩余文本继续作为运行时块进入后续栏或下一页；4) 导出 HTML 保留多栏正文分栏流结构，但不再要求硬裁切样式；5) 回归验证已覆盖“总高度看似够、单栏实际放不下”的双栏长段落，确认分页片段可完整拼回原文，不再依赖第三栏或裁掉内容。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`，并覆盖双栏长段落按当前栏高度续排且内容完整拼回原文。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户可重新打开截图中的双栏词表复查，放不下的内容应继续到后续栏或下一页，而不是露出第三栏或被隐藏。"
+    },
+    {
+      "id": "LOG-298",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页点反馈训练算法设计边界",
+      "action": "方案确认/边界登记/风险说明/准备文档设计",
+      "result": "用户确认按“让用户判断每一个分页点的分页情况是否正确、指出问题，再由系统根据问题自动优化”的方向设计分页训练算法。本步纳入：新增分页点反馈训练算法设计文档，定义分页点审核对象、问题类型字典、反馈样本结构、训练权重调整规则、自动优化闭环和后续 UI 最小入口；明确用户只需要判断分页情况与问题类型，不需要手动指定最终分页点。本步明确不纳入：不实现分页点审核 UI、训练脚本、评分器代码或权重持久化代码；不修改 `max-fill-v1` 当前分页逻辑；不替换默认分页算法；不新增 `.layout` 结构字段；不恢复分页算法代码主线默认推进。",
+      "verification": [
+        "用户已回复“确定”，确认当前设计小步可以执行。",
+        "`PH2-09-pagination-feedback-training-design-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-005` 已补充说明：本次只恢复一个设计型小步，不恢复分页算法代码主线默认推进。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后创建分页点反馈训练算法设计文档。"
+    },
+    {
+      "id": "LOG-299",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页点反馈训练算法设计",
+      "action": "设计文档/分页反馈训练/进度同步/校验",
+      "result": "已完成 `PH2-09-pagination-feedback-training-design-v1`：新增 `progress/roadmaps/PH2-09-分页点反馈训练算法设计.md`，明确分页训练算法采用“用户判断分页点是否正确并指出问题，系统转换训练样本并自动优化评分参数”的路线。文档已覆盖分页点审核对象、用户反馈结构、问题类型字典、偏好动作、训练样本、评分权重、自动优化算法、审核 UI 设想、存储分层、与 `max-fill-v1`、隐藏测量层、多栏分页和导出一致性的关系，以及后续实施拆分。本步未实现分页点审核 UI、训练脚本、评分器代码或修改现有分页算法。",
+      "verification": [
+        "已新增 `progress/roadmaps/PH2-09-分页点反馈训练算法设计.md`。",
+        "已在 `progress/tasks/phase-2.json` 的 `PH2-09.planReferences` 中引用该设计文档。",
+        "将 `PH2-09-pagination-feedback-training-design-v1` 更新为已完成，并保留本步不实现代码的边界说明。"
+      ],
+      "affectedFiles": [
+        "progress/roadmaps/PH2-09-分页点反馈训练算法设计.md",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续若继续落地，可先确认分页点审核对象生成或分页点审核 UI 的最小实现边界。"
+    },
+    {
+      "id": "LOG-300",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页审核列表 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认先落地分页审核列表 V1。本步纳入：在右侧 `AI助手` 面板新增独立 `分页` Tab，基于当前 `pageLayouts` 自动生成分页点审核列表，并允许用户对每个分页点做 `正确 / 不正确 / 不确定` 三态判断；判断结果本步先只保存在前端 store，不写入 `.layout`，也不触发自动优化。本步明确不纳入：问题类型多选、严重度、偏好动作、训练样本转换、自动优化、权重持久化和分页算法逻辑修改。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小实现边界可以执行。",
+        "`PH2-09-feedback-review-ui-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现分页审核列表状态与 `AI助手 -> 分页` 界面。"
+    },
+    {
+      "id": "LOG-301",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页审核列表 V1",
+      "action": "前端实现/store 状态/UI 接入/进度同步/校验",
+      "result": "已完成 `PH2-09-feedback-review-ui-v1`：1) 在 `AI助手` 面板新增独立 `分页` Tab；2) 基于当前 `pageLayouts` 自动生成分页点审核列表；3) 每个分页点展示页码、分页前后块类型、前后文本摘要、当前页剩余空间和填充率；4) 支持 `正确 / 不正确 / 不确定` 三态判断并允许反复切换；5) 审核结果当前只保存在前端 store，不写入 `.layout`，也不触发自动优化；6) 无文档、无分页结果或只有 1 页时显示中文空态提示。本步未实现问题类型多选、训练样本转换、自动优化或分页算法逻辑修改。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/components/ai/AiPanel.tsx",
+        "src/components/ai/AiPaginationTab.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；后续若继续推进，可先补问题类型多选和严重度，再接训练样本转换与自动优化。"
+    },
+    {
+      "id": "LOG-302",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页问题标签与严重度 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认在现有分页审核列表基础上继续做问题标签与严重度 V1。本步纳入：当分页点标记为 `不正确` 时展开问题标签多选和严重度选择；标签采用固定中文字典，并增加用户特别提出的 `页底内容被裁切`，用于表达“内容被页边距吃掉”的问题；结果继续只保存在前端 store，不写入 `.layout`，不触发自动优化。本步明确不纳入：备注输入、训练样本转换、自动优化、持久化和分页算法逻辑修改。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小实现边界可以执行。",
+        "`PH2-09-feedback-problem-tags-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始扩展分页审核状态与分页标签界面。"
+    },
+    {
+      "id": "LOG-303",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页问题标签与严重度 V1",
+      "action": "前端实现/store 状态/UI 扩展/进度同步/校验",
+      "result": "已完成 `PH2-09-feedback-problem-tags-v1`：1) 在现有分页审核卡片中，当判断为 `不正确` 时展开问题标签多选区；2) 已接入固定中文问题标签：`页尾留白过大`、`标题孤立`、`段落短尾`、`下一页开头过短`、`表格整块跳页`、`表格跨页难读`、`图片位置不合理`、`公式位置不合理`、`多栏不均衡`、`页码跳动过大`、`页底内容被裁切`；3) 已增加严重度 `轻微 / 中等 / 严重`；4) 卡片会显示当前已选问题摘要；5) 切换回 `正确 / 不确定` 时会自动清理不再适用的标签与严重度；6) 本步结果仍只保存在前端 store，不写入 `.layout`，不触发自动优化。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/components/ai/AiPaginationTab.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；后续若继续推进，可把这些标签转换成训练样本，再接自动优化。"
+    },
+    {
+      "id": "LOG-304",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页反馈训练样本 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认继续做分页反馈训练样本 V1。本步纳入：把分页点判断、问题标签和严重度转换成结构化训练样本；在前端 store 新增训练样本列表；在 `AI助手 -> 分页` 中新增样本预览区域，展示当前收集到的训练样本；结果继续只保存在运行时，不写入 `.layout`，不触发自动优化。本步明确不纳入：自动优化、分页算法逻辑修改、本地持久化、AI 自动判断和优化前后对比。",
+      "verification": [
+        "用户已回复“确认”，确认当前训练样本最小实现边界可以执行。",
+        "`PH2-09-feedback-training-samples-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始扩展分页审核状态与训练样本预览。"
+    },
+    {
+      "id": "LOG-305",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页反馈训练样本 V1",
+      "action": "前端实现/store 状态/样本预览/进度同步/校验",
+      "result": "已完成 `PH2-09-feedback-training-samples-v1`：1) 基于现有分页点判断、问题标签和严重度，当前会自动生成结构化训练样本；2) 训练样本至少包含 `sampleId`、`breakId`、页码、断点序号、判断结果、问题标签、严重度、当前页剩余空间、填充率和分页前后块摘要；3) 在 `AI助手 -> 分页` 中新增训练样本预览区域，可直接查看当前系统收集到了哪些样本；4) 用户修改判断、标签或严重度后，样本预览会即时刷新；5) 当前训练样本仍只保存在运行时 store，不写入 `.layout`，不触发自动优化。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/components/ai/AiPaginationTab.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；后续若继续推进，可基于这些训练样本接入自动优化按钮和评分权重调整。"
+    },
+    {
+      "id": "LOG-306",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页根因分析 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认继续按“先收集不正确基础数据，再分析不合理性和根因”的路线推进。本步纳入：在现有原始分页反馈和训练样本基础上，新增根因分类结构和根因分析结果，至少覆盖高度估算误差、真实换行不一致、页底安全边界不足、标题绑定过弱、短尾惩罚不足、表格拆分策略过保守和多栏平衡策略不足等根因；并在 `AI助手 -> 分页` 中展示根因分析结果。本步明确不纳入：10 篇一组的批量聚合分析、自动优化、分页算法逻辑改进和持久化。",
+      "verification": [
+        "用户已回复“确定”，确认当前根因分析最小实现边界可以执行。",
+        "`PH2-09-feedback-root-cause-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始扩展分页反馈根因分类和根因分析展示。"
+    },
+    {
+      "id": "LOG-307",
+      "date": "2026-06-29",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页根因分析 V1",
+      "action": "前端实现/根因分类/样本扩展/进度同步/校验",
+      "result": "已完成 `PH2-09-feedback-root-cause-v1`：1) 在现有训练样本结构上新增根因分类字段；2) 第一版根因分类已覆盖高度计算不正确、真实换行与估算换行不一致、页底安全边界不足、标题与下文绑定过弱、短尾惩罚不足、表格拆分策略过保守和多栏平衡策略不足；3) 基于现有问题标签做第一版规则映射，不要求用户手工填写原因；4) 在 `AI助手 -> 分页` 中，训练样本预览已显示每条样本的根因，同时新增根因分析结果汇总区，展示当前命中的根因类别和样本数；5) 根因分析结果仍只保存在运行时状态，不写入 `.layout`，不进入 10 篇批量聚合和算法改写。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/components/ai/AiPaginationTab.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；后续若继续推进，可开始做“10 篇为一组”的批量根因聚合分析，再进入算法改进阶段。"
+    },
+    {
+      "id": "LOG-308",
+      "date": "2026-06-30",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页批次分析 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认继续做“10 篇为一组”的分页批次分析 V1。本步纳入：增加文章批次概念，按 10 篇文档为一组，把每篇文章的训练样本和根因分析加入当前批次；统计每类根因的出现次数、严重度总分和影响分页点数量；在 `AI助手 -> 分页` 中展示批次收集进度、当前文档状态、批次文档列表和根因统计结果；并采用本机持久化跨文档保留。本步明确不纳入：自动优化、分页算法逻辑改写、优化前后对比、云同步和 `.layout` 持久化。",
+      "verification": [
+        "用户已回复“确定”，确认当前批次分析最小实现边界可以执行。",
+        "`PH2-09-feedback-batch-analysis-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始扩展分页批次模型、本机持久化和批次分析界面。"
+    },
+    {
+      "id": "LOG-309",
+      "date": "2026-06-30",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页批次分析 V1",
+      "action": "前端实现/本机持久化/批次统计/进度同步/校验",
+      "result": "已完成 `PH2-09-feedback-batch-analysis-v1`：1) 在现有分页训练样本基础上新增文章批次概念，按 10 篇文档为一组累计分页反馈；2) 批次数据采用本机 localStorage 持久化，跨文档、跨重启保留；3) 当前文档只有在已生成训练样本后，才允许加入批次；重复加入同一文档时会用最新训练样本覆盖旧记录；4) 批次分析会统计每类根因的样本数、严重度总分和影响分页点数量；5) 在 `AI助手 -> 分页` 中新增批次分析区域，展示当前收集进度、当前文档是否已加入批次、批次文档列表和根因统计结果。本步还未进入自动优化和分页算法改写。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/components/ai/AiPaginationTab.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；后续若继续推进，可基于已凑满 10 篇的批次结果接入“应用批次优化”并开始改进分页算法。"
+    },
+    {
+      "id": "LOG-310",
+      "date": "2026-06-30",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页批次自动优化 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认继续做“根据 10 篇批次结果真正去改分页算法”的分页批次自动优化 V1。本步纳入：根据当前批次根因统计结果生成一组运行时分页优化参数；把这组参数直接接入 `分页测试算法1 / max-fill-v1`；在 `AI助手 -> 分页` 中增加 `应用批次优化` 按钮和参数预览；并在应用后重新计算 `pageLayouts`。本步明确不纳入：写入 `.layout`、长期学习、复杂回滚历史、云同步或重写整套分页引擎。",
+      "verification": [
+        "用户已回复“确定”，确认当前批次自动优化最小实现边界可以执行。",
+        "`PH2-09-feedback-batch-auto-optimize-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始设计运行时优化参数并接入 `max-fill-v1`。"
+    },
+    {
+      "id": "LOG-311",
+      "date": "2026-06-30",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页批次自动优化 V1",
+      "action": "前端实现/运行时参数/算法接入/进度同步/校验",
+      "result": "已完成 `PH2-09-feedback-batch-auto-optimize-v1`：1) 基于当前批次根因统计结果生成一组运行时分页优化参数；2) 当前优化参数已覆盖页底安全边界、高度保守系数、真实换行优先级、标题同页保护、短尾惩罚、表格按行拆分优先级和多栏均衡权重；3) 这些参数已接入 `paginateBlocks -> max-fill-v1` 主链路，并在应用后重新计算 `pageLayouts`；4) `AI助手 -> 分页` 中已新增 `应用批次优化` 与 `清除本次优化` 按钮，以及当前运行时优化参数预览；5) 批次未满 10 篇时，按钮默认禁用并提示原因；6) 优化只作用于当前运行时分页结果，不写入 `.layout`。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/index.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/hooks/usePagination.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/components/ai/AiPaginationTab.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；后续若继续推进，可进一步补优化前后对比、优化结果持久化或更细粒度的参数训练。"
     }
   ]
 }

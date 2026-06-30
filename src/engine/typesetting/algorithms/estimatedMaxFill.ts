@@ -97,6 +97,8 @@ interface TextFragmentInfo {
   remainingText: string;
   /** 当前页使用的高度 */
   height: number;
+  /** 当前页片段是否需要去掉整段段后距，避免跨页时重复占用页尾空间 */
+  omitTrailingSpaceAfter?: boolean;
 }
 
 interface TableFragmentRow {
@@ -531,11 +533,29 @@ function createTextFragmentBlock(
   textRuns: TextRun[],
   text: string,
   idSuffix: string,
+  options: {
+    omitLeadingSpaceBefore?: boolean;
+    omitTrailingSpaceAfter?: boolean;
+    preserveOriginalIdentity?: boolean;
+  } = {},
 ): LayoutBlock {
+  const nextBlockStyleOverrides = {
+    ...block.blockStyleOverrides,
+  };
+  // 同一段落或标题被拆成多页时，只有原始整块需要保留完整段前/段后距。
+  // 运行时片段如果继续继承整段留白，会把本可容纳的最后一行提前挤到下一页。
+  if (options.omitLeadingSpaceBefore) {
+    nextBlockStyleOverrides.spaceBefore = 0;
+  }
+  if (options.omitTrailingSpaceAfter) {
+    nextBlockStyleOverrides.spaceAfter = 0;
+  }
+
   const fragmentBlock = {
     ...block,
-    id: `${block.id}-${idSuffix}`,
-    sourceRange: null,
+    id: options.preserveOriginalIdentity ? block.id : `${block.id}-${idSuffix}`,
+    sourceRange: options.preserveOriginalIdentity ? block.sourceRange : null,
+    blockStyleOverrides: nextBlockStyleOverrides,
     textRuns,
   };
 
@@ -1796,27 +1816,32 @@ function computeOptimalTextSplit(
 
   const lineWidths = resolveTextBlockLineWidths(contentWidthPx, block, baseStyle, headingMarkerInset);
 
-  // 计算可用行数（排除 margin）
-  const usableHeight = availableHeight - style.marginTop - style.marginBottom - headingDecorationHeight;
   const lineHeight = style.lineHeight;
-  if (usableHeight <= 0 || lineHeight <= 0) {
+  // 完整块放入当前页时继续保留整段段后距；
+  // 真正跨页时，当前页片段不应重复吃掉整段段后距，否则页尾会被留白提前“吞掉”。
+  const usableHeightWithTrailingSpace =
+    availableHeight - style.marginTop - style.marginBottom - headingDecorationHeight;
+  const usableHeightWithoutTrailingSpace =
+    availableHeight - style.marginTop - headingDecorationHeight;
+  if (usableHeightWithoutTrailingSpace <= 0 || lineHeight <= 0) {
     return null;
   }
 
-  const maxLines = Math.floor(usableHeight / lineHeight);
-  if (maxLines <= 0) {
+  const maxLinesWithTrailingSpace = Math.max(0, Math.floor(usableHeightWithTrailingSpace / lineHeight));
+  const maxLinesWithoutTrailingSpace = Math.floor(usableHeightWithoutTrailingSpace / lineHeight);
+  if (maxLinesWithoutTrailingSpace <= 0) {
     return null;
   }
 
   const measuredSplitInfo = resolveMeasuredTextSplitInfo(
     block.id,
     plainText,
-    maxLines,
+    maxLinesWithoutTrailingSpace,
     measuredTextLineBreaks,
   );
 
   if (measuredSplitInfo) {
-    if (measuredSplitInfo.totalLineCount <= maxLines) {
+    if (measuredSplitInfo.totalLineCount <= maxLinesWithTrailingSpace) {
       return {
         currentPageText: plainText,
         remainingText: '',
@@ -1833,7 +1858,8 @@ function computeOptimalTextSplit(
     return {
       currentPageText,
       remainingText,
-      height: style.marginTop + measuredSplitInfo.usedLineCount * lineHeight + headingDecorationHeight + style.marginBottom,
+      height: style.marginTop + measuredSplitInfo.usedLineCount * lineHeight + headingDecorationHeight,
+      omitTrailingSpaceAfter: true,
     };
   }
 
@@ -1845,7 +1871,7 @@ function computeOptimalTextSplit(
     { firstLineWidthPx: lineWidths.firstLineWidthPx },
   );
 
-  if (totalLines <= maxLines) {
+  if (totalLines <= maxLinesWithTrailingSpace) {
     // 全部内容可以放下
     return {
       currentPageText: plainText,
@@ -1883,8 +1909,8 @@ function computeOptimalTextSplit(
     const validLineBreaks = Math.max(1, currentLineBreaks);
 
     // 检查加入这一行后是否会超出
-    if (accumulatedLines + validLineBreaks > maxLines) {
-      const remainingLineCount = maxLines - accumulatedLines;
+    if (accumulatedLines + validLineBreaks > maxLinesWithoutTrailingSpace) {
+      const remainingLineCount = maxLinesWithoutTrailingSpace - accumulatedLines;
       const splitOffsetInLine = computeTextSplitOffsetForLineCount(
         lineText,
         lineFirstWidthPx,
@@ -1917,7 +1943,8 @@ function computeOptimalTextSplit(
       return {
         currentPageText,
         remainingText,
-        height: style.marginTop + usedLineCount * lineHeight + headingDecorationHeight + style.marginBottom,
+        height: style.marginTop + usedLineCount * lineHeight + headingDecorationHeight,
+        omitTrailingSpaceAfter: true,
       };
     }
 
@@ -1928,11 +1955,13 @@ function computeOptimalTextSplit(
     lineStartOffset = splitOffsetAfterLine;
   }
 
-  // 所有行都能放入
+  // 能放下所有正文行但需要借用段后距时，当前页片段继续去掉段后距，
+  // 避免它再次把页尾最后一行挤到下一页。
   return {
     currentPageText: plainText,
     remainingText: '',
-    height: style.marginTop + totalLines * lineHeight + headingDecorationHeight + style.marginBottom,
+    height: style.marginTop + totalLines * lineHeight + headingDecorationHeight,
+    omitTrailingSpaceAfter: true,
   };
 }
 
@@ -2142,8 +2171,19 @@ function hasRemainingContent(blocks: LayoutBlock[], startIndex: number): boolean
 export function paginateMaxFillBlocks(
   context: PaginationAlgorithmContext,
 ): PageLayout[] {
-  const { blocks: originalBlocks, contract, styles, measuredBlockHeights, measuredTextLineBreaks } = context;
+  const {
+    blocks: originalBlocks,
+    contract,
+    styles,
+    measuredBlockHeights,
+    measuredTextLineBreaks,
+    optimizationSettings,
+  } = context;
   const isMultiColumn = contract.columnCount > 1;
+  const bottomSafeAreaPx = optimizationSettings?.bottomSafeAreaPx ?? 0;
+  const heightReserveFactor = optimizationSettings?.heightReserveFactor ?? 1;
+  const shortTailPenaltyBoost = optimizationSettings?.shortTailPenaltyBoost ?? 0;
+  const tableRowSplitPriorityBoost = optimizationSettings?.tableRowSplitPriorityBoost ?? 0;
 
   if (originalBlocks.length === 0) {
     return [createEmptyPage(1, contract)];
@@ -2241,7 +2281,7 @@ export function paginateMaxFillBlocks(
       measuredHeight: measuredBlockHeight,
       contract,
       styles,
-    });
+    }) * heightReserveFactor;
     const availableHeightForBlock = getAvailableHeightForBlock(
       placedBlocks,
       currentHeight,
@@ -2249,13 +2289,30 @@ export function paginateMaxFillBlocks(
       block,
       contract,
       styles,
-    );
+    ) - bottomSafeAreaPx;
     const columnPlacementCandidate = isMultiColumn
       ? resolveColumnPlacementCandidate(columnFlowState, block, blockHeight, contract)
       : { fits: true, availableHeight: availableHeightForBlock, columnIndex: 0, isSpanAll: false };
     const columnAvailableHeightForBlock = isMultiColumn
       ? getColumnAvailableHeightForBlock(columnFlowState, block, blockHeight, contract)
       : availableHeightForBlock;
+
+    if (
+      isMultiColumn &&
+      columnPlacementCandidate.isSpanAll &&
+      !columnPlacementCandidate.fits &&
+      placedBlocks.length > 0
+    ) {
+      // 跨栏块会占用整行栏带；当前页剩余栏带放不下时应整块换页，不能按普通文本拆成页尾片段。
+      syncPlacedBlocksToPage(currentPage, placedBlocks);
+      pages.push(currentPage);
+      currentPage = createEmptyPage(pages.length + 1, contract);
+      currentHeight = 0;
+      placedBlocks = [];
+      resetColumnFlowState(columnFlowState);
+      index -= 1;
+      continue;
+    }
 
     if (block.type === 'toc' && block.metadata.kind === 'toc' && blockHeight > columnAvailableHeightForBlock) {
       const maxDepth = block.metadata.maxDepth;
@@ -2366,7 +2423,7 @@ export function paginateMaxFillBlocks(
         const fragment = buildTableFragment({
           block: tableBlock,
           startRowIndex,
-          availableHeight,
+          availableHeight: availableHeight + tableRowSplitPriorityBoost * 12,
           fragmentIndex,
           isCurrentPageEmpty: placedBlocks.length === 0,
           rowHeights,
@@ -2573,7 +2630,9 @@ export function paginateMaxFillBlocks(
 
     // 处理文本块（标题、段落）
     if (block.type === 'heading' || block.type === 'paragraph') {
-      const availableHeight = availableHeightForBlock;
+      // 多栏时文本拆分必须看“当前可用栏高度”，不能继续用整页总剩余高度；
+      // 否则算法会生成超过当前两栏可显示范围的片段，浏览器只能横向续出第三栏。
+      const availableHeight = isMultiColumn ? columnAvailableHeightForBlock : availableHeightForBlock;
 
       // 检查块是否能放入当前页
       if (columnPlacementCandidate.fits && blockHeight <= availableHeight) {
@@ -2587,7 +2646,7 @@ export function paginateMaxFillBlocks(
         // 不能完整放入，尝试按行分割
         const splitInfo = computeOptimalTextSplit(
           block,
-          availableHeight,
+          availableHeight + shortTailPenaltyBoost * 8,
           contract,
           styles,
           measuredTextLineBreaks,
@@ -2608,20 +2667,32 @@ export function paginateMaxFillBlocks(
               currentPageRuns,
               splitInfo.currentPageText,
               `frag-${pages.length}-${placedBlocks.length}`,
+              {
+                omitTrailingSpaceAfter: splitInfo.omitTrailingSpaceAfter,
+                preserveOriginalIdentity: splitInfo.remainingText.length === 0,
+              },
             );
 
             currentHeight = appendPlacedBlock(placedBlocks, currentHeight, fragmentBlock, splitInfo.height, contract, styles);
+            if (isMultiColumn) {
+              rebuildColumnFlowState(columnFlowState, placedBlocks, contract);
+            }
             shouldPushCurrentPage = true;
 
             // 创建剩余文本块，并插到当前块之后，确保它紧跟原块继续分页。
-            const remainingBlock = createTextFragmentBlock(
-              block,
-              remainingRuns,
-              splitInfo.remainingText,
-              `rest-${pages.length}-${placedBlocks.length}`,
-            );
+            if (splitInfo.remainingText.length > 0) {
+              const remainingBlock = createTextFragmentBlock(
+                block,
+                remainingRuns,
+                splitInfo.remainingText,
+                `rest-${pages.length}-${placedBlocks.length}`,
+                {
+                  omitLeadingSpaceBefore: true,
+                },
+              );
 
-            blocks.splice(index + 1, 0, remainingBlock);
+              blocks.splice(index + 1, 0, remainingBlock);
+            }
           }
         } else {
           // splitInfo 为 null（usableHeight<=0）→ 整个块翻页

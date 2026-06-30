@@ -61,6 +61,11 @@ export interface ImportedFontResult {
   fileName: string;
 }
 
+export interface ImportFontToWorkspacePayload {
+  workspaceRootPath: string;
+  relativeFontPath: string;
+}
+
 function getOwnerWindow(): BrowserWindow | undefined {
   return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? undefined;
 }
@@ -392,6 +397,47 @@ export async function importFontFile(): Promise<ImportedFontResult> {
     return {
       filePath,
       fileName: path.basename(filePath),
+    };
+  });
+}
+
+export async function importFontToWorkspace({
+  workspaceRootPath,
+  relativeFontPath,
+}: ImportFontToWorkspacePayload): Promise<ImportedFontResult> {
+  return withFsError(async () => {
+    const ownerWindow = getOwnerWindow();
+    const result = ownerWindow
+      ? await dialog.showOpenDialog(ownerWindow, {
+          title: '导入字体到当前工作区',
+          properties: ['openFile'],
+          filters: getOpenFontFilters(),
+        })
+      : await dialog.showOpenDialog({
+          title: '导入字体到当前工作区',
+          properties: ['openFile'],
+          filters: getOpenFontFilters(),
+        });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      throw new Error('已取消导入字体');
+    }
+
+    const [sourcePath] = result.filePaths;
+    // 将字体复制到工作区根目录下的 .fonts/ 子目录
+    const fontDirectoryPath = path.join(workspaceRootPath, '.fonts');
+    await mkdir(fontDirectoryPath, { recursive: true });
+    const fileName = path.basename(sourcePath);
+    // 返回相对于工作区的路径，便于跨设备迁移
+    const relativePath = path.join('.fonts', fileName);
+    const absoluteFontPath = path.join(fontDirectoryPath, fileName);
+
+    // 如果同名文件已存在则覆盖（不重命名），保持文件名一致
+    await copyFile(sourcePath, absoluteFontPath, fsConstants.COPYFILE_FICLONE);
+
+    return {
+      filePath: relativePath,
+      fileName,
     };
   });
 }

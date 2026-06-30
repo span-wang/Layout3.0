@@ -1,5 +1,6 @@
 import type { LayoutBlock, LayoutStyleSheet } from '@/engine/document-model';
 import type { PaginationAlgorithmId, ResolvedStyleContract } from '@/engine/style/types';
+import type { PaginationOptimizationSettings } from '@/types/ai';
 
 export type LayoutWarningType = 'oversizedBlock' | 'forcedOverflow';
 
@@ -27,6 +28,7 @@ export interface PaginationAlgorithmContext {
   styles?: LayoutStyleSheet;
   measuredBlockHeights?: Record<string, number>;
   measuredTextLineBreaks?: MeasuredTextLineBreaks;
+  optimizationSettings?: PaginationOptimizationSettings | null;
 }
 
 export type RebalanceTrailingBlockStrategy = 'v1' | 'v2';
@@ -43,4 +45,5 @@ export interface PaginateBlocksOptions {
   styles?: LayoutStyleSheet;
   measuredBlockHeights?: Record<string, number>;
   measuredTextLineBreaks?: MeasuredTextLineBreaks;
+  optimizationSettings?: PaginationOptimizationSettings | null;
 }

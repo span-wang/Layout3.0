@@ -14,6 +14,17 @@ export type ThemeId = 'default' | 'snowMountain' | 'handDrawn';
 
 export type ImageAlign = 'left' | 'center' | 'right';
 
+export type PageBackgroundMode = 'theme' | 'color' | 'image';
+
+export type PageBackgroundImageFit = 'cover' | 'contain' | 'repeat';
+
+export interface PageBackgroundSettings {
+  mode: PageBackgroundMode;
+  color: string;
+  imageSrc: string;
+  imageFit: PageBackgroundImageFit;
+}
+
 export type HeaderFooterArea = 'header' | 'footer';
 
 export type HeaderFooterSlot = 'left' | 'center' | 'right';
@@ -180,6 +191,7 @@ export interface StyleSettings {
   headerFooterMode: MarginMode;
   templateId: TemplateId;
   themeId: ThemeId;
+  pageBackground: PageBackgroundSettings;
   headerPreset: HeaderFooterPresetId;
   footerPreset: HeaderFooterPresetId;
   customHeaderReservedMm: number;
@@ -306,5 +318,6 @@ export interface ResolvedStyleContract {
   blockStyles: BlockStyleContract;
   themeTokens: ThemeVisualTokens;
   themeLayoutMetrics: ThemeLayoutMetrics;
+  pageBackground: PageBackgroundSettings;
   paginationBehavior: PaginationBehavior;
 }

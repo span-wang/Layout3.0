@@ -5,9 +5,10 @@ import {
   createBlankDocument,
   createFolderInDirectory,
   createLayoutFileInDirectory,
+  createFontResourceFromImportedFile,
   deleteEntryFromDirectory,
   getDirectoryDisplayName,
-  importLocalFontFile,
+  importFontToWorkspace,
   moveEntryToDirectory,
   openDefaultWorkspace,
   openLocalDocument,
@@ -19,6 +20,10 @@ import {
   saveLocalDocument,
 } from '@/services/FileService';
 import {
+  addFontToWorkspaceLibrary,
+  mergeWorkspaceFontLibraryIntoResources,
+} from '@/services/FontLibraryService';
+import {
   addRecentFile,
   clearRecentFiles,
   removeRecentFile,
@@ -27,7 +32,7 @@ import {
   updateRecentFilePathPrefix,
 } from '@/services/RecentFilesService';
 import { useAppStore } from '@/store';
-import type { TocItem } from '@/engine/document-model';
+import type { LayoutDocument, TocItem } from '@/engine/document-model';
 import type { PageLayout } from '@/engine/typesetting/types';
 import type { RecentFileEntry, WorkspaceDirectoryEntry } from '@/types/workspace';
 import { getBaseNameFromPath, isOpenableDocumentPath, isPathWithin, replacePathPrefix } from '@/utils/filePath';
@@ -94,6 +99,24 @@ export function useWorkspaceFileCommands({
     setWorkspaceMessage(msg);
   }, []);
 
+  const mergeWorkspaceFontsIntoDocument = useCallback(
+    (document: LayoutDocument): LayoutDocument => {
+      const targetWorkspace = workspaceRootPath ?? currentDirectoryPath;
+      const nextResources = mergeWorkspaceFontLibraryIntoResources(document.resources, targetWorkspace);
+
+      if (nextResources === document.resources) {
+        return document;
+      }
+
+      // 工作区字体是跨文档可用资产；载入文档时补进 resources，顶端工具栏和 @font-face 才能一起拿到。
+      return {
+        ...document,
+        resources: nextResources,
+      };
+    },
+    [currentDirectoryPath, workspaceRootPath],
+  );
+
   const syncWorkspaceRoot = useCallback(
     async (activeFilePath: string | null) => {
       const rootPath = workspaceRootPath ?? currentDirectoryPath;
@@ -119,14 +142,21 @@ export function useWorkspaceFileCommands({
       } else {
         resetStyleSettings();
       }
-      loadDocument(document);
-      if (document.filePath) {
-        const nextRecent = addRecentFile(document.filePath, document.title);
+
+      const nextDocument = {
+        ...document,
+        layoutDocument: mergeWorkspaceFontsIntoDocument(document.layoutDocument),
+      };
+
+      loadDocument(nextDocument);
+      const openedFilePath = nextDocument.filePath;
+      if (openedFilePath) {
+        const nextRecent = addRecentFile(openedFilePath, nextDocument.title);
         setRecentlyOpenedFiles(nextRecent);
-        await syncWorkspaceRoot(document.filePath);
+        await syncWorkspaceRoot(openedFilePath);
       }
     },
-    [loadDocument, replaceStyleSettings, resetStyleSettings, setRecentlyOpenedFiles, syncWorkspaceRoot],
+    [loadDocument, mergeWorkspaceFontsIntoDocument, replaceStyleSettings, resetStyleSettings, setRecentlyOpenedFiles, syncWorkspaceRoot],
   );
 
   useEffect(() => {
@@ -207,7 +237,10 @@ export function useWorkspaceFileCommands({
     clearDraft();
     const blankDocument = createBlankDocument();
     resetStyleSettings();
-    loadDocument(blankDocument);
+    loadDocument({
+      ...blankDocument,
+      layoutDocument: mergeWorkspaceFontsIntoDocument(blankDocument.layoutDocument),
+    });
 
     if (workspaceRootPath ?? currentDirectoryPath) {
       await syncWorkspaceRoot(null);
@@ -470,7 +503,11 @@ export function useWorkspaceFileCommands({
       if (deletesActiveDocument) {
         clearDraft();
         resetStyleSettings();
-        loadDocument(createBlankDocument());
+        const blankDocument = createBlankDocument();
+        loadDocument({
+          ...blankDocument,
+          layoutDocument: mergeWorkspaceFontsIntoDocument(blankDocument.layoutDocument),
+        });
       }
 
       await syncWorkspaceRoot(deletesActiveDocument ? null : filePath);
@@ -517,10 +554,35 @@ export function useWorkspaceFileCommands({
     }
 
     try {
-      const fontResource = await importLocalFontFile();
+      const targetWorkspace = workspaceRootPath ?? currentDirectoryPath;
+      if (!targetWorkspace) {
+        showMessage('请先打开或创建文档');
+        return;
+      }
+
+      // 使用新的工作区字体导入流程
+      const { relativePath, fileName } = await importFontToWorkspace(targetWorkspace);
+
+      // 基于返回的相对路径创建字体资源元数据
+      const fontResource = createFontResourceFromImportedFile({
+        filePath: relativePath,
+        fileName,
+      });
+
+      // 写入工作区字体库（localStorage），持久化
+      const workspaceFonts = addFontToWorkspaceLibrary(targetWorkspace, fontResource);
+
+      // 写入当前文档的 resources
       importLayoutFontResource(fontResource);
+
       await syncWorkspaceRoot(filePath);
-      showMessage(`已导入字体：${fontResource.displayName}`);
+
+      const fontCount = workspaceFonts.length;
+      showMessage(
+        fontCount > 1
+          ? `已导入字体：${fontResource.displayName}（工作区共有 ${fontCount} 个字体）`
+          : `已导入字体：${fontResource.displayName}`,
+      );
     } catch (error) {
       if (error instanceof Error && error.message === '已取消导入字体') {
         showMessage('已取消导入字体');

@@ -1,4 +1,5 @@
 import { defaultBlockSpacingParameters, defaultStyleSettings } from './presets';
+import { MAX_FILL_PAGINATION_ALGORITHM_ID } from '@/engine/typesetting/algorithmIds';
 import type {
   BlockSpacingParameterKey,
   BlockSpacingParameters,
@@ -11,6 +12,9 @@ import type {
   HeaderFooterSlot,
   MarginMode,
   MarginPresetId,
+  PageBackgroundImageFit,
+  PageBackgroundMode,
+  PageBackgroundSettings,
   PageOrientation,
   PageSizeId,
   PaginationBehavior,
@@ -77,6 +81,15 @@ function cloneColumnSettings(columns: ColumnSettings): ColumnSettings {
     gapMm: columns.gapMm,
     divider: columns.divider,
     headingsSpanAll: columns.headingsSpanAll,
+  };
+}
+
+export function clonePageBackgroundSettings(background: PageBackgroundSettings): PageBackgroundSettings {
+  return {
+    mode: background.mode,
+    color: background.color,
+    imageSrc: background.imageSrc,
+    imageFit: background.imageFit,
   };
 }
 
@@ -170,6 +183,14 @@ function isThemeId(value: unknown): value is ThemeId {
   return value === 'default' || value === 'snowMountain' || value === 'handDrawn';
 }
 
+function isPageBackgroundMode(value: unknown): value is PageBackgroundMode {
+  return value === 'theme' || value === 'color' || value === 'image';
+}
+
+function isPageBackgroundImageFit(value: unknown): value is PageBackgroundImageFit {
+  return value === 'cover' || value === 'contain' || value === 'repeat';
+}
+
 function normalizeNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
@@ -184,6 +205,19 @@ function normalizeString(value: unknown, fallback: string): string {
 
 function normalizeContentString(value: unknown, fallback: string): string {
   return typeof value === 'string' ? value : fallback;
+}
+
+function normalizeOptionalString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function normalizeColorString(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed : fallback;
 }
 
 function normalizeBoxInsets(value: unknown, fallback: BoxInsets): BoxInsets {
@@ -225,6 +259,22 @@ function normalizeHeaderFooterContent(
   return {
     header: normalizeHeaderFooterLineContent(value.header, fallback.header),
     footer: normalizeHeaderFooterLineContent(value.footer, fallback.footer),
+  };
+}
+
+function normalizePageBackgroundSettings(
+  value: unknown,
+  fallback: PageBackgroundSettings = defaultStyleSettings.pageBackground,
+): PageBackgroundSettings {
+  if (!isRecord(value)) {
+    return clonePageBackgroundSettings(fallback);
+  }
+
+  return {
+    mode: isPageBackgroundMode(value.mode) ? value.mode : fallback.mode,
+    color: normalizeColorString(value.color, fallback.color),
+    imageSrc: normalizeOptionalString(value.imageSrc, fallback.imageSrc),
+    imageFit: isPageBackgroundImageFit(value.imageFit) ? value.imageFit : fallback.imageFit,
   };
 }
 
@@ -291,7 +341,8 @@ export function normalizeBlockSpacingPresets(value: unknown): BlockSpacingPreset
 }
 
 function normalizePaginationAlgorithmId(value: unknown, fallback: string): string {
-  return typeof value === 'string' && value.trim() ? value : fallback;
+  // 目前产品只保留“分页测试算法1”。旧 .layout 里保存的实验算法 ID 统一回退，避免出现界面不可选但状态仍残留的算法。
+  return value === MAX_FILL_PAGINATION_ALGORITHM_ID ? MAX_FILL_PAGINATION_ALGORITHM_ID : fallback;
 }
 
 function normalizePaginationBehavior(
@@ -323,6 +374,7 @@ export function cloneStyleSettings(styleSettings: StyleSettings): StyleSettings 
   return {
     ...styleSettings,
     customMarginsMm: cloneBoxInsets(styleSettings.customMarginsMm),
+    pageBackground: clonePageBackgroundSettings(styleSettings.pageBackground),
     headerFooterContent: cloneHeaderFooterContent(styleSettings.headerFooterContent),
     columns: cloneColumnSettings(styleSettings.columns),
     paginationAlgorithmId: styleSettings.paginationAlgorithmId,
@@ -368,6 +420,8 @@ export function normalizeStyleSettings(value: unknown): StyleSettings {
       value.customFooterReservedMm,
       defaultStyleSettings.customFooterReservedMm,
     ),
+    // 页面背景是主题之上的用户覆盖层；旧 .layout 没有该字段时继续跟随主题。
+    pageBackground: normalizePageBackgroundSettings(value.pageBackground),
     // 旧 .layout 没有页眉页脚内容字段时，使用当前默认内容来保持原有视觉效果。
     headerFooterContent: normalizeHeaderFooterContent(value.headerFooterContent),
     isHeaderFooterLinked: normalizeBoolean(

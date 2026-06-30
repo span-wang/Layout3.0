@@ -8,6 +8,16 @@ import type {
   AiPanelTab,
   AiCheckResult,
   AiGenerationRecord,
+  PaginationBatchAnalysis,
+  PaginationBatchDocumentEntry,
+  PaginationBatchRootCauseStat,
+  PaginationOptimizationSettings,
+  PaginationProblemSeverity,
+  PaginationProblemTag,
+  PaginationRootCause,
+  PaginationReviewItem,
+  PaginationReviewVerdict,
+  PaginationTrainingSample,
   AiTaskConfigAssignments,
   AiTaskType,
   AiProvider,
@@ -43,6 +53,13 @@ export interface AiSlice {
   checkResult: AiCheckResult | null;
   checkError: string | null;
   ignoredCheckItems: string[];
+
+  // 分页审核状态
+  paginationReviewItems: PaginationReviewItem[];
+  paginationTrainingSamples: PaginationTrainingSample[];
+  paginationBatchAnalysis: PaginationBatchAnalysis;
+  paginationOptimizationSettings: PaginationOptimizationSettings | null;
+  hasAppliedPaginationBatchOptimization: boolean;
 
   // 配置 actions
   setAiConfig: (config: AiConfig | null) => void;
@@ -87,12 +104,28 @@ export interface AiSlice {
   unignoreCheckItem: (itemId: string) => void;
   clearIgnoredCheckItems: () => void;
   clearCheckResult: () => void;
+
+  // 分页审核 actions
+  setPaginationReviewItems: (items: PaginationReviewItem[]) => void;
+  setPaginationReviewVerdict: (breakId: string, verdict: PaginationReviewVerdict | null) => void;
+  togglePaginationReviewProblemTag: (breakId: string, tag: PaginationProblemTag) => void;
+  setPaginationReviewSeverity: (breakId: string, severity: PaginationProblemSeverity | null) => void;
+  setPaginationTrainingSamples: (samples: PaginationTrainingSample[]) => void;
+  addPaginationTrainingSamplesToBatch: (payload: {
+    documentId: string;
+    documentTitle: string;
+    samples: PaginationTrainingSample[];
+  }) => void;
+  applyPaginationBatchOptimization: () => void;
+  clearPaginationBatchOptimization: () => void;
+  clearPaginationReviewItems: () => void;
 }
 
 // localStorage 键名
 const LEGACY_AI_CONFIG_KEY = 'layout3-ai-config';
 const AI_CONFIGS_KEY = 'layout3-ai-configs-v1';
 const AI_TASK_ASSIGNMENTS_KEY = 'layout3-ai-task-assignments-v1';
+const PAGINATION_BATCH_ANALYSIS_KEY = 'layout3-pagination-batch-analysis-v1';
 
 const aiTaskTypes: AiTaskType[] = ['generate', 'optimize', 'check', 'regexRecognition'];
 
@@ -195,6 +228,163 @@ function saveAiSettings(configs: AiConfigProfile[], assignments: AiTaskConfigAss
   }
 }
 
+function createEmptyPaginationBatchAnalysis(): PaginationBatchAnalysis {
+  return {
+    batchId: 'pagination-batch-default',
+    documentCount: 0,
+    isReady: false,
+    documents: [],
+    rootCauseStats: [],
+  };
+}
+
+function createDefaultPaginationOptimizationSettings(): PaginationOptimizationSettings {
+  return {
+    bottomSafeAreaPx: 0,
+    heightReserveFactor: 1,
+    measuredLineBreakPriorityBoost: 0,
+    headingKeepWithNextBoost: 0,
+    shortTailPenaltyBoost: 0,
+    tableRowSplitPriorityBoost: 0,
+    columnBalancePenaltyBoost: 0,
+  };
+}
+
+function getSeverityScore(severity: PaginationProblemSeverity | null): number {
+  switch (severity) {
+    case 'high':
+      return 3;
+    case 'medium':
+      return 2;
+    case 'low':
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+function buildPaginationBatchRootCauseStats(
+  documents: PaginationBatchDocumentEntry[],
+): PaginationBatchRootCauseStat[] {
+  const stats = new Map<PaginationRootCause, PaginationBatchRootCauseStat>();
+
+  for (const document of documents) {
+    for (const sample of document.samples) {
+      for (const cause of sample.rootCauses) {
+        const current = stats.get(cause) ?? {
+          cause,
+          sampleCount: 0,
+          severityScore: 0,
+          affectedBreakCount: 0,
+        };
+        current.sampleCount += 1;
+        current.severityScore += getSeverityScore(sample.severity);
+        current.affectedBreakCount += 1;
+        stats.set(cause, current);
+      }
+    }
+  }
+
+  return Array.from(stats.values()).sort((left, right) => {
+    if (right.severityScore !== left.severityScore) {
+      return right.severityScore - left.severityScore;
+    }
+    return right.sampleCount - left.sampleCount;
+  });
+}
+
+function buildOptimizationSettingsFromBatchAnalysis(
+  analysis: PaginationBatchAnalysis,
+): PaginationOptimizationSettings {
+  const settings = createDefaultPaginationOptimizationSettings();
+
+  for (const stat of analysis.rootCauseStats) {
+    switch (stat.cause) {
+      case 'bottomSafeAreaTooSmall':
+        settings.bottomSafeAreaPx += Math.min(20, 4 + stat.severityScore);
+        settings.heightReserveFactor += Math.min(0.12, stat.sampleCount * 0.01);
+        break;
+      case 'heightEstimationError':
+        settings.heightReserveFactor += Math.min(0.2, stat.severityScore * 0.02);
+        break;
+      case 'lineBreakMismatch':
+        settings.measuredLineBreakPriorityBoost += Math.min(1, stat.sampleCount * 0.15);
+        break;
+      case 'headingBindingTooWeak':
+        settings.headingKeepWithNextBoost += Math.min(3, stat.severityScore * 0.3);
+        break;
+      case 'tailSplitPenaltyTooWeak':
+        settings.shortTailPenaltyBoost += Math.min(3, stat.severityScore * 0.3);
+        break;
+      case 'tableSplitStrategyTooConservative':
+        settings.tableRowSplitPriorityBoost += Math.min(3, stat.severityScore * 0.3);
+        break;
+      case 'columnBalanceStrategyWeak':
+        settings.columnBalancePenaltyBoost += Math.min(3, stat.severityScore * 0.3);
+        break;
+      default:
+        break;
+    }
+  }
+
+  settings.heightReserveFactor = Number(settings.heightReserveFactor.toFixed(3));
+  settings.measuredLineBreakPriorityBoost = Number(settings.measuredLineBreakPriorityBoost.toFixed(3));
+  settings.headingKeepWithNextBoost = Number(settings.headingKeepWithNextBoost.toFixed(3));
+  settings.shortTailPenaltyBoost = Number(settings.shortTailPenaltyBoost.toFixed(3));
+  settings.tableRowSplitPriorityBoost = Number(settings.tableRowSplitPriorityBoost.toFixed(3));
+  settings.columnBalancePenaltyBoost = Number(settings.columnBalancePenaltyBoost.toFixed(3));
+  return settings;
+}
+
+function normalizePaginationBatchAnalysis(raw: unknown): PaginationBatchAnalysis {
+  if (!raw || typeof raw !== 'object') {
+    return createEmptyPaginationBatchAnalysis();
+  }
+
+  const value = raw as Partial<PaginationBatchAnalysis>;
+  const documents = Array.isArray(value.documents)
+    ? value.documents.filter((entry): entry is PaginationBatchDocumentEntry =>
+        !!entry &&
+        typeof entry === 'object' &&
+        typeof entry.documentId === 'string' &&
+        typeof entry.documentTitle === 'string' &&
+        typeof entry.addedAt === 'string' &&
+        Array.isArray(entry.samples),
+      )
+    : [];
+  const rootCauseStats = buildPaginationBatchRootCauseStats(documents);
+
+  return {
+    batchId: typeof value.batchId === 'string' && value.batchId.trim()
+      ? value.batchId
+      : 'pagination-batch-default',
+    documentCount: documents.length,
+    isReady: documents.length >= 10,
+    documents,
+    rootCauseStats,
+  };
+}
+
+function loadPaginationBatchAnalysis(): PaginationBatchAnalysis {
+  try {
+    const stored = localStorage.getItem(PAGINATION_BATCH_ANALYSIS_KEY);
+    if (!stored) {
+      return createEmptyPaginationBatchAnalysis();
+    }
+    return normalizePaginationBatchAnalysis(JSON.parse(stored) as unknown);
+  } catch {
+    return createEmptyPaginationBatchAnalysis();
+  }
+}
+
+function savePaginationBatchAnalysis(analysis: PaginationBatchAnalysis): void {
+  try {
+    localStorage.setItem(PAGINATION_BATCH_ANALYSIS_KEY, JSON.stringify(analysis));
+  } catch {
+    // 忽略本机持久化错误，避免影响当前分页审核流程。
+  }
+}
+
 /**
  * 从 localStorage 加载 AI 多配置；如果只存在旧单配置，则迁移为“默认配置”。
  */
@@ -238,6 +428,7 @@ export const createAiSlice = (
 ): AiSlice => {
   // 从 localStorage 恢复多配置；旧单配置会迁移为“默认配置”。
   const initialAiSettings = loadAiSettings();
+  const initialPaginationBatchAnalysis = loadPaginationBatchAnalysis();
 
   return {
     // 配置状态
@@ -268,6 +459,13 @@ export const createAiSlice = (
     checkResult: null,
     checkError: null,
     ignoredCheckItems: [],
+
+    // 分页审核状态
+    paginationReviewItems: [],
+    paginationTrainingSamples: [],
+    paginationBatchAnalysis: initialPaginationBatchAnalysis,
+    paginationOptimizationSettings: null,
+    hasAppliedPaginationBatchOptimization: false,
 
     // 配置 actions
     setAiConfig: (config: AiConfig | null) => {
@@ -417,5 +615,110 @@ export const createAiSlice = (
     clearIgnoredCheckItems: () => set({ ignoredCheckItems: [] }),
 
     clearCheckResult: () => set({ checkResult: null, checkError: null, ignoredCheckItems: [] }),
+
+    setPaginationReviewItems: (items: PaginationReviewItem[]) =>
+      set({
+        paginationReviewItems: items,
+      }),
+
+    setPaginationReviewVerdict: (breakId: string, verdict: PaginationReviewVerdict | null) =>
+      set((state) => ({
+        paginationReviewItems: state.paginationReviewItems.map((item) =>
+          item.breakId === breakId
+            ? {
+                ...item,
+                verdict,
+                problemTags: verdict === 'incorrect' ? item.problemTags : [],
+                severity: verdict === 'incorrect' ? item.severity : null,
+              }
+            : item
+        ),
+      })),
+
+    togglePaginationReviewProblemTag: (breakId: string, tag: PaginationProblemTag) =>
+      set((state) => ({
+        paginationReviewItems: state.paginationReviewItems.map((item) => {
+          if (item.breakId !== breakId) {
+            return item;
+          }
+
+          const hasTag = item.problemTags.includes(tag);
+          return {
+            ...item,
+            problemTags: hasTag
+              ? item.problemTags.filter((currentTag) => currentTag !== tag)
+              : [...item.problemTags, tag],
+          };
+        }),
+      })),
+
+    setPaginationReviewSeverity: (breakId: string, severity: PaginationProblemSeverity | null) =>
+      set((state) => ({
+        paginationReviewItems: state.paginationReviewItems.map((item) =>
+          item.breakId === breakId ? { ...item, severity } : item
+        ),
+      })),
+
+    setPaginationTrainingSamples: (samples: PaginationTrainingSample[]) =>
+      set({
+        paginationTrainingSamples: samples,
+      }),
+
+    addPaginationTrainingSamplesToBatch: ({ documentId, documentTitle, samples }) =>
+      set((state) => {
+        const filteredSamples = samples.filter((sample) => sample.rootCauses.length > 0);
+        if (filteredSamples.length === 0) {
+          return {};
+        }
+
+        const nextDocuments = state.paginationBatchAnalysis.documents.filter(
+          (entry) => entry.documentId !== documentId,
+        );
+        nextDocuments.push({
+          documentId,
+          documentTitle,
+          addedAt: new Date().toISOString(),
+          samples: filteredSamples,
+        });
+
+        const nextAnalysis: PaginationBatchAnalysis = {
+          batchId: state.paginationBatchAnalysis.batchId,
+          documentCount: nextDocuments.length,
+          isReady: nextDocuments.length >= 10,
+          documents: nextDocuments,
+          rootCauseStats: buildPaginationBatchRootCauseStats(nextDocuments),
+        };
+
+        savePaginationBatchAnalysis(nextAnalysis);
+        return {
+          paginationBatchAnalysis: nextAnalysis,
+        };
+      }),
+
+    applyPaginationBatchOptimization: () =>
+      set((state) => {
+        if (!state.paginationBatchAnalysis.isReady) {
+          return {};
+        }
+
+        return {
+          paginationOptimizationSettings: buildOptimizationSettingsFromBatchAnalysis(
+            state.paginationBatchAnalysis,
+          ),
+          hasAppliedPaginationBatchOptimization: true,
+        };
+      }),
+
+    clearPaginationBatchOptimization: () =>
+      set({
+        paginationOptimizationSettings: null,
+        hasAppliedPaginationBatchOptimization: false,
+      }),
+
+    clearPaginationReviewItems: () =>
+      set({
+        paginationReviewItems: [],
+        paginationTrainingSamples: [],
+      }),
   };
 };

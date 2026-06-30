@@ -8,12 +8,14 @@ import type { AiPanelTab } from '@/types/ai';
 import { AiGenerateTab } from './AiGenerateTab';
 import { AiOptimizeTab } from './AiOptimizeTab';
 import { AiCheckTab } from './AiCheckTab';
+import { AiPaginationTab } from './AiPaginationTab';
 import { AiSettings } from './AiSettings';
 
 const TAB_LABELS: Record<AiPanelTab, string> = {
   generate: '生成',
   optimize: '优化',
   check: '检查',
+  pagination: '分页',
   settings: '设置',
 };
 
@@ -21,7 +23,7 @@ export function AiPanel(): JSX.Element {
   const activeAiTab = useAppStore((state) => state.activeAiTab);
   const setActiveAiTab = useAppStore((state) => state.setActiveAiTab);
 
-  const tabs: AiPanelTab[] = ['generate', 'optimize', 'check', 'settings'];
+  const tabs: AiPanelTab[] = ['generate', 'optimize', 'check', 'pagination', 'settings'];
 
   return (
     <div className="ai-panel">
@@ -44,6 +46,7 @@ export function AiPanel(): JSX.Element {
         {activeAiTab === 'generate' && <AiGenerateTab />}
         {activeAiTab === 'optimize' && <AiOptimizeTab />}
         {activeAiTab === 'check' && <AiCheckTab />}
+        {activeAiTab === 'pagination' && <AiPaginationTab />}
         {activeAiTab === 'settings' && <AiSettings />}
       </div>
     </div>
