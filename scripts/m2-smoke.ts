@@ -8,6 +8,7 @@ import {
   buildFontFaceCss,
   buildFontFamilyGroupsWithImportedFonts,
   createLayoutDocumentFromMarkdown,
+  createEmptyLayoutDocument,
   estimateImageVisibleHeightPx,
   getVisibleTocItemsForBlock,
   insertEquationBlockAfterNode,
@@ -50,8 +51,12 @@ import {
   loadBlockSpacingPresetLibrary,
 } from '../src/services/BlockSpacingPresetLibraryService.ts';
 import {
+  DOM_MEASURE_PAGINATION_ALGORITHM_ID,
   MAX_FILL_PAGINATION_ALGORITHM_ID,
+  listPaginationAlgorithms,
   paginateBlocks,
+  type TableRowMeasurementJob,
+  type TextFragmentMeasurementJob,
 } from '../src/engine/typesetting/index.ts';
 import { clearAllBlockHeightCache } from '../src/engine/typesetting/algorithms/estimatedMaxFill.ts';
 import { useAppStore } from '../src/store/index.ts';
@@ -1573,6 +1578,400 @@ async function main(): Promise<void> {
     styles: restoredProject.document.styles,
   });
   assert(pages.length >= 2, `M2 冒烟失败：分页结果页数异常，实际为 ${pages.length}`);
+  const paginationAlgorithmIds = listPaginationAlgorithms().map((algorithm) => algorithm.id);
+  assert(
+    paginationAlgorithmIds.includes(MAX_FILL_PAGINATION_ALGORITHM_ID) &&
+      paginationAlgorithmIds.includes(DOM_MEASURE_PAGINATION_ALGORITHM_ID),
+    `M2 冒烟失败：分页算法注册表没有同时包含旧引擎和真实测量引擎，实际为 ${paginationAlgorithmIds.join(', ') || '空'}`,
+  );
+  const domMeasurePages = paginateBlocks(restoredProject.document.blocks, contract, {
+    algorithmId: DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+    styles: restoredProject.document.styles,
+  });
+  assert(domMeasurePages.length >= 2, `M2 冒烟失败：真实测量分页引擎单栏分页结果页数异常，实际为 ${domMeasurePages.length}`);
+  const domMeasureTextContract = withTestPageMetrics({
+    ...contract,
+    contentHeightPx: 56,
+    columnCount: 1,
+  });
+  const domMeasureTextBlock: LayoutBlock = {
+    id: 'dom-measure-smoke-text',
+    type: 'paragraph',
+    sourceRange: null,
+    blockStyleRef: 'paragraph',
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [
+      {
+        id: 'dom-measure-smoke-text-run',
+        text: '这是一段用于验证真实测量分页引擎运行时文本分片的长段落内容。'.repeat(24),
+        sourceRange: null,
+        marks: [],
+        charStyleRef: null,
+        styleOverrides: {},
+        annotations: [],
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: '这是一段用于验证真实测量分页引擎运行时文本分片的长段落内容。'.repeat(24),
+    },
+  };
+  const domMeasureTextPages = paginateBlocks([domMeasureTextBlock], domMeasureTextContract, {
+    algorithmId: DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+  });
+  assert(domMeasureTextPages.length >= 2, 'M2 冒烟失败：真实测量分页引擎长段落测试没有产生跨页结果');
+  assert(
+    domMeasureTextPages.some(
+      (page) =>
+        page.blocks.some(
+          (block) => block.id.includes('dom-measure-smoke-text') && block.id !== domMeasureTextBlock.id,
+        ),
+    ),
+    'M2 冒烟失败：真实测量分页引擎没有生成运行时文本分页片段',
+  );
+  const domMeasureFragmentJobs: TextFragmentMeasurementJob[] = [];
+  paginateBlocks([domMeasureTextBlock], domMeasureTextContract, {
+    algorithmId: DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+    measuredTextLineBreaks: {
+      [domMeasureTextBlock.id]: [16, 32, domMeasureTextBlock.metadata.text.length],
+    },
+    textFragmentMeasurementJobs: domMeasureFragmentJobs,
+  });
+  assert(
+    domMeasureFragmentJobs.length >= 2 &&
+      domMeasureFragmentJobs.some((job) => job.endOffset === 16) &&
+      domMeasureFragmentJobs.some((job) => job.endOffset === 32),
+    'M2 冒烟失败：真实测量分页引擎没有为候选文本片段生成测量任务',
+  );
+  const domMeasureMeasuredFragmentPages = paginateBlocks([domMeasureTextBlock], domMeasureTextContract, {
+    algorithmId: DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+    measuredTextLineBreaks: {
+      [domMeasureTextBlock.id]: [16, 32, domMeasureTextBlock.metadata.text.length],
+    },
+    measuredTextFragmentHeights: {
+      [`${domMeasureTextBlock.id}:text:0-16:w${Math.round(domMeasureTextContract.contentWidthPx)}`]: 24,
+      [`${domMeasureTextBlock.id}:text:0-32:w${Math.round(domMeasureTextContract.contentWidthPx)}`]: 80,
+    },
+  });
+  const measuredFragmentFirstText = domMeasureMeasuredFragmentPages[0]?.blocks[0]?.textRuns
+    .map((run) => run.text)
+    .join('');
+  assert(
+    measuredFragmentFirstText === domMeasureTextBlock.metadata.text.slice(0, 16),
+    'M2 冒烟失败：真实测量分页引擎没有按片段真实高度收缩到可容纳断点',
+  );
+  const domMeasureLongListItemText =
+    '核心原则：按章节顺序精学，不跳重点；每学完一章做对应章节练习题（客观题+简单计算题）；整理笔记和错题本。'.repeat(10);
+  const domMeasureLongListBlock: LayoutBlock = {
+    id: 'dom-measure-long-list',
+    type: 'list',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'list',
+      ordered: true,
+      start: 3,
+      spread: false,
+      items: [
+        {
+          id: 'dom-measure-long-list-item-1',
+          sourceRange: null,
+          textRuns: [
+            {
+              id: 'dom-measure-long-list-item-run-1',
+              text: domMeasureLongListItemText,
+              sourceRange: null,
+              marks: [{ type: 'underline' }],
+              charStyleRef: null,
+              styleOverrides: { backgroundColor: '#fef3c7' },
+              annotations: [],
+            },
+          ],
+          level: 2,
+          checked: true,
+        },
+        {
+          id: 'dom-measure-long-list-item-2',
+          sourceRange: null,
+          textRuns: [
+            {
+              id: 'dom-measure-long-list-item-run-2',
+              text: '后续短列表项',
+              sourceRange: null,
+              marks: [],
+              charStyleRef: null,
+              styleOverrides: {},
+              annotations: [],
+            },
+          ],
+          level: 2,
+          checked: true,
+        },
+      ],
+    },
+  };
+  const domMeasureLongListContract = withTestPageMetrics({
+    ...contract,
+    contentHeightPx: 72,
+    columnCount: 1,
+  });
+  const domMeasureLongListJobs: TextFragmentMeasurementJob[] = [];
+  paginateBlocks([domMeasureLongListBlock], domMeasureLongListContract, {
+    algorithmId: DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+    measuredTextLineBreaks: {
+      'dom-measure-long-list-item-1': [
+        20,
+        40,
+        60,
+        80,
+        100,
+        120,
+        140,
+        160,
+        180,
+        200,
+        220,
+        240,
+        domMeasureLongListItemText.length,
+      ],
+    },
+    textFragmentMeasurementJobs: domMeasureLongListJobs,
+  });
+  assert(
+    domMeasureLongListJobs.some((job) => job.sourceBlockId === domMeasureLongListBlock.id),
+    'M2 冒烟失败：真实测量分页引擎没有为超长列表项生成片段测量任务',
+  );
+  const domMeasureLongListPages = paginateBlocks([domMeasureLongListBlock], domMeasureLongListContract, {
+    algorithmId: DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+    measuredTextLineBreaks: {
+      'dom-measure-long-list-item-1': [
+        20,
+        40,
+        60,
+        80,
+        100,
+        120,
+        140,
+        160,
+        180,
+        200,
+        220,
+        240,
+        domMeasureLongListItemText.length,
+      ],
+    },
+    measuredTextFragmentHeights: {
+      [`dom-measure-long-list-item-1:text:0-20:w${Math.round(domMeasureLongListContract.contentWidthPx)}`]: 24,
+      [`dom-measure-long-list-item-1:text:0-40:w${Math.round(domMeasureLongListContract.contentWidthPx)}`]: 48,
+      [`dom-measure-long-list-item-1:text:0-60:w${Math.round(domMeasureLongListContract.contentWidthPx)}`]: 84,
+    },
+  });
+  const domMeasureLongListFragments = domMeasureLongListPages
+    .flatMap((page) => page.blocks)
+    .filter((block) => block.type === 'list' && block.metadata.kind === 'list');
+  const domMeasureLongListPieces = domMeasureLongListFragments
+    .flatMap((block) => (block.metadata.kind === 'list' ? block.metadata.items : []))
+    .filter((item) => item.id.startsWith('dom-measure-long-list-item-1'));
+  const domMeasureLongListTextAfterSplit = domMeasureLongListPieces
+    .flatMap((item) => item.textRuns)
+    .map((run) => run.text)
+    .join('');
+  assert(
+    domMeasureLongListFragments.length > 1 &&
+      domMeasureLongListPieces.length > 1 &&
+      domMeasureLongListTextAfterSplit === domMeasureLongListItemText,
+    'M2 冒烟失败：真实测量分页引擎没有正确拆分超长列表项或拆分后内容顺序错误',
+  );
+  const domMeasureLongListHiddenMarkerCount = domMeasureLongListPieces.filter((item) =>
+    shouldHideLayoutListItemMarker(item),
+  ).length;
+  assert(
+    domMeasureLongListPieces.every(
+      (item) =>
+        item.checked === true &&
+        item.level === 2 &&
+        item.textRuns.every(
+          (run) =>
+            run.styleOverrides.backgroundColor === '#fef3c7' &&
+            run.marks.some((mark) => mark.type === 'underline'),
+        ),
+    ) &&
+      !shouldHideLayoutListItemMarker(domMeasureLongListPieces[0]!) &&
+      domMeasureLongListHiddenMarkerCount === domMeasureLongListPieces.length - 1,
+    'M2 冒烟失败：真实测量分页引擎列表项续页后没有保留样式层级或隐藏续页符号',
+  );
+  const domMeasureTableContract = withTestPageMetrics({
+    ...contract,
+    contentHeightPx: 120,
+    columnCount: 1,
+  });
+  const domMeasureTableBlock: LayoutBlock = {
+    id: 'dom-measure-table-row-smoke',
+    type: 'table',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {
+      lineHeight: 24,
+      spaceBefore: 0,
+      spaceAfter: 0,
+    },
+    pagination: {},
+    textRuns: [],
+    metadata: {
+      kind: 'table',
+      align: [null, null],
+      columnWidthsPx: [260, 260],
+      rows: [
+        {
+          id: 'dom-measure-table-row-smoke-header',
+          sourceRange: null,
+          heightPx: null,
+          cells: [
+            {
+              id: 'dom-measure-table-row-smoke-header-cell-1',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'dom-measure-table-row-smoke-header-cell-1-run',
+                  text: '列 A',
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: true,
+            },
+            {
+              id: 'dom-measure-table-row-smoke-header-cell-2',
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: 'dom-measure-table-row-smoke-header-cell-2-run',
+                  text: '列 B',
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: true,
+            },
+          ],
+        },
+        ...Array.from({ length: 4 }, (_, rowIndex) => ({
+          id: `dom-measure-table-row-smoke-row-${rowIndex + 1}`,
+          sourceRange: null,
+          heightPx: null,
+          cells: [
+            {
+              id: `dom-measure-table-row-smoke-row-${rowIndex + 1}-cell-1`,
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: `dom-measure-table-row-smoke-row-${rowIndex + 1}-cell-1-run`,
+                  text: `第 ${rowIndex + 1} 行 A`,
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: false,
+            },
+            {
+              id: `dom-measure-table-row-smoke-row-${rowIndex + 1}-cell-2`,
+              sourceRange: null,
+              textRuns: [
+                {
+                  id: `dom-measure-table-row-smoke-row-${rowIndex + 1}-cell-2-run`,
+                  text: rowIndex === 0 ? '这是一段很长的表格内容，用于模拟真实行高测量。'.repeat(10) : `第 ${rowIndex + 1} 行 B`,
+                  sourceRange: null,
+                  marks: [],
+                  charStyleRef: null,
+                  styleOverrides: {},
+                  annotations: [],
+                },
+              ],
+              isHeader: false,
+            },
+          ],
+        })),
+      ],
+    },
+  };
+  const domMeasureTableRowJobs: TableRowMeasurementJob[] = [];
+  paginateBlocks([domMeasureTableBlock], domMeasureTableContract, {
+    algorithmId: DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+    tableRowMeasurementJobs: domMeasureTableRowJobs,
+  });
+  assert(
+    domMeasureTableRowJobs.some((job) => job.sourceBlockId === domMeasureTableBlock.id),
+    'M2 冒烟失败：真实测量分页引擎没有为表格行生成测量任务',
+  );
+  const domMeasureMeasuredTablePages = paginateBlocks([domMeasureTableBlock], domMeasureTableContract, {
+    algorithmId: DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+    measuredTableRowHeights: {
+      'dom-measure-table-row-smoke-header': 32,
+      'dom-measure-table-row-smoke-row-1': 88,
+      'dom-measure-table-row-smoke-row-2': 32,
+      'dom-measure-table-row-smoke-row-3': 32,
+      'dom-measure-table-row-smoke-row-4': 32,
+    },
+  });
+  const domMeasureMeasuredTableFragments = domMeasureMeasuredTablePages
+    .flatMap((page) => page.blocks)
+    .filter((block) => block.type === 'table' && block.metadata.kind === 'table');
+  const domMeasureMeasuredRowIds = domMeasureMeasuredTableFragments.flatMap((block) =>
+    block.metadata.kind === 'table'
+      ? block.metadata.rows
+          .map((row) => row.id)
+          .filter((rowId) => !rowId.includes('repeat-header'))
+          .map((rowId) => rowId.replace(/-dom-fragment-\d+$/, ''))
+      : [],
+  );
+  assert(
+    domMeasureMeasuredTableFragments.length > 1 &&
+      domMeasureMeasuredTableFragments[0]?.metadata.kind === 'table' &&
+      domMeasureMeasuredTableFragments[0].metadata.rows.length === 2 &&
+      domMeasureMeasuredRowIds.join('|') === domMeasureTableBlock.metadata.rows.map((row) => row.id).join('|'),
+    'M2 冒烟失败：真实测量分页引擎没有优先使用真实行高切分页表格，或切分后行顺序错误',
+  );
+  const domMeasureSecondTableFragment = domMeasureMeasuredTableFragments[1];
+  const domMeasureSecondFragmentHeaderText =
+    domMeasureSecondTableFragment?.metadata.kind === 'table'
+      ? domMeasureSecondTableFragment.metadata.rows[0]?.cells
+          .map((cell) => cell.textRuns.map((run) => run.text).join(''))
+          .join('|')
+      : '';
+  assert(
+    domMeasureSecondTableFragment?.metadata.kind === 'table' &&
+      domMeasureSecondTableFragment.metadata.rows[0]?.id.includes('repeat-header') &&
+      domMeasureSecondTableFragment.metadata.rows[0]?.cells.every((cell) => cell.isHeader) &&
+      domMeasureSecondFragmentHeaderText === '列 A|列 B',
+    'M2 冒烟失败：真实测量分页引擎表格续页没有重复表头',
+  );
+  const domMeasureLastTableFragment = domMeasureMeasuredTableFragments.at(-1);
+  assert(
+    domMeasureLastTableFragment?.metadata.kind === 'table' &&
+      domMeasureLastTableFragment.metadata.rows[0]?.id.includes('repeat-header'),
+    'M2 冒烟失败：真实测量分页引擎后续续页没有继续重复表头',
+  );
 
   const tocItems = applyPageNumbersToTocItems(
     buildTocItems(restoredProject.document),
@@ -1833,6 +2232,22 @@ async function main(): Promise<void> {
         `${measuredBlockA.id}|${measuredBlockB.id}`,
     'M2 冒烟失败：分页测试算法1没有响应测量高度变化',
   );
+  const bottomSafeAreaPages = paginateBlocks(
+    [measuredBlockA, measuredBlockB],
+    withTestPageMetrics({
+      ...resolveStyleContract(defaultStyleSettings),
+      contentHeightPx: 48,
+    }),
+    {
+      algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+    },
+  );
+  assert(
+    bottomSafeAreaPages.length === 2 &&
+      bottomSafeAreaPages[0]?.blocks[0]?.id === measuredBlockA.id &&
+      bottomSafeAreaPages[1]?.blocks[0]?.id === measuredBlockB.id,
+    'M2 冒烟失败：分页测试算法1默认页底安全边界没有阻止内容贴底进入页脚区域',
+  );
 
   const dualColumnHeadingBlock: LayoutBlock = {
     id: 'm2-dual-column-heading',
@@ -1909,6 +2324,17 @@ async function main(): Promise<void> {
       Array.from(new Set(dualColumnBlockBaseIds)).join('|') ===
         [dualColumnHeadingBlock.id, ...dualColumnParagraphBlocks.map((block) => block.id)].join('|'),
     'M2 冒烟失败：分页测试算法1双栏分页没有按两栏容量正确换页或运行时片段顺序异常',
+  );
+  const dualColumnDomMeasurePages = paginateBlocks(
+    [dualColumnHeadingBlock, ...dualColumnParagraphBlocks],
+    dualColumnContract,
+    {
+      algorithmId: DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+    },
+  );
+  assert(
+    dualColumnDomMeasurePages.length === dualColumnPages.length,
+    'M2 冒烟失败：真实测量分页引擎在多栏场景下没有保守回退到现有分页结果',
   );
 
   const createColumnHeadingBlock = (id: string, depth: 1 | 2 | 3, text: string): LayoutBlock => ({
@@ -2452,7 +2878,7 @@ async function main(): Promise<void> {
     `M2 冒烟失败：分页测试算法1仍把“初步印象。”拆成过短尾巴，实际续页为“${tailMisbreakTexts[1] ?? ''}”`,
   );
 
-  const tailMeasuredTolerancePages = paginateBlocks(
+  const tailMeasuredOverflowPages = paginateBlocks(
     [maxFillTailMisbreakListBlock],
     withTestPageMetrics({
       ...resolveStyleContract(defaultStyleSettings),
@@ -2467,8 +2893,8 @@ async function main(): Promise<void> {
     },
   );
   assert(
-    tailMeasuredTolerancePages.length === 1,
-    `M2 冒烟失败：分页测试算法1把轻微实测高度偏差误判为需要拆页，实际页数 ${tailMeasuredTolerancePages.length}`,
+    tailMeasuredOverflowPages.length > 1,
+    `M2 冒烟失败：分页测试算法1仍忽略接近一行的实测高度偏差，实际页数 ${tailMeasuredOverflowPages.length}`,
   );
 
   const tailContextHeadingBlock: LayoutBlock = {
@@ -3524,6 +3950,58 @@ async function main(): Promise<void> {
     !imageWithoutCaptionHtml.includes('<figcaption>'),
     'M2 冒烟失败：图片 showCaption=false 时导出 HTML 不应包含 figcaption',
   );
+
+  useAppStore.getState().loadDocument({
+    title: '分页批次单篇优化验证',
+    filePath: null,
+    source: '# 分页批次单篇优化验证',
+    documentFormat: 'layout',
+    layoutDocument: createEmptyLayoutDocument({
+      title: '分页批次单篇优化验证',
+      source: '# 分页批次单篇优化验证',
+    }),
+  });
+  useAppStore.getState().addPaginationTrainingSamplesToBatch({
+    documentId: 'm2-pagination-batch-ready-document',
+    documentTitle: '分页批次单篇优化验证',
+    samples: [
+      {
+        sampleId: 'm2-pagination-batch-ready-sample',
+        breakId: 'm2-pagination-batch-ready-break',
+        documentId: 'm2-pagination-batch-ready-document',
+        documentTitle: '分页批次单篇优化验证',
+        pageNumber: 1,
+        breakIndex: 1,
+        verdict: 'incorrect',
+        problemTags: ['blankSpaceTooLarge'],
+        severity: 'medium',
+        pageRemainingHeightPx: 160,
+        pageFillRatio: 0.62,
+        before: {
+          blockId: 'm2-pagination-batch-before',
+          blockType: '段落',
+          textPreview: '分页前内容',
+        },
+        after: {
+          blockId: 'm2-pagination-batch-after',
+          blockType: '段落',
+          textPreview: '分页后内容',
+        },
+        rootCauses: ['heightEstimationError'],
+      },
+    ],
+  });
+  assert(
+    useAppStore.getState().paginationBatchAnalysis.isReady,
+    'M2 冒烟失败：分页批次加入 1 篇有效文章后应允许应用优化',
+  );
+  useAppStore.getState().applyPaginationBatchOptimization();
+  assert(
+    useAppStore.getState().hasAppliedPaginationBatchOptimization &&
+      useAppStore.getState().paginationOptimizationSettings !== null,
+    'M2 冒烟失败：分页批次 1 篇就绪后没有生成运行时优化参数',
+  );
+  useAppStore.getState().clearPaginationBatchOptimization();
 
   // 验证显示标题时导出 HTML 包含 figcaption
   const imageWithCaptionHtml = buildExportHtml({

@@ -74,7 +74,14 @@ import {
 } from '@/engine/style/quickTextStyle';
 import { renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
 import type { HeaderFooterContent, ResolvedStyleContract } from '@/engine/style/types';
-import type { MeasuredTextLineBreaks, PageLayout } from '@/engine/typesetting/types';
+import type {
+  MeasuredTableRowHeights,
+  MeasuredTextFragmentHeights,
+  MeasuredTextLineBreaks,
+  PageLayout,
+  TableRowMeasurementJob,
+  TextFragmentMeasurementJob,
+} from '@/engine/typesetting/types';
 import { useAppStore } from '@/store';
 import type { CanvasTextSelectionState } from '@/types/workspace';
 import { createTextFragment, resolveHangingIndentStyle } from '@/engine/document-model/utils';
@@ -113,6 +120,10 @@ interface CanvasPaneProps {
   isCondensed?: boolean;
   onMeasuredBlockHeightsChange?: (heights: Record<string, number>) => void;
   onMeasuredTextLineBreaksChange?: (lineBreaks: MeasuredTextLineBreaks) => void;
+  textFragmentMeasurementJobs?: TextFragmentMeasurementJob[];
+  onMeasuredTextFragmentHeightsChange?: (heights: MeasuredTextFragmentHeights) => void;
+  tableRowMeasurementJobs?: TableRowMeasurementJob[];
+  onMeasuredTableRowHeightsChange?: (heights: MeasuredTableRowHeights) => void;
 }
 
 interface BlockMeasurementCacheEntry {
@@ -2842,7 +2853,11 @@ function renderBlock(
                     getTableRowBaseHeightPx(row, rowIndex, tableResizeState?.pageContract);
 
                   return (
-                    <tr key={row.id} style={{ height: `${rowMinHeightPx}px` }}>
+                    <tr
+                      key={row.id}
+                      data-measure-table-row-id={row.id}
+                      style={{ height: `${rowMinHeightPx}px` }}
+                    >
                       {row.cells.map((cell, cellIndex) => {
                         if (isCoveredTableCell(cell)) {
                           return null;
@@ -3188,6 +3203,10 @@ function CanvasPaneComponent({
   isCondensed = false,
   onMeasuredBlockHeightsChange,
   onMeasuredTextLineBreaksChange,
+  textFragmentMeasurementJobs = [],
+  onMeasuredTextFragmentHeightsChange,
+  tableRowMeasurementJobs = [],
+  onMeasuredTableRowHeightsChange,
   workspaceRootPath,
 }: CanvasPaneProps): JSX.Element {
   const fontFaceCss = buildFontFaceCss(documentResources, workspaceRootPath);
@@ -3328,7 +3347,12 @@ function CanvasPaneComponent({
   }, [draftImageOffsets]);
 
   useLayoutEffect(() => {
-    if (!onMeasuredBlockHeightsChange && !onMeasuredTextLineBreaksChange) {
+    if (
+      !onMeasuredBlockHeightsChange &&
+      !onMeasuredTextLineBreaksChange &&
+      !onMeasuredTextFragmentHeightsChange &&
+      !onMeasuredTableRowHeightsChange
+    ) {
       return;
     }
 
@@ -3340,6 +3364,8 @@ function CanvasPaneComponent({
     const nextCache: Record<string, BlockMeasurementCacheEntry> = {};
     const nextHeights: Record<string, number> = {};
     const nextTextLineBreaks: MeasuredTextLineBreaks = {};
+    const nextTextFragmentHeights: MeasuredTextFragmentHeights = {};
+    const nextTableRowHeights: MeasuredTableRowHeights = {};
 
     documentBlocks.forEach((block) => {
       const signature = buildBlockMeasurementSignature(block, styleSignature);
@@ -3373,12 +3399,36 @@ function CanvasPaneComponent({
         nextHeights[blockId] = heightPx;
         Object.assign(nextTextLineBreaks, textLineBreaks);
       });
+
+      const measuredTextFragmentElements = measurementLayer.querySelectorAll<HTMLElement>('[data-measure-text-fragment-id]');
+      measuredTextFragmentElements.forEach((element) => {
+        const fragmentId = element.dataset.measureTextFragmentId;
+        if (!fragmentId) {
+          return;
+        }
+
+        // 文本片段高度只给 dom-measure-v1 的运行时分页使用，不写回文档模型。
+        nextTextFragmentHeights[fragmentId] = Math.max(0, Math.ceil(element.getBoundingClientRect().height));
+      });
+
+      const measuredTableRowElements = measurementLayer.querySelectorAll<HTMLTableRowElement>('[data-measure-table-row-id]');
+      measuredTableRowElements.forEach((element) => {
+        const rowId = element.dataset.measureTableRowId;
+        if (!rowId) {
+          return;
+        }
+
+        // 表格行真实高度只给 dom-measure-v1 的运行时分页使用，不写回文档模型。
+        nextTableRowHeights[rowId] = Math.max(0, Math.ceil(element.getBoundingClientRect().height));
+      });
     }
 
     blockMeasurementCacheRef.current = nextCache;
     onMeasuredBlockHeightsChange?.(nextHeights);
     onMeasuredTextLineBreaksChange?.(nextTextLineBreaks);
-  }, [documentBlocks, documentStyles, onMeasuredBlockHeightsChange, onMeasuredTextLineBreaksChange, resolvedStyleContract]);
+    onMeasuredTextFragmentHeightsChange?.(nextTextFragmentHeights);
+    onMeasuredTableRowHeightsChange?.(nextTableRowHeights);
+  }, [documentBlocks, documentStyles, onMeasuredBlockHeightsChange, onMeasuredTableRowHeightsChange, onMeasuredTextFragmentHeightsChange, onMeasuredTextLineBreaksChange, resolvedStyleContract, tableRowMeasurementJobs, textFragmentMeasurementJobs]);
 
   useLayoutEffect(() => {
     const canvasPane = canvasPaneRef.current;
@@ -4994,6 +5044,108 @@ function CanvasPaneComponent({
                   {renderBlock(
                     block,
                     900000 + index,
+                    null,
+                    [],
+                    () => undefined,
+                    undefined,
+                    () => undefined,
+                    () => undefined,
+                    null,
+                    null,
+                    null,
+                    '',
+                    null,
+                    null,
+                    () => undefined,
+                    editorRef,
+                    richEditorRef,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    tocItems,
+                    undefined,
+                    {},
+                    {},
+                    measuredImageVisibleSizes,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    {},
+                    () => undefined,
+                    {
+                      pageContract: resolvedStyleContract,
+                      draftTableColumnWidths: {},
+                      draftTableRowHeights: {},
+                    },
+                    null,
+                    documentStyles,
+                    () => undefined,
+                    1,
+                  )}
+                </div>
+              ))}
+              {textFragmentMeasurementJobs.map((job, index) => (
+                <div
+                  key={`measure-fragment-${job.id}`}
+                  data-measure-text-fragment-id={job.id}
+                  className="measurement-block measurement-text-fragment"
+                >
+                  {renderBlock(
+                    job.block,
+                    910000 + index,
+                    null,
+                    [],
+                    () => undefined,
+                    undefined,
+                    () => undefined,
+                    () => undefined,
+                    null,
+                    null,
+                    null,
+                    '',
+                    null,
+                    null,
+                    () => undefined,
+                    editorRef,
+                    richEditorRef,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    tocItems,
+                    undefined,
+                    {},
+                    {},
+                    measuredImageVisibleSizes,
+                    () => undefined,
+                    () => undefined,
+                    () => undefined,
+                    {},
+                    () => undefined,
+                    {
+                      pageContract: resolvedStyleContract,
+                      draftTableColumnWidths: {},
+                      draftTableRowHeights: {},
+                    },
+                    null,
+                    documentStyles,
+                    () => undefined,
+                    1,
+                  )}
+                </div>
+              ))}
+              {tableRowMeasurementJobs.map((job, index) => (
+                <div
+                  key={`measure-table-row-${job.id}`}
+                  data-measure-table-job-id={job.id}
+                  className="measurement-block measurement-table-row"
+                >
+                  {renderBlock(
+                    job.block,
+                    920000 + index,
                     null,
                     [],
                     () => undefined,

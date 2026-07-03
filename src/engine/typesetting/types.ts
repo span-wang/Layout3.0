@@ -21,6 +21,37 @@ export interface PageLayout {
 }
 
 export type MeasuredTextLineBreaks = Record<string, number[]>;
+export type MeasuredTextFragmentHeights = Record<string, number>;
+export type MeasuredTableRowHeights = Record<string, number>;
+/** 单元格级测量高度缓存 */
+export type MeasuredCellHeights = Record<string, number>;
+/** 单元格文本片段测量高度缓存 */
+export type MeasuredCellFragmentHeights = Record<string, number>;
+
+export interface TextFragmentMeasurementJob {
+  id: string;
+  block: LayoutBlock;
+  sourceBlockId: string;
+  startOffset: number;
+  endOffset: number;
+}
+
+export interface TableRowMeasurementJob {
+  id: string;
+  block: LayoutBlock;
+  sourceBlockId: string;
+  rowIds: string[];
+}
+
+/** 单元格级测量任务 */
+export interface CellMeasurementJob {
+  id: string;
+  block: LayoutBlock;
+  cellId: string;
+  cellIndex: number;
+  width: number;
+  charOffset?: number;
+}
 
 export interface PaginationAlgorithmContext {
   blocks: LayoutBlock[];
@@ -28,6 +59,16 @@ export interface PaginationAlgorithmContext {
   styles?: LayoutStyleSheet;
   measuredBlockHeights?: Record<string, number>;
   measuredTextLineBreaks?: MeasuredTextLineBreaks;
+  measuredTextFragmentHeights?: MeasuredTextFragmentHeights;
+  textFragmentMeasurementJobs?: TextFragmentMeasurementJob[];
+  measuredTableRowHeights?: MeasuredTableRowHeights;
+  tableRowMeasurementJobs?: TableRowMeasurementJob[];
+  /** 单元格级测量高度缓存 */
+  measuredCellHeights?: MeasuredCellHeights;
+  /** 单元格文本片段测量高度缓存 */
+  measuredCellFragmentHeights?: MeasuredCellFragmentHeights;
+  /** 单元格测量任务队列 */
+  cellMeasurementJobs?: CellMeasurementJob[];
   optimizationSettings?: PaginationOptimizationSettings | null;
 }
 
@@ -45,5 +86,15 @@ export interface PaginateBlocksOptions {
   styles?: LayoutStyleSheet;
   measuredBlockHeights?: Record<string, number>;
   measuredTextLineBreaks?: MeasuredTextLineBreaks;
+  measuredTextFragmentHeights?: MeasuredTextFragmentHeights;
+  textFragmentMeasurementJobs?: TextFragmentMeasurementJob[];
+  measuredTableRowHeights?: MeasuredTableRowHeights;
+  tableRowMeasurementJobs?: TableRowMeasurementJob[];
+  /** 单元格级测量高度缓存 */
+  measuredCellHeights?: MeasuredCellHeights;
+  /** 单元格文本片段测量高度缓存 */
+  measuredCellFragmentHeights?: MeasuredCellFragmentHeights;
+  /** 单元格测量任务队列 */
+  cellMeasurementJobs?: CellMeasurementJob[];
   optimizationSettings?: PaginationOptimizationSettings | null;
 }

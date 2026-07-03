@@ -277,6 +277,8 @@ export interface PaginationBatchRootCauseStat {
 /**
  * 分页批次分析结果
  */
+export const PAGINATION_BATCH_READY_DOCUMENT_COUNT = 1;
+
 export interface PaginationBatchAnalysis {
   batchId: string;
   documentCount: number;

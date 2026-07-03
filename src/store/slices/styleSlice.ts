@@ -6,6 +6,11 @@ import {
   normalizeStyleSettings,
 } from '@/engine/style/styleSettings';
 import {
+  DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+  MAX_FILL_PAGINATION_ALGORITHM_ID,
+  OFFSCREEN_MEASURE_PAGINATION_ALGORITHM_ID,
+} from '@/engine/typesetting/algorithmIds';
+import {
   mergeBlockSpacingPresetLibraryIntoStyleSettings,
   saveBlockSpacingPresetLibrary,
 } from '@/services/BlockSpacingPresetLibraryService';
@@ -236,9 +241,11 @@ export const createStyleSlice: StoreSlice<StyleSlice> = (set) => ({
     }),
   setPaginationAlgorithmId: (algorithmId) =>
     set((state) => {
-      // 当前只保留“分页测试算法1”，旧算法 ID 或异常输入统一收口到默认算法。
+      // 只允许写入当前已注册的三套分页引擎；更早的实验算法 ID 统一回退到默认算法。
       state.styleSettings.paginationAlgorithmId =
-        algorithmId === defaultStyleSettings.paginationAlgorithmId
+        algorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID ||
+        algorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID ||
+        algorithmId === OFFSCREEN_MEASURE_PAGINATION_ALGORITHM_ID
           ? algorithmId
           : defaultStyleSettings.paginationAlgorithmId;
       state.isDirty = true;

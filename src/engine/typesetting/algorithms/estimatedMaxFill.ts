@@ -138,6 +138,10 @@ const TINY_TRAILING_TEXT_MIN_MEANINGFUL_CHARS = 4;
 const TINY_TRAILING_TEXT_LOOKBACK_CHARS = 6;
 const MEANINGFUL_TEXT_IGNORE_PATTERN =
   /[\s，。！？、；：,.!?;:"'“”‘’《》（）()【】\[\]{}<>]/gu;
+const DEFAULT_BOTTOM_SAFE_AREA_RATIO = 0.0125;
+const DEFAULT_BOTTOM_SAFE_AREA_MIN_PX = 2;
+const DEFAULT_BOTTOM_SAFE_AREA_MAX_PX = 12;
+const MEASURED_HEIGHT_ESTIMATE_TOLERANCE_PX = 4;
 
 // ============== 块高度缓存 ==============
 
@@ -175,6 +179,17 @@ function getPaginationContentWidthPx(contract: ResolvedStyleContract): number {
 
 function getPaginationPageCapacityPx(contract: ResolvedStyleContract): number {
   return contract.contentHeightPx * contract.columnCount;
+}
+
+function resolveDefaultBottomSafeAreaPx(contract: ResolvedStyleContract): number {
+  // 分页测试算法1追求最大填充，但页面底部必须保留少量保险距离，避免真实渲染误差把最后一行压进页脚。
+  return Math.min(
+    DEFAULT_BOTTOM_SAFE_AREA_MAX_PX,
+    Math.max(
+      DEFAULT_BOTTOM_SAFE_AREA_MIN_PX,
+      Math.round(contract.contentHeightPx * DEFAULT_BOTTOM_SAFE_AREA_RATIO),
+    ),
+  );
 }
 
 function createColumnFlowState(contract: ResolvedStyleContract): ColumnFlowState {
@@ -1633,9 +1648,12 @@ function resolvePlacementBlockHeight(payload: {
     return estimatedHeight;
   }
 
-  const tolerancePx = getMeasurementTolerancePx(block, contract, styles);
-  // 隐藏测量层按“单块包裹”测量，正文页按自然流排版；二者在 margin 折叠或运行时片段估算上可能差不到一行。
-  // 对这种轻微向上偏差继续使用估算高度，避免算法1过早进入页尾拆分，造成页面明明有空白却把短句尾巴推到下一页。
+  const tolerancePx = Math.min(
+    getMeasurementTolerancePx(block, contract, styles),
+    MEASURED_HEIGHT_ESTIMATE_TOLERANCE_PX,
+  );
+  // 隐藏测量层按“单块包裹”测量，正文页按自然流排版；只允许几像素级测量抖动继续使用估算值。
+  // 如果放宽到一整行，算法1会在页底把真实更高的内容塞进页边距或页脚区域。
   if (
     tolerancePx > 0 &&
     measuredHeight > estimatedHeight &&
@@ -2180,7 +2198,9 @@ export function paginateMaxFillBlocks(
     optimizationSettings,
   } = context;
   const isMultiColumn = contract.columnCount > 1;
-  const bottomSafeAreaPx = optimizationSettings?.bottomSafeAreaPx ?? 0;
+  const bottomSafeAreaPx =
+    resolveDefaultBottomSafeAreaPx(contract) +
+    Math.max(0, optimizationSettings?.bottomSafeAreaPx ?? 0);
   const heightReserveFactor = optimizationSettings?.heightReserveFactor ?? 1;
   const shortTailPenaltyBoost = optimizationSettings?.shortTailPenaltyBoost ?? 0;
   const tableRowSplitPriorityBoost = optimizationSettings?.tableRowSplitPriorityBoost ?? 0;

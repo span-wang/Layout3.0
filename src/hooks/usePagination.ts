@@ -1,16 +1,27 @@
 import { useEffect } from 'react';
 import {
+  DOM_MEASURE_PAGINATION_ALGORITHM_ID,
   MAX_FILL_PAGINATION_ALGORITHM_ID,
   paginateBlocks,
 } from '@/engine/typesetting';
 import type { ResolvedStyleContract } from '@/engine/style/types';
-import type { MeasuredTextLineBreaks } from '@/engine/typesetting';
+import type {
+  MeasuredTableRowHeights,
+  MeasuredTextFragmentHeights,
+  MeasuredTextLineBreaks,
+  TableRowMeasurementJob,
+  TextFragmentMeasurementJob,
+} from '@/engine/typesetting';
 import { useAppStore } from '@/store';
 
 export function usePagination(
   resolvedStyleContract: ResolvedStyleContract,
   measuredBlockHeights: Record<string, number> = {},
   measuredTextLineBreaks: MeasuredTextLineBreaks = {},
+  measuredTextFragmentHeights: MeasuredTextFragmentHeights = {},
+  measuredTableRowHeights: MeasuredTableRowHeights = {},
+  onTextFragmentMeasurementJobsChange?: (jobs: TextFragmentMeasurementJob[]) => void,
+  onTableRowMeasurementJobsChange?: (jobs: TableRowMeasurementJob[]) => void,
 ): void {
   const parseState = useAppStore((state) => state.parseState);
   const layoutBlocks = useAppStore((state) => state.layoutDocument?.blocks ?? null);
@@ -29,14 +40,43 @@ export function usePagination(
 
     const shouldUseMeasuredHeights =
       resolvedStyleContract.columnCount === 1 &&
-      paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID;
+      (paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID ||
+        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID);
+    const nextTextFragmentMeasurementJobs: TextFragmentMeasurementJob[] = [];
+    const nextTableRowMeasurementJobs: TableRowMeasurementJob[] = [];
     const nextPages = paginateBlocks(layoutBlocks, resolvedStyleContract, {
       algorithmId: paginationAlgorithmId,
       styles: layoutStyles ?? undefined,
       measuredBlockHeights: shouldUseMeasuredHeights ? measuredBlockHeights : undefined,
       measuredTextLineBreaks: shouldUseMeasuredHeights ? measuredTextLineBreaks : undefined,
+      measuredTextFragmentHeights:
+        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+          ? measuredTextFragmentHeights
+          : undefined,
+      textFragmentMeasurementJobs:
+        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+          ? nextTextFragmentMeasurementJobs
+          : undefined,
+      measuredTableRowHeights:
+        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+          ? measuredTableRowHeights
+          : undefined,
+      tableRowMeasurementJobs:
+        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+          ? nextTableRowMeasurementJobs
+          : undefined,
       optimizationSettings: paginationOptimizationSettings,
     });
+    onTextFragmentMeasurementJobsChange?.(
+      paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+        ? nextTextFragmentMeasurementJobs
+        : [],
+    );
+    onTableRowMeasurementJobsChange?.(
+      paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+        ? nextTableRowMeasurementJobs
+        : [],
+    );
     setPageLayouts(nextPages);
-  }, [layoutBlocks, layoutStyles, measuredBlockHeights, measuredTextLineBreaks, paginationAlgorithmId, paginationOptimizationSettings, parseState, resolvedStyleContract, setPageLayouts]);
+  }, [layoutBlocks, layoutStyles, measuredBlockHeights, measuredTableRowHeights, measuredTextFragmentHeights, measuredTextLineBreaks, onTableRowMeasurementJobsChange, onTextFragmentMeasurementJobsChange, paginationAlgorithmId, paginationOptimizationSettings, parseState, resolvedStyleContract, setPageLayouts]);
 }

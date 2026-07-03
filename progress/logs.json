@@ -1,6 +1,32 @@
 {
   "entries": [
     {
+      "id": "LOG-326",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "PH2 / M2",
+      "step": "PH2-09 子步：新增 cell-measure-v2 算法目录及 5 个模块文件",
+      "action": "新增功能",
+      "result": "新增独立分页算法 cell-measure-v2（单元格精确测量分页引擎），支持逐单元格离屏测量、按列宽分配行高、单元格内容跨页分割（单格内容跨两页）、跨列/跨行合并单元格的识别与保持。npm run typecheck 和 npm run build 成功。",
+      "verification": [
+        "npm run typecheck 通过",
+        "npm run build 通过"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithmIds.ts",
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/registry.ts",
+        "src/engine/typesetting/algorithms/cellMeasure/types.ts",
+        "src/engine/typesetting/algorithms/cellMeasure/measurementCache.ts",
+        "src/engine/typesetting/algorithms/cellMeasure/cellOffscreenRenderer.ts",
+        "src/engine/typesetting/algorithms/cellMeasure/cellSplit.ts",
+        "src/engine/typesetting/algorithms/cellMeasure/index.ts"
+      ],
+      "next": "手动运行 npm run smoke:m2 验证新算法在实际场景中的表现。"
+    },
+    {
       "id": "LOG-001",
       "date": "2026-06-21",
       "taskIds": [
@@ -7664,6 +7690,381 @@
         "progress/logs.json"
       ],
       "next": "执行 `npm run progress:build` 同步展示文档；后续若继续推进，可进一步补优化前后对比、优化结果持久化或更细粒度的参数训练。"
+    },
+    {
+      "id": "LOG-312",
+      "date": "2026-06-30",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页批次单篇即可优化边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认把分页批次优化门槛从 10 篇调整为 1 篇。本步纳入：把批次就绪条件改为 `>= 1 篇`，已有本机批次数据读取时也按 1 篇判断就绪，同步更新 `AI助手 -> 分页` 的收集进度、说明文案、未就绪提示和按钮启用逻辑。本步明确不纳入：不改分页算法内部权重公式，不做批次历史、删除、重置、长期学习、云同步或 `.layout` 持久化，也不处理不同文件 `documentId` 覆盖问题。",
+      "verification": [
+        "用户已回复“确认”，确认当前阈值调整最小实现边界可以执行。",
+        "`PH2-09-feedback-batch-ready-threshold-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始调整分页批次就绪阈值和 AI 分页面板中文文案。"
+    },
+    {
+      "id": "LOG-313",
+      "date": "2026-06-30",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页批次单篇即可优化",
+      "action": "前端实现/阈值调整/文案同步/进度同步/校验",
+      "result": "已完成 `PH2-09-feedback-batch-ready-threshold-v1`：1) 新增分页批次就绪阈值常量，并将批次就绪条件从 `>= 10 篇` 调整为 `>= 1 篇`；2) 已有本机 localStorage 批次数据读取时会按 1 篇重新归一化 `isReady`；3) `AI助手 -> 分页` 中的收集进度、说明文案和未就绪提示已同步改成 1 篇口径；4) `smoke:m2` 已补充 1 篇有效样本加入批次后立即可应用优化并生成运行时优化参数的回归断言。本步未改分页算法内部权重公式，未新增批次历史、删除、重置或 `.layout` 持久化。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/components/ai/AiPaginationTab.tsx",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续如需继续修复不同文件 `documentId` 覆盖或批次历史管理，需要再单独确认边界。"
+    },
+    {
+      "id": "LOG-314",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认隔离式真实测量分页引擎 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认按“新增一套与当前分页引擎完全隔离、前端可切换”的方向推进真实测量分页引擎 V1。本步纳入：新增独立算法 ID、注册表接线、前端切换入口、隐藏测量层片段级测量接入、单栏真实测量分页主循环、长文本安全切分、列表按项分页、表格按行分页和基础回归验证。本步明确不纳入：覆盖 `max-fill-v1`、改 `.layout` 数据结构、两栏/三栏真实测量、复杂图片绕排、表头重复、导出专用第二引擎和长期学习持久化。",
+      "verification": [
+        "用户已回复“确认并开始做”，允许进入代码实现。",
+        "`PH2-09-dom-measure-engine-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现新算法 ID、注册表、样式白名单和隔离式真实测量分页引擎骨架。"
+    },
+    {
+      "id": "LOG-315",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "新增真实测量分页引擎开发计划文档并补记边界",
+      "action": "方案落档/边界登记/准备实现",
+      "result": "用户确认按当前方案执行，并要求额外沉淀一份新的开发计划文档。本步已把 `PH2-09-dom-measure-engine-plan-v1` 写回任务卡，并计划新增 `progress/roadmaps/PH2-09-隔离式真实测量分页引擎开发计划.md`。本步纳入：把新引擎目标、规则抽象、实施顺序、文件边界、风险与回退策略形成专项文档，并与 `PH2-09-dom-measure-engine-v1` 边界保持一致。本步明确不纳入：因为写文档而扩张到两栏/三栏真实测量、复杂图片绕排、表头重复或导出专用第二引擎。",
+      "verification": [
+        "用户已回复“按这版执行，并且将开发计划写一个新的文档”，允许把文档计划纳入本轮实现。",
+        "`PH2-09-dom-measure-engine-plan-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "progress/roadmaps/PH2-09-隔离式真实测量分页引擎开发计划.md"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始接入 `dom-measure-v1` 算法注册、前端切换和单栏真实测量分页骨架。"
+    },
+    {
+      "id": "LOG-316",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "登记真实测量分页引擎第一实现子步边界",
+      "action": "边界细化/准备实现",
+      "result": "为避免本轮实现范围失控，已把 `PH2-09-dom-measure-engine-skeleton-v1` 写回任务卡，作为 `PH2-09-dom-measure-engine-v1` 的第一实现子步。本步纳入：新增 `dom-measure-v1` 算法 ID、注册表接线、样式白名单、前端切换、新引擎独立目录、单栏真实测量分页骨架和最小 smoke 回归。本步明确不纳入：完整片段测量任务系统、两栏/三栏真实测量、表头重复、复杂图片绕排和新的页面协议。",
+      "verification": [
+        "`PH2-09-dom-measure-engine-skeleton-v1` 已写回 `progress/tasks/phase-2.json`，明确第一实现子步的本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档，然后开始修改算法注册、前端切换和新引擎骨架代码。"
+    },
+    {
+      "id": "LOG-317",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成真实测量分页引擎骨架与切换 V1",
+      "action": "前端实现/算法接线/运行时骨架/验证/进度同步",
+      "result": "已完成 `PH2-09-dom-measure-engine-skeleton-v1`：1) 新增 `dom-measure-v1` 算法 ID 并注册到分页算法注册表；2) `styleSettings.paginationAlgorithmId` 与 store 白名单已放开到 `max-fill-v1` / `dom-measure-v1`；3) `usePagination` 已让两套引擎在单栏时共享现有测量数据；4) 新增 `src/engine/typesetting/algorithms/domMeasure/` 独立目录与单栏真实测量分页骨架，支持长文本、列表、表格和图片的保守分页；5) `scripts/m1-smoke.ts` 与 `scripts/m2-smoke.ts` 已补充新引擎回归；6) `m2-smoke` 已通过，`build` 已通过。本步额外发现 `m1-smoke` 仍有一条与本轮分页引擎无关的旧表格插入毛刺，已作为独立遗留问题记录，不影响本轮分页引擎收口。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithmIds.ts",
+        "src/engine/typesetting/registry.ts",
+        "src/engine/typesetting/index.ts",
+        "src/engine/typesetting/algorithms/domMeasure/*",
+        "src/engine/style/styleSettings.ts",
+        "src/store/slices/styleSlice.ts",
+        "src/hooks/usePagination.ts",
+        "src/engine/style/blockStyleResolution.ts",
+        "scripts/m1-smoke.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "progress/roadmaps/PH2-09-隔离式真实测量分页引擎开发计划.md"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；若继续推进，优先进入片段测量任务与更精细的文本/表格分页收敛。"
+    },
+    {
+      "id": "LOG-318",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认文本片段真实测量 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认继续推进新分页引擎开发。本步已把 `PH2-09-dom-measure-fragment-text-v1` 写回任务卡。本步纳入：新增文本片段测量任务与片段高度缓存类型；接通 `usePagination`、隐藏测量层和 `dom-measure-v1` 的片段测量回填链路；让长标题和长段落跨页切分优先消费真实换行断点与文本片段真实高度；片段高度缺失时保持保守分页，回填后自动重排；补充长段落跨页和切回 `max-fill-v1` 不回退的验证。本步明确不纳入：两栏/三栏真实测量、表头重复、复杂表格跨页、图片绕排真实测量、`.layout` 字段变更、长期学习或覆盖旧引擎。",
+      "verification": [
+        "用户已回复“确定”，确认当前文本片段真实测量 V1 最小实现边界可以执行。",
+        "`PH2-09-dom-measure-fragment-text-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现文本片段测量状态、隐藏测量层渲染和 `dom-measure-v1` 文本分页消费。"
+    },
+    {
+      "id": "LOG-319",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成文本片段真实测量 V1",
+      "action": "前端实现/运行时测量/算法接入/回归验证/进度同步",
+      "result": "已完成 `PH2-09-dom-measure-fragment-text-v1`：1) 新增文本片段测量任务与片段高度缓存类型，并接入 `paginateBlocks -> dom-measure-v1` 上下文；2) `usePagination` 会把 `dom-measure-v1` 提出的待测文本片段回传到 `AppShell` 运行时状态；3) `CanvasPane` 隐藏测量层已能渲染待测文本片段并回填真实高度；4) `dom-measure-v1` 在长标题和长段落跨页时，会为候选断点生成片段测量任务，并在已有真实高度时收缩到可容纳断点；5) 片段高度缺失时继续采用保守分页，不写入 `.layout`，不影响切回 `max-fill-v1`；6) `smoke:m2` 已新增片段测量任务生成与真实高度收缩断点断言。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/index.ts",
+        "src/hooks/usePagination.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/algorithms/domMeasure/index.ts",
+        "src/engine/typesetting/algorithms/domMeasure/measurementCache.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续若继续推进，可进入列表超长项深拆、表格按行真实测量深化或多栏真实测量子步。"
+    },
+    {
+      "id": "LOG-320",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认超长列表项真实测量 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认继续推进 `PH2-09` 的下一小步：`PH2-09-dom-measure-list-item-fragment-v1`。本步纳入：让 `dom-measure-v1` 对列表块继续优先按整项分页，只有单个列表项本身放不下时才进入项内文本片段测量与切分；复用隐藏测量层回填真实列表项片段高度；列表项续页时继续沿用 `runtimePagination.hideMarker` 规则；补充长列表项跨页和真实高度收缩断点回归。本步明确不纳入：表格按行真实测量深化、表头重复、两栏/三栏真实测量、图片绕排真实测量、孤寡行控制和 `.layout` 字段变更。",
+      "verification": [
+        "用户已回复“确认”，确认当前超长列表项真实测量 V1 最小实现边界可以执行。",
+        "`PH2-09-dom-measure-list-item-fragment-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现列表项片段测量、隐藏测量层回填和 `dom-measure-v1` 列表项分页消费。"
+    },
+    {
+      "id": "LOG-321",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成超长列表项真实测量 V1",
+      "action": "前端实现/列表深拆/运行时测量/回归验证/进度同步",
+      "result": "已完成 `PH2-09-dom-measure-list-item-fragment-v1`：1) 新增 `domMeasure/listSplit.ts`，补齐列表项文本切片、续页 `hideMarker` 语义和列表运行时片段构造；2) `dom-measure-v1` 在列表块中继续优先按整项分页，只有单个列表项本身放不下时才进入项内文本片段测量与切分；3) 列表项深拆复用隐藏测量层与片段高度缓存，并在已有真实高度时收缩到可容纳断点；4) 续页列表项会保留原有样式、层级、任务勾选状态，并继续隐藏重复编号、重复项目符号或重复勾选框；5) `smoke:m2` 已新增长列表项真实测量回归，覆盖片段测量任务生成、内容顺序、样式保留和续页隐藏 marker。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/domMeasure/index.ts",
+        "src/engine/typesetting/algorithms/domMeasure/listSplit.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续若继续推进，可进入表格按行真实测量深化或多栏真实测量子步。"
+    },
+    {
+      "id": "LOG-322",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格按行真实测量 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认继续推进 `PH2-09-dom-measure-table-row-v1`。本步纳入：新增表格行真实高度测量任务与运行时缓存；隐藏测量层补齐表格行高度回填；`dom-measure-v1` 在表格分页时优先消费真实行高决定当前页能放几行，缺失时继续回退到现有估算行高；续页表格继续按行切分并保持当前行顺序；补充长表格真实行高分页回归。本步明确不纳入：表头重复、单元格内部跨页拆分、合并单元格复杂跨页、两栏/三栏表格真实测量和 `.layout` 字段变更。",
+      "verification": [
+        "用户已回复“确认”，确认当前表格按行真实测量 V1 最小实现边界可以执行。",
+        "`PH2-09-dom-measure-table-row-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现表格行真实测量状态、隐藏测量层回填和 `dom-measure-v1` 表格分页消费。"
+    },
+    {
+      "id": "LOG-323",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格按行真实测量 V1",
+      "action": "前端实现/运行时测量/表格分页接入/回归验证/进度同步",
+      "result": "已完成 `PH2-09-dom-measure-table-row-v1`：1) 扩展分页上下文、`usePagination`、`AppShell` 和 `CanvasPane`，新增表格行真实高度缓存与测量任务链路；2) 隐藏测量层已能按 `rowId` 回填 `tr` 的真实高度；3) `dom-measure-v1` 在表格分页时会优先消费真实行高决定当前页能放几行，缺失时继续回退到现有估算行高；4) 续页表格继续按行切分，保持当前行顺序和既有运行时协议；5) `smoke:m2` 已新增真实表格行高分页回归，覆盖测量任务生成和真实行高优先分页。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run smoke:m2` 成功，输出 `M2 冒烟验证通过：16 个结构块，3 页，5 个目录项。`。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/types.ts",
+        "src/engine/typesetting/index.ts",
+        "src/hooks/usePagination.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/algorithms/domMeasure/index.ts",
+        "src/engine/typesetting/algorithms/domMeasure/measurementCache.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续若继续推进，可进入表头重复或多栏真实测量子步。"
+    },
+    {
+      "id": "LOG-324",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格续页重复表头 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户确认继续推进 `PH2-09-dom-measure-table-header-repeat-v1`。本步纳入：让 `dom-measure-v1` 在表格续页时自动重复首行表头；重复表头继续沿用运行时行数据，不写入 `.layout`；隐藏测量层、分页结果和导出继续消费同一套重复表头口径；补充长表格续页重复表头回归。本步明确不纳入：单元格内部跨页拆分、合并单元格复杂跨页、两栏/三栏表格真实测量和 `.layout` 字段变更。",
+      "verification": [
+        "用户已回复“确定”，确认当前表格续页重复表头 V1 最小实现边界可以执行。",
+        "`PH2-09-dom-measure-table-header-repeat-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始实现 `dom-measure-v1` 表格续页重复表头和对应回归验证。"
+    },
+    {
+      "id": "LOG-325",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "新增离屏渲染精确测量分页算法 offscreen-measure-v1",
+      "action": "前端实现/算法注册/类型修复/验证",
+      "result": "已新增独立分页算法 offscreen-measure-v1：1) 新增算法 ID 和在注册表中注册；2) 创建离屏渲染器 offscreenRenderer.ts，使用隐藏 div 容器进行真实测量；3) 创建行级精确测量 preciseTextSplit.ts，提供二分查找最优分割点；4) 创建离屏测量算法 offscreenMeasure/index.ts，结合块级快速测量和行级精确切分；5) 更新 styleSlice.ts 支持新算法切换；6) 修复 TextRun 类型问题（marks 代替 bold/italic 属性）。",
+      "verification": [
+        "npm run typecheck 成功。",
+        "npm run build 成功。",
+        "npm run smoke:m2 测试中。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithmIds.ts",
+        "src/engine/typesetting/registry.ts",
+        "src/engine/typesetting/index.ts",
+        "src/engine/typesetting/algorithms/offscreenMeasure/types.ts",
+        "src/engine/typesetting/algorithms/offscreenMeasure/offscreenRenderer.ts",
+        "src/engine/typesetting/algorithms/offscreenMeasure/preciseTextSplit.ts",
+        "src/engine/typesetting/algorithms/offscreenMeasure/index.ts",
+        "src/store/slices/styleSlice.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "等待 smoke:m2 测试完成，验证离屏测量分页算法正常工作；后续可继续完善离屏测量能力或进入其他 PH2-09 子步。"
+    },
+    {
+      "id": "LOG-327",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分页测试算法1页底安全边界修复 V1 边界",
+      "action": "问题排查/方案确认/边界登记/风险更新",
+      "result": "用户确认修复分页测试算法1中页尾内容侵入页边距/页脚区域的问题。本步纳入：默认增加算法1页底安全余量，收紧实测高度略高于估算高度时仍采用估算高度的宽容逻辑，并让标题/段落和列表页尾拆分使用更保守的可用高度口径。本步明确不纳入：不重写分页引擎，不新增分页 UI，不改页眉页脚预留设置，不改 `.layout` 结构，不覆盖现有真实测量、离屏测量或单元格测量相关改动。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-09-max-fill-bottom-safe-area-fix-v1` 最小实现边界可以执行。",
+        "`PH2-09-max-fill-bottom-safe-area-fix-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已更新 RISK-007，记录本次普通页尾侵入页边距的根因和处理方向。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始修复 `max-fill-v1` 页底安全边界与高度乐观判定，并补充回归验证。"
+    },
+    {
+      "id": "LOG-328",
+      "date": "2026-07-01",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分页测试算法1页底安全边界修复 V1",
+      "action": "分页算法修复/回归断言补充/验证/进度同步",
+      "result": "已完成 `PH2-09-max-fill-bottom-safe-area-fix-v1`：1) `max-fill-v1` 默认按正文高度比例预留 2-12px 页底安全余量，避免无批次优化参数时仍把正文塞到页脚边界；2) 批次优化生成的 `bottomSafeAreaPx` 会继续叠加在默认安全余量之上；3) `resolvePlacementBlockHeight` 中实测高度略高于估算高度时的容忍范围已从接近一整行收紧为 4px 内，避免接近一行的真实渲染误差造成页尾侵入；4) `scripts/m2-smoke.ts` 已补充默认页底安全边界和实测高度偏差回归断言；5) 本步未改页眉页脚 UI、页边距设置或 `.layout` 结构。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "定向分页验证脚本成功，覆盖默认页底安全边界和实测高度明显高于估算时的保守分页。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m2` 两次超时：120 秒和 300 秒均未完成，未输出新的断言失败；该超时发生在当前工作区已有离屏/单元格测量算法改动存在时。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "progress/config.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续若继续分页质量深化，可单独推进真实行级分页或孤寡行控制。"
     }
   ]
 }

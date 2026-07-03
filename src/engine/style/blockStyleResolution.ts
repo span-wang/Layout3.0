@@ -345,7 +345,7 @@ export function getBlockStyleSourceSummary(
   const baseLabel =
     contract.templateId === 'default' && contract.themeId === 'default'
       ? '默认基线'
-      : `模板 / 主题基线（${contract.templateThemeLabel}）`;
+      : `模板基线（${contract.templateThemeLabel}）`;
 
   return hasBlockStyleOverrides(block)
     ? `${baseLabel} + 当前块局部覆盖`

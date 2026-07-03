@@ -5,6 +5,7 @@ import { useAppStore } from '@/store';
 import {
   PAGINATION_PROBLEM_SEVERITY_LABELS,
   PAGINATION_PROBLEM_TAG_LABELS,
+  PAGINATION_BATCH_READY_DOCUMENT_COUNT,
   PAGINATION_ROOT_CAUSE_LABELS,
 } from '@/types/ai';
 import type {
@@ -505,12 +506,12 @@ export function AiPaginationTab(): JSX.Element {
         <div className="ai-result-header">
           <h3 className="ai-section-title">批次分析</h3>
           <span className="ai-pagination-summary">
-            已收集 {paginationBatchAnalysis.documentCount} / 10 篇
+            已收集 {paginationBatchAnalysis.documentCount} / {PAGINATION_BATCH_READY_DOCUMENT_COUNT} 篇
           </span>
         </div>
 
         <p className="ai-description">
-          当前批次以 10 篇文章为一组。达到 10 篇后，就可以基于聚合根因进入算法改进阶段。
+          当前批次收集到 1 篇文章后，就可以基于已识别根因应用分页优化参数。
         </p>
 
         <div className="ai-pagination-sample-card">
@@ -575,7 +576,7 @@ export function AiPaginationTab(): JSX.Element {
 
         {!paginationBatchAnalysis.isReady ? (
           <div className="ai-pagination-empty-samples">
-            <span>当前批次未满 10 篇，暂时不能应用批次优化。</span>
+            <span>当前批次还没有文章，请先加入至少 1 篇文章后再应用批次优化。</span>
           </div>
         ) : null}
 

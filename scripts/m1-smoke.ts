@@ -41,6 +41,7 @@ import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '../s
 import { buildExportHtml } from '../src/services/exportHtml.ts';
 import { getBlockStyleControlSupportByBlockType } from '../src/components/layout/objectStyleSupport.ts';
 import {
+  DOM_MEASURE_PAGINATION_ALGORITHM_ID,
   MAX_FILL_PAGINATION_ALGORITHM_ID,
   DEFAULT_CODE_CHAR_WIDTH_FACTOR,
   listPaginationAlgorithms,
@@ -332,8 +333,13 @@ async function main(): Promise<void> {
   }
 
   const algorithmIds = listPaginationAlgorithms().map((algorithm) => algorithm.id);
-  if (algorithmIds.length !== 1 || algorithmIds[0] !== MAX_FILL_PAGINATION_ALGORITHM_ID) {
-    throw new Error(`分页算法注册验证失败：当前应只保留分页测试算法1，实际为 ${algorithmIds.join(', ') || '空'}`);
+  if (
+    !algorithmIds.includes(MAX_FILL_PAGINATION_ALGORITHM_ID) ||
+    !algorithmIds.includes(DOM_MEASURE_PAGINATION_ALGORITHM_ID)
+  ) {
+    throw new Error(
+      `分页算法注册验证失败：当前应至少包含分页测试算法1和真实测量分页引擎，实际为 ${algorithmIds.join(', ') || '空'}`,
+    );
   }
 
   if (restoredLegacyAlgorithmProject.styleSettings.paginationAlgorithmId !== MAX_FILL_PAGINATION_ALGORITHM_ID) {
@@ -663,7 +669,10 @@ async function main(): Promise<void> {
   }
 
   if (
-    !scopedBlockStyleHtml.includes('<table style="line-height:32px;margin-top:14px;margin-bottom:20px">')
+    !scopedBlockStyleHtml.includes('class="preview-table"') ||
+    !scopedBlockStyleHtml.includes('line-height:32px') ||
+    !scopedBlockStyleHtml.includes('margin-top:14px') ||
+    !scopedBlockStyleHtml.includes('margin-bottom:20px')
   ) {
     throw new Error('样式入口收口验证失败：表格的稳定样式项没有正确导出');
   }

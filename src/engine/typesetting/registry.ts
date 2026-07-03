@@ -1,6 +1,9 @@
 import type { PaginationAlgorithmId } from '@/engine/style/types';
 import { DEFAULT_PAGINATION_ALGORITHM_ID, MAX_FILL_PAGINATION_ALGORITHM_ID } from './algorithmIds';
+import { domMeasurePaginationAlgorithm } from './algorithms/domMeasure';
 import { estimatedMaxFillPaginationAlgorithm, paginateMaxFillBlocks } from './algorithms/estimatedMaxFill';
+import { offscreenMeasurePaginationAlgorithm } from './algorithms/offscreenMeasure';
+import { cellMeasurePaginationAlgorithm } from './algorithms/cellMeasure';
 import type { PaginationAlgorithmDefinition } from './types';
 
 const paginationAlgorithms = new Map<PaginationAlgorithmId, PaginationAlgorithmDefinition>();
@@ -8,6 +11,9 @@ const paginationAlgorithms = new Map<PaginationAlgorithmId, PaginationAlgorithmD
 function seedBuiltinPaginationAlgorithms(): void {
   [
     estimatedMaxFillPaginationAlgorithm,
+    domMeasurePaginationAlgorithm,
+    offscreenMeasurePaginationAlgorithm,
+    cellMeasurePaginationAlgorithm,
   ].forEach((algorithm) => {
     paginationAlgorithms.set(algorithm.id, algorithm);
   });

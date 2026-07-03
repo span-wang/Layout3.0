@@ -16,7 +16,13 @@ import { useResolvedStyleContract } from '@/hooks/useResolvedStyleContract';
 import { useAppStore } from '@/store';
 import type { AiGenerationRecord } from '@/types/ai';
 import type { CanvasTextSelectionState, WorkspaceDirectoryEntry } from '@/types/workspace';
-import type { MeasuredTextLineBreaks } from '@/engine/typesetting';
+import type {
+  MeasuredTableRowHeights,
+  MeasuredTextFragmentHeights,
+  MeasuredTextLineBreaks,
+  TableRowMeasurementJob,
+  TextFragmentMeasurementJob,
+} from '@/engine/typesetting';
 import { CanvasPane } from './CanvasPane';
 import { EditorPane } from './EditorPane';
 import { LeftPanel } from './LeftPanel';
@@ -46,11 +52,49 @@ function areMeasuredTextLineBreaksEqual(
   });
 }
 
+function areMeasuredTextFragmentHeightsEqual(
+  currentHeights: MeasuredTextFragmentHeights,
+  nextHeights: MeasuredTextFragmentHeights,
+): boolean {
+  const currentKeys = Object.keys(currentHeights);
+  const nextKeys = Object.keys(nextHeights);
+  return (
+    currentKeys.length === nextKeys.length &&
+    nextKeys.every((key) => currentHeights[key] === nextHeights[key])
+  );
+}
+
+function areMeasuredTableRowHeightsEqual(
+  currentHeights: MeasuredTableRowHeights,
+  nextHeights: MeasuredTableRowHeights,
+): boolean {
+  const currentKeys = Object.keys(currentHeights);
+  const nextKeys = Object.keys(nextHeights);
+  return (
+    currentKeys.length === nextKeys.length &&
+    nextKeys.every((key) => currentHeights[key] === nextHeights[key])
+  );
+}
+
 export function AppShell(): JSX.Element {
   const resolvedStyleContract = useResolvedStyleContract();
   const [measuredBlockHeights, setMeasuredBlockHeights] = useState<Record<string, number>>({});
   const [measuredTextLineBreaks, setMeasuredTextLineBreaks] = useState<MeasuredTextLineBreaks>({});
-  usePagination(resolvedStyleContract, measuredBlockHeights, measuredTextLineBreaks);
+  const [measuredTextFragmentHeights, setMeasuredTextFragmentHeights] =
+    useState<MeasuredTextFragmentHeights>({});
+  const [measuredTableRowHeights, setMeasuredTableRowHeights] =
+    useState<MeasuredTableRowHeights>({});
+  const [textFragmentMeasurementJobs, setTextFragmentMeasurementJobs] = useState<TextFragmentMeasurementJob[]>([]);
+  const [tableRowMeasurementJobs, setTableRowMeasurementJobs] = useState<TableRowMeasurementJob[]>([]);
+  usePagination(
+    resolvedStyleContract,
+    measuredBlockHeights,
+    measuredTextLineBreaks,
+    measuredTextFragmentHeights,
+    measuredTableRowHeights,
+    setTextFragmentMeasurementJobs,
+    setTableRowMeasurementJobs,
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [dragSource, setDragSource] = useState<string | null>(null);
@@ -191,6 +235,20 @@ export function AppShell(): JSX.Element {
     setMeasuredTextLineBreaks((currentBreaks) =>
       areMeasuredTextLineBreaksEqual(currentBreaks, nextBreaks) ? currentBreaks : nextBreaks,
     );
+  }, []);
+
+  const handleMeasuredTextFragmentHeightsChange = useCallback((nextHeights: MeasuredTextFragmentHeights) => {
+    setMeasuredTextFragmentHeights((currentHeights) => {
+      const mergedHeights = { ...currentHeights, ...nextHeights };
+      return areMeasuredTextFragmentHeightsEqual(currentHeights, mergedHeights) ? currentHeights : mergedHeights;
+    });
+  }, []);
+
+  const handleMeasuredTableRowHeightsChange = useCallback((nextHeights: MeasuredTableRowHeights) => {
+    setMeasuredTableRowHeights((currentHeights) => {
+      const mergedHeights = { ...currentHeights, ...nextHeights };
+      return areMeasuredTableRowHeightsEqual(currentHeights, mergedHeights) ? currentHeights : mergedHeights;
+    });
   }, []);
 
   const handleSelectLayoutNode = useCallback(
@@ -657,6 +715,10 @@ export function AppShell(): JSX.Element {
                 isCondensed={shouldShowEditor}
                 onMeasuredBlockHeightsChange={handleMeasuredBlockHeightsChange}
                 onMeasuredTextLineBreaksChange={handleMeasuredTextLineBreaksChange}
+                textFragmentMeasurementJobs={textFragmentMeasurementJobs}
+                onMeasuredTextFragmentHeightsChange={handleMeasuredTextFragmentHeightsChange}
+                tableRowMeasurementJobs={tableRowMeasurementJobs}
+                onMeasuredTableRowHeightsChange={handleMeasuredTableRowHeightsChange}
               />
             ) : null}
           </div>

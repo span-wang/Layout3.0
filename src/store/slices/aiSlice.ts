@@ -22,7 +22,7 @@ import type {
   AiTaskType,
   AiProvider,
 } from '@/types/ai';
-import { DEFAULT_AI_TASK_ASSIGNMENTS } from '@/types/ai';
+import { DEFAULT_AI_TASK_ASSIGNMENTS, PAGINATION_BATCH_READY_DOCUMENT_COUNT } from '@/types/ai';
 
 export interface AiSlice {
   // 兼容旧调用的当前配置状态，默认指向“内容生成”分配的配置
@@ -359,7 +359,7 @@ function normalizePaginationBatchAnalysis(raw: unknown): PaginationBatchAnalysis
       ? value.batchId
       : 'pagination-batch-default',
     documentCount: documents.length,
-    isReady: documents.length >= 10,
+    isReady: documents.length >= PAGINATION_BATCH_READY_DOCUMENT_COUNT,
     documents,
     rootCauseStats,
   };
@@ -684,7 +684,7 @@ export const createAiSlice = (
         const nextAnalysis: PaginationBatchAnalysis = {
           batchId: state.paginationBatchAnalysis.batchId,
           documentCount: nextDocuments.length,
-          isReady: nextDocuments.length >= 10,
+          isReady: nextDocuments.length >= PAGINATION_BATCH_READY_DOCUMENT_COUNT,
           documents: nextDocuments,
           rootCauseStats: buildPaginationBatchRootCauseStats(nextDocuments),
         };

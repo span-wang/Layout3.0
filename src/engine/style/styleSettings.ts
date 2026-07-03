@@ -1,5 +1,8 @@
 import { defaultBlockSpacingParameters, defaultStyleSettings } from './presets';
-import { MAX_FILL_PAGINATION_ALGORITHM_ID } from '@/engine/typesetting/algorithmIds';
+import {
+  DOM_MEASURE_PAGINATION_ALGORITHM_ID,
+  MAX_FILL_PAGINATION_ALGORITHM_ID,
+} from '@/engine/typesetting/algorithmIds';
 import type {
   BlockSpacingParameterKey,
   BlockSpacingParameters,
@@ -341,8 +344,11 @@ export function normalizeBlockSpacingPresets(value: unknown): BlockSpacingPreset
 }
 
 function normalizePaginationAlgorithmId(value: unknown, fallback: string): string {
-  // 目前产品只保留“分页测试算法1”。旧 .layout 里保存的实验算法 ID 统一回退，避免出现界面不可选但状态仍残留的算法。
-  return value === MAX_FILL_PAGINATION_ALGORITHM_ID ? MAX_FILL_PAGINATION_ALGORITHM_ID : fallback;
+  // 真实测量分页引擎接入后，`.layout` 里允许保留两种已注册算法；
+  // 更早期遗留的实验算法 ID 继续回退到默认算法，避免界面出现不可选残留值。
+  return value === MAX_FILL_PAGINATION_ALGORITHM_ID || value === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+    ? value
+    : fallback;
 }
 
 function normalizePaginationBehavior(
