@@ -50,7 +50,14 @@ export type AiTaskConfigAssignments = Record<AiTaskType, string | null>;
 /**
  * 生成内容类型
  */
-export type GenerateType = 'lecture' | 'summary' | 'exercise' | 'exam';
+export type GenerateType =
+  | 'lecture'
+  | 'summary'
+  | 'exercise'
+  | 'exam'
+  | 'xiaohongshuTitle'
+  | 'xiaohongshuCopy'
+  | 'xiaohongshuCover';
 
 /**
  * 生成选项
@@ -66,6 +73,14 @@ export interface GenerateOptions {
   subject?: string;
   /** 内容长度 */
   length?: 'short' | 'medium' | 'long';
+  /** 小红书使用：文章原始标题 */
+  articleTitle?: string;
+  /** 小红书使用：当前文章正文内容 */
+  articleContent?: string;
+  /** 小红书使用：用户选定或填写的推荐标题 */
+  selectedTitle?: string;
+  /** 小红书使用：用户选定或生成的小红书文案 */
+  selectedCopy?: string;
 }
 
 /**
@@ -325,6 +340,9 @@ export const GENERATE_TYPE_LABELS: Record<GenerateType, string> = {
   summary: '知识点总结',
   exercise: '练习题',
   exam: '试卷初稿',
+  xiaohongshuTitle: '小红书标题',
+  xiaohongshuCopy: '小红书文案',
+  xiaohongshuCover: '小红书主图方案',
 };
 
 /**

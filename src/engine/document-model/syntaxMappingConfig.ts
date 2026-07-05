@@ -6,6 +6,7 @@
  */
 
 import type { LayoutDocument, TextMarkType } from './types';
+import { normalizeLayoutBlockSemantic } from './semanticRole';
 
 /**
  * 文本标记语法映射配置
@@ -235,6 +236,26 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function normalizeLayoutBlockSemantics(blocks: LayoutDocument['blocks']): LayoutDocument['blocks'] {
+  return blocks.map((block) => {
+    const semantic = normalizeLayoutBlockSemantic(block.semantic);
+    const { semantic: _rawSemantic, ...blockWithoutSemantic } = block;
+    const normalizedBlock = semantic ? { ...blockWithoutSemantic, semantic } : blockWithoutSemantic;
+
+    if (normalizedBlock.type !== 'blockquote' || normalizedBlock.metadata.kind !== 'blockquote') {
+      return normalizedBlock;
+    }
+
+    return {
+      ...normalizedBlock,
+      metadata: {
+        ...normalizedBlock.metadata,
+        blocks: normalizeLayoutBlockSemantics(normalizedBlock.metadata.blocks),
+      },
+    };
+  });
+}
+
 function cloneTextMarkMapping(mapping: TextMarkMapping): TextMarkMapping {
   return { ...mapping };
 }
@@ -419,6 +440,7 @@ export function normalizeLayoutDocumentSyntaxMappingConfig(document: LayoutDocum
 
   return {
     ...documentWithoutLegacy,
+    blocks: normalizeLayoutBlockSemantics(document.blocks),
     meta: {
       ...document.meta,
       syntaxMappingConfig: normalizeSyntaxMappingConfig(document.meta.syntaxMappingConfig ?? legacyConfig),

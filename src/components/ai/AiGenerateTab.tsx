@@ -1,14 +1,36 @@
 /**
  * AI 生成 Tab
- * 支持生成讲义、知识点总结、练习题、试卷初稿
+ * 支持生成讲义、知识点总结、练习题、试卷初稿和小红书内容
  */
 
 import { useRef, useState } from 'react';
 import { useAppStore } from '@/store';
 import { aiService } from '@/services/AiService';
 import { addAiGenerationRecord } from '@/services/AiGenerationRecordService';
+import { layoutDocumentToMarkdown } from '@/services/layoutDocumentMarkdown';
 import type { GenerateOptions, GenerateType } from '@/types/ai';
 import { GENERATE_TYPE_LABELS, LENGTH_LABELS } from '@/types/ai';
+
+function isXiaohongshuGenerateType(type: GenerateType): boolean {
+  return type === 'xiaohongshuTitle' || type === 'xiaohongshuCopy' || type === 'xiaohongshuCover';
+}
+
+function getFirstUsefulLine(content: string): string {
+  const categoryNames = ['痛点型', '共鸣型', '反常识型', '对比型', '氛围感型', '合集清单型', '优先推荐', '推荐理由'];
+  const line = content
+    .split(/\r?\n/)
+    .map((item) => item.replace(/^#+\s*/, '').replace(/^[-*\d.、\s]+/, '').replace(/^["“”]+|["“”]+$/g, '').trim())
+    .find((item) => {
+      if (!item) {
+        return false;
+      }
+
+      // 小红书标题推荐会按类型分组，自动带入时跳过分组名，只取真正的标题候选。
+      return !categoryNames.some((name) => item.startsWith(name));
+    });
+
+  return line ?? '';
+}
 
 export function AiGenerateTab(): JSX.Element {
   const isGenerating = useAppStore((state) => state.isGenerating);
@@ -24,12 +46,15 @@ export function AiGenerateTab(): JSX.Element {
   const currentDirectoryPath = useAppStore((state) => state.currentDirectoryPath);
   const setAiGenerationRecordDirectory = useAppStore((state) => state.setAiGenerationRecordDirectory);
   const setAiGenerationRecordsError = useAppStore((state) => state.setAiGenerationRecordsError);
+  const layoutDocument = useAppStore((state) => state.layoutDocument);
 
   const [generateType, setGenerateType] = useState<GenerateType>('lecture');
   const [topic, setTopic] = useState('');
   const [grade, setGrade] = useState('');
   const [subject, setSubject] = useState('');
   const [length, setLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const [selectedXiaohongshuTitle, setSelectedXiaohongshuTitle] = useState('');
+  const [selectedXiaohongshuCopy, setSelectedXiaohongshuCopy] = useState('');
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleGenerate = async () => {
@@ -39,8 +64,23 @@ export function AiGenerateTab(): JSX.Element {
       return;
     }
 
-    if (!topic.trim()) {
+    const isXiaohongshuMode = isXiaohongshuGenerateType(generateType);
+    const articleTitle = layoutDocument?.title?.trim() || '';
+    const articleContent = layoutDocument ? layoutDocumentToMarkdown(layoutDocument) : '';
+    const normalizedTopic = topic.trim() || articleTitle || selectedXiaohongshuTitle.trim();
+
+    if (!normalizedTopic && !articleContent.trim()) {
       setGenerateError('请输入主题');
+      return;
+    }
+
+    if ((generateType === 'xiaohongshuCopy' || generateType === 'xiaohongshuCover') && !selectedXiaohongshuTitle.trim()) {
+      setGenerateError('请先填写已选小红书标题');
+      return;
+    }
+
+    if (generateType === 'xiaohongshuCover' && !selectedXiaohongshuCopy.trim()) {
+      setGenerateError('请先填写小红书文案，主图方案需要结合文案生成');
       return;
     }
 
@@ -53,10 +93,14 @@ export function AiGenerateTab(): JSX.Element {
 
       const options: GenerateOptions = {
         type: generateType,
-        topic: topic.trim(),
-        grade: grade.trim() || undefined,
-        subject: subject.trim() || undefined,
-        length,
+        topic: normalizedTopic,
+        grade: isXiaohongshuMode ? undefined : grade.trim() || undefined,
+        subject: isXiaohongshuMode ? undefined : subject.trim() || undefined,
+        length: isXiaohongshuMode ? undefined : length,
+        articleTitle: isXiaohongshuMode ? articleTitle || normalizedTopic : undefined,
+        articleContent: isXiaohongshuMode ? articleContent : undefined,
+        selectedTitle: isXiaohongshuMode ? selectedXiaohongshuTitle.trim() || undefined : undefined,
+        selectedCopy: isXiaohongshuMode ? selectedXiaohongshuCopy.trim() || undefined : undefined,
       };
 
       const abortController = new AbortController();
@@ -78,7 +122,7 @@ export function AiGenerateTab(): JSX.Element {
               grade: options.grade,
               subject: options.subject,
               length: options.length,
-              lengthLabel: LENGTH_LABELS[options.length || 'medium'],
+              lengthLabel: options.length ? LENGTH_LABELS[options.length] : undefined,
               provider: config?.provider,
               model: config?.model,
               content: finalContent,
@@ -131,6 +175,26 @@ export function AiGenerateTab(): JSX.Element {
     clearGeneratedContent();
   };
 
+  const handleFillTitleFromResult = () => {
+    const title = getFirstUsefulLine(generatedContent);
+    if (title) {
+      setSelectedXiaohongshuTitle(title);
+    }
+  };
+
+  const handleFillCopyFromResult = () => {
+    if (generatedContent.trim()) {
+      setSelectedXiaohongshuCopy(generatedContent.trim());
+    }
+  };
+
+  const isXiaohongshuMode = isXiaohongshuGenerateType(generateType);
+  const currentArticleTitle = layoutDocument?.title?.trim() || '当前文档暂无标题';
+  const currentArticleContent = layoutDocument ? layoutDocumentToMarkdown(layoutDocument) : '';
+  const currentArticleSummary = currentArticleContent.trim()
+    ? `已读取当前文档内容，约 ${currentArticleContent.trim().length} 字。`
+    : '当前文档内容为空，将主要根据你填写的选题生成。';
+
   return (
     <div className="ai-generate-tab">
       <div className="ai-section">
@@ -153,62 +217,130 @@ export function AiGenerateTab(): JSX.Element {
         <h3 className="ai-section-title">生成设置</h3>
         <div className="ai-form">
           <div className="ai-form-group">
-            <label htmlFor="ai-topic">主题</label>
+            <label htmlFor="ai-topic">{isXiaohongshuMode ? '选题 / 补充要求' : '主题'}</label>
             <input
               id="ai-topic"
               type="text"
               className="ai-input"
-              placeholder="例如：高中数学函数章节"
+              placeholder={isXiaohongshuMode ? '例如：适合新手的排版技巧' : '例如：高中数学函数章节'}
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               disabled={isGenerating}
             />
           </div>
 
-          <div className="ai-form-row">
-            <div className="ai-form-group">
-              <label htmlFor="ai-grade">年级（可选）</label>
-              <input
-                id="ai-grade"
-                type="text"
-                className="ai-input"
-                placeholder="例如：高一"
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                disabled={isGenerating}
-              />
-            </div>
+          {isXiaohongshuMode ? (
+            <>
+              <div className="ai-form-group">
+                <label>当前文章</label>
+                <div className="ai-context-box">
+                  <strong>{currentArticleTitle}</strong>
+                  <span>{currentArticleSummary}</span>
+                </div>
+              </div>
 
-            <div className="ai-form-group">
-              <label htmlFor="ai-subject">科目（可选）</label>
-              <input
-                id="ai-subject"
-                type="text"
-                className="ai-input"
-                placeholder="例如：数学"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                disabled={isGenerating}
-              />
-            </div>
-          </div>
+              {(generateType === 'xiaohongshuCopy' || generateType === 'xiaohongshuCover') && (
+                <div className="ai-form-group">
+                  <label htmlFor="ai-xiaohongshu-title">已选小红书标题</label>
+                  <input
+                    id="ai-xiaohongshu-title"
+                    type="text"
+                    className="ai-input"
+                    placeholder="从标题推荐结果里选一个标题填到这里"
+                    value={selectedXiaohongshuTitle}
+                    onChange={(e) => setSelectedXiaohongshuTitle(e.target.value)}
+                    disabled={isGenerating}
+                  />
+                  {generatedContent && generateType === 'xiaohongshuCopy' ? (
+                    <button
+                      type="button"
+                      className="ai-button ai-button-small"
+                      onClick={handleFillTitleFromResult}
+                      disabled={isGenerating}
+                    >
+                      从当前结果带入标题
+                    </button>
+                  ) : null}
+                </div>
+              )}
 
-          <div className="ai-form-group">
-            <label htmlFor="ai-length">内容长度</label>
-            <select
-              id="ai-length"
-              className="ai-select"
-              value={length}
-              onChange={(e) => setLength(e.target.value as 'short' | 'medium' | 'long')}
-              disabled={isGenerating}
-            >
-              {(Object.keys(LENGTH_LABELS) as Array<'short' | 'medium' | 'long'>).map((len) => (
-                <option key={len} value={len}>
-                  {LENGTH_LABELS[len]}
-                </option>
-              ))}
-            </select>
-          </div>
+              {generateType === 'xiaohongshuCover' && (
+                <div className="ai-form-group">
+                  <label htmlFor="ai-xiaohongshu-copy">小红书文案</label>
+                  <textarea
+                    id="ai-xiaohongshu-copy"
+                    className="ai-textarea"
+                    placeholder="填写或粘贴已生成的小红书文案"
+                    value={selectedXiaohongshuCopy}
+                    onChange={(e) => setSelectedXiaohongshuCopy(e.target.value)}
+                    disabled={isGenerating}
+                    rows={5}
+                  />
+                  {generatedContent ? (
+                    <button
+                      type="button"
+                      className="ai-button ai-button-small"
+                      onClick={handleFillCopyFromResult}
+                      disabled={isGenerating}
+                    >
+                      用当前结果作为文案
+                    </button>
+                  ) : null}
+                </div>
+              )}
+
+              <p className="ai-hint">
+                主图 V1 会生成设计方案和图片生成提示词，不会直接生成图片文件。
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="ai-form-row">
+                <div className="ai-form-group">
+                  <label htmlFor="ai-grade">年级（可选）</label>
+                  <input
+                    id="ai-grade"
+                    type="text"
+                    className="ai-input"
+                    placeholder="例如：高一"
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
+                    disabled={isGenerating}
+                  />
+                </div>
+
+                <div className="ai-form-group">
+                  <label htmlFor="ai-subject">科目（可选）</label>
+                  <input
+                    id="ai-subject"
+                    type="text"
+                    className="ai-input"
+                    placeholder="例如：数学"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    disabled={isGenerating}
+                  />
+                </div>
+              </div>
+
+              <div className="ai-form-group">
+                <label htmlFor="ai-length">内容长度</label>
+                <select
+                  id="ai-length"
+                  className="ai-select"
+                  value={length}
+                  onChange={(e) => setLength(e.target.value as 'short' | 'medium' | 'long')}
+                  disabled={isGenerating}
+                >
+                  {(Object.keys(LENGTH_LABELS) as Array<'short' | 'medium' | 'long'>).map((len) => (
+                    <option key={len} value={len}>
+                      {LENGTH_LABELS[len]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

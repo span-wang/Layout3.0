@@ -25,7 +25,14 @@ interface AiRequestResult {
 
 interface AiGenerationRecord {
   id: string;
-  type: 'lecture' | 'summary' | 'exercise' | 'exam';
+  type:
+    | 'lecture'
+    | 'summary'
+    | 'exercise'
+    | 'exam'
+    | 'xiaohongshuTitle'
+    | 'xiaohongshuCopy'
+    | 'xiaohongshuCover';
   typeLabel: string;
   topic: string;
   grade?: string;

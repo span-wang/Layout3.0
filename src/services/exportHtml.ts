@@ -12,6 +12,8 @@ import {
   resolveHangingIndentStyle,
   isImageTextWrapMode,
   buildLayoutListTree,
+  buildSemanticClassName,
+  getLayoutListItemKind,
   getLayoutListItemLevel,
   shouldHideLayoutListItemMarker,
   resolveTableColumnWidths,
@@ -126,6 +128,27 @@ function buildBlockStyle(
   return declarations.length > 0 ? ` style="${escapeHtml(declarations.join(';'))}"` : '';
 }
 
+function buildBlockAttributes(
+  block: LayoutBlock,
+  styles?: LayoutStyleSheet,
+  contract?: ResolvedStyleContract,
+  classNames: string[] = [],
+): string {
+  const semanticClassName = buildSemanticClassName(block);
+  const mergedClassNames = [
+    ...classNames,
+    ...semanticClassName.split(/\s+/).filter(Boolean),
+  ].filter(Boolean);
+  const classAttribute = mergedClassNames.length > 0
+    ? ` class="${escapeHtml(mergedClassNames.join(' '))}"`
+    : '';
+  const semanticAttribute = block.semantic?.roleId
+    ? ` data-semantic-role="${escapeHtml(block.semantic.roleId)}"`
+    : '';
+
+  return `${classAttribute}${semanticAttribute}${buildBlockStyle(block, styles, contract)}`;
+}
+
 function renderInlineText(text: string): string {
   // 分割普通文本和行内公式
   const fragments = splitInlineEquations(text);
@@ -237,8 +260,10 @@ function renderListTreeNodes(
   inheritedStyle = {},
   isRoot = false,
 ): string {
-  const tagName = ordered ? 'ol' : 'ul';
-  const startAttribute = ordered && start !== null && isRoot ? ` start="${start}"` : '';
+  const currentListKind = nodes[0] ? getLayoutListItemKind(nodes[0].item, ordered) : ordered ? 'ordered' : 'unordered';
+  const currentOrdered = currentListKind === 'ordered';
+  const tagName = currentOrdered ? 'ol' : 'ul';
+  const startAttribute = currentOrdered && start !== null && isRoot ? ` start="${start}"` : '';
   const childrenHtml = nodes
     .map((node) => {
       const nestedListHtml = node.children.length > 0
@@ -271,13 +296,13 @@ function renderBlock(
             : block.metadata.kind === 'heading' && block.metadata.depth === 3
             ? 'h3'
             : 'h4';
-      const className = shouldLayoutBlockSpanAllColumns(block, contract) ? ' class="column-span-all"' : '';
-      return `<${tagName}${className}${buildBlockStyle(block, styles, contract)}>${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
+      const classNames = shouldLayoutBlockSpanAllColumns(block, contract) ? ['column-span-all'] : [];
+      return `<${tagName}${buildBlockAttributes(block, styles, contract, classNames)}>${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
     }
     case 'toc':
       return '';
     case 'paragraph':
-      return `<p${buildBlockStyle(block, styles, contract)}>${renderTextRuns(block.textRuns, inheritedStyle)}</p>`;
+      return `<p${buildBlockAttributes(block, styles, contract)}>${renderTextRuns(block.textRuns, inheritedStyle)}</p>`;
     case 'list': {
       if (block.metadata.kind !== 'list') {
         return '';
@@ -289,17 +314,17 @@ function renderBlock(
         inheritedStyle,
         true,
       );
-      return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockStyle(block, styles, contract)}>`);
+      return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockAttributes(block, styles, contract)}>`);
     }
     case 'blockquote':
       return block.metadata.kind === 'blockquote'
-        ? `<blockquote>${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract)).join('')}</blockquote>`
+        ? `<blockquote${buildBlockAttributes(block, styles, contract)}>${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract)).join('')}</blockquote>`
         : '';
     case 'code':
-      return `<pre${buildBlockStyle(block, styles, contract)}><code>${renderTextRuns(block.textRuns, inheritedStyle)}</code></pre>`;
+      return `<pre${buildBlockAttributes(block, styles, contract)}><code>${renderTextRuns(block.textRuns, inheritedStyle)}</code></pre>`;
     case 'equation':
       return block.metadata.kind === 'equation'
-        ? `<div class="equation-shell"${buildBlockStyle(block, styles, contract)}>${renderEquationToHtml(block.metadata.value).html}</div>`
+        ? `<div${buildBlockAttributes(block, styles, contract, ['equation-shell'])}>${renderEquationToHtml(block.metadata.value).html}</div>`
         : '';
     case 'table':
       if (block.metadata.kind !== 'table') {
@@ -333,7 +358,7 @@ function renderBlock(
           return `<tr style="height:${rowHeightPx}px">${rowCellsHtml}</tr>`;
         })
         .join('');
-      return `<div class="table-shell"><table class="preview-table"${buildBlockStyle(block, styles, contract)}><colgroup>${colgroupHtml}</colgroup><tbody>${tableRowsHtml}</tbody></table></div>`;
+      return `<div class="table-shell"><table${buildBlockAttributes(block, styles, contract, ['preview-table'])}><colgroup>${colgroupHtml}</colgroup><tbody>${tableRowsHtml}</tbody></table></div>`;
     case 'image':
       if (block.metadata.kind !== 'image') {
         return '';
@@ -404,7 +429,16 @@ function renderImageBlock(block: LayoutBlock): string {
     ? `<figcaption>${escapeHtml(block.metadata.title || block.metadata.alt || '')}</figcaption>`
     : '';
 
-  return `<figure class="image-shell ${escapeHtml(getImageWrapClassName(layout))}"${wrapperStyleParts.length > 0 ? ` style="${escapeHtml(wrapperStyleParts.join(';'))}"` : ''}>${
+  const figureClassNames = [
+    'image-shell',
+    getImageWrapClassName(layout),
+    ...buildSemanticClassName(block).split(/\s+/).filter(Boolean),
+  ].filter(Boolean);
+  const semanticAttribute = block.semantic?.roleId
+    ? ` data-semantic-role="${escapeHtml(block.semantic.roleId)}"`
+    : '';
+
+  return `<figure class="${escapeHtml(figureClassNames.join(' '))}"${semanticAttribute}${wrapperStyleParts.length > 0 ? ` style="${escapeHtml(wrapperStyleParts.join(';'))}"` : ''}>${
     block.metadata.src
       ? `<span class="image-viewport"${viewportStyleParts.length > 0 ? ` style="${escapeHtml(viewportStyleParts.join(';'))}"` : ''}><img class="preview-image preview-image-fit preview-image-cropped" src="${escapeHtml(resolveAssetSrc(block.metadata.src))}" alt="${escapeHtml(block.metadata.alt || '图片')}"${block.metadata.title ? ` title="${escapeHtml(block.metadata.title)}"` : ''}${imageStyleParts.length > 0 ? ` style="${escapeHtml(imageStyleParts.join(';'))}"` : ''} /></span>`
       : '<div class="preview-image placeholder">图片占位</div>'
@@ -483,7 +517,7 @@ function renderPages(
                   .join('')
               : '<div class="toc-empty-state-export">当前文档还没有符合当前目录层级的标题。</div>';
 
-          bodyParts.push(`<section class="toc-block-export"${buildBlockStyle(block, styles, page.contract)}><div class="toc-block-export-title">${escapeHtml(getTocBlockDisplayTitle(block))}</div>${entries}</section>`);
+          bodyParts.push(`<section${buildBlockAttributes(block, styles, page.contract, ['toc-block-export'])}><div class="toc-block-export-title">${escapeHtml(getTocBlockDisplayTitle(block))}</div>${entries}</section>`);
           continue;
         }
 
@@ -881,6 +915,24 @@ export function buildExportHtml({ pages, title, resources, styles, styleSettings
         border: 1px solid var(--page-code-border, transparent);
         border-radius: 12px;
         white-space: pre-wrap;
+      }
+
+      .equation-shell {
+        margin: 14px 0;
+        padding: 6px 14px;
+        color: var(--page-heading3-color, #21364d);
+        font-family: "Cambria Math", "Times New Roman", serif;
+        font-size: 16px;
+        line-height: 1.4;
+        text-align: center;
+        background: #f7fafc;
+        border: 1px solid #dfe8ef;
+        border-radius: 8px;
+      }
+
+      /* 导出页也要收紧 KaTeX 默认块级外边距，避免和画布预览的公式高度不一致。 */
+      .equation-shell .katex-display {
+        margin: 0.3em 0;
       }
 
       .table-shell {

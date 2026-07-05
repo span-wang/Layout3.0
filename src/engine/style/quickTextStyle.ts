@@ -191,6 +191,13 @@ export function getEffectiveRunFontSize(
   return resolveQuickTextStyleForRun(run, inheritedStyle).fontSize ?? fallback;
 }
 
+export function getEffectiveRunFontFamily(
+  run: TextRun,
+  inheritedStyle: TextStyleOverrides,
+): string | undefined {
+  return resolveQuickTextStyleForRun(run, inheritedStyle).fontFamily;
+}
+
 export function getMaxEffectiveFontSize(
   textRuns: TextRun[],
   inheritedStyle: TextStyleOverrides,
@@ -235,6 +242,16 @@ export function getEffectiveTextRunsMaxFontSize(payload: {
   return getMaxEffectiveFontSize(payload.textRuns, inheritedStyle, payload.fallback);
 }
 
+export function getEffectiveTextRunsFontFamily(payload: {
+  textRuns: TextRun[];
+  block: LayoutBlock;
+  styles: LayoutStyleSheet | null | undefined;
+}): string | undefined {
+  const inheritedStyle = resolveQuickTextStyleForBlock(payload.block, payload.styles);
+  return payload.textRuns.find((run) => run.styleOverrides.fontFamily)?.styleOverrides.fontFamily ??
+    inheritedStyle.fontFamily;
+}
+
 export function getEffectiveListItemMaxFontSize(payload: {
   item: LayoutListItem;
   block: LayoutBlock;
@@ -245,6 +262,16 @@ export function getEffectiveListItemMaxFontSize(payload: {
   return getMaxEffectiveFontSize(payload.item.textRuns, inheritedStyle, payload.fallback);
 }
 
+export function getEffectiveListItemFontFamily(payload: {
+  item: LayoutListItem;
+  block: LayoutBlock;
+  styles: LayoutStyleSheet | null | undefined;
+}): string | undefined {
+  const inheritedStyle = resolveQuickTextStyleForBlock(payload.block, payload.styles);
+  return payload.item.textRuns.find((run) => run.styleOverrides.fontFamily)?.styleOverrides.fontFamily ??
+    inheritedStyle.fontFamily;
+}
+
 export function getEffectiveTableCellMaxFontSize(payload: {
   cell: LayoutTableCell;
   block: LayoutBlock;
@@ -253,4 +280,14 @@ export function getEffectiveTableCellMaxFontSize(payload: {
 }): number {
   const inheritedStyle = resolveQuickTextStyleForBlock(payload.block, payload.styles);
   return getMaxEffectiveFontSize(payload.cell.textRuns, inheritedStyle, payload.fallback);
+}
+
+export function getEffectiveTableCellFontFamily(payload: {
+  cell: LayoutTableCell;
+  block: LayoutBlock;
+  styles: LayoutStyleSheet | null | undefined;
+}): string | undefined {
+  const inheritedStyle = resolveQuickTextStyleForBlock(payload.block, payload.styles);
+  return payload.cell.textRuns.find((run) => run.styleOverrides.fontFamily)?.styleOverrides.fontFamily ??
+    inheritedStyle.fontFamily;
 }

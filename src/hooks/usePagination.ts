@@ -39,9 +39,11 @@ export function usePagination(
     }
 
     const shouldUseMeasuredHeights =
-      resolvedStyleContract.columnCount === 1 &&
-      (paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID ||
-        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID);
+      paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID ||
+      paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID;
+    const shouldUseFragmentMeasurements =
+      paginationAlgorithmId === MAX_FILL_PAGINATION_ALGORITHM_ID ||
+      paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID;
     const nextTextFragmentMeasurementJobs: TextFragmentMeasurementJob[] = [];
     const nextTableRowMeasurementJobs: TableRowMeasurementJob[] = [];
     const nextPages = paginateBlocks(layoutBlocks, resolvedStyleContract, {
@@ -50,30 +52,30 @@ export function usePagination(
       measuredBlockHeights: shouldUseMeasuredHeights ? measuredBlockHeights : undefined,
       measuredTextLineBreaks: shouldUseMeasuredHeights ? measuredTextLineBreaks : undefined,
       measuredTextFragmentHeights:
-        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+        shouldUseFragmentMeasurements
           ? measuredTextFragmentHeights
           : undefined,
       textFragmentMeasurementJobs:
-        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+        shouldUseFragmentMeasurements
           ? nextTextFragmentMeasurementJobs
           : undefined,
       measuredTableRowHeights:
-        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+        shouldUseFragmentMeasurements
           ? measuredTableRowHeights
           : undefined,
       tableRowMeasurementJobs:
-        paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+        shouldUseFragmentMeasurements
           ? nextTableRowMeasurementJobs
           : undefined,
       optimizationSettings: paginationOptimizationSettings,
     });
     onTextFragmentMeasurementJobsChange?.(
-      paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+      shouldUseFragmentMeasurements
         ? nextTextFragmentMeasurementJobs
         : [],
     );
     onTableRowMeasurementJobsChange?.(
-      paginationAlgorithmId === DOM_MEASURE_PAGINATION_ALGORITHM_ID
+      shouldUseFragmentMeasurements
         ? nextTableRowMeasurementJobs
         : [],
     );

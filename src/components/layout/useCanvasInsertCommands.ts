@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react';
+import { getChemistryApparatusById, type ChemistryApparatusId } from '@/constants/chemistryApparatus';
 import { type InsertListBlockKind } from '@/engine/document-model';
 import { selectLocalImageFile } from '@/services/FileService';
 import { useAppStore } from '@/store';
@@ -13,6 +14,7 @@ interface UseCanvasInsertCommandsPayload {
 
 interface CanvasInsertCommands {
   handleInsertImage: () => Promise<void>;
+  handleInsertChemistryApparatus: (apparatusId: ChemistryApparatusId) => void;
   handleInsertEquation: () => void;
   handleInsertTable: () => void;
   handleInsertList: (kind: InsertListBlockKind) => void;
@@ -86,6 +88,39 @@ export function useCanvasInsertCommands({
       const message = error instanceof Error ? error.message : '插入图片失败';
       showMessage(`插入图片失败：${message}`);
     }
+  };
+
+  const handleInsertChemistryApparatus = (apparatusId: ChemistryApparatusId): void => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入化学图式的文档');
+      return;
+    }
+
+    const apparatus = getChemistryApparatusById(apparatusId);
+    if (!apparatus) {
+      showMessage('化学图式插入失败：未找到对应素材');
+      return;
+    }
+
+    const insertedBlockId = insertLayoutImageBlock({
+      src: apparatus.src,
+      alt: apparatus.name,
+      title: apparatus.name,
+      widthPx: apparatus.defaultWidthPx,
+      heightPx: apparatus.defaultHeightPx,
+      lockAspectRatio: true,
+      objectFit: 'contain',
+      wrapMode: 'inline',
+      insertAfterNodeId: selectedNodeId,
+    });
+
+    if (!insertedBlockId) {
+      showMessage('化学图式插入失败：当前文档不可写');
+      return;
+    }
+
+    selectInsertedNode(insertedBlockId);
+    showMessage(`已插入化学图式：${apparatus.name}`);
   };
 
   const handleInsertEquation = (): void => {
@@ -235,6 +270,7 @@ export function useCanvasInsertCommands({
 
   return {
     handleInsertImage,
+    handleInsertChemistryApparatus,
     handleInsertEquation,
     handleInsertTable,
     handleInsertList,

@@ -1,9 +1,7 @@
 import type { LayoutBlock, LayoutTableCell, LayoutTableRow, TableCellRangeSelection } from './types';
 import { normalizeTableColumnWidthPx, normalizeTableRowHeightPx } from './utils';
-import {
-  estimateTextLines,
-  resolveEstimatedTextCharWidthFactor,
-} from '../typesetting/textMetrics';
+import { measureTextWidth } from '@/engine/font-metrics';
+import { estimateTextLines } from '../typesetting/textMetrics';
 
 export interface TableAutoFitCellMetrics {
   fontSizePx: number;
@@ -30,6 +28,56 @@ export interface ResolvedTableAutoFitSize {
   rowHeightsPx: number[];
 }
 
+function fitResolvedColumnWidthsToContentWidth(
+  widths: number[],
+  contentWidthPx: number,
+  minColumnWidthPx: number,
+): number[] {
+  if (widths.length === 0) {
+    return [];
+  }
+
+  const safeMinColumnWidthPx = Math.max(1, Math.floor(minColumnWidthPx));
+  const safeContentWidthPx = Math.max(
+    safeMinColumnWidthPx * widths.length,
+    Math.round(contentWidthPx),
+  );
+  const currentTotalWidthPx = widths.reduce((total, width) => total + width, 0);
+  if (currentTotalWidthPx <= safeContentWidthPx) {
+    return widths.map((width) => Math.max(safeMinColumnWidthPx, Math.round(width)));
+  }
+
+  const flexibleWidths = widths.map((width) => Math.max(0, width - safeMinColumnWidthPx));
+  const flexibleTotalWidthPx = flexibleWidths.reduce((total, width) => total + width, 0);
+  const availableFlexibleWidthPx = Math.max(
+    0,
+    safeContentWidthPx - safeMinColumnWidthPx * widths.length,
+  );
+
+  // 显式列宽超出当前正文/栏宽时，也必须重新压回可用宽度；
+  // 否则单栏里自动适应过的表格切到双栏后会继续保留旧总宽，把相邻栏内容顶开。
+  if (flexibleTotalWidthPx <= 0) {
+    const averageWidthPx = safeContentWidthPx / widths.length;
+    return widths.map(() => Math.max(safeMinColumnWidthPx, Math.floor(averageWidthPx)));
+  }
+
+  const scaledWidths = widths.map((width) => {
+    const flexibleWidthPx = Math.max(0, width - safeMinColumnWidthPx);
+    return safeMinColumnWidthPx + (flexibleWidthPx / flexibleTotalWidthPx) * availableFlexibleWidthPx;
+  });
+
+  const roundedWidths = scaledWidths.map((width) => Math.max(safeMinColumnWidthPx, Math.floor(width)));
+  let remainingWidthPx = safeContentWidthPx - roundedWidths.reduce((total, width) => total + width, 0);
+  let cursor = 0;
+  while (remainingWidthPx > 0) {
+    roundedWidths[cursor % roundedWidths.length] += 1;
+    remainingWidthPx -= 1;
+    cursor += 1;
+  }
+
+  return roundedWidths;
+}
+
 // 表格列宽和行高的运行时口径统一放在这里，画布、导出和分页都复用同一套结果。
 export function resolveTableColumnWidths(
   columnWidthsPx: Array<number | null> | null | undefined,
@@ -54,7 +102,11 @@ export function resolveTableColumnWidths(
     .filter((index) => index >= 0);
 
   if (unresolvedIndexes.length === 0) {
-    return normalizedWidths.map((width) => width ?? runtimeMinWidthPx);
+    return fitResolvedColumnWidthsToContentWidth(
+      normalizedWidths.map((width) => width ?? runtimeMinWidthPx),
+      contentWidthPx,
+      runtimeMinWidthPx,
+    );
   }
 
   const remainingWidth = contentWidthPx - explicitWidthTotal;
@@ -65,7 +117,7 @@ export function resolveTableColumnWidths(
   const floorFillWidth = Math.max(runtimeMinWidthPx, Math.floor(fillWidth));
   let remainingRemainder = Math.max(0, Math.round(remainingWidth - floorFillWidth * unresolvedIndexes.length));
 
-  return normalizedWidths.map((width) => {
+  return fitResolvedColumnWidthsToContentWidth(normalizedWidths.map((width) => {
     if (width !== null) {
       return width;
     }
@@ -75,7 +127,7 @@ export function resolveTableColumnWidths(
       remainingRemainder -= 1;
     }
     return nextWidth;
-  });
+  }), contentWidthPx, runtimeMinWidthPx);
 }
 
 export function resolveTableRowHeightPx(
@@ -133,8 +185,7 @@ function estimateSingleLineTextWidthPx(text: string, fontSizePx: number): number
       return maxWidth;
     }
 
-    const charWidthFactor = resolveEstimatedTextCharWidthFactor(line);
-    return Math.max(maxWidth, Math.ceil(Array.from(line).length * fontSizePx * charWidthFactor));
+    return Math.max(maxWidth, Math.ceil(measureTextWidth(line, { fontSize: fontSizePx })));
   }, 0);
 }
 

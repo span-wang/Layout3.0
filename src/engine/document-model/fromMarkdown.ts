@@ -20,6 +20,7 @@ import type { Position } from 'unist';
 import { createRemarkProcessor } from '@/engine/parser/remark';
 import { PAGE_BREAK_COMMAND } from '@/engine/parser/pageBreak';
 import { mergeAdjacentTextRuns } from './operations';
+import { parseSemanticRolePrefix } from './semanticRole';
 import { normalizeSyntaxMappingConfig } from './syntaxMappingConfig';
 import type {
   BlockPagination,
@@ -314,6 +315,39 @@ function buildBlockTextRuns(blockId: string, text: string, sourceRange: SourceRa
   return [createTextRun(blockId, 0, text, sourceRange, [])];
 }
 
+function stripPrefixFromTextRuns(blockId: string, textRuns: TextRun[], prefixLength: number): TextRun[] {
+  if (prefixLength <= 0) {
+    return textRuns;
+  }
+
+  let remainingPrefixLength = prefixLength;
+  const strippedRuns: TextRun[] = [];
+
+  for (const run of textRuns) {
+    if (remainingPrefixLength >= run.text.length) {
+      remainingPrefixLength -= run.text.length;
+      continue;
+    }
+
+    const nextText = remainingPrefixLength > 0 ? run.text.slice(remainingPrefixLength) : run.text;
+    remainingPrefixLength = 0;
+
+    if (!nextText) {
+      continue;
+    }
+
+    strippedRuns.push({
+      ...run,
+      text: nextText,
+    });
+  }
+
+  return mergeAdjacentTextRuns(strippedRuns).map((run, index) => ({
+    ...run,
+    id: createRunId(blockId, index, run.text),
+  }));
+}
+
 function buildListItemTextRuns(itemId: string, node: ListItem): TextRun[] {
   const segments: TextRun[] = [];
   let hasInsertedContent = false;
@@ -349,17 +383,8 @@ function buildListItemTextRuns(itemId: string, node: ListItem): TextRun[] {
       continue;
     }
 
-    if (child.type === 'list') {
-      const nestedText = child.children
-        .map((listItem) => extractPlainTextFromListItem(listItem))
-        .filter(Boolean)
-        .join('\n');
-      if (nestedText) {
-        appendTextRuns([
-          createTextRun(itemId, segments.length, nestedText, createSourceRange(child.position), []),
-        ]);
-      }
-    }
+    // 子列表会由 flattenListItems 展开成独立的 LayoutListItem。
+    // 这里不再把子列表文字塞回父项，避免画布里出现“父项一遍 + 子项一遍”的重复内容。
   }
 
   const normalizedRuns = mergeAdjacentTextRuns(segments);
@@ -390,7 +415,7 @@ function extractPlainTextFromListItem(node: ListItem): string {
     .join('\n');
 }
 
-function buildListItem(blockId: string, pathKey: string, node: ListItem, level = 1): LayoutListItem {
+function buildListItem(blockId: string, pathKey: string, node: ListItem, level = 1, listKind: LayoutListItem['listKind'] = 'unordered'): LayoutListItem {
   const itemId = `${blockId}-item-${pathKey}-${createTextFragment(extractPlainTextFromListItem(node), 'item')}`;
 
   return {
@@ -398,17 +423,20 @@ function buildListItem(blockId: string, pathKey: string, node: ListItem, level =
     sourceRange: createSourceRange(node.position),
     textRuns: buildListItemTextRuns(itemId, node),
     level: Math.max(1, Math.min(3, Math.floor(level))),
+    listKind,
     checked: typeof node.checked === 'boolean' ? node.checked : null,
   };
 }
 
-function flattenListItems(blockId: string, items: ListItem[], level = 1, pathPrefix = 'root'): LayoutListItem[] {
-  return items.flatMap((item, index) => {
+function flattenListItems(blockId: string, node: List, level = 1, pathPrefix = 'root'): LayoutListItem[] {
+  const listKind: LayoutListItem['listKind'] = node.ordered ? 'ordered' : 'unordered';
+
+  return node.children.flatMap((item, index) => {
     const pathKey = `${pathPrefix}-${index + 1}`;
-    const currentItem = buildListItem(blockId, pathKey, item, level);
+    const currentItem = buildListItem(blockId, pathKey, item, level, listKind);
     const nestedItems = item.children
       .filter((child): child is List => child.type === 'list')
-      .flatMap((nestedList, nestedIndex) => flattenListItems(blockId, nestedList.children, level + 1, `${pathKey}-list-${nestedIndex + 1}`));
+      .flatMap((nestedList, nestedIndex) => flattenListItems(blockId, nestedList, level + 1, `${pathKey}-list-${nestedIndex + 1}`));
 
     return [currentItem, ...nestedItems];
   });
@@ -476,30 +504,42 @@ function buildParagraphBlock(state: BuilderState, node: Paragraph): LayoutBlock 
     return buildImageBlock(state, node.children[0], sourceRange);
   }
 
-  const blockId = createBlockId(state, 'paragraph', plainText);
+  const semanticPrefix = parseSemanticRolePrefix(plainText);
+  const blockText = semanticPrefix?.content ?? plainText;
+  const blockId = createBlockId(state, 'paragraph', blockText);
+  const rawTextRuns = buildTextRunsFromPhrasing(blockId, node.children);
   return {
     ...createBaseBlock(blockId, 'paragraph', sourceRange, 'paragraph'),
-    textRuns: buildTextRunsFromPhrasing(blockId, node.children),
+    ...(semanticPrefix ? { semantic: semanticPrefix.semantic } : {}),
+    textRuns: semanticPrefix
+      ? stripPrefixFromTextRuns(blockId, rawTextRuns, semanticPrefix.prefixLength)
+      : rawTextRuns,
     pagination: createBlockPagination(),
     metadata: {
       kind: 'paragraph',
-      text: plainText,
+      text: blockText,
     },
   };
 }
 
 function buildHeadingBlock(state: BuilderState, node: Heading): LayoutBlock {
   const plainText = extractPlainTextFromPhrasing(node.children);
-  const blockId = createBlockId(state, 'heading', plainText);
+  const semanticPrefix = parseSemanticRolePrefix(plainText);
+  const blockText = semanticPrefix?.content ?? plainText;
+  const blockId = createBlockId(state, 'heading', blockText);
+  const rawTextRuns = buildTextRunsFromPhrasing(blockId, node.children);
 
   return {
     ...createBaseBlock(blockId, 'heading', createSourceRange(node.position), `heading-${node.depth}`),
-    textRuns: buildTextRunsFromPhrasing(blockId, node.children),
+    ...(semanticPrefix ? { semantic: semanticPrefix.semantic } : {}),
+    textRuns: semanticPrefix
+      ? stripPrefixFromTextRuns(blockId, rawTextRuns, semanticPrefix.prefixLength)
+      : rawTextRuns,
     pagination: createBlockPagination({ keepWithNext: true }),
     metadata: {
       kind: 'heading',
       depth: node.depth,
-      text: plainText,
+      text: blockText,
     },
   };
 }
@@ -517,7 +557,7 @@ function buildListBlock(state: BuilderState, node: List): LayoutBlock {
       ordered: node.ordered ?? false,
       start: node.start ?? null,
       spread: node.spread ?? false,
-      items: flattenListItems(blockId, node.children, 1),
+      items: flattenListItems(blockId, node, 1),
     },
   };
 }

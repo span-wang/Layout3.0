@@ -1,4 +1,4 @@
-import type { BlockStyleOverrides, LayoutListItem } from './types';
+import type { BlockStyleOverrides, LayoutListItem, LayoutListKind } from './types';
 
 // 统一使用稳定哈希，确保同一输入在重复导入时生成一致的模型 ID。
 export function createStableHash(value: string): string {
@@ -93,6 +93,14 @@ export function normalizeLayoutListLevel(level: number | null | undefined): Layo
 
 export function getLayoutListItemLevel(item: LayoutListItem): LayoutListLevel {
   return normalizeLayoutListLevel(item.level);
+}
+
+export function getLayoutListItemKind(item: LayoutListItem, fallbackOrdered: boolean): LayoutListKind {
+  if (item.listKind === 'ordered' || item.listKind === 'unordered') {
+    return item.listKind;
+  }
+
+  return fallbackOrdered ? 'ordered' : 'unordered';
 }
 
 export function shouldHideLayoutListItemMarker(item: LayoutListItem): boolean {

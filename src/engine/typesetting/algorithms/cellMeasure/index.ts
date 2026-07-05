@@ -17,10 +17,13 @@ import {
   type LayoutTableRow,
 } from '@/engine/document-model';
 import type { ResolvedStyleContract, TextBlockStyleRule } from '@/engine/style/types';
+import { measureTextSplitOffsetForLineCount } from '@/engine/font-metrics';
 import {
   getEffectiveListItemMaxFontSize,
+  getEffectiveListItemFontFamily,
   getEffectiveTableCellMaxFontSize,
   getEffectiveTextRunsMaxFontSize,
+  getEffectiveTextRunsFontFamily,
   resolveEffectiveTextLineHeight,
 } from '@/engine/style/quickTextStyle';
 import { estimateTextLines } from '../../textMetrics';
@@ -211,7 +214,13 @@ function estimateBlockHeight(
       baseFontSize: blockStyle.fontSize,
       baseLineHeight: block.blockStyleOverrides.lineHeight ?? blockStyle.lineHeight,
     });
-    const lineCount = estimateTextLines(text, contract.contentWidthPx, fontSize);
+    const lineCount = estimateTextLines(text, contract.contentWidthPx, fontSize, {
+      fontFamily: getEffectiveTextRunsFontFamily({
+        textRuns: block.textRuns,
+        block,
+        styles,
+      }),
+    });
     return (
       (block.blockStyleOverrides.spaceBefore ?? blockStyle.marginTop) +
       lineCount * lineHeight +
@@ -238,6 +247,13 @@ function estimateBlockHeight(
         itemText,
         Math.max(120, contract.contentWidthPx - listStyle.indent),
         fontSize,
+        {
+          fontFamily: getEffectiveListItemFontFamily({
+            item,
+            block,
+            styles,
+          }),
+        },
       );
       return totalHeight + (itemIndex === 0 ? 0 : listStyle.itemGap) + lineCount * lineHeight;
     }, 0);
@@ -542,11 +558,10 @@ function tryFindCellSplitPoint(
     // 需要在这个单元格内找分割点
     // 计算可用行数
     const availableLines = Math.floor(availableHeight / lineHeight);
-    const charsPerLine = Math.floor(cellWidth / (fontSize * 0.6));
-    const estimatedSplitOffset = Math.max(1, availableLines * charsPerLine);
+    const estimatedSplitOffset = measureTextSplitOffsetForLineCount(cellText, cellWidth, { fontSize }, availableLines);
 
     // 生成候选分割点
-    const candidates = findCellSplitCandidates(cell, estimatedSplitOffset, charsPerLine);
+    const candidates = findCellSplitCandidates(cell, estimatedSplitOffset);
 
     // 找到最优分割点
     for (const offset of candidates) {
@@ -598,7 +613,6 @@ function tryFindCellSplitPoint(
 function findCellSplitCandidates(
   cell: LayoutTableRow['cells'][0],
   estimatedOffset: number,
-  charsPerLine: number
 ): number[] {
   const text = cell.textRuns.map((run) => run.text).join('');
   const candidates: Set<number> = new Set();
@@ -608,10 +622,11 @@ function findCellSplitCandidates(
     candidates.add(estimatedOffset);
   }
 
-  // 添加行边界作为候选
-  for (let i = charsPerLine; i < text.length; i += charsPerLine) {
-    if (i > 0 && i < text.length) {
-      candidates.add(i);
+  // 添加真实测量断点附近的候选，给标点/短语边界留一点调整空间。
+  for (let delta = -8; delta <= 8; delta += 1) {
+    const offset = estimatedOffset + delta;
+    if (offset > 0 && offset < text.length) {
+      candidates.add(offset);
     }
   }
 
@@ -702,6 +717,11 @@ function handleTextBlockSplit(
     text,
     widthPx: contract.contentWidthPx,
     fontSize,
+    fontFamily: getEffectiveTextRunsFontFamily({
+      textRuns: block.textRuns,
+      block,
+      styles: undefined,
+    }),
     availableLineCount,
     measuredLineBreaks: measuredTextLineBreaks?.[block.id],
   });
@@ -774,7 +794,13 @@ function handleListBlockSplit(
       baseLineHeight: block.blockStyleOverrides.lineHeight ?? listStyle.lineHeight,
     });
     const itemWidth = Math.max(120, contract.contentWidthPx - listStyle.indent);
-    const itemLineCount = estimateTextLines(itemText, itemWidth, fontSize);
+    const itemLineCount = estimateTextLines(itemText, itemWidth, fontSize, {
+      fontFamily: getEffectiveListItemFontFamily({
+        item,
+        block,
+        styles: undefined,
+      }),
+    });
     const itemHeight = (fragmentItems.length === 0 ? 0 : listStyle.itemGap) + itemLineCount * lineHeight;
     const candidateHeight = fragmentHeight + itemHeight;
 

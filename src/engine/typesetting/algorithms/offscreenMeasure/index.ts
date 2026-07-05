@@ -18,8 +18,11 @@ import {
 import type { ResolvedStyleContract, TextBlockStyleRule } from '@/engine/style/types';
 import {
   getEffectiveListItemMaxFontSize,
+  getEffectiveListItemFontFamily,
   getEffectiveTableCellMaxFontSize,
+  getEffectiveTableCellFontFamily,
   getEffectiveTextRunsMaxFontSize,
+  getEffectiveTextRunsFontFamily,
   resolveEffectiveTextLineHeight,
 } from '@/engine/style/quickTextStyle';
 import { estimateTextLines } from '../../textMetrics';
@@ -148,7 +151,13 @@ function estimateBlockHeight(
       baseFontSize: blockStyle.fontSize,
       baseLineHeight: block.blockStyleOverrides.lineHeight ?? blockStyle.lineHeight,
     });
-    const lineCount = estimateTextLines(text, contract.contentWidthPx, fontSize);
+    const lineCount = estimateTextLines(text, contract.contentWidthPx, fontSize, {
+      fontFamily: getEffectiveTextRunsFontFamily({
+        textRuns: block.textRuns,
+        block,
+        styles,
+      }),
+    });
     return (
       (block.blockStyleOverrides.spaceBefore ?? blockStyle.marginTop) +
       lineCount * lineHeight +
@@ -175,6 +184,13 @@ function estimateBlockHeight(
         itemText,
         Math.max(120, contract.contentWidthPx - listStyle.indent),
         fontSize,
+        {
+          fontFamily: getEffectiveListItemFontFamily({
+            item,
+            block,
+            styles,
+          }),
+        },
       );
       return totalHeight + (itemIndex === 0 ? 0 : listStyle.itemGap) + lineCount * lineHeight;
     }, 0);
@@ -205,6 +221,13 @@ function estimateBlockHeight(
           cellText,
           Math.max(80, contract.contentWidthPx / Math.max(1, row.cells.length)),
           fontSize,
+          {
+            fontFamily: getEffectiveTableCellFontFamily({
+              cell,
+              block,
+              styles,
+            }),
+          },
         );
         const minimumRowHeight = cell.isHeader ? tableStyle.headerRowHeight : tableStyle.rowHeight;
         return Math.max(maxHeight, minimumRowHeight, lineCount * lineHeight + tableStyle.cellPaddingY * 2);
@@ -306,6 +329,11 @@ function handleTextBlockSplit(
     baseFontSize: blockStyle.fontSize,
     baseLineHeight: block.blockStyleOverrides.lineHeight ?? blockStyle.lineHeight,
   });
+  const fontFamily = getEffectiveTextRunsFontFamily({
+    textRuns: block.textRuns,
+    block,
+    styles,
+  });
 
   // 计算可用行数
   const safeAvailableHeight = Math.max(
@@ -319,6 +347,7 @@ function handleTextBlockSplit(
     text,
     widthPx: contract.contentWidthPx,
     fontSize,
+    fontFamily,
     availableLineCount,
     measuredLineBreaks: measuredTextLineBreaks?.[block.id],
   });
@@ -346,7 +375,12 @@ function handleTextBlockSplit(
   const estimatedSplitOffset = splitResult.splitOffset;
 
   // 估算当前页片段高度
-  const estimatedLines = estimateTextLineCount(text.slice(0, estimatedSplitOffset), contract.contentWidthPx, fontSize);
+  const estimatedLines = estimateTextLineCount(
+    text.slice(0, estimatedSplitOffset),
+    contract.contentWidthPx,
+    fontSize,
+    fontFamily,
+  );
   const estimatedFragmentHeight =
     (block.blockStyleOverrides.spaceBefore ?? blockStyle.marginTop) +
     estimatedLines * lineHeight;
@@ -537,7 +571,13 @@ function handleListBlockSplit(
       baseLineHeight: block.blockStyleOverrides.lineHeight ?? listStyle.lineHeight,
     });
     const itemWidth = Math.max(120, contract.contentWidthPx - listStyle.indent);
-    const itemLineCount = estimateTextLines(itemText, itemWidth, fontSize);
+    const itemLineCount = estimateTextLines(itemText, itemWidth, fontSize, {
+      fontFamily: getEffectiveListItemFontFamily({
+        item,
+        block,
+        styles,
+      }),
+    });
     const itemHeight = (fragmentItems.length === 0 ? 0 : listStyle.itemGap) + itemLineCount * lineHeight;
     const candidateHeight = fragmentHeight + itemHeight;
 

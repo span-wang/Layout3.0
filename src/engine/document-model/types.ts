@@ -23,6 +23,38 @@ export type LayoutBlockType =
   | 'columnBreak'
   | 'pageBreak';
 
+export type LayoutListKind = 'ordered' | 'unordered';
+
+export type SemanticRoleId =
+  | 'title'
+  | 'section'
+  | 'question'
+  | 'answer'
+  | 'explanation'
+  | 'key-point'
+  | 'pitfall'
+  | 'caption'
+  | 'example'
+  | 'step'
+  | 'summary'
+  | 'warning';
+
+export type SemanticRoleCategory = 'general' | 'note' | 'exam' | 'reading';
+
+export interface SemanticRole {
+  id: SemanticRoleId;
+  name: string;
+  category: SemanticRoleCategory;
+  description?: string;
+}
+
+export interface LayoutBlockSemantic {
+  roleId: SemanticRoleId;
+  alias?: string;
+  source: 'manual' | 'markdown-prefix' | 'keyword' | 'ai';
+  confidence?: number;
+}
+
 export interface SourcePoint {
   line: number;
   column: number;
@@ -98,7 +130,11 @@ export interface LayoutListItem {
   textRuns: TextRun[];
   // 多级列表先固定支持 1-3 级；旧文档缺字段时按 1 级兼容。
   level?: number;
+  // 记录该列表项所在列表层的标记类型；旧文档缺字段时由列表块根层 ordered 兼容推断。
+  listKind?: LayoutListKind;
   checked: boolean | null;
+  // 只给运行时分页片段使用：记录该片段对应原始文本节点与字符区间，方便隐藏测量结果跨页续用。
+  runtimeMeasurement?: RuntimeTextMeasurement | null;
   // 只给分页运行时片段使用：同一个列表项续到下一页时隐藏重复的编号、符号或任务勾选框。
   runtimePagination?: {
     hideMarker?: boolean;
@@ -110,6 +146,8 @@ export interface LayoutTableCell {
   sourceRange: SourceRange | null;
   textRuns: TextRun[];
   isHeader: boolean;
+  // 只给运行时分页片段使用：记录该片段对应原始文本节点与字符区间，方便隐藏测量结果跨页续用。
+  runtimeMeasurement?: RuntimeTextMeasurement | null;
   // 合并单元格 V1：主单元格保存跨度；旧文档缺字段时按 1 x 1 普通单元格兼容。
   rowSpan?: number | null;
   colSpan?: number | null;
@@ -121,8 +159,20 @@ export interface LayoutTableRow {
   id: string;
   sourceRange: SourceRange | null;
   cells: LayoutTableCell[];
+  // 只给运行时分页片段使用：让拆出的行或续页表头仍能命中原始行的真实测量结果。
+  runtimeMeasurement?: RuntimeRowMeasurement | null;
   // 表格行高是可选的最小高度；旧文档缺字段时继续按模板默认高度自动排版。
   heightPx?: number | null;
+}
+
+export interface RuntimeTextMeasurement {
+  sourceNodeId: string;
+  startOffset: number;
+  endOffset: number;
+}
+
+export interface RuntimeRowMeasurement {
+  sourceRowId: string;
 }
 
 export type TableColumnAlign = 'left' | 'center' | 'right' | null;
@@ -151,12 +201,53 @@ export interface TocBlockMetadata {
   };
 }
 
+// PH2-20-block-split-text-rendering-adaptation-v1：文本块（heading / paragraph）运行时切片元数据。
+// 与 table / list / toc 同口径，把"续排位置"从隐式 id 后缀转为结构化字段。
+// 字符偏移量与 LayoutBlock.runtimeMeasurement 字段同步：sourceNodeId 指原始块 id；
+// characterRange 表示本片段在原始文本中的字符区间（闭区间，含端点）。
+export interface TextBlockRuntimeSlice {
+  // true = 续排片段（-rest-）；false = 当前页片段（-frag-）或原始块整放。
+  isContinuation: boolean;
+  // true = 原始块整放（即 preserveOriginalIdentity=true），没有跨页切分；与 isContinuation 互斥。
+  isOriginal: boolean;
+  // 原始块 id，用于把当前片段映射回原始来源。
+  sourceNodeId: string;
+  // 字符区间（含端点）；在原文本中的 start / end 偏移。
+  characterRange: {
+    start: number;
+    end: number;
+  };
+  // 调试用：保留当前 fragment 后缀（-frag-PAGE-BLOCK / -rest-PAGE-BLOCK）。
+  fragmentIdSuffix: string;
+}
+
+export interface ParagraphBlockMetadata {
+  kind: 'paragraph';
+  text: string;
+  runtimeSlice?: TextBlockRuntimeSlice;
+}
+
+export interface HeadingBlockMetadata {
+  kind: 'heading';
+  depth: 1 | 2 | 3 | 4 | 5 | 6;
+  text: string;
+  runtimeSlice?: TextBlockRuntimeSlice;
+}
+
 export interface ListBlockMetadata {
   kind: 'list';
   ordered: boolean;
   start: number | null;
   spread: boolean;
   items: LayoutListItem[];
+  // 运行时列表片段只存在于分页结果，用来表示当前页显示过滤后列表项的哪一段；不会写回 .layout 原文档。
+  runtimeSlice?: {
+    startIndex: number;
+    endIndex: number;
+    fragmentIndex: number;
+    totalItems: number;
+    isContinuation: boolean;
+  };
 }
 
 export interface TableBlockMetadata {
@@ -165,6 +256,14 @@ export interface TableBlockMetadata {
   // 每列宽度以排版像素保存；缺省列按自动宽度兼容旧文档。
   columnWidthsPx?: Array<number | null>;
   rows: LayoutTableRow[];
+  // 运行时表格片段只存在于分页结果，用来表示当前页显示过滤后表格行的哪一段；不会写回 .layout 原文档。
+  runtimeSlice?: {
+    startRowIndex: number;
+    endRowIndex: number;
+    fragmentIndex: number;
+    totalFragments: number;
+    isContinuation: boolean;
+  };
 }
 
 export type ImageWrapMode = 'inline' | 'square' | 'topBottom' | 'tight';
@@ -243,10 +342,14 @@ export interface LayoutBlock {
   id: string;
   type: LayoutBlockType;
   sourceRange: SourceRange | null;
+  // 语义块基础层：不改变块类型，只记录当前块承担的内容角色。
+  semantic?: LayoutBlockSemantic;
   blockStyleRef: string | null;
   blockStyleOverrides: BlockStyleOverrides;
   textRuns: TextRun[];
   pagination: BlockPagination;
+  // 只给运行时分页片段使用：让跨页后的标题/段落片段继续命中原始隐藏测量结果。
+  runtimeMeasurement?: RuntimeTextMeasurement | null;
   metadata: LayoutBlockMetadata;
 }
 

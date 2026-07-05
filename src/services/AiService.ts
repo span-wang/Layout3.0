@@ -7,6 +7,7 @@ import type {
   AiConfig,
   AiProvider,
   GenerateOptions,
+  GenerateType,
   OptimizeOptions,
   AiCheckResult,
   StreamCallback,
@@ -70,8 +71,28 @@ interface StreamChunk {
   completion?: string;
 }
 
+const ARTICLE_CONTEXT_MAX_CHARS = 8000;
+
 function getResponseContentType(response: AiMainProcessRequestResult): string {
   return response.headers['content-type'] ?? response.headers['Content-Type'] ?? '';
+}
+
+function isXiaohongshuGenerateType(type: GenerateType): boolean {
+  return type === 'xiaohongshuTitle' || type === 'xiaohongshuCopy' || type === 'xiaohongshuCover';
+}
+
+function formatOptionalField(label: string, value?: string): string {
+  const trimmed = value?.trim();
+  return trimmed ? `${label}：${trimmed}` : `${label}：未填写`;
+}
+
+function truncateArticleContent(content?: string): string {
+  const trimmed = content?.trim() ?? '';
+  if (trimmed.length <= ARTICLE_CONTEXT_MAX_CHARS) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, ARTICLE_CONTEXT_MAX_CHARS)}\n\n（以上为当前文章内容前 ${ARTICLE_CONTEXT_MAX_CHARS} 字，后续内容已省略）`;
 }
 
 function createUnexpectedResponseError(endpoint: string, response: AiMainProcessRequestResult): Error {
@@ -295,6 +316,41 @@ function getTextMarkTypeLabel(markType: TextMarkType): string {
   };
 
   return labels[markType];
+}
+
+export function createGenerateSystemPrompt(type: GenerateType): string {
+  if (isXiaohongshuGenerateType(type)) {
+    return `你是一个专业的小红书内容策划助手，擅长把文章内容转成适合小红书传播的标题、正文和封面主图方案。
+
+统一规则：
+1. 使用中文输出，语气自然、有画面感，但不要夸张到失真。
+2. 必须围绕用户给定的文章标题、选中标题、文案和文章内容展开，不能编造文章中没有的关键事实。
+3. 输出结构清晰，使用 Markdown 标题和列表。
+4. 不要输出额外解释，不要声明“我是 AI”。
+5. 主图能力只输出设计方案和图片生成提示词，不要声称已经生成真实图片文件。`;
+  }
+
+  return `你是一个专业的教育内容生成助手，擅长生成 Markdown 格式的教育文档。
+
+生成规则：
+1. 使用标准 Markdown 语法。
+2. 标题层级清晰（H1-H3），标题仍优先使用 #、##、###，不要在标题行前添加 role:。
+3. 内容结构化，便于排版。
+4. 适当使用列表、表格等元素。
+5. 数学公式使用 $...$（行内）和 $$...$$（独立公式）。
+6. 对需要被排版系统识别的正文块，在该段开头添加语义角色前缀，格式必须是 role:角色名 正文。
+7. 可用语义角色只使用：role:题干、role:答案、role:解析、role:重点、role:易错、role:说明、role:例题、role:步骤、role:总结、role:注意。
+8. 练习题和试卷初稿中，题目正文优先使用 role:题干，参考答案使用 role:答案，解题说明使用 role:解析。
+9. 讲义和知识点总结中，核心概念优先使用 role:重点，示例使用 role:例题，过程说明使用 role:步骤，常见错误使用 role:易错，章节收束使用 role:总结。
+10. 不要为每一行都机械添加 role:；只有承担明确语义的正文块才添加。
+
+示例：
+role:重点 一次函数的图像是一条直线。
+role:例题 已知 y = 2x + 1，求 x = 3 时的函数值。
+role:答案 y = 7。
+role:解析 将 x = 3 代入 y = 2x + 1，得到 y = 2 × 3 + 1 = 7。
+
+请直接生成内容，不要有额外的解释说明。`;
 }
 
 /**
@@ -593,7 +649,7 @@ export class AiService {
     onChunk: StreamCallback,
     signal?: AbortSignal
   ): Promise<string> {
-    const systemPrompt = this.getGenerateSystemPrompt();
+    const systemPrompt = this.getGenerateSystemPrompt(options.type);
     const userMessage = this.getGenerateUserMessage(options);
 
     return this.streamGenerate(systemPrompt, userMessage, onChunk, signal);
@@ -806,23 +862,26 @@ ${content}`;
   /**
    * 获取生成系统提示词
    */
-  private getGenerateSystemPrompt(): string {
-    return `你是一个专业的教育内容生成助手，擅长生成 Markdown 格式的教育文档。
-
-生成规则：
-1. 使用标准 Markdown 语法
-2. 标题层级清晰（H1-H3）
-3. 内容结构化，便于排版
-4. 适当使用列表、表格等元素
-5. 数学公式使用 $...$（行内）和 $$...$$（独立公式）
-
-请直接生成内容，不要有额外的解释说明。`;
+  private getGenerateSystemPrompt(type: GenerateType): string {
+    return createGenerateSystemPrompt(type);
   }
 
   /**
    * 获取生成用户消息
    */
   private getGenerateUserMessage(options: GenerateOptions): string {
+    if (options.type === 'xiaohongshuTitle') {
+      return this.getXiaohongshuTitleUserMessage(options);
+    }
+
+    if (options.type === 'xiaohongshuCopy') {
+      return this.getXiaohongshuCopyUserMessage(options);
+    }
+
+    if (options.type === 'xiaohongshuCover') {
+      return this.getXiaohongshuCoverUserMessage(options);
+    }
+
     const typeLabels: Record<string, string> = {
       lecture: '讲义',
       summary: '知识点总结',
@@ -847,6 +906,64 @@ ${content}`;
     message += `\n长度要求：${lengthLabels[options.length || 'medium'] || '中等长度'}`;
 
     return message;
+  }
+
+  private getXiaohongshuTitleUserMessage(options: GenerateOptions): string {
+    const articleContent = truncateArticleContent(options.articleContent);
+
+    return `请根据以下信息推荐小红书标题。
+
+${formatOptionalField('选题/主题', options.topic)}
+${formatOptionalField('文章标题', options.articleTitle)}
+
+文章内容：
+${articleContent || '当前没有提供文章正文，请主要根据选题/主题和文章标题生成。'}
+
+输出要求：
+1. 按以下 6 类分别输出，每类 5 个标题：痛点型（直接解决问题）、共鸣型（让人一秒带入）、反常识型（颠覆认知）、对比型（变化越明显越容易火）、氛围感型（买感觉）、合集清单型（一篇顶十篇）。
+2. 每个标题尽量短、有记忆点，适合小红书信息流。
+3. 标题不要使用虚假承诺，不要承诺绝对效果。
+4. 最后补充“优先推荐”的 3 个标题，并说明推荐理由。`;
+  }
+
+  private getXiaohongshuCopyUserMessage(options: GenerateOptions): string {
+    const articleContent = truncateArticleContent(options.articleContent);
+
+    return `请根据用户选定的小红书标题和文章内容，生成一篇小红书文案。
+
+${formatOptionalField('文章标题', options.articleTitle)}
+选定小红书标题：${options.selectedTitle?.trim() || options.topic}
+
+文章内容：
+${articleContent || '当前没有提供文章正文，请主要根据标题生成，并避免编造具体数据或事实。'}
+
+输出要求：
+1. 先输出最终标题，再输出正文。
+2. 正文需要结合文章内容，不要只写泛泛而谈的营销话术。
+3. 结构包含：开头钩子、正文分点、结尾互动、话题标签。
+4. 语言像真实小红书笔记，亲切、具体、有节奏，但不要堆砌感叹号。
+5. 标签 6-10 个，和内容强相关。`;
+  }
+
+  private getXiaohongshuCoverUserMessage(options: GenerateOptions): string {
+    const articleContent = truncateArticleContent(options.articleContent);
+
+    return `请根据文章标题、小红书文案和文章内容，生成小红书主图方案和图片生成提示词。
+
+${formatOptionalField('文章标题', options.articleTitle)}
+选定小红书标题：${options.selectedTitle?.trim() || options.topic}
+
+小红书文案：
+${options.selectedCopy?.trim() || '用户没有单独提供文案，请结合文章内容和选定标题推导主图重点。'}
+
+文章内容：
+${articleContent || '当前没有提供文章正文，请主要根据标题和文案生成主图方案。'}
+
+输出要求：
+1. 输出“封面主文案”“封面副文案”“画面构图”“颜色与氛围”“元素清单”“图片生成提示词”“负面提示词”。
+2. 封面文字要短，适合竖版小红书封面，不要超过 2 行主视觉文字。
+3. 图片生成提示词要能直接复制给图片生成模型使用，描述清楚主体、构图、风格、色彩、光线、文字区域和画幅。
+4. 明确这是主图生成方案，不要声称已经生成图片文件。`;
   }
 
   /**

@@ -194,6 +194,7 @@ export function AppShell(): JSX.Element {
   } = useWorkspaceFileCommands({ displayedPageLayouts, tocItems });
   const {
     handleInsertImage,
+    handleInsertChemistryApparatus,
     handleInsertEquation,
     handleInsertTable,
     handleInsertList,
@@ -596,6 +597,7 @@ export function AppShell(): JSX.Element {
         onRedo={handleRedoLayoutDocument}
         onImportFont={handleImportFont}
         onInsertImage={handleInsertImage}
+        onInsertChemistryApparatus={handleInsertChemistryApparatus}
         onInsertEquation={handleInsertEquation}
         onInsertTable={handleInsertTable}
         onInsertList={handleInsertList}

@@ -3,7 +3,14 @@ import path from 'node:path';
 import { app, ipcMain } from 'electron';
 
 type AiProvider = 'openai' | 'anthropic' | 'custom';
-type GenerateType = 'lecture' | 'summary' | 'exercise' | 'exam';
+type GenerateType =
+  | 'lecture'
+  | 'summary'
+  | 'exercise'
+  | 'exam'
+  | 'xiaohongshuTitle'
+  | 'xiaohongshuCopy'
+  | 'xiaohongshuCover';
 type GenerateLength = 'short' | 'medium' | 'long';
 
 interface AiGenerationRecord {
@@ -79,7 +86,15 @@ function createRecordId(): string {
 }
 
 function isKnownGenerateType(value: unknown): value is GenerateType {
-  return value === 'lecture' || value === 'summary' || value === 'exercise' || value === 'exam';
+  return (
+    value === 'lecture' ||
+    value === 'summary' ||
+    value === 'exercise' ||
+    value === 'exam' ||
+    value === 'xiaohongshuTitle' ||
+    value === 'xiaohongshuCopy' ||
+    value === 'xiaohongshuCover'
+  );
 }
 
 function isKnownGenerateLength(value: unknown): value is GenerateLength {

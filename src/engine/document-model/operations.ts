@@ -17,8 +17,10 @@ import type {
   TextStyleOverrides,
   ImageBlockMetadata,
   ImageWrapSide,
+  LayoutBlockSemantic,
 } from './types';
 import { normalizeImageWrapMode, resolveImageWrapSide } from './imageLayout';
+import { applySemanticToBlock } from './semanticRole';
 import {
   createTextFragment,
   getLayoutListItemLevel,
@@ -2915,4 +2917,11 @@ export function applyBlockStyleOverridesToBlock(
       ...blockStyleOverrides,
     },
   };
+}
+
+export function applySemanticToLayoutBlock(
+  block: LayoutBlock,
+  semantic: LayoutBlockSemantic | null,
+): LayoutBlock {
+  return applySemanticToBlock(block, semantic);
 }

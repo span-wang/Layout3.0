@@ -8,6 +8,7 @@
  */
 
 import type { LayoutBlock, LayoutTableCell, LayoutTableRow, TableBlockMetadata } from '@/engine/document-model';
+import { measureTextLines } from '@/engine/font-metrics';
 import { splitTextRuns } from '../offscreenMeasure/preciseTextSplit';
 
 export interface CellSliceResult {
@@ -327,7 +328,7 @@ export function splitTableCellContent(
 }
 
 /**
- * 估算单元格高度（基于字符数和字体）
+ * 通过唯一字体测量接口估算单元格高度。
  */
 export function estimateCellHeight(
   cell: LayoutTableCell,
@@ -336,8 +337,6 @@ export function estimateCellHeight(
   lineHeight: number = 1.5
 ): number {
   const text = cell.textRuns.map((run) => run.text).join('');
-  const charWidth = fontSize * 0.6; // 估算中文字符宽度
-  const charsPerLine = Math.floor(width / charWidth);
-  const lineCount = Math.ceil(text.length / charsPerLine);
+  const lineCount = measureTextLines(text, width, { fontSize });
   return lineCount * fontSize * lineHeight;
 }

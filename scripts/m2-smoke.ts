@@ -59,6 +59,10 @@ import {
   type TextFragmentMeasurementJob,
 } from '../src/engine/typesetting/index.ts';
 import { clearAllBlockHeightCache } from '../src/engine/typesetting/algorithms/estimatedMaxFill.ts';
+import {
+  createDeterministicFontMetricsProvider,
+  setFontMetricsProvider,
+} from '../src/engine/font-metrics';
 import { useAppStore } from '../src/store/index.ts';
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -66,6 +70,8 @@ function assert(condition: unknown, message: string): asserts condition {
     throw new Error(message);
   }
 }
+
+setFontMetricsProvider(createDeterministicFontMetricsProvider());
 
 function createMemoryStorage(): Storage {
   const store = new Map<string, string>();
@@ -3002,7 +3008,7 @@ async function main(): Promise<void> {
     'M2 冒烟失败：分页测试算法1仍把“初步印象。”单独拆到第二页正文开头',
   );
 
-  // 验证混排文本（中文+英文+数字）使用字符级精确流式布局，不再按平均宽度估算
+  // 验证混排文本（中文+英文+数字）通过唯一字体测量接口分页，不再让分页算法自己散落宽度估算。
   const flowMixedText = '项目编号PROJ-2026-001，负责人张三负责预算审核，金额CNY150000.00元整备注信息。'.repeat(6);
   const mixedTextBlock: LayoutBlock = {
     id: 'm2-mixed-text-flow',
@@ -3050,6 +3056,56 @@ async function main(): Promise<void> {
     mixedPages.length >= 2,
     'M2 冒烟失败：分页测试算法1混排文本没有正确分页，实际页数为 ' + mixedPages.length,
   );
+  setFontMetricsProvider({
+    measureTextWidth(text, style) {
+      const fontSize = style.fontSize;
+      const scale = style.fontFamily === 'LAYOUT3_wide_font_metric_test' ? 1.6 : 0.45;
+      return Array.from(text).reduce((total, char) => total + (/\s/u.test(char) ? fontSize * 0.25 : fontSize * scale), 0);
+    },
+  });
+  const fontMetricNarrowBlock: LayoutBlock = {
+    ...mixedTextBlock,
+    id: 'm2-font-metric-narrow-block',
+    textRuns: [
+      {
+        ...mixedTextBlock.textRuns[0],
+        id: 'm2-font-metric-narrow-run',
+        text: '字体测量接口分页校验文字'.repeat(12),
+        styleOverrides: { fontSize: 14, fontFamily: 'LAYOUT3_narrow_font_metric_test' },
+      },
+    ],
+    metadata: {
+      kind: 'paragraph',
+      text: '字体测量接口分页校验文字'.repeat(12),
+    },
+  };
+  const fontMetricWideBlock: LayoutBlock = {
+    ...fontMetricNarrowBlock,
+    id: 'm2-font-metric-wide-block',
+    textRuns: [
+      {
+        ...fontMetricNarrowBlock.textRuns[0],
+        id: 'm2-font-metric-wide-run',
+        styleOverrides: { fontSize: 14, fontFamily: 'LAYOUT3_wide_font_metric_test' },
+      },
+    ],
+  };
+  const fontMetricContract = withTestPageMetrics({
+    ...resolveStyleContract(defaultStyleSettings),
+    contentWidthPx: 92,
+    contentHeightPx: 72,
+  });
+  const narrowFontPages = paginateBlocks([fontMetricNarrowBlock], fontMetricContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  const wideFontPages = paginateBlocks([fontMetricWideBlock], fontMetricContract, {
+    algorithmId: MAX_FILL_PAGINATION_ALGORITHM_ID,
+  });
+  assert(
+    wideFontPages.length > narrowFontPages.length,
+    `M2 冒烟失败：分页测试算法1没有通过字体测量接口响应字体宽度变化，窄字体 ${narrowFontPages.length} 页，宽字体 ${wideFontPages.length} 页`,
+  );
+  setFontMetricsProvider(createDeterministicFontMetricsProvider());
 
   const maxFillCacheText = '这是一段用于验证分页测试算法1高度缓存契约隔离的长文本。'.repeat(18);
   const maxFillCacheBlock: LayoutBlock = {

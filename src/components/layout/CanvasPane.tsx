@@ -21,6 +21,8 @@ import {
   clearTextFormattingInTextRuns,
   getHeadingText,
   getLayoutBlockPlainText,
+  buildSemanticClassName,
+  getLayoutListItemKind,
   getLayoutListItemLevel,
   getTocBlockDisplayTitle,
   getTextContentFromRuns,
@@ -153,6 +155,7 @@ interface RenderListTreeOptions {
   onCommitEdit: () => void;
   onCancelEdit: () => void;
   onListItemContextMenu: (event: MouseEvent<HTMLElement>, itemId: string) => void;
+  fallbackOrdered: boolean;
 }
 
 type CanvasEditorKind =
@@ -247,12 +250,8 @@ interface ActiveTableColumnResize {
 interface ActiveTableRowResize {
   rowId: string;
   cellId: string;
-  nextRowId: string;
-  nextCellId: string;
-  rowIndex: number;
   startClientY: number;
   startHeightPx: number;
-  startNextHeightPx: number;
   pageScale: number;
 }
 
@@ -387,9 +386,11 @@ function buildMeasurementStyleSignature(
   styles: LayoutStyleSheet,
 ): string {
   return JSON.stringify({
-    contentWidthPx: contract.singleColumnContentWidthPx,
+    contentWidthPx: contract.contentWidthPx,
+    singleColumnContentWidthPx: contract.singleColumnContentWidthPx,
     columnCount: contract.columnCount,
     columnGapPx: contract.columnGapPx,
+    headingsSpanAll: contract.headingsSpanAll,
     blockStyles: contract.blockStyles,
     themeLayoutMetrics: contract.themeLayoutMetrics,
     templateId: contract.templateId,
@@ -407,6 +408,26 @@ function buildBlockMeasurementSignature(block: LayoutBlock, styleSignature: stri
     blockStyleOverrides: block.blockStyleOverrides,
     pagination: block.pagination,
   })}`;
+}
+
+function getMeasurementBlockWidthPx(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+): number {
+  if (contract.columnCount <= 1 || shouldLayoutBlockSpanAllColumns(block, contract)) {
+    return contract.contentWidthPx;
+  }
+
+  return contract.singleColumnContentWidthPx;
+}
+
+function buildMeasurementBlockStyle(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+): CSSProperties {
+  return {
+    width: `${Math.max(40, getMeasurementBlockWidthPx(block, contract))}px`,
+  };
 }
 
 const TEXT_LINE_TOP_TOLERANCE_PX = 1;
@@ -1099,14 +1120,18 @@ function renderListTreeNodes({
   onCommitEdit,
   onCancelEdit,
   onListItemContextMenu,
+  fallbackOrdered,
 }: RenderListTreeOptions): ReactNode[] {
-  const ListTag = block.metadata.kind === 'list' && block.metadata.ordered ? 'ol' : 'ul';
   const inheritedTextStyle = resolveQuickTextStyleForBlock(block, documentStyles);
 
   return nodes.map((node) => {
     const item = node.item;
     const itemNode = getEditableListItemNode(item);
     const shouldHideMarker = shouldHideLayoutListItemMarker(item);
+    const childListKind = node.children[0]
+      ? getLayoutListItemKind(node.children[0].item, fallbackOrdered)
+      : fallbackOrdered ? 'ordered' : 'unordered';
+    const ChildListTag = childListKind === 'ordered' ? 'ol' : 'ul';
 
     return (
       <li
@@ -1158,7 +1183,7 @@ function renderListTreeNodes({
           </span>
         </span>
         {node.children.length > 0 ? (
-          <ListTag>{renderListTreeNodes({
+          <ChildListTag>{renderListTreeNodes({
             block,
             documentStyles,
             nodes: node.children,
@@ -1179,7 +1204,8 @@ function renderListTreeNodes({
             onCommitEdit,
             onCancelEdit,
             onListItemContextMenu,
-          })}</ListTag>
+            fallbackOrdered,
+          })}</ChildListTag>
         ) : null}
       </li>
     );
@@ -1274,6 +1300,7 @@ function createSelectableBlockProps(
   const classNames = [
     'selectable-layout-block',
     className,
+    buildSemanticClassName(block),
     block.id === selectedNodeId ? 'selected' : '',
     isBlockRangeSelected ? 'block-range-selected' : '',
   ]
@@ -1283,6 +1310,7 @@ function createSelectableBlockProps(
   return {
     className: classNames,
     'data-layout-node-id': block.id,
+    ...(block.semantic?.roleId ? { 'data-semantic-role': block.semantic.roleId } : {}),
     onMouseDown: (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
       onPrepareSelectNode(block.id);
@@ -1346,6 +1374,7 @@ function createSelectableEquationBlockProps({
   const classNames = [
     'selectable-layout-block',
     'equation-shell',
+    buildSemanticClassName(block),
     block.id === selectedNodeId ? 'selected' : '',
     isBlockRangeSelected ? 'block-range-selected' : '',
   ]
@@ -1355,6 +1384,7 @@ function createSelectableEquationBlockProps({
   return {
     className: classNames,
     'data-layout-node-id': block.id,
+    ...(block.semantic?.roleId ? { 'data-semantic-role': block.semantic.roleId } : {}),
     onMouseDown: (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
       onPrepareSelectNode(block.id);
@@ -2727,6 +2757,7 @@ function renderBlock(
             onCommitEdit,
             onCancelEdit,
             onListItemContextMenu: onListItemContextMenu ?? (() => undefined),
+            fallbackOrdered: block.metadata.ordered,
           })}
         </ListTag>
       );
@@ -2940,7 +2971,7 @@ function renderBlock(
                                 }}
                               />
                             ) : null}
-                            {shouldShowResizeHandles && rowIndex < tableRows.length - 1 && cellIndex === 0 && tableResizeState?.onStartTableRowResize ? (
+                            {shouldShowResizeHandles && cellIndex === 0 && tableResizeState?.onStartTableRowResize ? (
                               <button
                                 type="button"
                                 className="table-row-resize-handle"
@@ -3868,20 +3899,12 @@ function CanvasPaneComponent({
       const deltaY =
         (event.clientY - activeTableRowResize.startClientY) / Math.max(0.0001, activeTableRowResize.pageScale);
       const minHeightPx = 28;
-      const totalHeightPx = activeTableRowResize.startHeightPx + activeTableRowResize.startNextHeightPx;
-      const nextHeight = Math.max(
-        minHeightPx,
-        Math.min(
-          Math.round(activeTableRowResize.startHeightPx + deltaY),
-          Math.max(minHeightPx, totalHeightPx - minHeightPx),
-        ),
-      );
-      const nextNeighborHeight = Math.max(minHeightPx, totalHeightPx - nextHeight);
+      // 行高拖拽只调整当前行，避免把相邻行反向压缩或撑高。
+      const nextHeight = Math.max(minHeightPx, Math.round(activeTableRowResize.startHeightPx + deltaY));
 
       setDraftTableRowHeights((current) => ({
         ...current,
         [activeTableRowResize.rowId]: nextHeight,
-        [activeTableRowResize.nextRowId]: nextNeighborHeight,
       }));
     };
 
@@ -3892,14 +3915,6 @@ function CanvasPaneComponent({
       }
 
       const draftHeight = draftTableRowHeightsRef.current[resizeState.rowId];
-      const draftNextHeight = draftTableRowHeightsRef.current[resizeState.nextRowId];
-      if (draftNextHeight !== undefined) {
-        updateLayoutTableRowHeight({
-          cellId: resizeState.nextCellId,
-          heightPx: draftNextHeight,
-        });
-      }
-
       if (draftHeight !== undefined) {
         updateLayoutTableRowHeight({
           cellId: resizeState.cellId,
@@ -3911,7 +3926,6 @@ function CanvasPaneComponent({
       setDraftTableRowHeights((current) => {
         const next = { ...current };
         delete next[resizeState.rowId];
-        delete next[resizeState.nextRowId];
         return next;
       });
     };
@@ -4464,21 +4478,12 @@ function CanvasPaneComponent({
     }
 
     const row = block.metadata.rows[rowIndex];
-    const nextRow = block.metadata.rows[rowIndex + 1];
     if (!row) {
-      return;
-    }
-    if (!nextRow) {
       return;
     }
 
     const measuredHeightPx = Math.max(28, Math.round(rowElement.getBoundingClientRect().height / Math.max(0.0001, pageScale)));
-    const nextRowElement = rowElement.nextElementSibling as HTMLTableRowElement | null;
-    const measuredNextHeightPx = nextRowElement
-      ? Math.max(28, Math.round(nextRowElement.getBoundingClientRect().height / Math.max(0.0001, pageScale)))
-      : measuredHeightPx;
     const startHeightPx = draftTableRowHeights[rowId] ?? row.heightPx ?? measuredHeightPx;
-    const startNextHeightPx = draftTableRowHeights[nextRow.id] ?? nextRow.heightPx ?? measuredNextHeightPx;
 
     onSelectNode(cellId);
     setActiveImageResize(null);
@@ -4487,18 +4492,13 @@ function CanvasPaneComponent({
     setActiveTableRowResize({
       rowId,
       cellId,
-      nextRowId: nextRow.id,
-      nextCellId: nextRow.cells[0]?.id ?? cellId,
-      rowIndex,
       startClientY: event.clientY,
       startHeightPx,
-      startNextHeightPx,
       pageScale,
     });
     setDraftTableRowHeights((current) => ({
       ...current,
       [rowId]: startHeightPx,
-      [nextRow.id]: startNextHeightPx,
     }));
   };
 
@@ -5040,6 +5040,7 @@ function CanvasPaneComponent({
                   key={`measure-${block.id}`}
                   data-measure-block-id={block.id}
                   className="measurement-block"
+                  style={buildMeasurementBlockStyle(block, resolvedStyleContract)}
                 >
                   {renderBlock(
                     block,
@@ -5091,6 +5092,7 @@ function CanvasPaneComponent({
                   key={`measure-fragment-${job.id}`}
                   data-measure-text-fragment-id={job.id}
                   className="measurement-block measurement-text-fragment"
+                  style={buildMeasurementBlockStyle(job.block, resolvedStyleContract)}
                 >
                   {renderBlock(
                     job.block,
@@ -5142,6 +5144,7 @@ function CanvasPaneComponent({
                   key={`measure-table-row-${job.id}`}
                   data-measure-table-job-id={job.id}
                   className="measurement-block measurement-table-row"
+                  style={buildMeasurementBlockStyle(job.block, resolvedStyleContract)}
                 >
                   {renderBlock(
                     job.block,

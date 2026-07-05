@@ -11,11 +11,12 @@ export function splitTextForAvailableLines(params: {
   text: string;
   widthPx: number;
   fontSize: number;
+  fontFamily?: string;
   availableLineCount: number;
   measuredLineBreaks?: number[];
   firstLineWidthPx?: number;
 }): TextSplitResult | null {
-  const { text, widthPx, fontSize, availableLineCount, measuredLineBreaks, firstLineWidthPx } = params;
+  const { text, widthPx, fontSize, fontFamily, availableLineCount, measuredLineBreaks, firstLineWidthPx } = params;
   if (!text.trim() || availableLineCount <= 0) {
     return null;
   }
@@ -27,7 +28,7 @@ export function splitTextForAvailableLines(params: {
   } else if (measuredLineBreaks && measuredLineBreaks.length > 0) {
     splitOffset = measuredLineBreaks[measuredLineBreaks.length - 1] ?? 0;
   } else {
-    const estimatedLineCount = estimateTextLines(text, widthPx, fontSize, { firstLineWidthPx });
+    const estimatedLineCount = estimateTextLines(text, widthPx, fontSize, { firstLineWidthPx, fontFamily });
     if (estimatedLineCount <= availableLineCount) {
       return {
         currentPageText: text,
@@ -36,7 +37,10 @@ export function splitTextForAvailableLines(params: {
       };
     }
 
-    splitOffset = computeTextSplitOffsetForLineCount(text, widthPx, fontSize, availableLineCount);
+    splitOffset = computeTextSplitOffsetForLineCount(text, widthPx, fontSize, availableLineCount, {
+      firstLineWidthPx,
+      fontFamily,
+    });
   }
 
   if (splitOffset <= 0 || splitOffset >= text.length) {

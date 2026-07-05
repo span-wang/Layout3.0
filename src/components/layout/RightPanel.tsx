@@ -6,8 +6,10 @@ import {
   getSelectedBlockquoteContext,
   getSelectedLayoutNodeInfo,
   findTopLevelBlockForSelectedNode,
+  BUILT_IN_SEMANTIC_ROLES,
   getLayoutBlockPlainText,
   getLayoutListItemLevel,
+  getSemanticRoleById,
   type BlockquoteStructureAction,
   type ListStructureAction,
   type LayoutBlock,
@@ -29,6 +31,7 @@ import {
   type ImageBlockMetadata,
   type ImageWrapMode,
   type ImageWrapSide,
+  type LayoutBlockSemantic,
 } from '@/engine/document-model';
 import { buildFontFamilyGroupsWithImportedFonts } from '@/engine/document-model/fontResources';
 import { isImageTextWrapMode, resolveImageLayout } from '@/engine/document-model/imageLayout';
@@ -167,6 +170,13 @@ const blockStyleLabels: Record<string, string> = {
   firstLineIndent: '首行缩进',
   hangingIndent: '悬挂缩进',
   backgroundColor: '背景色',
+};
+
+const semanticSourceLabels: Record<LayoutBlockSemantic['source'], string> = {
+  manual: '手动设置',
+  'markdown-prefix': 'Markdown 前缀',
+  keyword: '关键词识别',
+  ai: 'AI 识别',
 };
 
 const orientationOptions: Array<{ id: PageOrientation; label: string; description: string }> = [
@@ -391,6 +401,78 @@ function renderObjectPropertyRow(label: string, value: string): JSX.Element {
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function getSemanticRoleSummary(semantic: LayoutBlockSemantic | undefined): string {
+  if (!semantic) {
+    return '未设置';
+  }
+
+  const role = getSemanticRoleById(semantic.roleId);
+  return semantic.alias
+    ? `${semantic.alias} -> ${role?.name ?? semantic.roleId}`
+    : role?.name ?? semantic.roleId;
+}
+
+function renderSemanticRolePanel({
+  block,
+  onChange,
+}: {
+  block: LayoutBlock;
+  onChange: (semantic: LayoutBlockSemantic | null) => void;
+}): JSX.Element {
+  const currentSemantic = block.semantic;
+  const currentRoleId = currentSemantic?.roleId ?? '';
+  const currentRole = getSemanticRoleById(currentRoleId);
+
+  return (
+    <section className="detail-panel object-detail-panel">
+      <div className="detail-panel-head">
+        <h3>语义块</h3>
+        <span>{currentRole ? currentRole.name : '为当前块标记内容角色'}</span>
+      </div>
+      <div className="object-property-list">
+        {renderObjectPropertyRow('当前语义', getSemanticRoleSummary(currentSemantic))}
+        {renderObjectPropertyRow('来源', currentSemantic ? semanticSourceLabels[currentSemantic.source] : '未设置')}
+      </div>
+      <div className="property-stack">
+        <label>
+          语义角色
+          <select
+            className="style-select"
+            value={currentRoleId}
+            onChange={(event) => {
+              const nextRole = getSemanticRoleById(event.target.value);
+              onChange(
+                nextRole
+                  ? {
+                      roleId: nextRole.id,
+                      alias: nextRole.name,
+                      source: 'manual',
+                    }
+                  : null,
+              );
+            }}
+          >
+            <option value="">无</option>
+            {BUILT_IN_SEMANTIC_ROLES.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className="micro-button"
+          disabled={!currentSemantic}
+          onClick={() => onChange(null)}
+        >
+          清除语义
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -755,6 +837,10 @@ function renderObjectPropertiesPanel(
       spaceBefore?: number;
       spaceAfter?: number;
     };
+  }) => void,
+  updateLayoutBlockSemantic: (payload: {
+    nodeId: string;
+    semantic: LayoutBlockSemantic | null;
   }) => void,
   tableSelection: TableCellRangeSelection | null,
   tableStructureFeedback: string | null,
@@ -1315,6 +1401,17 @@ function renderObjectPropertiesPanel(
           {renderObjectPropertyRow('块级覆盖', getBlockStyleSummary(selectedNodeInfo.ownerBlock))}
         </div>
       </section>
+
+      {renderSemanticRolePanel({
+        block: selectedNodeInfo.ownerBlock,
+        onChange: (semantic) => {
+          syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+          updateLayoutBlockSemantic({
+            nodeId: selectedNodeInfo.nodeId,
+            semantic,
+          });
+        },
+      })}
 
       {selectedImageMetadata ? (
         <section className="detail-panel object-detail-panel">
@@ -3529,6 +3626,7 @@ export function RightPanel({
   const updateLayoutListBatchChecked = useAppStore((state) => state.updateLayoutListBatchChecked);
   const updateLayoutBlockquoteStructure = useAppStore((state) => state.updateLayoutBlockquoteStructure);
   const applyLayoutNodeBlockStyle = useAppStore((state) => state.applyLayoutNodeBlockStyle);
+  const updateLayoutBlockSemantic = useAppStore((state) => state.updateLayoutBlockSemantic);
   const updateLayoutTocMaxDepth = useAppStore((state) => state.updateLayoutTocMaxDepth);
   const refreshLayoutTocBlock = useAppStore((state) => state.refreshLayoutTocBlock);
   const deleteLayoutTopLevelBlock = useAppStore((state) => state.deleteLayoutTopLevelBlock);
@@ -3777,6 +3875,7 @@ export function RightPanel({
             updateLayoutBlockquoteStructure,
             deleteLayoutTopLevelBlock,
             applyLayoutNodeBlockStyle,
+            updateLayoutBlockSemantic,
             tableSelection,
             tableStructureFeedback,
             setTableStructureFeedback,

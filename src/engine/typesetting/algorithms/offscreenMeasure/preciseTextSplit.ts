@@ -6,6 +6,7 @@
  */
 
 import type { LayoutBlock, TextRun } from '@/engine/document-model';
+import { measureTextLines } from '@/engine/font-metrics';
 import type { OffscreenMeasurementJob } from './types';
 
 /**
@@ -88,48 +89,15 @@ export class MeasurementState {
 }
 
 /**
- * 估算文本行数（无测量时使用）
- * 使用字符宽度表估算
+ * 通过唯一字体测量接口计算文本行数。
  */
 export function estimateTextLineCount(
   text: string,
   width: number,
-  fontSize: number
+  fontSize: number,
+  fontFamily?: string,
 ): number {
-  // 中文字符宽度 = fontSize
-  // 英文字符宽度 = fontSize * 0.5
-  // 空格宽度 = fontSize * 0.25
-
-  const chineseCharWidth = fontSize;
-  const latinCharWidth = fontSize * 0.5;
-  const spaceWidth = fontSize * 0.25;
-
-  let totalWidth = 0;
-  let lineCount = 1;
-
-  for (const char of text) {
-    let charWidth: number;
-
-    if (/\s/.test(char)) {
-      charWidth = spaceWidth;
-    } else if (/[\u4e00-\u9fa5\u3000-\u303f\uff00-\uffef]/.test(char)) {
-      // 中文、全角标点
-      charWidth = chineseCharWidth;
-    } else if (/[a-zA-Z0-9]/.test(char)) {
-      charWidth = latinCharWidth;
-    } else {
-      charWidth = latinCharWidth;
-    }
-
-    totalWidth += charWidth;
-
-    if (totalWidth > width) {
-      lineCount++;
-      totalWidth = charWidth;
-    }
-  }
-
-  return lineCount;
+  return measureTextLines(text, width, { fontSize, fontFamily });
 }
 
 /**

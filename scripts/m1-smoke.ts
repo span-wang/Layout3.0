@@ -49,6 +49,10 @@ import {
   resolveEstimatedTextCharWidthFactor,
   paginateBlocks,
 } from '../src/engine/typesetting/index.ts';
+import {
+  createDeterministicFontMetricsProvider,
+  setFontMetricsProvider,
+} from '../src/engine/font-metrics';
 import { useAppStore } from '../src/store/index.ts';
 import { resolveAssetSrc } from '../src/utils/filePath.ts';
 import { defaultBlockStyles } from '../src/engine/style/presets.ts';
@@ -57,6 +61,8 @@ const outputDir = path.resolve('out', 'm1-smoke');
 const outputPath = path.join(outputDir, 'm1-smoke.pdf');
 const electronCliPath = path.resolve('node_modules', 'electron', 'cli.js');
 const exportScriptPath = path.join(outputDir, 'm1-smoke-export.cjs');
+
+setFontMetricsProvider(createDeterministicFontMetricsProvider());
 
 async function runElectronExport(html: string): Promise<void> {
   const script = [
@@ -350,13 +356,13 @@ async function main(): Promise<void> {
   const latinFactor = resolveEstimatedTextCharWidthFactor('pagination');
   const mixedFactor = resolveEstimatedTextCharWidthFactor('纯中文 pagination 混排');
 
-  if (pureCjkFactor !== 1) {
-    throw new Error(`文本估算验证失败：纯中文字符宽度系数应为 1，实际得到 ${pureCjkFactor}`);
+  if (pureCjkFactor <= latinFactor) {
+    throw new Error(`字体测量验证失败：中文示例宽度应大于英文示例，实际得到中文 ${pureCjkFactor}、英文 ${latinFactor}`);
   }
 
-  if (latinFactor >= mixedFactor || mixedFactor >= 1) {
+  if (latinFactor >= mixedFactor || mixedFactor >= pureCjkFactor) {
     throw new Error(
-      `文本估算验证失败：中英混排字符宽度系数应介于纯英文与纯中文之间，实际得到英文 ${latinFactor}、混排 ${mixedFactor}`,
+      `字体测量验证失败：中英混排宽度应介于纯英文与纯中文之间，实际得到英文 ${latinFactor}、混排 ${mixedFactor}、中文 ${pureCjkFactor}`,
     );
   }
 
@@ -364,11 +370,11 @@ async function main(): Promise<void> {
   const latinLines = estimateTextLines('pagination', 96, 16);
 
   if (pureCjkLines !== 2) {
-    throw new Error(`文本估算验证失败：纯中文示例应换成 2 行，实际得到 ${pureCjkLines} 行`);
+    throw new Error(`字体测量验证失败：纯中文示例应换成 2 行，实际得到 ${pureCjkLines} 行`);
   }
 
   if (latinLines !== 1) {
-    throw new Error(`文本估算验证失败：英文示例应保持 1 行，实际得到 ${latinLines} 行`);
+    throw new Error(`字体测量验证失败：英文示例应保持 1 行，实际得到 ${latinLines} 行`);
   }
 
   if (Math.abs(defaultBlockStyles.code.charWidth - DEFAULT_CODE_CHAR_WIDTH_FACTOR) > 1e-9) {

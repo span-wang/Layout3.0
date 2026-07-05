@@ -6,6 +6,7 @@ import type {
   ImageWrapSide,
   InsertListBlockKind,
   LayoutBlock,
+  LayoutBlockSemantic,
   ListBatchCheckedAction,
   ListBatchCheckedScope,
   ListIndentAction,
@@ -288,6 +289,10 @@ export interface DocumentSlice {
   applyLayoutNodeBlockStyle: (payload: {
     nodeId: string;
     blockStyleOverrides: BlockStyleOverrides;
+  }) => void;
+  updateLayoutBlockSemantic: (payload: {
+    nodeId: string;
+    semantic: LayoutBlockSemantic | null;
   }) => void;
   applyLayoutQuickTextStyle: (payload: {
     scope: QuickTextStyleScope;

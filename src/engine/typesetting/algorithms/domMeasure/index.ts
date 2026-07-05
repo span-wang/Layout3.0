@@ -8,8 +8,11 @@ import {
 import type { ResolvedStyleContract, TextBlockStyleRule } from '@/engine/style/types';
 import {
   getEffectiveListItemMaxFontSize,
+  getEffectiveListItemFontFamily,
   getEffectiveTableCellMaxFontSize,
+  getEffectiveTableCellFontFamily,
   getEffectiveTextRunsMaxFontSize,
+  getEffectiveTextRunsFontFamily,
   resolveEffectiveTextLineHeight,
 } from '@/engine/style/quickTextStyle';
 import { estimateTextLines } from '../../textMetrics';
@@ -75,7 +78,13 @@ function getBlockHeight(
       baseFontSize: blockStyle.fontSize,
       baseLineHeight: block.blockStyleOverrides.lineHeight ?? blockStyle.lineHeight,
     });
-    const lineCount = estimateTextLines(text, contract.contentWidthPx, fontSize);
+    const lineCount = estimateTextLines(text, contract.contentWidthPx, fontSize, {
+      fontFamily: getEffectiveTextRunsFontFamily({
+        textRuns: block.textRuns,
+        block,
+        styles,
+      }),
+    });
     return (
       (block.blockStyleOverrides.spaceBefore ?? blockStyle.marginTop) +
       lineCount * lineHeight +
@@ -102,6 +111,13 @@ function getBlockHeight(
         itemText,
         Math.max(120, contract.contentWidthPx - listStyle.indent),
         fontSize,
+        {
+          fontFamily: getEffectiveListItemFontFamily({
+            item,
+            block,
+            styles,
+          }),
+        },
       );
       return totalHeight + (itemIndex === 0 ? 0 : listStyle.itemGap) + lineCount * lineHeight;
     }, 0);
@@ -133,6 +149,13 @@ function getBlockHeight(
           cellText,
           Math.max(80, contract.contentWidthPx / Math.max(1, row.cells.length)),
           fontSize,
+          {
+            fontFamily: getEffectiveTableCellFontFamily({
+              cell,
+              block,
+              styles,
+            }),
+          },
         );
         const minimumRowHeight = cell.isHeader ? tableStyle.headerRowHeight : tableStyle.rowHeight;
         return Math.max(
@@ -459,7 +482,13 @@ function estimateListItemHeight(params: {
     baseLineHeight: block.blockStyleOverrides.lineHeight ?? listStyle.lineHeight,
   });
   const measuredLineCount = measuredTextLineBreaks?.[item.id]?.length;
-  const lineCount = measuredLineCount ?? estimateTextLines(itemText, getListTextWidthPx(block, contract), fontSize);
+  const lineCount = measuredLineCount ?? estimateTextLines(itemText, getListTextWidthPx(block, contract), fontSize, {
+    fontFamily: getEffectiveListItemFontFamily({
+      item,
+      block,
+      styles,
+    }),
+  });
   return (fragmentItemIndex === 0 ? 0 : listStyle.itemGap) + lineCount * lineHeight;
 }
 
@@ -766,6 +795,11 @@ function paginateSingleColumnDomMeasure(context: PaginationAlgorithmContext): Pa
             text: itemText,
             widthPx: getListTextWidthPx(block, contract),
             fontSize,
+            fontFamily: getEffectiveListItemFontFamily({
+              item,
+              block,
+              styles,
+            }),
             availableLineCount,
             measuredLineBreaks: measuredTextLineBreaks?.[item.id],
           });
@@ -899,6 +933,11 @@ function paginateSingleColumnDomMeasure(context: PaginationAlgorithmContext): Pa
         text,
         widthPx: contract.contentWidthPx,
         fontSize,
+        fontFamily: getEffectiveTextRunsFontFamily({
+          textRuns: block.textRuns,
+          block,
+          styles,
+        }),
         availableLineCount,
         measuredLineBreaks: measuredTextLineBreaks?.[block.id],
       });

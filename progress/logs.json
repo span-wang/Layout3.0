@@ -1,6 +1,874 @@
 {
   "entries": [
     {
+      "id": "LOG-368",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-14"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成批量应用字体与批量应用字号拆分 V1",
+      "action": "顶端工具栏批量规则按钮拆分/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-14-font-family-font-size-separate-batch-actions-v1`：批量区域保留同一个范围选择（全文字、H1、H2、H3、H4、段落、列表、表格），但原来的单个“应用”按钮已拆为 `应用字体` 和 `应用字号` 两个动作；`应用字体` 只调用 `applyQuickTextStyleFontFamilyScope` 并只写入 `fontFamily`，不会覆盖所选范围的字号；`应用字号` 只调用 `applyQuickTextStyleFontSizeScope` 并只写入 `fontSize`，不会覆盖所选范围的字体。当前文字即时字体/字号逻辑保持不变。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-14-font-family-font-size-separate-batch-actions-v1` 更新为已完成，并补 completedOn 与验证项。",
+        "`progress/risks.json` 已更新 `RISK-029` 当前处理方式，记录批量字体/字号拆分动作已完成。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/Toolbar.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续如需分别清除某个范围的字体规则或字号规则，再另拆样式规则管理任务。"
+    },
+    {
+      "id": "LOG-367",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-14"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认批量应用字体与批量应用字号拆分 V1 边界",
+      "action": "用户确认开工/交互返工定位/边界登记/风险更新",
+      "result": "用户继续反馈：批量区域里“应用字体”和“应用字号”不能放在同一个按钮里，否则只想统一字体时，也会把标题、段落、列表、表格等不同类型的字号一起写成同一个值，破坏排版层级。本步按 `PH2-14-font-family-font-size-separate-batch-actions-v1` 推进：批量范围仍共用全文字、H1、H2、H3、H4、段落、列表、表格；应用字体只写 `fontFamily`，不写 `fontSize`；应用字号只写 `fontSize`，不写 `fontFamily`。",
+      "verification": [
+        "用户已回复“其额定”，按上下文理解为确认当前修正方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-14` 下追加并行修正小步边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已更新 `RISK-029` 当前处理方式，记录批量字体/字号仍需拆分动作的体验返工。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/Toolbar.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后拆分批量应用字体和批量应用字号两个按钮，并运行类型检查与构建验证。"
+    },
+    {
+      "id": "LOG-366",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-14"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 Word 式字体字号应用逻辑优化 V1",
+      "action": "顶端工具栏交互优化/样式写回链路拆分/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-14-word-like-font-size-application-v1`：1) 顶端字体控件继续即时作用于当前选中文字或当前选中节点，并在显示值上回落到类型规则字体；2) 新增当前文字字号预设下拉和手动字号输入，用户选择预设、输入后回车或失焦都会通过 `applyLayoutNodeTextStyle` 写入当前选区或当前节点的 `TextRun.styleOverrides.fontSize`；3) 批量规则入口独立成组，提供批量字体、批量范围、批量字号和应用按钮，继续通过 `applyLayoutQuickTextStyle` 写入 `LayoutDocument.styles.textStyles`；4) 局部文字覆盖、类型规则、全文字体字号和模板默认的既有优先级保持不变；5) 本步未改 `.layout` 字段结构、分页算法、字体测量接口、模板系统或字号单位体系。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-14-word-like-font-size-application-v1` 更新为已完成，并补 completedOn 与验证项。",
+        "`progress/risks.json` 已更新 `RISK-029` 当前处理方式，记录体验缺陷已完成最小优化。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/Toolbar.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续如需样式窗格、样式库、清除某一级规则或 px/pt 体系迁移，再另拆样式增强任务。"
+    },
+    {
+      "id": "LOG-363",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-14"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 Word 式字体字号应用逻辑优化 V1 边界",
+      "action": "用户确认开工/交互缺陷定位/边界登记/风险记录",
+      "result": "用户反馈当前字体调整和各类型字号应用逻辑别扭、不方便，希望参考 Word。定位确认：顶端字体字号工具把当前选区即时修改和全文字 / H1 / 段落 / 列表 / 表格批量规则应用混在一起，用户需要理解范围下拉和应用按钮，和 Word 中“选中什么就改什么”的心智不一致。本步按 `PH2-14-word-like-font-size-application-v1` 推进：顶端字体/字号优先直接作用于当前选中文字或当前选中节点；批量类型规则入口独立展示并继续写入 `LayoutDocument.styles.textStyles`；不改 `.layout` 字段结构、不改分页算法、不迁移字号单位体系。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小优化方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-14` 下追加并行小步边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-029`，记录字体字号工具交互心智混乱的体验缺陷和处理方式。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/Toolbar.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实施顶端字体/字号即时应用与批量类型规则入口拆分，并运行类型检查与构建验证。"
+    },
+    {
+      "id": "LOG-361",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格最后一行行高拖拽手柄补齐 V1",
+      "action": "画布表格拖拽入口修复/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-table-last-row-height-handle-v1`：`CanvasPane.tsx` 已移除行高手柄显示条件中的 `rowIndex < tableRows.length - 1`，最后一行在表格选中或单元格选中时也会显示行高拖拽手柄；上一小步的独立行高写回逻辑保持不变，拖拽预览和释放写回仍只修改当前行 `heightPx`。本步未改列宽拖拽、自动适应、合并单元格、分页算法或 `.layout` 字段结构。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-table-last-row-height-handle-v1` 更新为已完成。",
+        "`progress/risks.json` 已更新 `RISK-028` 当前处理方式，记录缺陷已修复。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；如后续需要批量行高或属性面板数值输入，再另拆 `PH2-05B` 表格编辑增强。"
+    },
+    {
+      "id": "LOG-360",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格最后一行行高拖拽手柄补齐 V1 边界",
+      "action": "用户确认开工/缺陷定位/边界登记/风险记录",
+      "result": "用户反馈表格最后一行无法调整行高。定位确认：上一轮 `PH2-05B-table-row-height-independent-resize-v1` 已让行高拖拽不再依赖下一行，但 `CanvasPane.tsx` 渲染手柄时仍保留 `rowIndex < tableRows.length - 1` 条件，导致最后一行不显示行高拖拽手柄。本步按 `PH2-05B-table-last-row-height-handle-v1` 推进：只移除“必须存在下一行”的显示限制；拖拽预览和释放写回仍只修改当前行 `heightPx`。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小补丁方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加补充小步边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-028`，记录最后一行行高拖拽手柄缺失缺陷及影响范围。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实施最后一行行高手柄显示补丁，并运行类型检查与构建验证。"
+    },
+    {
+      "id": "LOG-359",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格行高拖拽解除邻行联动 V1",
+      "action": "画布表格拖拽修复/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-table-row-height-independent-resize-v1`：1) `CanvasPane.tsx` 的行高拖拽状态移除下一行 ID、下一行单元格 ID 和下一行初始高度等联动字段；2) 拖拽移动时只更新当前行在 `draftTableRowHeights` 中的预览高度，不再计算或写入邻行高度；3) 鼠标释放时只对当前行调用一次 `updateLayoutTableRowHeight`，不再对下一行写回高度；4) 保留最小行高 28px 和现有行高拖拽手柄显示范围，不新增最后一行拖拽入口；5) 本步未改列宽拖拽、自动适应、合并单元格、分页算法或 `.layout` 字段结构。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-table-row-height-independent-resize-v1` 边界卡移动到 `PH2-05B` 并更新为已完成。",
+        "`progress/risks.json` 已更新 `RISK-027` 当前处理方式，记录缺陷已修复。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；如后续需要批量行高或属性面板数值输入，再另拆 `PH2-05B` 表格编辑增强。"
+    },
+    {
+      "id": "LOG-358",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格行高拖拽解除邻行联动 V1 边界",
+      "action": "用户确认开工/缺陷定位/边界登记/风险记录",
+      "result": "用户反馈表格行高拖拽存在联动，调整当前行时其他行会发生变化。定位确认：`CanvasPane.tsx` 当前行高拖拽逻辑按当前行与下一行总高度不变处理，导致当前行变化时邻行同步反向变化。本步按 `PH2-05B-table-row-height-independent-resize-v1` 推进：拖拽预览和释放写回只修改当前行 `heightPx`，不再写入下一行；保留最小行高约束和既有 `.layout` 行高字段，分页、保存与导出继续消费同一套 `rows[].heightPx` 数据。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小修复方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加并行小步边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-027`，记录表格行高拖拽邻行联动缺陷及影响范围。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实施表格行高拖拽只写当前行的最小修复，并运行类型检查与构建验证。"
+    },
+    {
+      "id": "LOG-357",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成嵌套列表有序/无序标记保真修复 V1",
+      "action": "文档模型扩展/Markdown 导入修复/画布渲染修复/导出修复/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-04-list-mixed-marker-fix-v1`：1) `LayoutListItem` 新增可选 `listKind` 字段，记录该列表项所在列表层是 `ordered` 还是 `unordered`，旧文件缺字段时继续按列表块根层 `ordered` 兼容；2) `fromMarkdown.ts` 在递归展开列表时把每一层 mdast `List.ordered` 写入对应列表项；3) `CanvasPane.tsx` 渲染嵌套子列表时按子层第一个列表项的 `listKind` 选择 `ol/ul`，不再复用根层 `ordered`；4) `exportHtml.ts` 使用同一口径导出嵌套列表，确保 HTML/PDF 中外层 `ol`、内层 `ul` 可同时存在；5) `fromMarkdown.test.ts` 补充混合嵌套列表模型和导出回归；6) 本步未改列表拖拽、缩进编辑、编号样式或分页算法。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，2 个测试 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-04-list-mixed-marker-fix-v1` 边界卡更新为已完成，并补 completedOn 与验证项。",
+        "`progress/risks.json` 已更新 `RISK-026` 当前处理方式，记录缺陷已修复。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/utils.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续如果需要在右侧属性面板中只转换当前层级的有序/无序，另拆 `PH2-05B` 列表编辑增强。"
+    },
+    {
+      "id": "LOG-356",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认嵌套列表有序/无序标记保真修复 V1 边界",
+      "action": "用户确认开工/缺陷定位/边界登记/风险记录",
+      "result": "用户反馈原本子列表是无序列表，但画布里全部变成有序列表。定位确认：当前 `ListBlockMetadata.ordered` 只表达整个列表块根层标记类型，`LayoutListItem` 没有保存所在层级列表自己的有序/无序类型；`CanvasPane` 与 `exportHtml` 递归渲染子列表时复用根层 `ordered`，导致外层 `1.` 下的内层 `-` 被渲染为 `1.` / `2.`。本步按 `PH2-04-list-mixed-marker-fix-v1` 推进：给列表项补可选层级标记字段，Markdown 导入写入该字段，画布预览和 HTML/PDF 导出按该字段选择 `ol/ul`；旧文件缺字段时继续按根层 `ordered` 兼容。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小修复方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-04` 下追加并行小步边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-026`，记录嵌套列表标记类型丢失缺陷及影响范围。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "src/engine/document-model/utils.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实施列表项层级标记字段、导入写入和预览/导出消费，并补充混合嵌套列表回归。"
+    },
+    {
+      "id": "LOG-355",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成嵌套列表 Markdown 导入去重修复 V1",
+      "action": "Markdown 导入修复/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-04-list-nested-duplicate-fix-v1`：1) `fromMarkdown.ts` 中父级列表项文本构建不再把直接子列表文字拼入 `textRuns`；2) 子列表仍由 `flattenListItems` 展开成独立 `LayoutListItem`，保留原有层级和画布树渲染口径；3) 新增 `fromMarkdown.test.ts` 定向回归，验证父级列表项只包含自身文字，两个子项分别作为 2 级列表项存在；4) 本步未改画布渲染、导出、分页算法或 `.layout` 结构。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，1 个测试 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-04-list-nested-duplicate-fix-v1` 边界卡更新为已完成，并补 completedOn 与验证项。",
+        "`progress/risks.json` 已更新 `RISK-025` 当前处理方式，记录缺陷已修复。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续如发现多段列表项、引用内列表或复杂 Markdown 列表结构不一致，再拆 `PH2-04` Markdown 导入兼容性增强。"
+    },
+    {
+      "id": "LOG-354",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认嵌套列表 Markdown 导入去重修复 V1 边界",
+      "action": "用户确认开工/缺陷定位/边界登记/风险记录",
+      "result": "用户反馈列表解析时重复解析，截图表现为父级有序列表项下方先显示子列表文本，随后又显示同一批子列表项。定位确认：`fromMarkdown.ts` 在构建父级 `LayoutListItem.textRuns` 时会把直接子列表文字拼入父项，同时 `flattenListItems` 又会把该子列表展开成独立列表项，造成内容重复。本步按 `PH2-04-list-nested-duplicate-fix-v1` 推进：父级列表项只保留自身段落/代码内容，子列表继续作为独立层级列表项展开；不改画布渲染、导出、分页算法或 `.layout` 结构。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小修复方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-04` 下追加并行小步边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-025`，记录嵌套列表导入重复解析缺陷及影响范围。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实施列表项文本构建去重修复，并补充嵌套列表导入回归验证。"
+    },
+    {
+      "id": "LOG-353",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH3-10"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成小红书内容生成 V1",
+      "action": "AI 生成类型扩展/提示词接入/生成面板交互/记录兼容/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-10-xiaohongshu-content-v1`：1) `GenerateType` 新增小红书标题、小红书文案、小红书主图方案三类生成类型，并同步 Electron 主进程/预加载层 AI 生成记录类型白名单，避免记录读取时降级为讲义；2) `AiService` 新增小红书专用系统提示词和三类用户提示词，标题推荐覆盖痛点型、共鸣型、反常识型、对比型、氛围感型、合集清单型，文案生成结合已选标题与当前文章内容，主图方案结合文章标题、已选标题、文案和正文内容输出封面方案与图片生成提示词；3) 新增 `layoutDocumentToMarkdown` 共享工具，AI 检查和小红书生成都从当前结构化文档读取 Markdown 上下文，不反写源码快照；4) AI 生成 Tab 新增小红书专用表单：展示当前文章标题和内容字数，文案/主图步骤要求填写已选标题，主图步骤要求填写文案，并提供从当前结果带入标题/文案的辅助按钮；5) 主图 V1 明确只生成设计方案和可复制提示词，不直接生成真实图片文件；6) 结果继续复用现有停止生成、生成记录落盘、插入当前文档和清空链路。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-3.json` 已将 PH3-10 状态更新为已完成，并补 completedOn 与完成验证项。",
+        "`progress/risks.json` 已更新 RISK-024 当前处理方式，记录 V1 已完成、真实图片生成后续拆分。"
+      ],
+      "affectedFiles": [
+        "src/types/ai.ts",
+        "src/services/AiService.ts",
+        "src/services/layoutDocumentMarkdown.ts",
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/components/ai/AiCheckTab.tsx",
+        "src/styles.css",
+        "electron/main/ai-record-handlers.ts",
+        "electron/preload/index.ts",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续若要生成真实主图图片，单独拆图片模型调用、资源落盘与图片块插入任务。"
+    },
+    {
+      "id": "LOG-352",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH3-10"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认小红书内容生成 V1 边界",
+      "action": "用户确认开工/边界登记/范围风险登记",
+      "result": "用户确认在 AI 模块新增小红书标题推荐、小红书文案推荐、小红书主图生成功能。本步按 `PH3-10-xiaohongshu-content-v1` 推进：1) 小红书标题推荐按痛点型、共鸣型、反常识型、对比型、氛围感型、合集清单型输出候选；2) 文案推荐必须结合用户选择的推荐标题、当前文章标题和当前文章内容；3) 主图能力本步先输出主图设计方案、封面文字建议和可复制的图片生成提示词，不直接调用图片模型生成真实 PNG/JPG；4) 结果沿用 AI 面板确认式插入，不自动覆盖当前文档；5) 真实图片生成、图片资源落盘和自动插入图片块后续另拆任务。",
+      "verification": [
+        "用户已回复“确定”，确认当前小红书内容生成 V1 方案可以执行。",
+        "`progress/tasks/phase-3.json` 已新增 PH3-10 任务卡并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 RISK-024，记录真实图片生成暂不纳入本步的范围调整风险。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后开始实现 AI 生成面板中的小红书标题、文案和主图方案生成能力。"
+    },
+    {
+      "id": "LOG-351",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-20-inline-equation-split-guard"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成行内公式跨页切分保护 V1",
+      "action": "分页偏移保护/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-20-inline-equation-split-guard-v1`：1) 在 `estimatedMaxFill.ts` 中新增行内公式切分保护函数，识别同一文本内成对 `$...$` 区间；2) 当切分点落在行内公式内部时，优先回退到公式起始 `$` 之前，让公式整体进入下一片段；若公式前只有空白，则推进到公式结束 `$` 之后，避免产生无意义空白片段；3) 该保护已接入标题/段落、列表项和表格单元格切分路径，覆盖实测换行点与估算切分点两种来源；4) 未改 `splitInlineEquations` / KaTeX 渲染链路，未新增 `.layout` 字段，未改变 runtimeSlice 字段形状；5) 新增 3 个定向回归，分别模拟段落、列表项、表格单元格的真实换行点落在 `$8000 \\\\times 30\\\\%$` 内部，验证拆分片段中 `$` 成对且所有片段拼接后等于原文。",
+      "verification": [
+        "定向回归通过：`node .\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs --test src\\\\engine\\\\typesetting\\\\algorithms\\\\estimatedMaxFill.types-adoption.test.ts src\\\\engine\\\\typesetting\\\\algorithms\\\\estimatedMaxFill.blockquote.test.ts src\\\\engine\\\\typesetting\\\\algorithms\\\\estimatedMaxFill.table.test.ts`，共 16 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 PH2-20-inline-equation-split-guard 状态更新为已完成，并补 completedOn 与完成验证项。",
+        "`progress/risks.json` 已更新 RISK-023 当前处理方式，记录本次缺陷修复完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.types-adoption.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；若后续需要支持 `\\\\(...\\\\)`、跨行公式或超宽公式缩放，另拆公式解析 / 公式排版增强任务。"
+    },
+    {
+      "id": "LOG-350",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-20-inline-equation-split-guard"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认行内公式跨页切分保护 V1 边界",
+      "action": "用户确认开工/边界登记/进度源回写",
+      "result": "用户反馈行内公式跨页拆分后无法解析，并确认按 `PH2-20-inline-equation-split-guard-v1` 推进。定位确认：Markdown 导入会把 `$...$` 行内公式保留为普通 TextRun，CanvasPane / exportHtml 渲染时再用 splitInlineEquations 解析；分页算法当前按普通字符偏移拆分标题、段落、列表项和表格单元格文本，因此可能把切分点落在 `$...$` 公式内部，导致拆分后的两个片段都不再是合法行内公式。本步纳入：新增切分偏移校正，避免切入同一文本内成对 `$...$` 公式；覆盖标题、段落、列表项、表格单元格；新增定向回归验证片段 `$` 成对且拼接后不丢文本。本步明确不纳入：不改公式解析语法、不支持跨多行公式、不做公式自动缩放或内部断行、不改块级公式、不重写分页主循环。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小修复方案可以执行。",
+        "`progress/tasks/phase-2.json` 已新增顶层任务卡 PH2-20-inline-equation-split-guard (order 84) + executionBoundary 边界卡。",
+        "`progress/risks.json` 已更新 RISK-023 当前处理方式，追加本步开工。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.types-adoption.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；随后实现行内公式安全切分偏移校正，并补充标题/段落/列表项/表格单元格的定向回归。"
+    },
+    {
+      "id": "LOG-349",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-20-block-split-text-rendering-adaptation"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "PH2-20 多栏块切分通用机制 V1：文本块 runtimeSlice 接入实施完成登记",
+      "action": "类型扩展 / 主循环 fragmentContext / 整放 path / helper / 新增 2 个测试 / typecheck / build / 全部回归",
+      "result": "实施落地：1) types.ts 新增 TextBlockRuntimeSlice 接口（5 字段：isContinuation / isOriginal / sourceNodeId / characterRange.start / characterRange.end / fragmentIdSuffix），并把 HeadingBlockMetadata / ParagraphBlockMetadata.runtimeSlice 由无扩展为可选字段；ListBlockMetadata 同步保持不变；2) createTextFragmentBlock 的 options 新增 fragmentContext?: TextFragmentContext，内部对 heading / paragraph 一次性写完整 runtimeSlice，code / blockquote 路径不写；3) 主分页循环 heading/paragraph 整放 path 写入 runtimeSlice = { isContinuation: false, isOriginal: true, ... }，且如果 block 已有 runtimeSlice 则跳过覆盖（保留续排标记）；4) 切分 path 在 createTextFragmentBlock 调用前先取 canonical sourceNodeId（已有 runtimeSlice.sourceNodeId ?? block.id）与 baseCharacterStart（已有 runtimeSlice.characterRange.start ?? 0），让 current / remaining 的 characterRange 累计指向原始文本位置，sourceNodeId 始终指回原始块；5) 加 helper isTextBlockExistingSlice 守卫，避免把 ListBlockMetadata 等其他 runtimeSlice 误读；6) estimatedMaxFill.types-adoption.test.ts 新增 2 个定向回归。验证：13/13 测试通过（其中新加 2 个：长段落跨页切分 + heading 整放），typecheck 通过，npm run build 通过。",
+      "verification": [
+        "`src/engine/document-model/types.ts` 新增 TextBlockRuntimeSlice 接口与 Heading/ParagraphBlockMetadata.runtimeSlice? 字段。",
+        "`src/engine/typesetting/algorithms/estimatedMaxFill.ts` createTextFragmentBlock 新增 fragmentContext 参数；heading/paragraph 主分页循环切分 path 用 canonical sourceNodeId + baseCharacterStart 累计；整放 path 写入 isOriginal=true 并保留已有 slice。",
+        "`src/engine/typesetting/algorithms/estimatedMaxFill.types-adoption.test.ts` 新增 2 个测试。",
+        "测试：estimatedMaxFill.types-adoption.test.ts + estimatedMaxFill.blockquote.test.ts + estimatedMaxFill.table.test.ts 共 13 测试，全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功（含 electron-vite 渲染层构建）。",
+        "`npm run progress:build` 即将执行。",
+        "`PH2-20-block-split-text-rendering-adaptation` 任务状态预计置为已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.types-adoption.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；PH2-20-block-split-text-rendering-adaptation 任务状态置为已完成；下一步推进 PH2-20-block-split-quote-code-toc-rendering-adaptation-v1（runtimeSlice 写入 TOC / 引用容器 / 代码块），但用户尚未提需求，待用户确认后再开工。"
+    },
+    {
+      "id": "LOG-348",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-20-block-split-text-rendering-adaptation"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "PH2-20 多栏块切分通用机制 V1：文本块 runtimeSlice 接入开工登记",
+      "action": "用户确认开工/边界确认/进度源回写",
+      "result": "用户回复确认 `runtimeSlice 形状对齐 table/list`、`id 后缀 -frag-/-rest- 保留`、`CanvasPane/exportHtml 不动` 三条决策。本步在 PH2-20-block-split-rendering-adaptation-v1 列表 runtimeSlice 已就位的基础上，把 runtimeSlice 接入方案推广到 heading / paragraph 文本块：1) HeadingBlockMetadata / ParagraphBlockMetadata 新增可选字段 runtimeSlice，shape 与 table/list 同口径 `{ isContinuation, isOriginal, sourceNodeId, characterRange: { start, end }, fragmentIdSuffix }`；2) createTextFragmentBlock 的 options 新增 fragmentContext?: TextBlockRuntimeSlice，函数内部一次性写入完整 runtimeSlice；3) 主分页循环 heading/paragraph 分支按路径填 fragmentContext；4) id 后缀与 CanvasPane / exportHtml 行为均保持不变。本轮评估：PH2-09 提到的 measuredTextLineBreaks 跨 fragment id 命中问题由后续 PH2-20-block-split-quote-code-toc-rendering-adaptation-v1 / PH2-09 测量缓存键扩展子步一并解决。本步已新增顶层任务卡 PH2-20-block-split-text-rendering-adaptation (order 83) 并将 executionBoundary 标记为 PH2-20-block-split-text-rendering-adaptation-v1，写明本步纳入 5 项 / 不纳入 6 项 / 后续归属 2 项 / 验证方式 9 项。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已新增顶层任务卡 PH2-20-block-split-text-rendering-adaptation (order 83) + executionBoundary 边界卡。",
+        "`progress/risks.json` 已更新 RISK-023 当前处理方式，追加本步开工。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.types-adoption.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；开始实施改动 1-3：types.ts 添加 TextBlockRuntimeSlice 接口并在 Heading/ParagraphBlockMetadata 上添加 runtimeSlice?; createTextFragmentBlock options 新增 fragmentContext 参数；主循环 heading/paragraph 分支按路径填 fragmentContext；新增运行时回归测试。"
+    },
+    {
+      "id": "LOG-347",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-20-block-split-rendering-adaptation"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "PH2-20 多栏块切分通用机制 V1：列表片段 runtimeSlice 整理完成登记",
+      "action": "用户确认开工/实施完成/全部回归通过/进度源回写",
+      "result": "本步已完成 `PH2-20-block-split-rendering-adaptation-v1` 实施：1) `createListFragmentBlock` 签名扩展为接收 `totalItems`（默认 -1），并在 metadata 上一次性写入 `runtimeSlice = { startIndex, endIndex, fragmentIndex, totalItems, isContinuation: fragmentIndex > 1 }`，endIndex 由 items.length 反推确保与子集下标一一对应；2) PH2-20-block-split-types-adaptation-v1 主循环里的 `blockWithSlice` 重复覆盖删除，统一由 `buildListFragment` 内部产出含完整 runtimeSlice 的片段；3) 保留 id 后缀 `-list-fragment-${fragmentIndex}` 不动（便于 React key 与 debug 追踪）；4) 新增 1 个 runtimeSlice-internal-block-test 定向回归，验证 `paginateMaxFillBlocks` 端到端输出每个列表片段均带 `metadata.runtimeSlice`，且 `runtimeSlice.startIndex / endIndex` 与 `items.length` 一一对应、跨片段 startIndex 严格递增；5) 与既有 10 个 estimatedMaxFill 测试一起 `pass 11 / fail 0`。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "定向回归通过：`node .\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs --test src\\\\engine\\\\typesetting\\\\algorithms\\\\estimatedMaxFill.types-adoption.test.ts` 与 `estimatedMaxFill.blockquote.test.ts` / `estimatedMaxFill.table.test.ts` 一起 `pass 11 / fail 0`。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 PH2-20-block-split-rendering-adaptation 顶层任务状态由 `进行中` 更新为 `已完成`，并补 `completedOn: 2026-07-05`。",
+        "`progress/risks.json` 已更新 RISK-023 当前处理方式，记录本次返工实施完成。",
+        "`npm run progress:build` 与 `npm run progress:check` 已执行并同步 `项目开发进度.md` 与 `当前执行看板.md`。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.types-adoption.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "下一步候选：1) `PH2-20-block-split-text-rendering-adaptation-v1`：文本块 runtimeSlice 接入；2) `PH2-20-block-split-quote-code-toc-rendering-adaptation-v1`：引用容器 / 代码块 / TOC 的 runtimeSlice 写入；3) `PH2-09` 测量缓存键按栏宽 + fragmentIndex 扩展；4) 回到 M2 主链路下一项 P0 任务。"
+    },
+    {
+      "id": "LOG-346",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-20-block-split-rendering-adaptation"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "PH2-20 多栏块切分通用机制 V1：列表片段 runtimeSlice 整理开工登记",
+      "action": "用户确认开工/边界确认/进度源回写",
+      "result": "用户回复“id 后缀保留 + 所有列表片段生成 runtimeSlice” 与 “保留 metadata 突变式生成” 两条决策。基于上一实施步（PH2-20-block-split-types-adoption-v1）的实际产物 —— 列表 runtimeSlice 已经在主循环的 blockWithSlice 覆盖写入，但 createListFragmentBlock 内部仍只产出不含 runtimeSlice 的片段 —— 把产出点往前挪到 createListFragmentBlock，让 buildListFragment 内部一次性产出含完整 metadata（含 runtimeSlice）的片段，并把主循环里的 blockWithSlice 重复覆盖删掉。CanvasPane / exportHtml 经调研确认不解析 id 后缀，本步不动渲染 / 导出层。本步已新增顶层任务卡 PH2-20-block-split-rendering-adaptation (order 82) 并将 executionBoundary 标记为 PH2-20-block-split-rendering-adaptation-v1，写明本步纳入 5 项 / 不纳入 6 项 / 后续归属 3 项 / 验证方式 9 项。RISK-023 当前处理方式追加本步开工说明。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已新增顶层任务卡 PH2-20-block-split-rendering-adaptation (order 82) + executionBoundary 边界卡。",
+        "`progress/risks.json` 已更新 RISK-023 当前处理方式，追加本步开工。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；开始实施改动 1-5：createListFragmentBlock 新增 totalItems 参数与 runtimeSlice 写入、主循环 blockWithSlice 删除、新增运行时回归测试。"
+    },
+    {
+      "id": "LOG-345",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-20-block-split-types-adoption"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "PH2-20 多栏块切分通用机制 V1：接入剩余块类型完成登记",
+      "action": "用户确认开工/实施完成/全部回归通过/进度源回写",
+      "result": "本步已完成 `PH2-20-block-split-types-adoption-v1` 实施：1) `types.ts` 补充 `ListBlockMetadata.runtimeSlice.isContinuation` 字段；2) `estimatedMaxFill.ts` 新增 `resolveCurrentColumnRemainingHeight` 帮助函数（被 5 处入口判断共享）；3) 新增 5 个 `trySplit*ToFitHeight` 薄包装（list / toc / blockquote / code / text）与对应 5 个 Payload 类型；4) 列表 / TOC / 引用容器 / 代码块 / 文本块 5 种块类型入口判断改为与表格一致的“当前栏能否放下整块”口径，停止依赖 `columnPlacementCandidate.fits`；5) 9 处 `resetColumnFlowState` 改为先 `advanceToNextColumn` 推进栏位、栏满才真正换页；6) 列表 runtimeSlice 已写入片段 metadata；7) 文本块的 `trySplitTextToFitHeight` 与 `blocks.splice` 续排天然冲突（业务上文本块剩余文本 splice 进外层 blocks），本步只做入口判断 + advanceToNextColumn 修正，未调用 trySplitTextToFitHeight；8) 新增定向回归脚本 `estimatedMaxFill.types-adoption.test.ts` 共 6 个测试（列表 2 + TOC 1 + 引用 1 + 代码 1 + 文本 1），与既有 blockquote / table 测试一起 `pass 10 / fail 0`。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "定向回归通过：`node .\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs --test src\\\\engine\\\\typesetting\\\\algorithms\\\\estimatedMaxFill.types-adoption.test.ts` 与 `estimatedMaxFill.blockquote.test.ts` / `estimatedMaxFill.table.test.ts` 一起 `pass 10 / fail 0`。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 PH2-20-block-split-types-adoption 顶层任务状态由 `进行中` 更新为 `已完成`，并补 `completedOn: 2026-07-05`。",
+        "`progress/risks.json` 已更新 RISK-023 当前处理方式，记录本次返工实施完成。",
+        "`npm run progress:build` 与 `npm run progress:check` 已执行并同步 `项目开发进度.md` 与 `当前执行看板.md`。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.types-adoption.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "下一步回到 M2 主链路，按 P0 顺序选择下一项；后续 `PH2-20-block-split-rendering-adaptation-v1` 负责渲染层 / 导出层适配其他块类型 runtimeSlice。"
+    },
+    {
+      "id": "LOG-344",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-20-block-split-types-adoption"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "PH2-20 多栏块切分通用机制 V1：接入剩余块类型开工登记",
+      "action": "用户确认开工/边界确认/进度源回写",
+      "result": "用户回复“继续接入其他块类型”并确认接入范围包含文本块、runtimeSlice 仅写表格和列表。本步已新增顶层任务卡 PH2-20-block-split-types-adoption (order 81) 并将其 executionBoundary 标记为 PH2-20-block-split-types-adoption-v1，写明本步纳入 8 项 / 不纳入 7 项 / 后续归属 4 项 / 验证方式 9 项。RISK-023 当前处理方式追加本步开工说明。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已新增顶层任务卡 PH2-20-block-split-types-adoption (order 81) + executionBoundary 边界卡。",
+        "`progress/risks.json` 已更新 RISK-023 当前处理方式，追加本步开工。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；开始实施改动 1-6：抽 resolveCurrentColumnRemainingHeight 帮助函数、新增 5 个 trySplit*ToFitHeight 接口、修整 5 种块类型入口判断、9 处 resetColumnFlowState 改为 advanceToNextColumn、列表 runtimeSlice 写入、新增定向回归脚本。"
+    },
+    {
+      "id": "LOG-343",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-20"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成多栏块切分通用机制 + 表格 PoC V1",
+      "action": "用户确认开工/实施完成/定向回归通过/进度源回写",
+      "result": "本步已完成 `PH2-20-block-split-unified-interface-v1` 实施：1) `types.ts` 在 `TableBlockMetadata` 与 `ListBlockMetadata` 上扩展 `runtimeSlice`；2) `estimatedMaxFill.ts` 新增 `BlockSplitContext` / `TrySplitTableToFitHeightPayload` 类型和 `trySplitTableToFitHeight` 表格统一接口；3) 表格分片主循环入口判断改为“当前栏能放下整表才整放”，避免 `resolveColumnPlacementCandidate` 向后找栏误判 fits=true；4) 新增 `advanceToNextColumn` 帮助按栏推进栏位、修复切分失败或还有剩余行换页时 `resetColumnFlowState` 清空 `columnHeights` 导致整块跳到新页第一栏的次因；5) `runtimeSlice` 已写入表格片段 metadata；6) 新增 `src/engine/typesetting/algorithms/estimatedMaxFill.table.test.ts` 定向回归脚本，与 blockquote 测试一起 `pass 4 / fail 0`；7) `typecheck` / `build` 均通过。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "定向回归通过：`node .\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs --test src\\\\engine\\\\typesetting\\\\algorithms\\\\estimatedMaxFill.table.test.ts` 与 `estimatedMaxFill.blockquote.test.ts` 一起 `pass 4 / fail 0`，覆盖“双栏下表格按行切分填满当前栏、第二栏从剩余行开始”与“引用块/代码块切分填满当前栏”。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-20` 顶层任务状态由 `进行中` 更新为 `已完成`，executionBoundary 增加 `completedOn: 2026-07-05` 并补充实施说明。",
+        "`progress/risks.json` 已更新 `RISK-023` 当前处理方式，记录本次返工已从“可拆正文块统一续排”推进为“统一块切分接口 + 栏状态保护 + 表格 PoC”并完成实现。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行并同步 `项目开发进度.md` 与 `当前执行看板.md`。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.table.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示文档；后续子步 `PH2-20-block-split-types-adoption-v1` 接入列表 / TOC / 引用容器 / 代码块 / 文本块到统一接口。"
+    },
+    {
+      "id": "LOG-342",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-09",
+        "PH2-20"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "推进多栏可拆正文块统一续排到统一块切分接口 + 栏状态保护 + 表格 PoC V1",
+      "action": "用户确认开工/边界推进/进度源回写",
+      "result": "用户已回复“都按方案走，编号 PH2-20 开始”，本步从已确认边界的 `PH2-09-multicolumn-splittable-block-fill-v1` 推进为可执行任务 `PH2-20-block-split-unified-interface-v1`：`max-fill-v1` 将抽出 `trySplitBlockToFitHeight` 统一接口 + `placeBlockInColumns` 三段式调度，并修复切分失败换页时 `resetColumnFlowState` 清空 `columnHeights` 导致整块跳到新页第一栏的次因；本轮以表格作为首个 PoC，其他块类型接入延后。",
+      "verification": [
+        "用户已回复“都按方案走，编号 PH2-20 开始”，确认本步进入实施阶段。",
+        "`progress/tasks/phase-2.json` 已新增顶层任务卡 `PH2-20 多栏块切分通用机制 V1`，并在其 executionBoundary 中写入 `PH2-20-block-split-unified-interface-v1` 的本步纳入 / 不纳入 / 后续归属 / 验证方式。",
+        "`progress/config.json` 已将 `M2 排版可用` 里程碑状态回退为 `进行中`，因为 PH2-20 多栏块切分通用机制仍在推进。",
+        "`progress/risks.json` 已更新 `RISK-023` 当前处理方式，记录本次返工从“可拆正文块统一续排”推进为“统一块切分接口 + 栏状态保护 + 表格 PoC”。",
+        "`npm run progress:build` 和 `npm run progress:check` 成功，生成文档与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/config.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "开始实现统一接口与三段式调度并以表格作为首个 PoC 落地；先实现 `trySplitBlockToFitHeight` 与 `placeBlockInColumns` 的最小骨架，再让表格 PoC 通过，然后跑定向回归验证。"
+    },
+    {
+      "id": "LOG-341",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "修正多栏续排返工边界为可拆正文块统一续排 V1",
+      "action": "用户反馈纠偏/边界修正/风险处理更新/准备实现",
+      "result": "用户明确指出当前问题“不是引用框，是所有的块内容”，因此本轮返工边界已从上一轮过窄的 `PH2-09-multicolumn-blockquote-fragment-fill-v1` 修正为 `PH2-09-multicolumn-splittable-block-fill-v1`。本步纳入：让 `max-fill-v1` 在多栏里对可继续拆开的正文块统一按当前栏剩余高度续排，而不是只有段落/列表/表格少数类型可拆；当前优先覆盖标题、段落、列表、表格、引用容器和代码块。本步明确不纳入：图片、公式、分隔线等非正文对象强拆，局部分栏，新 UI，或新的 `.layout` 字段。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-09-multicolumn-splittable-block-fill-v1` 最小实现边界可以执行。",
+        "`PH2-09-multicolumn-splittable-block-fill-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已更新 `RISK-023` 当前处理方式，记录本次返工范围已从“引用块特例”修正为“多栏可拆正文块统一续排”。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "开始补齐代码块在多栏中的续排能力，并把本轮回归验证从引用块扩展到代码块与其他可拆正文块。"
+    },
+    {
+      "id": "LOG-340",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成多栏引用块优先填满当前栏 V1",
+      "action": "分页算法修复/定向回归/编译验证/进度同步",
+      "result": "已完成 `PH2-09-multicolumn-blockquote-fragment-fill-v1`：在 `max-fill-v1` 中新增引用块分页分支，多栏场景下引用块 / callout 不再只按整块避让；当当前栏剩余高度放不下整块引用时，算法会优先按引用内部子块生成运行时片段，让当前栏先吃掉能容纳的内容，再把剩余内容续排到后续栏或下一页。实现复用了现有文本切分、列表拆项、表格拆行和嵌套引用递归分页能力，没有扩张成新的通用容器分页框架；同时新增窄范围自动化回归，覆盖多栏引用块至少拆成两个片段且内容顺序保持不变。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`node .\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs --test src\\\\engine\\\\typesetting\\\\algorithms\\\\estimatedMaxFill.blockquote.test.ts` 成功，覆盖多栏引用块运行时拆片与内容顺序保持。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.blockquote.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "progress/config.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续如继续分页深化，可优先收口代码块 / TOC / 其他容器块的剩余占高与续排一致性。"
+    },
+    {
+      "id": "LOG-339",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认多栏引用块优先填满当前栏 V1 边界",
+      "action": "方案确认/边界登记/风险处理更新/准备实现",
+      "result": "用户已确认继续推进 `PH2-09-multicolumn-blockquote-fragment-fill-v1`。本步纳入：在 `max-fill-v1` 多栏主循环中补齐引用块 / callout 的最小续排能力，让引用块在整块放不下当前栏时优先按内部子块生成运行时片段，先吃满当前栏剩余空间，再把剩余内容续排到后续栏或下一页，避免出现“当前栏明明还有空间却整块后移”的大块留白。本步明确不纳入：所有容器块的通用碎片化系统、代码块/图片/公式等其他复杂块的统一分页、孤儿行/寡妇行、局部分栏和新的 `.layout` 字段。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-09-multicolumn-blockquote-fragment-fill-v1` 最小实现边界可以执行。",
+        "`PH2-09-multicolumn-blockquote-fragment-fill-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已更新 `RISK-023` 当前处理方式，记录当前返工子步已进入执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "开始在 `estimatedMaxFill.ts` 中补齐多栏引用块按内部子块续排的最小实现，并补充定向分页验证。"
+    },
+    {
+      "id": "LOG-338",
+      "date": "2026-07-04",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成多栏标题后接表格挂靠判断 V1",
+      "action": "分页算法修复/多栏挂靠预判/定向验证/进度同步",
+      "result": "已完成 `PH2-09-multicolumn-heading-table-keep-with-next-v1`：在 `max-fill-v1` 的多栏主循环中新增“标题后接表格”的最小挂靠判断。现在标题落入当前栏前，会先模拟标题放入后的剩余栏高，并调用现有表格首片段构建逻辑判断标题下方是否还能正常开始表格；如果不能，就把标题与表格一起推进到下一栏或下一页，避免标题单独挂在栏尾。实现继续复用了现有多栏推进状态和现有表格分页协议，没有扩张成完整通用 keep-with-next 系统。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "多栏标题后接表格挂靠定向验证成功，输出 `multicolumn heading-table keep-with-next verification passed`。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；如用户继续反馈多栏挂靠问题，再优先扩展到标题后接图片、公式或列表。"
+    },
+    {
+      "id": "LOG-337",
+      "date": "2026-07-04",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认多栏标题后接表格挂靠判断 V1 边界",
+      "action": "方案确认/边界登记/准备实现",
+      "result": "用户已确认继续推进 `PH2-09-multicolumn-heading-table-keep-with-next-v1`。本步纳入：在 `max-fill-v1` 多栏主循环中补齐“标题后接表格”的最小挂靠判断，让标题进入当前栏前先预判标题与后一个表格首片段是否能在同一栏开始显示；如果不行，就把标题与表格一起推进到下一栏或下一页，避免标题单独挂在栏尾。本步明确不纳入：所有块类型通用 keep-with-next 系统、孤儿/寡妇行、标题后接图片/公式/列表的完整挂靠规则、以及合并单元格复杂跨页。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-09-multicolumn-heading-table-keep-with-next-v1` 最小实现边界可以执行。",
+        "`PH2-09-multicolumn-heading-table-keep-with-next-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后开始实现多栏下标题后接表格的挂靠判断。"
+    },
+    {
+      "id": "LOG-336",
+      "date": "2026-07-04",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "修复表格多栏下显式列宽未按栏宽收口",
+      "action": "缺陷修复/公共函数收口/定向验证/进度同步",
+      "result": "已修复截图反馈中的表格多栏缺陷：`resolveTableColumnWidths()` 过去在“所有列都已有显式宽度”时会直接原样返回，导致单栏里自动适应过的表格切到双栏后继续保留旧总宽，把相邻栏内容顶开。现在无论列宽是显式宽度还是部分自动补宽，最终都会按当前正文/栏宽重新收口；因此画布预览、分页估算和 HTML/PDF 导出会统一把表格压回当前栏宽，不再让表格横向侵入下一栏。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "定向列宽验证脚本成功，输出 `table multicolumn width clamp verification passed [ 103, 197 ]`。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/tableLayout.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；如用户继续反馈表格多栏问题，再优先排查续页表头、合并单元格和跨栏表格语义。"
+    },
+    {
+      "id": "LOG-335",
+      "date": "2026-07-04",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成算法1全量隐藏 DOM 真实测量与多栏接通 V1",
+      "action": "前端实现/分页算法收口/隐藏测量层修复/定向验证/进度同步",
+      "result": "已完成 `PH2-09-max-fill-full-dom-measure-multicolumn-v1`：1) `usePagination` 已让 `max-fill-v1` 在单栏与多栏中都接收 `measuredBlockHeights`、`measuredTextLineBreaks`、`measuredTextFragmentHeights`、`measuredTableRowHeights` 以及对应测量任务队列；2) `CanvasPane` 隐藏测量层现在会按真实栏宽和标题跨栏规则测量原始块、文本片段与表格行，多栏不再用整页正文宽度粗测所有块；3) `estimatedMaxFill.ts` 已新增运行时测量来源信息，跨页后的标题/段落片段、列表项片段和表格单元格片段会继续命中原始隐藏测量换行结果，减少跨页后退回估算的分叉；4) 算法1现已在单栏与多栏中统一优先消费实测顶层块高、实测文本片段高、实测表格行高与真实换行数据，缺测时才回退最小估算兜底；5) 定向分页验证脚本已证明：多栏长正文会创建并消费片段真实测量任务，多栏长表格拆行会创建真实行高测量任务。全量 `smoke:m2` 仍在当前工作区超时，未得到新的断言失败输出。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "定向分页验证脚本成功，输出 `targeted pagination verification passed`。",
+        "`npm run smoke:m2` 180 秒超时，未输出新的断言失败；该现象已在日志和风险处理中如实保留。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/hooks/usePagination.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物；后续若继续收口 `RISK-023`，优先建议进入 X-2 表头 / 列宽 / 合并格统一或 X-4 TOC / 代码块 / 引用块占高统一。"
+    },
+    {
+      "id": "LOG-334",
+      "date": "2026-07-04",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认算法1全量隐藏 DOM 真实测量与多栏接通 V1 边界",
+      "action": "方案确认/边界登记/风险处理更新/准备实现",
+      "result": "用户已确认按既定方案开始推进 `PH2-09-max-fill-full-dom-measure-multicolumn-v1`。本步已先把边界写回真相源：纳入 `max-fill-v1` 在现有支持块类型与单栏/多栏场景中统一优先消费隐藏 DOM 真实测量，包括实测顶层块高、实测文本片段高、实测表格行高和真实换行数据；同时去掉多栏因为算法入口限制而主动回退估算的旁路，并补齐栏宽、跨栏和运行时片段上下文进入测量签名。本步明确不纳入孤儿行/寡妇行、合并单元格复杂跨页、非首行表头语义统一、第二套页面协议和 `.layout` 字段变更。`RISK-023` 已同步从“等待用户确认”更新为“已进入当前执行子步”。",
+      "verification": [
+        "用户已回复“按这个方案开始”，确认当前 `PH2-09-max-fill-full-dom-measure-multicolumn-v1` 最小实现边界可以执行。",
+        "`PH2-09-max-fill-full-dom-measure-multicolumn-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已更新 `RISK-023` 当前处理方式，记录当前子步与后续拆分阶段的对应关系。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后开始实现算法1全量隐藏 DOM 真实测量与多栏真实测量接入。"
+    },
+    {
+      "id": "LOG-362",
+      "date": "2026-07-04",
+      "taskIds": [
+        "GOV-023"
+      ],
+      "phaseMilestone": "项目治理 / 第二阶段排版深化风险登记",
+      "step": "分页测试算法1 剩余风险排查登记",
+      "action": "排查并登记",
+      "result": "已完成对分页测试算法1 (`src/engine/typesetting/algorithms/estimatedMaxFill.ts`) 及其周边的剩余风险排查，按风险等级汇总为 24 项：A 高优先级测量链路（① 算法1 大量回退 Canvas 估算；② measuredTextLineBreaks 键与跨页 fragment id 失配；③ measuredBlockHeights 不缓存运行时片段；④ 续页表头未进入可用行数）；B 高优先级列宽/合并格语义（⑤ dom/cell/offscreen 平均列宽回退；⑥ 续页表头判定口径单一；⑦ 合并格被 splitTableRowToFit 直接拒绝）；C 中优先级代码层/一致性（⑧ tocLayout 写死字号/行高；⑨ 块高缓存键 JSON 整 sheet；⑩ 模块级 WeakMap 跨文档复用；⑪ 4px 写死容差；⑫ computeOptimalTextSplit 对 \\n 的 split 估算；⑬ 单栏/多栏 availableHeightForBlock 与 columnAvailableHeightForBlock 混用；⑭ blocks.splice + index 自减的隐性重复处理；⑮ 续页表头走估算时整表下移兜底；⑯ heightReserveFactor/shortTailPenaltyBoost 语义混淆；⑰ 引用块/代码块/horizontalRule 占高估算不准）；D 低优先级（⑱ 不处理孤儿寡妇；⑲ cellSplit 合并格 start/end row 全 0/rowSpan；⑳ 离屏容器不消费主题变量；㉑ 跨页同文本片段测量任务未去重；㉒ Node deterministic provider 与浏览器 provider 不对齐；㉓ resolveTextBlockLineWidths 在两处入口口径不一致；㉔ measuredTextLineBreaks 测量键未纳入 lineWidths/indent/themeLayoutMetrics/letterSpacing/fontWeight/fontStyle）。已沉淀为 RISK-023 范围调整型记录；并提出 6 个建议阶段（X-1 测量键/跨页命中一致性、X-2 表头/列宽/合并格统一、X-3 高度缓存键与容差参数化、X-4 TOC/代码块/引用块占高统一、X-5 分页主循环改显式队列、X-6 孤儿寡妇 + Node 真实 Canvas provider 镜像）。本次仅排查登记，不动代码。",
+      "verification": [
+        "人工阅读 `src/engine/typesetting/algorithms/estimatedMaxFill.ts`、`src/engine/typesetting/algorithms/domMeasure/index.ts`、`src/engine/typesetting/algorithms/offscreenMeasure/index.ts`、`src/engine/typesetting/algorithms/cellMeasure/index.ts`、`src/engine/typesetting/algorithms/cellMeasure/cellSplit.ts`、`src/engine/typesetting/algorithms/offscreenMeasure/preciseTextSplit.ts`、`src/engine/typesetting/algorithms/offscreenMeasure/offscreenRenderer.ts`、`src/engine/font-metrics/index.ts`、`src/engine/style/quickTextStyle.ts`、`src/engine/document-model/utils.ts`、`src/engine/document-model/tableLayout.ts`、`src/engine/typesetting/tocLayout.ts`、`src/engine/typesetting/types.ts` 共 13 个相关文件。",
+        "RISK-023 已写入 `progress/risks.json`，与 RISK-005/RISK-007/RISK-021/RISK-022 等既有分页算法风险记录口径一致。",
+        "建议阶段 X-1 到 X-6 待用户确认后再按 AGENTS.md 规则 9/10 写回本步边界并启动子步。"
+      ],
+      "affectedFiles": [
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "等待用户确认从哪个建议阶段（默认 X-1 测量键/跨页命中一致性）开始推进，并在 `progress/tasks/phase-2.json` 内新增对应子步卡。"
+    },
+    {
       "id": "LOG-326",
       "date": "2026-07-01",
       "taskIds": [
@@ -8065,6 +8933,343 @@
         "progress/config.json"
       ],
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续若继续分页质量深化，可单独推进真实行级分页或孤寡行控制。"
+    },
+    {
+      "id": "LOG-329",
+      "date": "2026-07-03",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认唯一字体测量接口接入分页 V1 边界",
+      "action": "方案确认/边界登记/范围调整记录",
+      "result": "用户已确认采用浏览器原生字体测量路线，并进一步要求只保留一套字体测量。本步纳入：新增独立字体测量模块作为分页算法唯一接口；导入字体和系统字体统一通过浏览器原生测量能力；`max-fill-v1` 的文本宽度、行数和分割点计算改为调用字体测量接口；收口分页路径对字符经验宽度估算的直接依赖；补充中英文混排、导入字体名和大字号分页回归。本步明确不纳入：不引入 `opentype.js`、`fontkit`，不做复杂脚本 shaping、连字、OpenType feature、字体管理器或 `.layout` 字段变更。",
+      "verification": [
+        "用户已回复“好的，那就用你推荐的，开始做吧”，确认当前唯一字体测量接口方案可以执行。",
+        "`PH2-09-single-font-measurement-interface-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
+        "`RISK-022` 已登记字体测量口径从经验估算切到唯一接口的范围调整风险。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层产物，然后开始新增字体测量接口并改造分页调用链。"
+    },
+    {
+      "id": "LOG-330",
+      "date": "2026-07-03",
+      "taskIds": [
+        "PH2-09"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成唯一字体测量接口接入分页 V1",
+      "action": "字体测量模块新增/分页调用链改造/回归验证/进度同步",
+      "result": "已完成 `PH2-09-single-font-measurement-interface-v1`：1) 新增 `src/engine/font-metrics/` 作为唯一字体测量入口，浏览器环境默认通过 Canvas `measureText()` 获取最终渲染字体宽度；2) `textMetrics.ts` 改为兼容壳，旧导入路径继续可用但内部统一委托字体测量模块；3) `max-fill-v1` 的标题、段落、列表项、表格单元格、代码块文本行数和分割点计算已通过字体测量接口，不再在分页算法内直接使用宽/窄/空格固定系数；4) 目录分页、表格自动适应、dom/offscreen/cell 历史测量算法中的文本行数和断点计算同步接入同一接口；5) Node 冒烟环境通过同一 provider 接口注入测试测量器，不在分页算法里另写第二套逻辑；6) 本步未引入 `opentype.js`、`fontkit`，未新增 `.layout` 字段或字体管理器。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "字体测量接口定向验证脚本成功，切换 provider 后同一段文字分页从普通 15 页变为宽字体 24 页。",
+        "`npm run smoke:m2` 300 秒超时，未输出新的断言失败；该全量超时与 2026-07-01 已记录的既有现象一致。"
+      ],
+      "affectedFiles": [
+        "src/engine/font-metrics/index.ts",
+        "src/engine/typesetting/textMetrics.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/engine/typesetting/algorithms/domMeasure/index.ts",
+        "src/engine/typesetting/algorithms/domMeasure/textSplit.ts",
+        "src/engine/typesetting/algorithms/offscreenMeasure/index.ts",
+        "src/engine/typesetting/algorithms/offscreenMeasure/preciseTextSplit.ts",
+        "src/engine/typesetting/algorithms/cellMeasure/index.ts",
+        "src/engine/typesetting/algorithms/cellMeasure/cellSplit.ts",
+        "src/engine/typesetting/tocLayout.ts",
+        "src/engine/document-model/tableLayout.ts",
+        "src/engine/style/quickTextStyle.ts",
+        "scripts/m1-smoke.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "继续观察真实文档中导入字体与系统字体切换后的分页表现；后续如需复杂脚本 shaping、连字或 OpenType feature，再单独评估字体排版能力。"
+    },
+    {
+      "id": "LOG-331",
+      "date": "2026-07-04",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认公式块紧凑间距修复 V1 边界",
+      "action": "方案确认/边界登记",
+      "result": "用户已确认继续推进 `PH2-10-equation-compact-spacing-v1`。本步纳入：收紧块级公式容器 `.equation-shell` 的上下留白，并同步覆盖 KaTeX 块级公式 `.katex-display` 的默认上下外边距；统一画布预览、隐藏测量层和 HTML/PDF 导出口径；完成后执行必要构建与进度生成。本步明确不纳入：不改公式字号、颜色、横向内边距、行内公式、公式编辑交互、公式编号题注引用、分页算法和 `.layout` 结构。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-10-equation-compact-spacing-v1` 最小实现边界可以执行。",
+        "`PH2-10-equation-compact-spacing-v1` 已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 同步展示层产物，然后开始收紧块级公式在画布预览、隐藏测量层与 HTML/PDF 导出中的上下间距。"
+    },
+    {
+      "id": "LOG-332",
+      "date": "2026-07-04",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成公式块紧凑间距修复 V1",
+      "action": "样式修复/导出口径补齐/构建验证/进度同步",
+      "result": "已完成 `PH2-10-equation-compact-spacing-v1`：1) 收紧块级公式容器 `.equation-shell` 的上下外边距、上下内边距与行高；2) 新增 `.equation-shell .katex-display` 紧凑间距覆盖，收口 KaTeX 默认块级公式上下外边距；3) HTML/PDF 导出补齐并同步公式壳基础样式与 KaTeX 间距覆盖，避免导出继续沿用更松的旧口径；4) 画布预览、隐藏测量层与导出结果已经统一为更紧凑的公式块留白表现。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/styles.css",
+        "src/services/exportHtml.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；如用户仍觉得公式块偏松，再基于截图做更小幅度的间距微调。"
+    },
+    {
+      "id": "LOG-364",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-07-semantic-role-model"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认语义块基础 V1 边界",
+      "action": "方案确认/边界登记",
+      "result": "用户要求参考 layout2.0 设计语义块，并确认按完整方案执行。本步纳入：新增内置语义角色字典；在 `LayoutBlock` 上新增可选 `semantic` 字段；Markdown 导入支持 `role:答案 正文` 前缀并清理正文；右侧“对象属性”新增“语义块”设置区；画布预览、隐藏测量层和 HTML/PDF 导出输出稳定 `data-semantic-role` 与 `semantic-role-*` class；补充最小验证。本步明确不纳入：不做完整语义角色字典管理面板、不做全文批量匹配、不新增 `answer-block` / `brush-callout` 等结构化容器块、不做 AI 自动识别、不接入复杂语义样式模板、不改分页主算法。",
+      "verification": [
+        "用户已回复“按这个方案做”，确认当前 `PH2-07-semantic-role-model-v1` 可以进入实施。",
+        "`progress/tasks/phase-2.json` 已新增任务卡 `PH2-07-semantic-role-model` 并写明本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档，然后开始实现语义角色模型、Markdown 导入、右侧面板和导出标记。"
+    },
+    {
+      "id": "LOG-365",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-07-semantic-role-model"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成语义块基础 V1",
+      "action": "模型扩展/Markdown 导入/UI 写回/预览导出标记/回归验证/进度同步",
+      "result": "已完成 `PH2-07-semantic-role-model-v1`：1) 新增内置语义角色字典、别名解析、`role:` 前缀解析、语义字段归一化与语义 class helper；2) `LayoutBlock` 新增可选 `semantic` 字段，保存 `roleId`、`alias`、`source` 与可选 `confidence`，`.layout` 读写会兼容旧文件并清理非法语义字段；3) Markdown 导入支持 `role:答案 正文` 前缀，剥离前缀时保留后续正文 TextRun marks；4) 右侧“对象属性”新增“语义块”区域，支持查看当前语义、来源、选择语义角色和清除语义；5) 画布预览、隐藏测量层和 HTML/PDF 导出输出稳定 `data-semantic-role` 与 `semantic-role-*` class；6) 本步未新增结构化容器块、未做 AI 自动识别、未改分页主算法。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，3 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/semanticRole.ts",
+        "src/engine/document-model/index.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "src/engine/document-model/syntaxMappingConfig.ts",
+        "src/engine/document-model/operations.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；后续若继续语义块，可优先做关键词批量识别、语义角色样式绑定或答案解析/提示等结构化容器块。"
+    },
+    {
+      "id": "LOG-371",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-07-ai-semantic-prompt"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 AI 默认生成语义角色前缀 V1 边界",
+      "action": "用户确认/边界登记/准备修改默认提示词",
+      "result": "用户确认需要在默认提示词里加入语义角色规范。本步纳入：修改 AI 教育内容生成的默认系统提示词，让讲义、知识点总结、练习题、试卷初稿默认输出可被解析器识别的 `role:` 语义前缀；明确可用角色包含题干、答案、解析、重点、易错、说明、例题、步骤、总结、注意；标题继续使用标准 Markdown 标题；练习题/试卷优先使用 `role:题干`、`role:答案`、`role:解析`；讲义/总结优先使用 `role:重点`、`role:例题`、`role:步骤`、`role:易错`、`role:总结`；补充最小提示词验证。本步明确不纳入：不改 AI 接口协议，不做 AI 自动识别已有文档语义，不新增语义角色 UI 开关，不改小红书生成提示词，不改 Markdown 解析器，不把语义来源标记改成 `ai`。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-07-ai-semantic-prompt-v1` 可以进入实施。",
+        "`progress/tasks/phase-2.json` 已新增任务卡 `PH2-07-ai-semantic-prompt` 并写明本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档，然后修改 AI 教育生成默认提示词并补充最小验证。"
+    },
+    {
+      "id": "LOG-370",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认化学实验图式 SVG 素材插入 V1 边界",
+      "action": "用户确认开工/素材授权范围收口/边界登记/风险记录",
+      "result": "用户确认按推荐方向推进化学实验装置图式接入。本步按 `PH2-05B-chemistry-apparatus-svg-library-v1` 执行：先建立一组项目原创、可直接插入的黑白 SVG 化学实验图式，并在顶端“插入”区提供中文入口；插入后复用现有图片块、图片资源、选中态、`.layout` 保存恢复、画布预览和 HTML/PDF 导出链路。本步不抓取国内教材/题库图片，不接完整化学绘图编辑器，也不引入 Ketcher 等结构式编辑器。",
+      "verification": [
+        "用户已回复“按照你的推荐来吧”，确认当前最小接入方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-apparatus-svg-library-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-030`，记录化学图式素材授权与范围扩张风险，并明确 V1 仅使用项目原创 SVG。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/useCanvasInsertCommands.ts",
+        "src/components/layout/AppShell.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后新增项目原创化学 SVG 图式库和顶栏插入入口，并运行类型检查与构建验证。"
+    },
+    {
+      "id": "LOG-372",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-07-ai-semantic-prompt"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 AI 默认生成语义角色前缀 V1",
+      "action": "默认提示词扩展/最小测试补齐/类型检查/进度同步",
+      "result": "已完成 `PH2-07-ai-semantic-prompt-v1`：1) `src/services/AiService.ts` 将教育内容生成默认系统提示词扩展为语义角色前缀规范，要求明确语义的正文块使用 `role:角色名 正文`；2) 可用角色限定为题干、答案、解析、重点、易错、说明、例题、步骤、总结、注意；3) 练习题和试卷初稿优先使用 `role:题干`、`role:答案`、`role:解析`，讲义和知识点总结优先使用 `role:重点`、`role:例题`、`role:步骤`、`role:易错`、`role:总结`；4) 标题继续使用标准 Markdown 标题，并明确不要在标题行前添加 `role:`；5) 小红书标题、文案、封面生成提示词保持原格式，不混入教育语义角色前缀；6) 本步未改 AI 接口协议、未新增 UI 开关、未改 Markdown 解析器、未把来源标记改成 `ai`。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\AiService.test.ts`，2 个测试全部 pass。",
+        "`npm run typecheck` 成功。"
+      ],
+      "affectedFiles": [
+        "src/services/AiService.ts",
+        "src/services/AiService.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run build`、`npm run progress:build` 与 `npm run progress:check` 完成构建和进度展示同步；后续如需进一步区分来源，可单独扩展 AI 插入链路把语义来源标记为 `ai`。"
+    },
+    {
+      "id": "LOG-373",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成化学实验图式 SVG 素材插入 V1",
+      "action": "内置 SVG 素材库新增/顶栏插入入口接入/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-chemistry-apparatus-svg-library-v1`：1) 新增 `src/constants/chemistryApparatus.ts`，登记 8 个项目原创黑白 SVG 化学图式：试管、烧杯、锥形瓶、集气瓶、酒精灯、导管集气瓶、澄清石灰水检验、二氧化碳收集示意；2) 每个图式记录中文名称、分类、授权来源说明、默认宽高和 SVG data URI；3) `useCanvasInsertCommands` 新增化学图式插入命令，复用 `insertLayoutImageBlock` 写入图片块、alt/title、默认尺寸、等比锁定和内联环绕；4) `AppShell` 与 `Toolbar` 已接通顶端“化学图式”中文下拉入口，选择后自动插入并选中新图片块；5) 本步未抓取国内教材/题库图片，未新增 `.layout` 字段，未接完整化学绘图编辑器。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-apparatus-svg-library-v1` 更新为已完成，并补 completedOn 与验证项。",
+        "`progress/risks.json` 已更新 `RISK-030` 当前处理方式，记录 V1 已按项目原创 SVG 策略完成。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/components/layout/useCanvasInsertCommands.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续若继续化学图式，可优先拆完整素材面板、外部授权素材台账或化学装置拖拽组合编辑器。"
+    },
+    {
+      "id": "LOG-374",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认教材式化学实验装置模板图库 V2 边界",
+      "action": "用户确认返工/体验问题定位/边界登记/风险记录",
+      "result": "用户反馈 V1 化学图式过于简陋、偏图标化，并确认按 V2 方案返工增强。本步按 `PH2-05B-chemistry-apparatus-template-gallery-v2` 推进：把化学图式从单个仪器图标升级为更接近教材/试卷可直接使用的实验装置模板，并把顶栏下拉升级为带缩略图的小型素材面板；素材仍为项目原创 SVG，继续复用现有图片块插入、保存、预览和导出链路。",
+      "verification": [
+        "用户已回复“确认”，确认 V2 返工增强方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-apparatus-template-gallery-v2` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-031`，记录 V1 偏图标化、无法满足教材式实验装置图预期的返工风险。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/useCanvasInsertCommands.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后重做教材式化学装置 SVG 模板库，并把顶栏入口升级为缩略图素材面板。"
+    },
+    {
+      "id": "LOG-375",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认浮动工具条字体字号调整 V1 边界",
+      "action": "用户确认开工/边界登记/进度同步",
+      "result": "用户确认完善浮动工具条，新增字体和字号调整。本步按 `PH2-06-floating-toolbar-font-family-size-v1` 执行：在画布原位富文本编辑态选中文字后，通过浮动工具条直接调整当前选区字体和字号；写回继续复用现有 `TextRun.styleOverrides.fontFamily/fontSize` 草稿链路，失焦提交时进入模型。本步不新增 `.layout` 字段，不修改批量字体字号规则，不扩展字体管理器，也不恢复分页算法主线。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-06` 下追加 `PH2-06-floating-toolbar-font-family-size-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx (待开发)",
+        "src/styles.css (待开发)",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实现浮动工具条字体下拉、字号调整和紧凑布局，并运行类型检查与构建验证。"
+    },
+    {
+      "id": "LOG-376",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-07-custom-semantic-keyword-rules"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "补记自定义语义块规则 V1 开工边界日志",
+      "action": "进度一致性补登记/不改代码/不改任务状态",
+      "result": "`progress:check` 发现当前进行中的 `PH2-07-custom-semantic-keyword-rules` 缺少对应日志记录。该任务卡已在 `progress/tasks/phase-2.json` 中写明边界并处于进行中：新增文档级自定义语义角色配置、关键词前缀规则配置、扫描全文与应用语义入口；本次仅补齐结构化日志记录，便于进度源校验通过，不代表该任务已完成，也不修改该任务代码。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已存在 `PH2-07-custom-semantic-keyword-rules` 进行中任务卡和 executionBoundary。",
+        "本日志仅用于补齐结构化进度源的任务-日志映射。",
+        "任务状态保持 `进行中`，未提前标记完成。"
+      ],
+      "affectedFiles": [
+        "progress/logs.json"
+      ],
+      "next": "继续保持 `PH2-07-custom-semantic-keyword-rules` 为进行中；后续完成实际功能后再补完成日志和验证。"
     }
   ]
 }

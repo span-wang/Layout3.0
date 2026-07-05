@@ -33,6 +33,7 @@ const TOC_ENTRY_DOTS_MIN_WIDTH = 12;
 const TOC_ENTRY_PAGE_WIDTH = 28;
 const TOC_ENTRY_DEPTH_INDENT = 16;
 const TOC_EMPTY_HEIGHT = 18;
+const TOC_ENTRY_FONT_FAMILY = '"Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif';
 
 function getTocMarginTop(block: LayoutBlock): number {
   return block.blockStyleOverrides.spaceBefore ?? TOC_MARGIN_TOP;
@@ -63,7 +64,9 @@ function estimateTocEntryHeight(item: TocItem, itemIndexInFragment: number, cont
     80,
     innerWidth - depthIndent - TOC_ENTRY_DOTS_MIN_WIDTH - TOC_ENTRY_PAGE_WIDTH - TOC_ENTRY_GAP * 2,
   );
-  const lineCount = estimateTextLines(item.text, textWidth, TOC_ENTRY_FONT_SIZE);
+  const lineCount = estimateTextLines(item.text, textWidth, TOC_ENTRY_FONT_SIZE, {
+    fontFamily: TOC_ENTRY_FONT_FAMILY,
+  });
 
   return (
     (itemIndexInFragment > 0 ? TOC_ENTRY_GAP : 0) +

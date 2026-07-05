@@ -8,6 +8,7 @@ import {
   FileDown,
   FilePlus2,
   FileUp,
+  FlaskConical,
   Files,
   FolderOpen,
   Highlighter,
@@ -41,6 +42,7 @@ import {
 } from 'lucide-react';
 import { useState, type MouseEvent } from 'react';
 import { ToolButton } from '@/components/common/ToolButton';
+import { chemistryApparatusItems, type ChemistryApparatusId } from '@/constants/chemistryApparatus';
 import { fontFamilyPlaceholderValue, textFontFamilyGroups } from '@/constants/fontFamilies';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import { workspaceViewModes } from '@/constants/workspace';
@@ -55,9 +57,13 @@ import {
 } from '@/engine/document-model';
 import { buildFontFamilyGroupsWithImportedFonts } from '@/engine/document-model/fontResources';
 import {
+  getBlockBaseFontSize,
   getQuickTextStyleRule,
+  resolveQuickTextStyleForBlock,
   type QuickTextStyleScope,
 } from '@/engine/style/quickTextStyle';
+import { resolveStyleContract } from '@/engine/style/resolveContract';
+import type { ResolvedStyleContract } from '@/engine/style/types';
 import { useAppStore } from '@/store';
 import type { CanvasTextSelectionState, WorkspaceViewMode } from '@/types/workspace';
 
@@ -80,6 +86,7 @@ interface ToolbarProps {
   onRedo: () => void;
   onImportFont: () => void;
   onInsertImage: () => void;
+  onInsertChemistryApparatus: (apparatusId: ChemistryApparatusId) => void;
   onInsertEquation: () => void;
   onInsertTable: () => void;
   onInsertList: (kind: InsertListBlockKind) => void;
@@ -145,6 +152,7 @@ const quickBlockStyleEditableBlockTypes: LayoutBlock['type'][] = ['heading', 'pa
 const defaultQuickTextColor = '#344054';
 const defaultQuickHighlightColor = '#FEF08A';
 const defaultQuickFontSize = 16;
+const quickFontSizePresetOptions = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72];
 
 const quickTextStyleScopeOptions: Array<{
   id: QuickTextStyleScope;
@@ -213,8 +221,8 @@ function isQuickTextMarkActive(
 function getQuickSharedTextStyleValue(
   textRuns: TextRun[],
   selection: TextRangeSelection | null,
-  key: 'color' | 'highlightColor' | 'fontFamily',
-): string | undefined {
+  key: 'color' | 'highlightColor' | 'fontFamily' | 'fontSize',
+): string | number | undefined {
   const selectedRuns = collectQuickSelectedRuns(textRuns, selection);
   if (selectedRuns.length === 0) {
     return undefined;
@@ -223,6 +231,35 @@ function getQuickSharedTextStyleValue(
   const firstValue = selectedRuns[0].styleOverrides[key];
   const isShared = selectedRuns.every((run) => run.styleOverrides[key] === firstValue);
   return isShared ? firstValue : undefined;
+}
+
+function normalizeQuickFontSizeValue(value: string | number): number | null {
+  const parsedValue = typeof value === 'number' ? value : Number.parseFloat(value);
+  if (!Number.isFinite(parsedValue)) {
+    return null;
+  }
+
+  return Math.max(10, Math.min(72, Math.round(parsedValue)));
+}
+
+function resolveQuickCurrentFontSizeLabel(
+  nodeInfo: SelectedLayoutNodeInfo | null,
+  selection: TextRangeSelection | null,
+  styles: Parameters<typeof resolveQuickTextStyleForBlock>[1],
+  styleContract: ResolvedStyleContract,
+): string {
+  if (!nodeInfo) {
+    return '';
+  }
+
+  const sharedFontSize = getQuickSharedTextStyleValue(nodeInfo.textRuns, selection, 'fontSize');
+  if (sharedFontSize !== undefined) {
+    return String(sharedFontSize);
+  }
+
+  const inheritedStyle = resolveQuickTextStyleForBlock(nodeInfo.ownerBlock, styles);
+  const inheritedFontSize = inheritedStyle.fontSize ?? getBlockBaseFontSize(nodeInfo.ownerBlock, styleContract);
+  return String(inheritedFontSize);
 }
 
 function isQuickTextStyleEditable(nodeInfo: SelectedLayoutNodeInfo | null): boolean {
@@ -260,6 +297,7 @@ export function Toolbar({
   onRedo,
   onImportFont,
   onInsertImage,
+  onInsertChemistryApparatus,
   onInsertEquation,
   onInsertTable,
   onInsertList,
@@ -273,6 +311,7 @@ export function Toolbar({
   onOpenAiPanel,
 }: ToolbarProps): JSX.Element {
   const layoutDocument = useAppStore((state) => state.layoutDocument);
+  const styleSettings = useAppStore((state) => state.styleSettings);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
   const updateLayoutNodeText = useAppStore((state) => state.updateLayoutNodeText);
   const toggleLayoutNodeTextMark = useAppStore((state) => state.toggleLayoutNodeTextMark);
@@ -280,6 +319,7 @@ export function Toolbar({
   const clearLayoutNodeTextFormatting = useAppStore((state) => state.clearLayoutNodeTextFormatting);
   const applyLayoutNodeBlockStyle = useAppStore((state) => state.applyLayoutNodeBlockStyle);
   const applyLayoutQuickTextStyle = useAppStore((state) => state.applyLayoutQuickTextStyle);
+  const styleContract = resolveStyleContract(styleSettings);
   const selectedNodeInfo = getSelectedLayoutNodeInfo(layoutDocument);
   const fontFamilyGroups = buildFontFamilyGroupsWithImportedFonts(
     textFontFamilyGroups,
@@ -300,15 +340,29 @@ export function Toolbar({
       : defaultQuickHighlightColor;
   const [quickFontFamily, setQuickFontFamily] = useState(fontFamilyPlaceholderValue);
   const [quickTextStyleScope, setQuickTextStyleScope] = useState<QuickTextStyleScope>('allText');
-  const [quickFontSize, setQuickFontSize] = useState(String(defaultQuickFontSize));
+  const [quickFontSizeDraft, setQuickFontSizeDraft] = useState('');
+  const [batchQuickFontFamily, setBatchQuickFontFamily] = useState(fontFamilyPlaceholderValue);
+  const [batchQuickFontSize, setBatchQuickFontSize] = useState(String(defaultQuickFontSize));
+  const [chemistryApparatusSelectValue, setChemistryApparatusSelectValue] = useState('');
+  const inheritedTextStyle = selectedNodeInfo
+    ? resolveQuickTextStyleForBlock(selectedNodeInfo.ownerBlock, layoutDocument?.styles)
+    : {};
   const currentFontFamily =
     selectedNodeInfo
-      ? getQuickSharedTextStyleValue(selectedNodeInfo.textRuns, activeSelection, 'fontFamily') ??
+      ? (getQuickSharedTextStyleValue(selectedNodeInfo.textRuns, activeSelection, 'fontFamily') as string | undefined) ??
+        inheritedTextStyle.fontFamily ??
         quickFontFamily
       : quickFontFamily;
   const quickScopeStyle = getQuickTextStyleRule(layoutDocument?.styles, quickTextStyleScope);
+  const currentFontSizeLabel = resolveQuickCurrentFontSizeLabel(
+    selectedNodeInfo,
+    activeSelection,
+    layoutDocument?.styles,
+    styleContract,
+  );
   const currentTextAlign = selectedNodeInfo?.ownerBlock.blockStyleOverrides.textAlign ?? 'left';
-  const canApplyQuickTextStyle = !!layoutDocument && quickFontFamily !== fontFamilyPlaceholderValue;
+  const canApplyBatchFontFamily = !!layoutDocument && batchQuickFontFamily !== fontFamilyPlaceholderValue;
+  const canApplyBatchFontSize = !!layoutDocument && normalizeQuickFontSizeValue(batchQuickFontSize) !== null;
 
   const syncEditingTextBeforeStyleAction = (nodeId: string) => {
     if (!canvasTextSelection.isEditing || canvasTextSelection.nodeId !== nodeId) {
@@ -396,6 +450,40 @@ export function Toolbar({
     applyQuickFontFamily(fontFamily);
   };
 
+  const applyQuickFontSize = (fontSize: number) => {
+    if (!selectedNodeInfo || !canEditTextStyle) {
+      return;
+    }
+
+    const nextFontSize = normalizeQuickFontSizeValue(fontSize);
+    if (!nextFontSize) {
+      return;
+    }
+
+    // Word 式即时字号只写当前选区或当前节点，批量类型规则由后面的独立入口处理。
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    setQuickFontSizeDraft('');
+    applyLayoutNodeTextStyle({
+      nodeId: selectedNodeInfo.nodeId,
+      selection: activeSelection,
+      styleOverrides: { fontSize: nextFontSize },
+    });
+  };
+
+  const commitQuickFontSizeDraft = () => {
+    if (!quickFontSizeDraft.trim()) {
+      return;
+    }
+
+    const nextFontSize = normalizeQuickFontSizeValue(quickFontSizeDraft);
+    if (!nextFontSize) {
+      setQuickFontSizeDraft('');
+      return;
+    }
+
+    applyQuickFontSize(nextFontSize);
+  };
+
   const applyQuickTextAlign = (textAlign: 'left' | 'center' | 'right' | 'justify') => {
     if (!selectedNodeInfo || !canEditBlockStyle) {
       return;
@@ -418,20 +506,31 @@ export function Toolbar({
     });
   };
 
-  const applyQuickTextStyleScope = () => {
-    if (!layoutDocument || quickFontFamily === fontFamilyPlaceholderValue) {
+  const applyQuickTextStyleFontFamilyScope = () => {
+    if (!layoutDocument || batchQuickFontFamily === fontFamilyPlaceholderValue) {
       return;
     }
 
-    const parsedFontSize = Number.parseInt(quickFontSize, 10);
-    const nextFontSize = Number.isFinite(parsedFontSize)
-      ? Math.max(10, Math.min(72, Math.round(parsedFontSize)))
-      : defaultQuickFontSize;
-    setQuickFontSize(String(nextFontSize));
+    // 批量字体只写 fontFamily，避免把标题、正文等既有字号一起改成同一个值。
     applyLayoutQuickTextStyle({
       scope: quickTextStyleScope,
       styleOverrides: {
-        fontFamily: quickFontFamily,
+        fontFamily: batchQuickFontFamily,
+      },
+    });
+  };
+
+  const applyQuickTextStyleFontSizeScope = () => {
+    if (!layoutDocument) {
+      return;
+    }
+
+    const nextFontSize = normalizeQuickFontSizeValue(batchQuickFontSize) ?? defaultQuickFontSize;
+    setBatchQuickFontSize(String(nextFontSize));
+    // 批量字号只写 fontSize；字体规则由“应用字体”单独处理，避免两个动作互相牵连。
+    applyLayoutQuickTextStyle({
+      scope: quickTextStyleScope,
+      styleOverrides: {
         fontSize: nextFontSize,
       },
     });
@@ -439,6 +538,15 @@ export function Toolbar({
 
   const handleInsertPlaceholder = (label: string) => {
     window.alert(`${label}：该插入入口已预留，后续小步接入真实逻辑。`);
+  };
+
+  const handleChemistryApparatusChange = (apparatusId: string) => {
+    setChemistryApparatusSelectValue('');
+    if (!apparatusId) {
+      return;
+    }
+
+    onInsertChemistryApparatus(apparatusId as ChemistryApparatusId);
   };
 
   return (
@@ -577,6 +685,53 @@ export function Toolbar({
             >
               <FileUp size={17} />
             </button>
+            <label className={canEditTextStyle ? 'format-select-shell compact' : 'format-select-shell compact disabled'}>
+              <select
+                className="format-select-input"
+                aria-label="当前文字字号预设"
+                disabled={!canEditTextStyle}
+                value={quickFontSizePresetOptions.includes(Number(currentFontSizeLabel)) ? currentFontSizeLabel : ''}
+                onChange={(event) => {
+                  if (!event.target.value) {
+                    return;
+                  }
+
+                  applyQuickFontSize(Number(event.target.value));
+                }}
+              >
+                <option value="">
+                  {currentFontSizeLabel ? `${currentFontSizeLabel}px` : '字号'}
+                </option>
+                {quickFontSizePresetOptions.map((fontSize) => (
+                  <option key={`quick-font-size-${fontSize}`} value={fontSize}>
+                    {fontSize}px
+                  </option>
+                ))}
+              </select>
+            </label>
+            <input
+              className="format-number-input"
+              type="number"
+              min={10}
+              max={72}
+              step={1}
+              aria-label="当前文字字号"
+              disabled={!canEditTextStyle}
+              value={quickFontSizeDraft}
+              placeholder={currentFontSizeLabel || '字号'}
+              onMouseDown={() => {
+                if (selectedNodeInfo) {
+                  syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+                }
+              }}
+              onChange={(event) => setQuickFontSizeDraft(event.target.value)}
+              onBlur={commitQuickFontSizeDraft}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.currentTarget.blur();
+                }
+              }}
+            />
             {quickTextMarkOptions.map((option) => {
               const Icon = option.icon;
               const isActive = selectedNodeInfo
@@ -649,11 +804,45 @@ export function Toolbar({
               <Eraser size={15} />
               <span>清除</span>
             </button>
-            <span className="format-toolbar-separator" aria-hidden="true" />
+          </div>
+        </section>
+
+        <section className="format-toolbar-group batch-format-group" aria-label="批量字体字号">
+          <span className="format-toolbar-title">批量</span>
+          <div className="format-toolbar-controls">
+            <label className={layoutDocument ? 'format-select-shell' : 'format-select-shell disabled'}>
+              <Type size={15} />
+              <select
+                className="format-select-input"
+                aria-label="批量规则字体"
+                disabled={!layoutDocument}
+                value={batchQuickFontFamily}
+                onChange={(event) => {
+                  if (event.target.value === fontFamilyPlaceholderValue) {
+                    return;
+                  }
+
+                  setBatchQuickFontFamily(event.target.value);
+                }}
+              >
+                <option value={fontFamilyPlaceholderValue} disabled>
+                  字体
+                </option>
+                {fontFamilyGroups.map((group) => (
+                  <optgroup key={`batch-${group.label}`} label={group.label}>
+                    {group.options.map((option) => (
+                      <option key={`batch-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
             <label className={layoutDocument ? 'format-select-shell compact' : 'format-select-shell compact disabled'}>
               <select
                 className="format-select-input"
-                aria-label="应用范围"
+                aria-label="批量应用范围"
                 disabled={!layoutDocument}
                 value={quickTextStyleScope}
                 onChange={(event) => setQuickTextStyleScope(event.target.value as QuickTextStyleScope)}
@@ -671,22 +860,38 @@ export function Toolbar({
               min={10}
               max={72}
               step={1}
-              aria-label="批量字号"
+              aria-label="批量规则字号"
               disabled={!layoutDocument}
-              value={quickFontSize}
+              value={batchQuickFontSize}
               placeholder={quickScopeStyle.fontSize ? String(quickScopeStyle.fontSize) : '字号'}
-              onChange={(event) => setQuickFontSize(event.target.value)}
+              onChange={(event) => setBatchQuickFontSize(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  applyQuickTextStyleFontSizeScope();
+                }
+              }}
             />
             <button
               type="button"
               className="format-select-button format-apply-button"
-              disabled={!canApplyQuickTextStyle}
-              title="按所选范围应用当前字体和字号"
-              aria-label="应用字体字号"
-              onClick={applyQuickTextStyleScope}
+              disabled={!canApplyBatchFontFamily}
+              title="按所选范围只应用字体规则"
+              aria-label="应用批量字体规则"
+              onClick={applyQuickTextStyleFontFamilyScope}
             >
               <Type size={15} />
-              <span>应用</span>
+              <span>应用字体</span>
+            </button>
+            <button
+              type="button"
+              className="format-select-button format-apply-button"
+              disabled={!canApplyBatchFontSize}
+              title="按所选范围只应用字号规则"
+              aria-label="应用批量字号规则"
+              onClick={applyQuickTextStyleFontSizeScope}
+            >
+              <Type size={15} />
+              <span>应用字号</span>
             </button>
           </div>
         </section>
@@ -751,6 +956,24 @@ export function Toolbar({
             >
               <ImagePlus size={17} />
             </button>
+            <label className={layoutDocument ? 'format-select-shell compact chemistry-apparatus-select' : 'format-select-shell compact chemistry-apparatus-select disabled'}>
+              <FlaskConical size={15} />
+              <select
+                className="format-select-input"
+                aria-label="插入化学图式"
+                title="插入化学图式"
+                disabled={!layoutDocument}
+                value={chemistryApparatusSelectValue}
+                onChange={(event) => handleChemistryApparatusChange(event.target.value)}
+              >
+                <option value="">化学图式</option>
+                {chemistryApparatusItems.map((item) => (
+                  <option key={item.id} value={item.id} title={`${item.sourceLabel}，授权：${item.license}`}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               className="format-icon-button"

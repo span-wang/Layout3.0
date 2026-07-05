@@ -167,6 +167,86 @@
       "description": "`PH2-19-column-css-overflow-clip-fix-v1` 通过多栏容器硬裁切阻止第三栏露出，但会把放不下的内容隐藏掉，违反排版必须完整显示内容的验收标准。",
       "impactScope": "PH2-19 页面分栏配置、CanvasPane 多栏预览、HTML/PDF 导出、多栏文本分页、Typesetting Engine 分页测试算法1",
       "currentHandling": "已完成 `PH2-19-column-overflow-pagination-fix-v2` 返工：撤掉 V1 中依赖 `overflow: hidden`、`max-height` 和 `column-fill: auto` 裁掉内容的修复思路；分页测试算法1多栏文本拆分已改为使用当前可用栏高度，当前页片段放入后重建栏位状态，剩余文本继续进入后续栏或下一页；`smoke:m2` 已覆盖双栏长段落完整拼回原文，避免内容丢失。"
+    },
+    {
+      "id": "RISK-022",
+      "date": "2026-07-03",
+      "type": "范围调整",
+      "description": "字体测量从分页算法内的字符宽度经验估算调整为唯一字体测量接口；若分页算法继续直接调用估算函数或散落 DOM/canvas 测量逻辑，后续字体、字号、导入字体和导出结果会继续出现口径分叉。",
+      "impactScope": "PH2-09 分页测试算法1、Typesetting Engine 字体测量、CanvasPane 画布预览、HTML/PDF 导出、scripts/m2-smoke 回归验证",
+      "currentHandling": "已完成首轮收口：新增唯一字体测量模块 `src/engine/font-metrics/`，分页算法、目录分页、表格自动适应和历史测量算法的文本宽度/行数/分割点计算已统一通过该接口；`textMetrics.ts` 仅保留兼容壳并委托新模块。Node 冒烟环境也通过同一 provider 接口注入测试测量器，不在分页算法内新增第二套估算逻辑。"
+    },
+    {
+      "id": "RISK-023",
+      "date": "2026-07-04",
+      "type": "范围调整",
+      "description": "分页测试算法1 (`estimatedMaxFill.ts`) 排查后仍存在 24 项会导致分页不准确、不稳定的剩余因素，按风险等级归并如下。A 高优先级测量链路：① 算法1大量回退到 `estimateTextLines`/`computeTextSplitOffsetForLineCount` Canvas 估算分支，字体未加载或测量层节流时会在两次渲染间抖动；② `measuredTextLineBreaks` 键按 `nodeId === block.id` 取，但跨页 fragment id 已变为 `${block.id}-list-fragment-N`/`-frag-...`/`-page-fragment-N` 等运行时 id，原块真实换行永远命中不到，导致同一文本『未跨页/已跨页』两种情形下分页结果不一致；③ `measuredBlockHeights` 只缓存顶层块、不缓存运行时片段，跨页长表/长列表的页内实测高度永远走估算；④ `buildTableFragment` 把续页表头当普通行算进 `rowHeights[0]`，续页表头额外一行未进入可用行数计算。B 高优先级列宽/合并格语义：⑤ dom/cell/offscreen 三套算法中部分调用点仍按 `contentWidthPx / cells.length` 平均分列宽，与 `getTableCellTextWidthPx` 的 colSpan 累加口径不一致；⑥ `getRepeatedTableHeaderRow` 与 `isOnlyOriginalHeaderOnNonLastFragment` 仅以『首行所有 cell 都是 header』判表头，对非首行表头或部分单元格表头不自洽；⑦ 合并格被 `splitTableRowToFit` 直接拒绝，含合并格的长表格常出现整表后移或剩余空间被浪费。C 中优先级代码层/一致性：⑧ `tocLayout.ts` 用写死 `TOC_ENTRY_FONT_SIZE = 14`/`TOC_ENTRY_LINE_HEIGHT = 20`，未消费 `contract.blockStyles` 或 `ThemeLayoutMetrics`，目录口径与正文分叉；⑨ `buildBlockHeightCacheKey` 把整张 `LayoutStyleSheet` JSON.stringify 进 key，撤销/重做或样式变更立即失效且 CPU 开销高；⑩ `blockHeightCache` 是模块级 WeakMap，多文档切换、`.layout` 重开、Markdown 重导入会复用旧高度；⑪ `MEASURED_HEIGHT_ESTIMATE_TOLERANCE_PX = 4` 写死，未按 lineHeight 取比例，对大字号偏松、小字号偏紧；⑫ `computeOptimalTextSplit` 用 `plainText.split('\\n')` 估算视觉行数，但富文本里 `<br>`/`breakAfter` 等价但 textRuns 无 `\\n` 时估算与切分字符错位；⑬ 单栏/多栏路径混用 `availableHeightForBlock` 与 `columnAvailableHeightForBlock`，最后一列剩余高度小、前面列已满时可能误判可放下并溢出栏底；⑭ `paginateMaxFillBlocks` 用 `blocks.splice(index+1,0,remainingBlock)` + `index -= 1` 就地改动，长文档在边界情况下会重复处理同一块或剩余块提前出队；⑮ 续页表头走估算时，整表下移兜底不修正分页结果；⑯ `heightReserveFactor`/`shortTailPenaltyBoost` 语义与单位混淆；⑰ 引用块用写死 16 占位、code 块走 `estimateTextLines` 估算、horizontalRule 用配置常量，富文本代码块带长字符串时块高度低估。D 低优先级体验：⑱ 算法1 注释明确不处理孤儿/寡妇行；⑲ `cellSplit.ts` 的 `getCellStartRow`/`getCellEndRow` 全部用 0/rowSpan，合并格不在首行时 `splitTableCellContent` 会把前面所有行塞回『剩余行』导致内容重复；⑳ `createOffscreenContainer` 不消费主题 CSS 变量、字号样式覆盖和字体回落表，测量层换行索引可能与正式画布不一致；㉑ `textFragmentMeasurementJobs` 没去重跨页同文本片段，重负载时分页抖动；㉒ Node 冒烟里 `createDeterministicFontMetricsProvider` 把 Han/Hiragana/Katakana/Hangul/Emoji 都按 `fontSize*1` 估、其他字符按 `fontSize*0.5`，与浏览器真实 Canvas provider 不对齐，冒烟通过 ≠ 浏览器通过；㉓ `resolveTextBlockLineWidths` 在 `getTextBlockUsableLineCount` 与 `computeOptimalTextSplit` 两处入口口径不一致；㉔ `measuredTextLineBreaks` 未把 `lineWidths`/`indent`/`themeLayoutMetrics`/`letterSpacing`/`fontWeight`/`fontStyle` 写入测量键，真实换行与分页实际宽度不对齐。",
+      "impactScope": "PH2-09 分页测试算法1、Typesetting Engine 分页主链路、CanvasPane 画布预览、HTML/PDF 导出、scripts/m2-smoke 回归验证、Phase-2 阶段目标",
+      "currentHandling": "已完成 `PH2-09-max-fill-full-dom-measure-multicolumn-v1` 首轮收口：算法1现在会在单栏与多栏中统一优先消费隐藏 DOM 真实测量，包括实测顶层块高、实测文本片段高、实测表格行高与真实换行数据；隐藏测量层也已按真实栏宽与标题跨栏规则测量多栏块，不再因为入口限制主动退回估算链路。本轮已重点覆盖 X-1 测量键 / 跨页命中一致性，并同步接通多栏真实测量入口。2026-07-05 用户进一步明确“不是引用框，而是所有块内容”，因此当前返工已从 `PH2-09-multicolumn-blockquote-fragment-fill-v1` 修正为 `PH2-09-multicolumn-splittable-block-fill-v1`：多栏里可继续拆开的正文块应统一优先按当前栏剩余高度续排，不能因为整块放不下就过早跳到下一栏；当前优先覆盖标题、段落、列表、表格、引用容器和代码块。2026-07-05 用户进一步确认“继续接入其他块类型”，本步已在 PH2-20 V1 表格 PoC 已落地的基础上继续推进为 `PH2-20-block-split-types-adoption-v1`：把剩余 5 种块类型（列表 / TOC / 引用容器 / 代码块 / 文本块）都接入 `trySplit*ToFitHeight` 统一接口；统一入口判断；切分失败 / 还有剩余内容换页统一先 `advanceToNextColumn`；仅表格和列表写 `runtimeSlice`。该子步已在 2026-07-05 完成实施：抽 `resolveCurrentColumnRemainingHeight` 帮助函数 + 5 个 trySplit 薄包装 + 5 处入口判断改写 + 9 处换页改 advanceToNextColumn + 列表 runtimeSlice 写入；新增 6 个回归测试（列表×2、TOC×1、引用×1、代码×1、文本×1），全部 pass；既有 blockquote/table 4 个 PoC 也全部 pass；`npm run typecheck` 与 `npm run build` 均通过。基于上一实施步产物（主循环的 blockWithSlice 重复覆盖写 runtimeSlice），`PH2-20-block-split-rendering-adaptation-v1` 已开工：把 runtimeSlice 产出点挪到 createListFragmentBlock，让 buildListFragment 一次性产出含完整 metadata 的片段；主循环删掉重复覆盖；本步不改 CanvasPane / exportHtml。该子步于 2026-07-05 完成：createListFragmentBlock 升级为接收 totalItems 参数并一次性写 runtimeSlice，主循环删除 blockWithSlice 重复覆盖，新增 1 个 runtimeSlice-internal-block-test 定向回归；既有 6 个测试 + 新增 1 个一起 pass 7 / fail 0；既有 blockquote 2 个、table 2 个测试也全部 pass；`npm run typecheck` 与 `npm run build` 均通过。该子步后继续推进 `PH2-20-block-split-text-rendering-adaptation-v1`：把 runtimeSlice 接入方案推广到 heading / paragraph 文本块。HeadingBlockMetadata / ParagraphBlockMetadata 新增可选字段 runtimeSlice，shape 与 table/list 同口径（isContinuation / isOriginal / sourceNodeId / characterRange / fragmentIdSuffix）；createTextFragmentBlock 的 options 新增 fragmentContext，一次性写入完整 runtimeSlice；id 后缀与 CanvasPane / exportHtml 行为保持不变。该子步亦于 2026-07-05 完成：types.ts 新增 TextBlockRuntimeSlice 接口并把上述两个 metadata 的 runtimeSlice 字段设为可选；createTextFragmentBlock 新增 fragmentContext 参数；主分页循环 heading/paragraph 切分 path 用 canonical sourceNodeId + baseCharacterStart 累计，current / remaining fragment 均带完整 metadata.runtimeSlice；整放 path 写入 isOriginal=true 并对已有 slice 跳过覆盖。新增 2 个定向测试（长段落跨页切分 + heading 整放）。13 个既有/新增测试全部 pass；typecheck 与 build 通过。2026-07-05 用户反馈行内公式跨页拆分后无法解析，根因是分页字符偏移切入 `$...$` 公式内部；已完成 `PH2-20-inline-equation-split-guard-v1`：新增行内公式切分偏移保护函数，识别同一文本内成对 `$...$` 区间，切分点落入公式内部时优先回退到公式前，公式前只有空白时推进到公式后；该保护已接入标题/段落、列表项和表格单元格切分路径，覆盖实测换行点与估算切分点两类来源；新增 3 个定向回归（段落 / 列表项 / 表格单元格）验证拆分片段 `$` 成对且拼接后原文不丢。PH2-09 的 measuredTextLineBreaks 跨 fragment id 命中问题由后续 PH2-09 测量缓存键扩展子步一并解决。剩余 X-2 表头 / 列宽 / 合并格统一、X-3 高度缓存键与容差参数化、X-4 TOC / 代码块 / 引用块占高统一、X-5 分页主循环显式队列、X-6 孤儿/寡妇行 + Node 冒烟真实 Canvas provider 镜像，继续后续拆步推进。全量 `smoke:m2` 在当前工作区仍超时，因此后续子步继续优先补强针对性验证。 "
+    },
+    {
+      "id": "RISK-024",
+      "date": "2026-07-05",
+      "type": "范围调整",
+      "description": "用户要求在 AI 模块新增小红书主图生成功能，但当前 AI 服务链路主要是聊天文本接口，尚未建立图片生成模型调用、图片文件保存、工作区资源导入和图片块插入协议；若在同一步强行接入真实图片生成，会扩大到资源管理、导出、分页和模型配置多条链路。",
+      "impactScope": "PH3-10 小红书内容生成 V1、AiService、AI 生成面板、AI 生成记录、工作区资源管理、图片块插入和导出链路",
+      "currentHandling": "已完成 `PH3-10` V1：小红书标题推荐、小红书文案推荐，以及主图设计方案和图片生成提示词输出已接入现有 AI 生成模块；真实 PNG/JPG 生成、图片模型配置、图片保存到工作区资源目录并自动插入图片块，继续按后续 `PH3-11` 或 AI 图片生成增强任务单独推进。"
+    },
+    {
+      "id": "RISK-025",
+      "date": "2026-07-05",
+      "type": "缺陷",
+      "description": "Markdown 嵌套列表导入时，父级列表项会把直接子列表文字拼入自己的 `textRuns`，同时子列表又会被展开成独立列表项，导致画布预览、导出和分页测量看到重复内容。",
+      "impactScope": "PH2-04 Markdown 导入到文档模型、Document Model 列表结构、CanvasPane 画布预览、HTML/PDF 导出、分页高度估算",
+      "currentHandling": "已完成 `PH2-04-list-nested-duplicate-fix-v1` 最小修复：父级列表项只保留自身段落/代码内容，嵌套列表继续作为独立 `LayoutListItem` 按层级展开；已新增定向回归验证父项不再重复包含子项文字，`typecheck` 和 `build` 均通过。本步未改渲染树、导出和分页算法。"
+    },
+    {
+      "id": "RISK-026",
+      "date": "2026-07-05",
+      "type": "缺陷",
+      "description": "Markdown 混合嵌套列表导入后会丢失子层列表自身的有序/无序类型；根层为有序列表时，内层原本的无序列表在画布预览和导出中会被渲染成有序列表。",
+      "impactScope": "PH2-04 Markdown 导入到文档模型、LayoutListItem 模型兼容、CanvasPane 画布预览、HTML/PDF 导出、AI 上下文 Markdown 导出",
+      "currentHandling": "已完成 `PH2-04-list-mixed-marker-fix-v1` 最小修复：在 `LayoutListItem` 上补可选 `listKind` 字段，Markdown 导入写入每一层的 `ordered/unordered`，画布预览和 HTML/PDF 导出按该字段选择 `ol/ul`；旧文件缺字段时继续按根列表 `ordered` 兼容。定向回归、`typecheck` 和 `build` 均通过。本步未改列表编辑大功能和分页算法。"
+    },
+    {
+      "id": "RISK-027",
+      "date": "2026-07-05",
+      "type": "缺陷",
+      "description": "表格行高拖拽采用“当前行与下一行总高度不变”的相邻行联动策略，导致用户只想调整当前行时，下一行也会被压缩或撑高。",
+      "impactScope": "PH2-05B 复杂块结构编辑兼容补齐、CanvasPane 表格拖拽交互、LayoutDocument 表格行高写回、分页估算、HTML/PDF 导出",
+      "currentHandling": "已完成 `PH2-05B-table-row-height-independent-resize-v1` 最小修复：`CanvasPane.tsx` 的表格行高拖拽预览态和释放写回态现在都只修改当前行 `heightPx`，不再写入邻行高度；分页、保存和导出继续消费既有 `rows[].heightPx` 字段。`typecheck` 和 `build` 均已通过。"
+    },
+    {
+      "id": "RISK-028",
+      "date": "2026-07-05",
+      "type": "缺陷",
+      "description": "表格行高拖拽解除邻行联动后，渲染层仍保留旧的“必须存在下一行才显示拖拽手柄”条件，导致最后一行无法调整行高。",
+      "impactScope": "PH2-05B 复杂块结构编辑兼容补齐、CanvasPane 表格拖拽交互、LayoutDocument 表格行高写回",
+      "currentHandling": "已完成 `PH2-05B-table-last-row-height-handle-v1` 最小补丁：`CanvasPane.tsx` 已移除行高手柄显示条件中对下一行存在的限制，最后一行也能显示拖拽手柄；独立行高写回逻辑保持不变，拖拽后仍只修改当前行 `heightPx`。`typecheck` 和 `build` 均已通过。"
+    },
+    {
+      "id": "RISK-029",
+      "date": "2026-07-05",
+      "type": "体验缺陷",
+      "description": "顶端字体字号工具把“当前选区即时修改”和“全文字 / H1 / 段落 / 列表 / 表格批量规则应用”混在同一组控件中，用户需要先理解范围下拉和应用按钮，和 Word 中“选中什么就改什么”的常见心智不一致，导致字体调整和各类型字号应用显得别扭、不方便。",
+      "impactScope": "PH2-14 字体字号批量快捷应用 V1、Toolbar 顶端快捷格式工具栏、Document Model 文字样式写回、Style Module 类型规则写回、CanvasPane 画布预览、HTML/PDF 导出",
+      "currentHandling": "已完成 `PH2-14-word-like-font-size-application-v1` 最小交互优化后，用户进一步指出批量应用字体和批量应用字号仍不能共用同一个应用按钮，否则会把标题、段落等不同类型字号一起写成同一个值。已完成 `PH2-14-font-family-font-size-separate-batch-actions-v1`：批量范围共用，但 `应用字体` 只写 `fontFamily`，`应用字号` 只写 `fontSize`；`typecheck` 与 `build` 均已通过。"
+    },
+    {
+      "id": "RISK-030",
+      "date": "2026-07-05",
+      "type": "范围调整",
+      "description": "化学实验装置图式若直接使用国内教材、教辅、题库或商业素材站图片，会带来版权授权不清与后续产品内置不可控风险；若同一步接入完整绘图编辑器，又会扩大到素材管理、图形组合、标签编辑、连接点和导出多条链路。",
+      "impactScope": "PH2-05B 化学实验图式插入、Toolbar 顶端插入入口、LayoutDocument 图片资源、CanvasPane 画布预览、HTML/PDF 导出",
+      "currentHandling": "已完成 `PH2-05B-chemistry-apparatus-svg-library-v1`：第一版仅接入项目原创黑白 SVG 线稿，并复用现有图片块插入链路；未抓取国内教学资源，未内置授权不明素材，未接完整化学绘图编辑器。后续如引入外部开源/商业素材包，需另做授权台账和素材库治理。"
+    },
+    {
+      "id": "RISK-031",
+      "date": "2026-07-05",
+      "type": "返工",
+      "description": "V1 化学图式虽然打通了插入、保存和导出链路，但素材表现偏单个仪器图标，缺少教材/试卷常用的组合装置、导管、橡胶塞、液面、箭头和实验标签，用户反馈“太简陋”，无法满足真实教学资源使用预期。",
+      "impactScope": "PH2-05B 化学实验图式插入、Toolbar 顶端插入入口、化学图式素材库、LayoutDocument 图片块预览与导出",
+      "currentHandling": "已确认按 `PH2-05B-chemistry-apparatus-template-gallery-v2` 返工：把素材升级为教材式组合装置模板，并把顶栏下拉改为带缩略图的小型素材面板；仍坚持项目原创 SVG 与现有图片块链路，不抓取版权不明教学图片。"
     }
   ]
 }

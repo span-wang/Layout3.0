@@ -9,3 +9,4 @@ export * from './fontResources';
 export * from './tableLayout';
 export * from './utils';
 export * from './syntaxMappingConfig';
+export * from './semanticRole';

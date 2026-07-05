@@ -2,6 +2,7 @@ import { starterMarkdown, starterTitle } from '@/constants/workspace';
 import {
   applyTextRunPatchToTextRuns,
   applyBlockStyleOverridesToBlock,
+  applySemanticToLayoutBlock,
   autoFitTablesInLayoutDocument,
   buildBlockRangeSelection,
   convertListItemTaskStateByItem,
@@ -2745,6 +2746,17 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
 
       const result = replaceOwnerBlock(state.layoutDocument.blocks, nodeId, (block) =>
         applyBlockStyleOverridesToBlock(block, blockStyleOverrides),
+      );
+      applyDocumentMutation(state, nodeId, result);
+    }),
+  updateLayoutBlockSemantic: ({ nodeId, semantic }) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = replaceOwnerBlock(state.layoutDocument.blocks, nodeId, (block) =>
+        applySemanticToLayoutBlock(block, semantic),
       );
       applyDocumentMutation(state, nodeId, result);
     }),
