@@ -2,6 +2,7 @@ node_modules
 out
 dist
 release
+.codex/
 *.log
 .DS_Store
 patch-test.txt

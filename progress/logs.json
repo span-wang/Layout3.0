@@ -1,6 +1,124 @@
 {
   "entries": [
     {
+      "id": "LOG-402",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-21A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 DOCX 连续流式分页修正 V1",
+      "action": "DOCX 分页策略修正/显式分页符保留/类型检查/构建验证/XML 烟测/进度同步",
+      "result": "已完成 `PH2-21-docx-pagination-flow-fix-v1`：1) `src/services/exportDocx.ts` 新增“同页设置是否一致”判断；2) 同页设置一致时，DOCX 改为使用原始文档块连续导出，不再按预览每页强制创建 `nextPage` section；3) 页眉页脚改为连续流友好的动态占位符输出，页码和总页数交给 Word 字段计算；4) 文档里的显式 `pageBreak` 现在会在 DOCX 中保留为真实分页符；5) 若未来真的出现跨页页面设置差异，仍保留按页兜底的 section 路径；6) 现有 PDF 导出、预览分页和表格自动适应链路保持不变。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "DOCX 连续流烟测成功：`node --import tsx -` 构造“双页同设置 + 中间显式分页符”样例，解包 `word/document.xml` 后确认不再包含 `w:val=\"nextPage\"`，同时仍包含显式分页符 `w:type=\"page\"`。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-21A` 更新为已完成，并补 `completedOn` 与验证项。",
+        "`progress/risks.json` 已更新 `RISK-038` 当前处理方式，记录连续流返修已完成与剩余限制。",
+        "`progress/config.json` 已更新 `export-pipeline` 模块摘要，纳入 DOCX 连续流修正结果。"
+      ],
+      "affectedFiles": [
+        "src/services/exportDocx.ts",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/config.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需逐页 `{本页标题}`、DOCX 多栏或更高保真页眉页脚，再继续拆 `PH2-21` 深化小步。"
+    },
+    {
+      "id": "LOG-400",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-21A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 DOCX 连续流式分页修正 V1 边界",
+      "action": "用户确认开工/导出问题定位/边界登记/风险更新",
+      "result": "用户进一步确认当前问题不是表格，而是 DOCX 导出把预览分页结果一页一页硬映射成 Word `section + nextPage`。结果是：预览页里虽然能放满，但 Word 实际排版更省空间时，当前页还是被提前结束，出现大块留白。本步按 `PH2-21-docx-pagination-flow-fix-v1` 推进：DOCX 改为连续正文流导出，只保留用户显式 `pageBreak` 为真实分页符；同页设置一致时不再按预览每页强制切 section。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-21-docx-pagination-flow-fix-v1` 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-21A` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已更新 `RISK-038` 当前处理方式，记录 DOCX 强制分页导致页面填充不满的问题。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后只修改 `src/services/exportDocx.ts` 的分页策略并补最小验证。"
+    },
+    {
+      "id": "LOG-401",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-21"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 DOCX 导出 V1",
+      "action": "导出链路新增/图片资源读取与 SVG 转 PNG/类型检查/构建验证/烟测验证/进度同步",
+      "result": "已完成 `PH2-21-docx-export-v1`：1) 工具栏新增 `导出 DOCX`；2) renderer 新增 `buildDocxArrayBuffer` 与 `exportCurrentDocumentAsDocx`，主进程新增 `file:exportDocx` 保存对话框与二进制写盘；3) DOCX 当前按分页结果一页一个 section 输出，接入标题、段落、列表、表格、图片、代码块、引用块、目录、分页符、基础页尺寸页边距、基础页眉页脚和页码；4) 本地图片会读取真实资源嵌入，SVG 会先转 PNG 再写入 DOCX，避免 `layout-asset://` 资源协议直接泄漏到导出文件；5) 现有 PDF 导出链路保持不变。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "DOCX 最小烟测成功：`node --import tsx -` 调用 `buildDocxArrayBuffer` 输出 `DOCX smoke ok: 10540 bytes`。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-21` 更新为已完成，并补 `completedOn` 与验证项。",
+        "`progress/risks.json` 已更新 `RISK-038` 当前处理方式，记录最小闭环已完成与剩余深化范围。",
+        "`progress/config.json` 已更新 `export-pipeline` 模块摘要，纳入 DOCX 导出 V1。"
+      ],
+      "affectedFiles": [
+        "src/services/exportDocx.ts",
+        "src/services/ExportService.ts",
+        "electron/main/docx-handlers.ts",
+        "electron/main/ipc-handlers.ts",
+        "electron/preload/index.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "src/components/layout/AppShell.tsx",
+        "package.json",
+        "package-lock.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/config.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需 DOCX 主题保真、多栏、复杂图片环绕/裁剪或公式增强，再继续拆 `PH2-21` 深化小步。"
+    },
+    {
+      "id": "LOG-369",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-21"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 DOCX 导出 V1 边界",
+      "action": "用户确认开工/任务卡补录/范围收口/风险登记",
+      "result": "用户确认新增导出 `docx`。结合当前导出链路现状，本步按 `PH2-21-docx-export-v1` 推进：新增独立的 DOCX 导出入口与保存链路，优先覆盖标题、段落、列表、表格、图片、代码块、引用块、分页符、基础页尺寸页边距、基础页眉页脚和页码；不在本步追求主题纹理、SVG 装饰、多栏、复杂图片环绕/裁剪和公式高保真 1:1。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-21-docx-export-v1` 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增顶层任务卡 `PH2-21` 与 executionBoundary 边界记录。",
+        "`progress/risks.json` 已新增 `RISK-038`，记录 DOCX 导出为何先收口为结构化最小闭环。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后安装 DOCX 依赖并实现工具栏、renderer、IPC、主进程与 DOCX 生成链路。"
+    },
+    {
       "id": "LOG-368",
       "date": "2026-07-05",
       "taskIds": [
@@ -9270,6 +9388,677 @@
         "progress/logs.json"
       ],
       "next": "继续保持 `PH2-07-custom-semantic-keyword-rules` 为进行中；后续完成实际功能后再补完成日志和验证。"
+    },
+    {
+      "id": "LOG-377",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-06"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成浮动工具条字体字号调整 V1",
+      "action": "浮动工具条菜单新增/局部文字样式草稿写回/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-06-floating-toolbar-font-family-size-v1`：1) `CanvasPane` 浮动工具条新增字体和字号两个按钮式菜单，避免原生下拉抢焦点导致富文本选区丢失；2) 字体菜单复用基础字体列表与当前文档导入字体资源；3) 字号菜单提供 10-72px 常用预设；4) 选择字体或字号后只更新当前选区的局部 `TextRun.styleOverrides.fontFamily/fontSize` 草稿，失焦时继续通过既有草稿提交链路写回模型；5) 新增浮动工具条专用紧凑菜单样式，长字体名会截断，不扩大为字体管理器、批量规则或分页算法修改。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-06-floating-toolbar-font-family-size-v1` 更新为已完成，并补 completedOn 与验证项。",
+        "`progress/config.json` 已更新 Editor Module 和 UI Components 摘要，记录浮动工具条字体字号菜单已补齐。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "本步已完成；后续如需手动输入任意字号、链接或格式刷，再另拆浮动工具条增强小步。"
+    },
+    {
+      "id": "LOG-378",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成教材式化学实验装置模板图库 V2",
+      "action": "素材库返工/工具栏面板升级/类型检查/生产构建",
+      "result": "已完成 `PH2-05B-chemistry-apparatus-template-gallery-v2`：1) `src/constants/chemistryApparatus.ts` 已从 V1 单仪器图标升级为 10 个项目原创教材式组合实验装置 SVG 模板，覆盖 CO2 通入澄清石灰水、CO2 收集、O2 排水法收集、O2 向上排空气法收集、加热试管制气体、锥形瓶反应制气体、检验 CO2 是否集满、检查装置气密性、过滤装置、蒸发皿加热；2) 每个模板统一黑白教材线稿风格，包含导管、橡胶塞、液面、箭头、中文标注和气体标签，并登记分类、说明、授权来源和默认尺寸；3) `Toolbar.tsx` 已把顶端“化学图式”入口从普通下拉框升级为带分类筛选、缩略图、中文名称和授权提示的小型素材面板；4) 点击素材卡片后继续复用 `insertLayoutImageBlock` 插入图片块，插入成功后自动关闭面板、选中新图片块并切到右侧“对象属性”；5) 本步未抓取国内教材、教辅、题库平台或商业素材站图片，未新增 `.layout` 字段，也未接完整化学绘图编辑器。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-apparatus-template-gallery-v2` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已将 `RISK-031` 更新为返工完成处理。",
+        "`src/constants/chemistryApparatus.ts` 当前登记 10 个化学实验装置模板素材。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/components/layout/Toolbar.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "本步已完成；后续若继续化学图式，可优先拆完整化学装置拖拽组合编辑器、外部授权素材台账或分子结构式编辑接入。"
+    },
+    {
+      "id": "LOG-379",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-07-custom-semantic-keyword-rules"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成自定义语义块规则 V1",
+      "action": "文档级配置新增/关键词扫描应用/右侧语义规则面板/回归验证/进度同步",
+      "result": "已完成 `PH2-07-custom-semantic-keyword-rules-v1`：1) `LayoutDocument.meta.semanticRoleConfig` 新增文档级自定义语义角色与关键词规则配置，旧文档缺字段时回退为空配置；2) 语义角色 helper 支持自定义角色归一化、角色查询、前缀规则匹配和自定义语义 class 安全输出；3) 文档模型层新增扫描与批量应用纯函数，支持跳过或覆盖已有语义、移除 `【答案解析】` 这类关键词前缀并保留正文 TextRun 格式；4) store 新增更新语义配置、扫描全文、应用语义动作，批量应用会进入撤销历史并标记文档未保存；5) 右侧面板新增“语义规则”标签，可创建自定义语义块、配置关键词前缀、扫描全文并应用语义；6) 对象属性里的语义角色下拉已显示自定义角色；7) 本步未做复杂正则、实时自动识别、AI 自动识别、列表项/表格单元格独立语义字段、结构化容器块或分页算法修改。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，2 个测试全部 pass。",
+        "内置语义导入回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，3 个测试全部 pass。",
+        "`npm run typecheck` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/semanticRole.ts",
+        "src/engine/document-model/syntaxMappingConfig.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/semanticRole.test.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/RightPanel.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run build`、`npm run progress:build` 与 `npm run progress:check` 完成构建和进度展示同步；后续可继续做正则规则、语义样式绑定或列表/表格深层语义。"
+    },
+    {
+      "id": "LOG-380",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-07-semantic-role-style-binding"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认语义块样式绑定 V1 边界",
+      "action": "用户确认/边界登记/准备实现语义标签与导出视觉",
+      "result": "用户确认继续完善语义块，本步按 `PH2-07-semantic-role-style-binding-v1` 推进：让内置语义块和自定义语义块统一生成展示信息；画布预览中给带语义的块显示轻量语义标签、左侧色条和浅色背景；自定义角色颜色进入预览与 HTML/PDF 导出；右侧“对象属性”补充当前语义颜色和类型展示；补充最小验证，确认自定义语义角色颜色可进入导出 HTML。本步明确不纳入复杂模板市场、完整样式编辑器、拖拽调整语义块样式、语义分页规则、结构化答案解析容器或 AI 自动识别。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-07-semantic-role-style-binding-v1` 可以进入实施。",
+        "`progress/tasks/phase-2.json` 已新增任务卡 `PH2-07-semantic-role-style-binding` 并写明本步纳入、本步明确不纳入和后续归属任务。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档，然后开始实现画布语义标签、色条和 HTML/PDF 导出语义视觉。"
+    },
+    {
+      "id": "LOG-381",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认化学线稿图库扩容与组合编辑器 V1 边界",
+      "action": "用户确认开工/边界登记/第三方画布内核风险记录",
+      "result": "用户确认继续设计更多线稿式图库，并接入成熟编辑器支持组合设计。本步按 `PH2-05B-chemistry-line-art-gallery-and-composer-v1` 执行：扩充项目原创化学单部件线稿素材，并接入 Konva / React Konva 建立最小可用化学图式组合编辑器；支持添加部件、移动、缩放、旋转、删除、撤销重做、中文标签、简单导管线，并把组合结果导出为图片块插入当前文档。本步不抓取授权不明教学图片，不做完整化学仿真，不接分子结构式编辑器，也不新增 `.layout` 顶层字段。",
+      "verification": [
+        "用户已回复“确认”，确认线稿图库扩容与成熟组合编辑器方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-line-art-gallery-and-composer-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-032`，记录组合编辑器范围扩张和第三方画布内核接入风险。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts (待开发)",
+        "src/components/layout/Toolbar.tsx (待开发)",
+        "src/components/layout/useCanvasInsertCommands.ts (待开发)",
+        "src/styles.css (待开发)",
+        "package.json (待开发)",
+        "package-lock.json (待开发)",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后安装 Konva / React Konva，扩充原创线稿部件素材，并实现组合编辑器最小闭环。"
+    },
+    {
+      "id": "LOG-382",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认一级列表项独立块导入 V1 边界",
+      "action": "用户确认开工/Markdown 列表导入粒度定位/边界登记/风险记录",
+      "result": "用户要求“将一级列表设置为单独的块，不要将多个连续的一级列表放到一个块里，除非用户自行合并”。定位确认：当前 `fromMarkdown.ts` 会把一个顶层 mdast `List` 整体转换成一个 `LayoutBlock`，连续多个一级列表项天然进入同一个列表块。本步按 `PH2-04-top-level-list-single-block-v1` 推进：每个一级列表项导入为独立 `list` 块；子列表仍保留在对应一级项块内；有序列表拆块后通过 `metadata.start` 保留编号连续性；不改列表编辑 UI、`.layout` 顶层字段或分页算法。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小修复方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-04` 下追加 `PH2-04-top-level-list-single-block-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-033`，记录一级列表项被提前合并为同一块的缺陷及影响范围。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/fromMarkdown.ts (待开发)",
+        "src/engine/document-model/fromMarkdown.test.ts (待开发)",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实现一级列表项独立块导入，并运行定向回归、类型检查和构建验证。"
+    },
+    {
+      "id": "LOG-383",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH3-04"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认当前文档搜索与替换 V1 边界",
+      "action": "用户确认/边界登记/准备实现搜索与替换面板",
+      "result": "用户要求“将搜索模块做完整”，并已确认按当前文档搜索与替换 V1 推进：把左侧“搜索”从文件名搜索升级为当前 `.layout` 文档全文搜索，覆盖标题、段落、列表项、表格单元格、代码、公式、图片 alt 与引用块子内容；支持区分大小写、全字匹配、结果列表、点击定位、替换当前命中和替换全部；顶栏“搜索”按钮与 Ctrl/Cmd + F 将打开并聚焦搜索面板。替换写回复用现有 LayoutDocument 节点文字更新链路，并进入既有撤销历史。本步明确不纳入当前文件夹/跨文件全文搜索、正则搜索、跨节点复杂选区替换、搜索索引数据库、分页算法、导出链路或 `.layout` 顶层结构调整。",
+      "verification": [
+        "用户已回复“确定”，确认当前搜索模块 V1 边界可以执行。",
+        "`progress/tasks/phase-3.json` 已将 `PH3-04` 标记为 `进行中`，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实现当前文档搜索 helper、左侧搜索替换面板、顶栏/快捷键入口和最小验证。"
+    },
+    {
+      "id": "LOG-384",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-04"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成一级列表项独立块导入 V1",
+      "action": "Markdown 导入拆块修复/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-04-top-level-list-single-block-v1`：1) `fromMarkdown.ts` 新增按一级列表项拆块的 `buildListBlocks` 包装，一个顶层 mdast `List` 不再整体合成一个 `list` 块，而是每个一级 `ListItem` 产出一个独立列表块；2) 每个独立列表块继续使用现有 `flattenListItems` 展开自身子列表，保留 2/3 级层级和有序/无序 `listKind`；3) 有序列表拆块后按一级项下标写入 `metadata.start`，第二个独立块从 2 开始，导出和画布可继续显示连续编号；4) 本步未改列表渲染 UI、右侧列表编辑、`.layout` 顶层字段或分页算法；5) 额外补齐了 `CanvasPane.tsx` 中既有 `semanticRoleConfig` 参数传递错位，解除全量类型检查阻塞。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，4 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-04-top-level-list-single-block-v1` 更新为已完成。",
+        "`progress/risks.json` 已将 `RISK-033` 更新为已完成处理。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续如需用户手动合并多个列表块，另拆 `PH2-05B` 列表编辑增强。"
+    },
+    {
+      "id": "LOG-385",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成化学线稿图库扩容与组合编辑器 V1",
+      "action": "Konva 依赖接入/原创部件图库扩容/组合设计器新增/导出插入链路/类型检查/构建验证",
+      "result": "已完成 `PH2-05B-chemistry-line-art-gallery-and-composer-v1`：1) 安装 React 18 兼容的 `konva@10.3.0` 与 `react-konva@18.2.16`，未强行升级到要求 React 19 的 `react-konva@19`；2) `src/constants/chemistryApparatus.ts` 在保留 10 个成套实验装置模板基础上，新增 14 个项目原创化学线稿部件：试管、烧杯、锥形瓶、集气瓶、漏斗、长颈漏斗、分液漏斗、直导管、弯导管、橡胶塞、水槽、铁架台、酒精灯、玻璃棒；3) 新增 `ChemistryComposerDialog`，用 Konva Stage/Layer/Image/Text/Line/Transformer 建立组合设计器，支持部件添加、选中、拖拽移动、缩放、旋转、删除、撤销、重做、清空、中文标签和简单导管线；4) 顶端“化学图式”面板新增“组合设计”入口；5) 组合结果导出为 PNG data URL，并复用 `insertLayoutImageBlock` 插入当前文档，自动选中新图片块并切到右侧“对象属性”；6) 本步未抓取授权不明教学图片，未新增 `.layout` 顶层字段，未接完整化学仿真或分子结构式编辑器。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-line-art-gallery-and-composer-v1` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已将 `RISK-032` 更新为最小闭环完成处理。",
+        "轻量校验通过：`src/constants/chemistryApparatus.ts` 当前包含 10 个成套模板和 14 个可组合部件。",
+        "`npm ls konva react-konva --depth=0` 显示 `konva@10.3.0` 与 `react-konva@18.2.16` 已安装。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "package.json",
+        "package-lock.json",
+        "src/constants/chemistryApparatus.ts",
+        "src/components/layout/ChemistryComposerDialog.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/useCanvasInsertCommands.ts",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "本步已完成；后续可继续做导管连接点吸附、自动对齐、组合成组/解组、模板另存和素材授权台账。"
+    },
+    {
+      "id": "LOG-386",
+      "date": "2026-07-05",
+      "taskIds": [
+        "PH2-07-semantic-role-style-binding"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成语义块样式绑定 V1",
+      "action": "语义展示信息统一/画布语义视觉/HTML-PDF 导出视觉/对象属性展示/定向回归/类型检查/构建验证",
+      "result": "已完成 `PH2-07-semantic-role-style-binding-v1`：1) 语义角色统一生成展示信息，内置语义有默认色，自定义语义消费用户配置色；2) 画布块节点输出语义 class、`data-semantic-role`、`data-semantic-label` 与 CSS 变量，并显示轻量标签、左侧色条和浅色背景；3) HTML/PDF 导出同步写入语义标签、色条、背景与自定义颜色变量；4) 右侧对象属性展示当前语义类型和颜色；5) 本步未扩展完整语义样式编辑器、模板市场、语义分页规则、结构化容器或 AI 自动识别。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已将 `PH2-07-semantic-role-style-binding` 标记为已完成，并补充完成摘要、完成日期和验证项。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，3 个测试全部 pass。",
+        "Markdown / 导出回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，4 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/semanticRole.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "src/services/exportHtml.ts",
+        "src/engine/document-model/semanticRole.test.ts",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续可继续拆分语义块样式预设、语义分页规则或 AI 自动语义识别。"
+    },
+    {
+      "id": "LOG-387",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH3-04"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成当前文档搜索与替换 V1",
+      "action": "搜索服务新增/左侧搜索替换面板接入/顶栏与快捷键入口/批量替换写回/定向回归/构建验证/进度同步",
+      "result": "已完成 `PH3-04-current-document-search-replace-v1`：1) 新增 `DocumentSearchService`，支持当前 `.layout` 文档全文搜索、区分大小写、全字匹配、上下文片段预览，以及按命中结果生成纯文本/富文本替换草稿；2) 左侧“搜索”已从文件名搜索升级为搜索与替换面板，覆盖标题、段落、列表项、表格单元格、代码、公式、图片 alt 与引用块子内容；3) 搜索结果可显示内容类型、字位区间和关键词高亮，并可点击定位到画布对应节点；4) `AppShell` 已接通顶栏“搜索”按钮与 `Ctrl/Cmd + F`，并在源码视图下自动切到分屏以便结果定位；5) store 新增一次性多节点文字替换动作，替换当前命中和替换全部都会进入既有撤销历史，避免“全部替换”拆成很多次撤销；6) 本步未扩展跨文件搜索、当前文件夹全文搜索、正则搜索、复杂选区替换或后台索引。",
+      "verification": [
+        "`progress/tasks/phase-3.json` 已将 `PH3-04` 标记为已完成，并补 `completedOn`、完成摘要、验证项和完成说明。",
+        "`progress/config.json` 已更新 `editor-module` 与 `ui-components` 摘要，登记当前文档搜索与替换 V1 已可用。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\DocumentSearchService.test.ts`，2 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/services/DocumentSearchService.ts",
+        "src/services/DocumentSearchService.test.ts",
+        "src/components/layout/SearchPanel.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/store/slices/documentSlice.ts",
+        "src/store/types.ts",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "本步已完成；后续如需继续做跨文件搜索、正则搜索、搜索历史、范围过滤或复杂选区替换，继续拆回 `PH3-04` 增强小步。"
+    },
+    {
+      "id": "LOG-388",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认化学 SVG 精细版 V1 边界",
+      "action": "用户确认开工/视觉返工边界登记/风险记录",
+      "result": "用户继续推进化学图式优化，并明确指出当前 SVG 线稿“画的也太粗糙了”。本步按 `PH2-05B-chemistry-svg-refinement-v1` 执行：保持现有图库分类、组合编辑器和插入链路不变，只重绘 `src/constants/chemistryApparatus.ts` 中的 14 个可组合部件和 10 个成套模板 SVG，提升线条层级、器皿比例、液面、刻度、塞子、导管和局部细节，让素材更接近教材/试卷风格。本步不新增组合编辑器功能，不接外部素材包，不修改 `.layout` 结构。",
+      "verification": [
+        "用户已回复“继续”，确认本步可以直接开工。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-svg-refinement-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-034`，记录 SVG 视觉质量返工风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts (待开发)",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后重绘更精细的化学 SVG 部件与模板，并运行类型检查与构建验证。"
+    },
+    {
+      "id": "LOG-389",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成化学 SVG 精细版 V1",
+      "action": "原创 SVG 重绘/部件与模板精细化/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-chemistry-svg-refinement-v1`：1) 保持现有图库分类、组合编辑器和图片块插入链路不变，整体重绘 `src/constants/chemistryApparatus.ts` 中的 SVG；2) 10 个成套模板统一改为更细的教材式线稿风格，强化器皿轮廓、液面、塞子、导管、支架与文字层次；3) 14 个可组合部件同步重绘，提升器皿比例、厚薄线层级、局部刻度和细部结构，减少上一版粗线示意图感；4) 素材 ID、分类、默认尺寸和组合编辑器数据结构保持不变，因此 `Toolbar`、`ChemistryComposerDialog` 和图片块插入链路无需改动；5) 本步继续坚持项目原创 SVG，未抓取或内置授权不明教学图片。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-svg-refinement-v1` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已将 `RISK-034` 更新为返工完成处理。",
+        "`src/constants/chemistryApparatus.ts` 当前仍保持 10 个模板和 14 个部件，但 SVG 线稿已整体精细化重绘。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "本步已完成；后续若还需要更接近印刷教材，可继续拆 SVG 视觉规范 V2 或部件细分图库任务。"
+    },
+    {
+      "id": "LOG-390",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认化学基础元素库补齐 V1 边界",
+      "action": "用户确认开工/基础器材范围登记/后续容器编辑延期",
+      "result": "用户确认先把化学组合设计器的基本元素做齐，再做容器编辑。本步按 `PH2-05B-chemistry-basic-elements-library-v1` 推进：在现有 14 个项目原创可组合部件基础上，新增约 26 个教材/试卷高频基础器材，覆盖容器、导管与塞、支架与加热、分离器材等分类；新增元素继续使用项目原创 SVG 线稿，并复用现有 Konva 组合设计器的添加、拖拽、缩放、旋转、删除、撤销重做和导出插入链路。本步不做液面高度、刻度显隐、瓶塞状态、导管连接点吸附、成组/解组或模板另存。",
+      "verification": [
+        "用户已回复“确定”，确认先补齐基础元素库。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-basic-elements-library-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-035`，记录基础元素扩容与容器编辑顺序调整。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts (待开发)",
+        "src/components/layout/ChemistryComposerDialog.tsx (待评估)",
+        "src/styles.css (待评估)",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后扩充基础元素 SVG 部件库并运行类型检查与构建验证。"
+    },
+    {
+      "id": "LOG-391",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成化学基础元素库补齐 V1",
+      "action": "原创 SVG 部件扩容/分类补齐/轻量校验/类型检查/生产构建",
+      "result": "已完成 `PH2-05B-chemistry-basic-elements-library-v1`：1) `src/constants/chemistryApparatus.ts` 在现有 14 个可组合部件基础上新增 26 个项目原创基础元素，使组合设计器部件总数达到 40 个；2) 新增部件覆盖量筒、圆底烧瓶、平底烧瓶、广口瓶、试剂瓶、蒸发皿、坩埚、T 形管、U 形管、乳胶管、玻璃片、单孔塞、双孔塞、三脚架、石棉网、铁圈、铁夹、试管夹、燃烧匙、滴管、滴定管、冷凝管、药匙、镊子、研钵、表面皿；3) 部件分类已扩为容器、计量器具、导管与塞、支架与加热、分离器材、操作器材 6 类；4) 新增元素继续复用现有 Konva 组合设计器的添加、拖拽、缩放、旋转、删除、撤销重做和导出插入链路；5) 本步未做液面高度、刻度显隐、瓶塞状态、导管连接点吸附、成组/解组或模板另存。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-basic-elements-library-v1` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已将 `RISK-035` 更新为基础元素补齐完成处理。",
+        "轻量校验通过：`chemistryLineArtParts.length === 40`，40 个部件 ID 全部唯一。",
+        "分类统计通过：容器 9 个、计量器具 3 个、导管与塞 9 个、支架与加热 10 个、分离器材 5 个、操作器材 4 个。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续可继续推进 `PH2-05B-chemistry-container-editing-v1` 容器属性编辑，或先补导管连接点吸附。"
+    },
+    {
+      "id": "LOG-392",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认化学容器编辑 V1 边界",
+      "action": "用户确认开工/容器属性范围登记/动态渲染风险记录",
+      "result": "用户确认继续推进 `PH2-05B-chemistry-container-editing-v1`。本步只围绕组合设计器中的容器状态编辑做最小闭环：让试管、烧杯、锥形瓶、集气瓶、圆底烧瓶、平底烧瓶、广口瓶、试剂瓶、量筒、水槽这 10 类容器从静态 SVG 升级为可编辑容器；在 `ChemistryComposerDialog` 中给选中的容器显示中文属性区，首批支持液面显示、液面高度、刻度显示、塞子显示，以及正放 / 倒置 / 斜放预设；继续复用现有 Konva 组合设计器拖拽、缩放、旋转、撤销重做和导出插入链路。本步不做导管连接点吸附、自动对齐、成组/解组、模板另存，也不做插入文档后的二次编辑。",
+      "verification": [
+        "用户已回复“确定”，确认当前容器编辑 V1 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-container-editing-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-036`，记录容器动态渲染范围与一致性风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts (待开发)",
+        "src/components/layout/ChemistryComposerDialog.tsx (待开发)",
+        "src/styles.css (待评估)",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后扩展可编辑容器元数据、实现组合设计器属性区与动态容器渲染。"
+    },
+    {
+      "id": "LOG-393",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成化学容器编辑 V1",
+      "action": "容器元数据扩展/动态 SVG 渲染/属性区接入/类型检查/生产构建",
+      "result": "已完成 `PH2-05B-chemistry-container-editing-v1`：1) `src/constants/chemistryApparatus.ts` 已为试管、烧杯、锥形瓶、集气瓶、圆底烧瓶、平底烧瓶、广口瓶、试剂瓶、量筒、水槽这 10 类容器补齐 `editableContainer` 元数据、默认状态和动态 SVG 生成 helper；2) 新增液面、刻度、塞子和姿态预设的容器状态模型，并让可编辑容器渲染结果按状态实时生成 `data:image/svg+xml`；3) `ChemistryComposerDialog.tsx` 已把容器状态写入组合元素模型，并在组合设计器右侧新增中文属性区，支持液面显示、液面高度、刻度显示、塞子显示，以及正放 / 倒置 / 斜放预设；4) 动态容器继续复用现有 Konva 组合设计器拖拽、缩放、旋转、撤销重做和导出 PNG 插入文档链路；5) 本步未接入导管连接点吸附、自动对齐、成组/解组、模板另存或插入文档后的二次编辑。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-container-editing-v1` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已将 `RISK-036` 更新为容器编辑完成处理。",
+        "轻量校验通过：可编辑容器数量为 10，且 10 类容器都能生成 `data:image/svg+xml` 动态渲染结果。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/components/layout/ChemistryComposerDialog.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续可继续推进导管连接点吸附、自动对齐或组合成组/解组。"
+    },
+    {
+      "id": "LOG-394",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认化学导管连接点吸附 V1 边界",
+      "action": "用户确认开工/连接点范围登记/吸附一致性风险记录",
+      "result": "用户确认继续推进 `PH2-05B-chemistry-connector-snap-v1`。本步只围绕组合设计器中的导管线端点吸附做最小闭环：给 10 类可编辑容器和单孔塞 / 双孔塞定义连接点；只对导管线的起点 / 终点做吸附，靠近连接点时高亮并自动吸上去；吸附后记录关系，让容器移动、缩放、旋转时导管端点跟随更新；导出 PNG 和插入文档继续复用现有链路。本步不做自动避障布线、导管 SVG 部件之间互吸附、自动对齐、成组/解组、模板另存或插入文档后的二次编辑。",
+      "verification": [
+        "用户已回复“确认”，确认当前导管连接点吸附 V1 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-connector-snap-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-037`，记录连接点吸附范围与一致性风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts (待开发)",
+        "src/components/layout/ChemistryComposerDialog.tsx (待开发)",
+        "src/styles.css (待评估)",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后扩展连接点元数据、实现导管线端点吸附与跟随更新。"
+    },
+    {
+      "id": "LOG-395",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成化学导管连接点吸附 V1",
+      "action": "连接点元数据扩展/导管吸附关系建模/端点手柄与高亮/类型检查/生产构建",
+      "result": "已完成 `PH2-05B-chemistry-connector-snap-v1`：1) `src/constants/chemistryApparatus.ts` 已为试管、烧杯、锥形瓶、集气瓶、圆底烧瓶、平底烧瓶、广口瓶、试剂瓶、量筒、水槽，以及单孔塞、双孔塞补齐连接点定义；2) `ChemistryComposerDialog.tsx` 已为导管线新增起点 / 终点吸附关系模型，并按最近连接点计算吸附目标；3) 选中导管线时会显示两个端点拖拽手柄，拖到连接点附近时会高亮目标并在释放后自动吸附；4) 吸附后的导管端点会随着目标容器或塞子的移动、缩放、旋转同步更新；5) 手动整体拖动、缩放或旋转导管线时会主动解除吸附，避免旧关系回拉；6) 本步未实现自动避障布线、导管 SVG 部件之间互吸附、自动对齐、成组/解组、模板另存或插入文档后的二次编辑。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-connector-snap-v1` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已将 `RISK-037` 更新为导管连接点吸附完成处理。",
+        "轻量校验通过：带连接点的部件数量为 12，其中双孔塞包含 2 个连接点。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/components/layout/ChemistryComposerDialog.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续可继续推进自动避障布线、导管部件互吸附、自动对齐或组合成组/解组。"
+    },
+    {
+      "id": "LOG-396",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分液漏斗与滴定管容器扩展 V1 边界",
+      "action": "用户确认开工/特殊容器范围登记/风险范围收口",
+      "result": "用户在“继续完善化学容器编辑器”的下一步候选中选择了方案 1。本步按 `PH2-05B-chemistry-special-container-editing-v1` 推进：继续沿着容器编辑链路补强，只把 `分液漏斗` 与 `滴定管` 两个高频器材从静态 SVG 部件升级为可编辑容器；在既有液面、液面高度、刻度和姿态口径上，最小补齐特殊器材需要的“阀门开关”状态；继续复用现有 Konva 组合设计器拖拽、缩放、旋转、撤销重做和导出 PNG 插入文档链路。本步明确不纳入导管连接点扩容、自动对齐、成组/解组、模板另存、放液动画或实验仿真。",
+      "verification": [
+        "用户已回复“1”，确认当前最小推进方向。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-special-container-editing-v1`，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已更新 `RISK-036` 当前处理方式，记录特殊容器扩展仍受范围控制。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后扩展容器状态模型、分液漏斗/滴定管动态 SVG 和右侧属性区的阀门开关。"
+    },
+    {
+      "id": "LOG-397",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分液漏斗与滴定管容器扩展 V1",
+      "action": "特殊容器状态模型扩展/动态 SVG 渲染/属性区阀门开关/定向测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-chemistry-special-container-editing-v1`：1) `src/constants/chemistryApparatus.ts` 已将 `分液漏斗` 与 `滴定管` 纳入 `editableContainer` 范围，并在现有容器状态模型中新增 `valveOpen` 与 `supportsValve`；2) `buildEditableContainerBody` 已补齐 `separatoryFunnel` 与 `burette` 两类特殊容器的动态 SVG 渲染分支，让液面、刻度和阀门开关都能实时进入组合设计器画面与导出图片；3) `ChemistryComposerDialog.tsx` 右侧中文属性区已为支持阀门的器材补充“打开阀门”开关，并继续沿用现有液面显示、液面高度和刻度显示入口；4) 新增 `src/constants/chemistryApparatus.test.ts` 定向测试，覆盖可编辑容器范围和阀门状态渲染差异；5) 本步未扩到其他器材、连接点吸附扩容、动画放液、实验仿真、模板另存或插入文档后的二次编辑。",
+      "verification": [
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-special-container-editing-v1` 更新为已完成，并补 `startedOn`、`completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-036` 当前处理方式，记录特殊容器扩展已完成且范围继续收口。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\constants\\chemistryApparatus.test.ts`，2 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/components/layout/ChemistryComposerDialog.tsx",
+        "src/constants/chemistryApparatus.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "本步已完成；后续可继续推进特殊容器连接点扩容、更多可编辑器材、动画放液或组合成组/解组。"
+    },
+    {
+      "id": "LOG-398",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-07-semantic-block-template"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认语义块模板 V1 边界",
+      "action": "用户确认开工/设计决策收口/边界登记/风险记录",
+      "result": "用户在连续确认完 40 个设计分支后明确回复“1，不再问了，直接按照当前的开始做”，本步按 `PH2-07-semantic-block-template-v1` 进入实施。当前已把范围收口为最小闭环：结构真相源继续保留原 `block.type`；块模板只覆盖表现层外壳，不改块高度；先支持 `paragraph / heading / list / blockquote` 4 类块；内置 `默认语义框 / 侧边强调 / 浅色卡片 / 警示框` 4 种块模板；语义角色继续提供标签和颜色，块模板负责外壳形态；普通块和语义块共用同一套块模板库；自定义语义角色可配置默认块模板；块级手动模板覆盖、进入语义前模板备份和清除语义恢复链路都随 `.layout` 保存恢复；旧文件只在运行时按“语义角色 -> 默认块模板”解析，不做批量回填。",
+      "verification": [
+        "用户已明确回复“1，不再问了，直接按照当前的开始做”，确认当前最小闭环方案可以开工。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-07-semantic-block-template` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-039`，记录块模板若过度扩面会牵动分页、主题装饰和旧文件迁移的范围风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现块模板文档模型字段、默认模板解析、对象属性面板、预览/导出接线与最小验证。"
+    },
+    {
+      "id": "LOG-399",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-07-semantic-block-template"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成语义块模板 V1",
+      "action": "文档模型扩展/对象属性接线/预览导出同步/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-07-semantic-block-template-v1`：1) `src/engine/document-model/types.ts` 在 `LayoutBlock` 顶层新增 `semanticPreset` 聚合状态，并在自定义语义角色定义上补齐 `defaultBlockPresetId`；2) `semanticRole.ts` 已新增 4 种内置块模板、默认模板解析、语义前模板备份、清除语义恢复和旧文件运行时映射逻辑；3) `syntaxMappingConfig.ts` 与 `.layout` 归一化已兼容新字段，不会因为旧文件缺字段而报错；4) 右侧“对象属性”新增独立“块模板”区，自定义语义角色新增默认块模板选择入口；5) 画布预览与 HTML/PDF 导出统一输出 `data-semantic-preset` 与 `semantic-block-preset-*` class，并按语义角色颜色或模板中性色渲染 `默认语义框 / 侧边强调 / 浅色卡片 / 警示框` 4 种外壳；6) 普通块手动模板、语义默认模板、语义态手动覆盖和清除语义恢复链路均已打通。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts src\\engine\\document-model\\fromMarkdown.test.ts`，9 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-07-semantic-block-template` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-039` 当前处理方式，记录 V1 已完成且后续扩面需另拆任务。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/semanticRole.ts",
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/syntaxMappingConfig.ts",
+        "src/engine/document-model/semanticRole.test.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/store/types.ts",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续如需扩到更多块类型、允许块模板改变高度，或开放块模板编辑器，再按 `PH2-07` 后续小步继续拆。"
     }
   ]
 }

@@ -18,9 +18,11 @@ import type {
   ImageBlockMetadata,
   ImageWrapSide,
   LayoutBlockSemantic,
+  LayoutSemanticRoleConfig,
+  SemanticBlockPresetId,
 } from './types';
 import { normalizeImageWrapMode, resolveImageWrapSide } from './imageLayout';
-import { applySemanticToBlock } from './semanticRole';
+import { applySemanticPresetToBlock, applySemanticToBlock, findSemanticKeywordPrefixMatch } from './semanticRole';
 import {
   createTextFragment,
   getLayoutListItemLevel,
@@ -226,6 +228,33 @@ export interface BlockquoteStructureEditResult {
   block: LayoutBlock;
   selectedNodeId: string | null;
   didUpdate: boolean;
+}
+
+export interface SemanticKeywordScanItem {
+  blockId: string;
+  roleId: string;
+  roleName: string;
+  ruleId: string;
+  keyword: string;
+  originalText: string;
+  previewText: string;
+  stripKeyword: boolean;
+  status: 'applicable' | 'skippedExisting';
+}
+
+export interface SemanticKeywordScanResult {
+  items: SemanticKeywordScanItem[];
+  applicableCount: number;
+  skippedExistingCount: number;
+}
+
+export interface SemanticKeywordApplyResult extends SemanticKeywordScanResult {
+  blocks: LayoutBlock[];
+  didUpdate: boolean;
+}
+
+export interface SemanticKeywordApplyOptions {
+  overwriteExisting?: boolean;
 }
 
 // 清除文字格式只处理当前已接入的“视觉样式”，不碰链接、代码语义和答案标记。
@@ -2294,6 +2323,80 @@ export function getLayoutBlockTextContent(block: LayoutBlock): string {
   return getTextContentFromRuns(block.textRuns);
 }
 
+function isSemanticKeywordTargetBlock(block: LayoutBlock): boolean {
+  return (
+    (block.type === 'heading' && block.metadata.kind === 'heading') ||
+    (block.type === 'paragraph' && block.metadata.kind === 'paragraph')
+  );
+}
+
+function stripTextPrefixFromTextRuns(
+  textRuns: TextRun[],
+  nodeId: string,
+  prefixLength: number,
+): TextRun[] {
+  if (prefixLength <= 0) {
+    return textRuns;
+  }
+
+  let remainingPrefixLength = prefixLength;
+  const nextRuns: TextRun[] = [];
+
+  for (const run of textRuns) {
+    if (remainingPrefixLength >= run.text.length) {
+      remainingPrefixLength -= run.text.length;
+      continue;
+    }
+
+    if (remainingPrefixLength > 0) {
+      nextRuns.push({
+        ...run,
+        text: run.text.slice(remainingPrefixLength),
+        sourceRange: null,
+      });
+      remainingPrefixLength = 0;
+      continue;
+    }
+
+    nextRuns.push({ ...run });
+  }
+
+  return rebuildRunIds(nodeId, mergeAdjacentTextRuns(nextRuns));
+}
+
+function updateSemanticKeywordTargetTextRuns(
+  block: LayoutBlock,
+  textRuns: TextRun[],
+): LayoutBlock {
+  const nextText = getTextContentFromRuns(textRuns);
+
+  if (block.type === 'heading' && block.metadata.kind === 'heading') {
+    return {
+      ...block,
+      sourceRange: null,
+      textRuns,
+      metadata: {
+        ...block.metadata,
+        text: nextText,
+      },
+    };
+  }
+
+  if (block.type === 'paragraph' && block.metadata.kind === 'paragraph') {
+    return {
+      ...block,
+      sourceRange: null,
+      textRuns,
+      metadata: {
+        ...block.metadata,
+        text: nextText,
+      },
+    };
+  }
+
+  return block;
+}
+
 export function isEditableLayoutTextBlock(block: LayoutBlock): boolean {
   return (
     block.type === 'heading' ||
@@ -2922,6 +3025,172 @@ export function applyBlockStyleOverridesToBlock(
 export function applySemanticToLayoutBlock(
   block: LayoutBlock,
   semantic: LayoutBlockSemantic | null,
+  config?: LayoutSemanticRoleConfig,
 ): LayoutBlock {
-  return applySemanticToBlock(block, semantic);
+  return applySemanticToBlock(block, semantic, config);
+}
+
+export function applySemanticPresetToLayoutBlock(
+  block: LayoutBlock,
+  presetId: SemanticBlockPresetId | null,
+): LayoutBlock {
+  return applySemanticPresetToBlock(block, presetId);
+}
+
+function createSemanticKeywordScanItem(
+  block: LayoutBlock,
+  config: LayoutSemanticRoleConfig,
+  options: SemanticKeywordApplyOptions,
+): SemanticKeywordScanItem | null {
+  if (!isSemanticKeywordTargetBlock(block)) {
+    return null;
+  }
+
+  const originalText = getTextContentFromRuns(block.textRuns);
+  const match = findSemanticKeywordPrefixMatch(originalText, config);
+  if (!match) {
+    return null;
+  }
+
+  return {
+    blockId: block.id,
+    roleId: match.role.id,
+    roleName: match.role.name,
+    ruleId: match.rule.id,
+    keyword: match.rule.keyword,
+    originalText,
+    previewText: match.content,
+    stripKeyword: match.rule.stripKeyword,
+    status: block.semantic && !options.overwriteExisting ? 'skippedExisting' : 'applicable',
+  };
+}
+
+function collectSemanticKeywordScanItems(
+  blocks: LayoutBlock[],
+  config: LayoutSemanticRoleConfig,
+  options: SemanticKeywordApplyOptions,
+): SemanticKeywordScanItem[] {
+  const items: SemanticKeywordScanItem[] = [];
+
+  for (const block of blocks) {
+    const item = createSemanticKeywordScanItem(block, config, options);
+    if (item) {
+      items.push(item);
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      items.push(...collectSemanticKeywordScanItems(block.metadata.blocks, config, options));
+    }
+  }
+
+  return items;
+}
+
+function summarizeSemanticKeywordScanItems(items: SemanticKeywordScanItem[]): SemanticKeywordScanResult {
+  return {
+    items,
+    applicableCount: items.filter((item) => item.status === 'applicable').length,
+    skippedExistingCount: items.filter((item) => item.status === 'skippedExisting').length,
+  };
+}
+
+export function scanSemanticKeywordRulesInBlocks(
+  blocks: LayoutBlock[],
+  config: LayoutSemanticRoleConfig,
+  options: SemanticKeywordApplyOptions = {},
+): SemanticKeywordScanResult {
+  return summarizeSemanticKeywordScanItems(collectSemanticKeywordScanItems(blocks, config, options));
+}
+
+function applySemanticKeywordRulesToBlock(
+  block: LayoutBlock,
+  config: LayoutSemanticRoleConfig,
+  options: SemanticKeywordApplyOptions,
+): { block: LayoutBlock; didUpdate: boolean } {
+  if (!isSemanticKeywordTargetBlock(block)) {
+    if (block.type !== 'blockquote' || block.metadata.kind !== 'blockquote') {
+      return { block, didUpdate: false };
+    }
+
+    const nestedResult = applySemanticKeywordRulesToBlockList(block.metadata.blocks, config, options);
+    if (!nestedResult.didUpdate) {
+      return { block, didUpdate: false };
+    }
+
+    return {
+      block: {
+        ...block,
+        sourceRange: null,
+        metadata: {
+          ...block.metadata,
+          blocks: nestedResult.blocks,
+        },
+      },
+      didUpdate: true,
+    };
+  }
+
+  if (block.semantic && !options.overwriteExisting) {
+    return { block, didUpdate: false };
+  }
+
+  const originalText = getTextContentFromRuns(block.textRuns);
+  const match = findSemanticKeywordPrefixMatch(originalText, config);
+  if (!match) {
+    return { block, didUpdate: false };
+  }
+
+  const semanticBlock = applySemanticToBlock(
+    block,
+    {
+      roleId: match.role.id,
+      alias: match.role.name,
+      source: 'keyword',
+    },
+    config,
+  );
+  const nextBlock =
+    match.rule.stripKeyword && match.prefixLength > 0
+      ? updateSemanticKeywordTargetTextRuns(
+          semanticBlock,
+          stripTextPrefixFromTextRuns(block.textRuns, block.id, match.prefixLength),
+        )
+      : semanticBlock;
+
+  return {
+    block: nextBlock,
+    didUpdate: nextBlock !== block,
+  };
+}
+
+function applySemanticKeywordRulesToBlockList(
+  blocks: LayoutBlock[],
+  config: LayoutSemanticRoleConfig,
+  options: SemanticKeywordApplyOptions,
+): { blocks: LayoutBlock[]; didUpdate: boolean } {
+  let didUpdate = false;
+  const nextBlocks = blocks.map((block) => {
+    const result = applySemanticKeywordRulesToBlock(block, config, options);
+    if (result.didUpdate) {
+      didUpdate = true;
+    }
+    return result.block;
+  });
+
+  return { blocks: nextBlocks, didUpdate };
+}
+
+export function applySemanticKeywordRulesToBlocks(
+  blocks: LayoutBlock[],
+  config: LayoutSemanticRoleConfig,
+  options: SemanticKeywordApplyOptions = {},
+): SemanticKeywordApplyResult {
+  const scanResult = scanSemanticKeywordRulesInBlocks(blocks, config, options);
+  const applyResult = applySemanticKeywordRulesToBlockList(blocks, config, options);
+
+  return {
+    ...scanResult,
+    blocks: applyResult.blocks,
+    didUpdate: applyResult.didUpdate,
+  };
 }

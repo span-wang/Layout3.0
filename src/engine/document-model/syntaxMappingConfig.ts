@@ -6,7 +6,11 @@
  */
 
 import type { LayoutDocument, TextMarkType } from './types';
-import { normalizeLayoutBlockSemantic } from './semanticRole';
+import {
+  normalizeLayoutBlockSemantic,
+  normalizeLayoutBlockSemanticPresetState,
+  normalizeSemanticRoleConfig,
+} from './semanticRole';
 
 /**
  * 文本标记语法映射配置
@@ -236,11 +240,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function normalizeLayoutBlockSemantics(blocks: LayoutDocument['blocks']): LayoutDocument['blocks'] {
+function normalizeLayoutBlockSemantics(
+  blocks: LayoutDocument['blocks'],
+  semanticRoleConfig: LayoutDocument['meta']['semanticRoleConfig'],
+): LayoutDocument['blocks'] {
   return blocks.map((block) => {
-    const semantic = normalizeLayoutBlockSemantic(block.semantic);
-    const { semantic: _rawSemantic, ...blockWithoutSemantic } = block;
-    const normalizedBlock = semantic ? { ...blockWithoutSemantic, semantic } : blockWithoutSemantic;
+    const semantic = normalizeLayoutBlockSemantic(block.semantic, semanticRoleConfig);
+    const semanticPreset = normalizeLayoutBlockSemanticPresetState(block.semanticPreset);
+    const { semantic: _rawSemantic, semanticPreset: _rawSemanticPreset, ...blockWithoutSemantic } = block;
+    const normalizedBlock = {
+      ...blockWithoutSemantic,
+      ...(semantic ? { semantic } : {}),
+      ...(semanticPreset ? { semanticPreset } : {}),
+    };
 
     if (normalizedBlock.type !== 'blockquote' || normalizedBlock.metadata.kind !== 'blockquote') {
       return normalizedBlock;
@@ -250,7 +262,7 @@ function normalizeLayoutBlockSemantics(blocks: LayoutDocument['blocks']): Layout
       ...normalizedBlock,
       metadata: {
         ...normalizedBlock.metadata,
-        blocks: normalizeLayoutBlockSemantics(normalizedBlock.metadata.blocks),
+        blocks: normalizeLayoutBlockSemantics(normalizedBlock.metadata.blocks, semanticRoleConfig),
       },
     };
   });
@@ -436,14 +448,16 @@ export function normalizeLayoutDocumentSyntaxMappingConfig(document: LayoutDocum
   const legacyConfig = isRecord(legacyDocument.metadata)
     ? legacyDocument.metadata.syntaxMappingConfig
     : undefined;
+  const semanticRoleConfig = normalizeSemanticRoleConfig(document.meta.semanticRoleConfig);
   const { metadata: _legacyMetadata, ...documentWithoutLegacy } = legacyDocument;
 
   return {
     ...documentWithoutLegacy,
-    blocks: normalizeLayoutBlockSemantics(document.blocks),
+    blocks: normalizeLayoutBlockSemantics(document.blocks, semanticRoleConfig),
     meta: {
       ...document.meta,
       syntaxMappingConfig: normalizeSyntaxMappingConfig(document.meta.syntaxMappingConfig ?? legacyConfig),
+      semanticRoleConfig,
     },
   };
 }

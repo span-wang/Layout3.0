@@ -5,6 +5,11 @@ import {
   listAiGenerationRecords,
 } from '@/services/AiGenerationRecordService';
 import {
+  createDocumentSearchReplacementDrafts,
+  searchLayoutDocument,
+  type DocumentSearchResult,
+} from '@/services/DocumentSearchService';
+import {
   applyPageNumbersToTocItems,
   buildHeadingPageNumberMap,
   buildTocItems,
@@ -97,6 +102,11 @@ export function AppShell(): JSX.Element {
   );
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchCaseSensitive, setSearchCaseSensitive] = useState(false);
+  const [searchWholeWord, setSearchWholeWord] = useState(false);
+  const [searchReplacementText, setSearchReplacementText] = useState('');
+  const [selectedSearchResultId, setSelectedSearchResultId] = useState<string | null>(null);
+  const [searchFocusRequestKey, setSearchFocusRequestKey] = useState(0);
   const [dragSource, setDragSource] = useState<string | null>(null);
   const [requestedEditNodeId, setRequestedEditNodeId] = useState<string | null>(null);
   const [requestedScrollToNodeId, setRequestedScrollToNodeId] = useState<string | null>(null);
@@ -144,6 +154,7 @@ export function AppShell(): JSX.Element {
   const clearLayoutSelection = useAppStore((state) => state.clearLayoutSelection);
   const updateLayoutNodeText = useAppStore((state) => state.updateLayoutNodeText);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
+  const replaceMultipleLayoutNodeTexts = useAppStore((state) => state.replaceMultipleLayoutNodeTexts);
   const insertLayoutMarkdownBlocks = useAppStore((state) => state.insertLayoutMarkdownBlocks);
   const mergeLayoutSelectedBlocks = useAppStore((state) => state.mergeLayoutSelectedBlocks);
   const undoLayoutDocument = useAppStore((state) => state.undoLayoutDocument);
@@ -159,6 +170,14 @@ export function AppShell(): JSX.Element {
         ? pageLayouts
         : [{ pageNumber: 1, blocks: [], contract: resolvedStyleContract, warnings: [] }];
   const rawTocItems = useMemo(() => buildTocItems(layoutDocument), [layoutDocument]);
+  const searchResults = useMemo(
+    () =>
+      searchLayoutDocument(layoutDocument, searchQuery, {
+        caseSensitive: searchCaseSensitive,
+        wholeWord: searchWholeWord,
+      }),
+    [layoutDocument, searchCaseSensitive, searchQuery, searchWholeWord],
+  );
   const headingPageNumberMap = useMemo(() => buildHeadingPageNumberMap(displayedPageLayouts), [displayedPageLayouts]);
   const tocItems = useMemo(
     () => applyPageNumbersToTocItems(rawTocItems, headingPageNumberMap),
@@ -191,10 +210,12 @@ export function AppShell(): JSX.Element {
     handleMoveEntry,
     handleImportFont,
     handleExportPdf,
+    handleExportDocx,
   } = useWorkspaceFileCommands({ displayedPageLayouts, tocItems });
   const {
     handleInsertImage,
     handleInsertChemistryApparatus,
+    handleInsertChemistryComposition,
     handleInsertEquation,
     handleInsertTable,
     handleInsertList,
@@ -341,6 +362,91 @@ export function AppShell(): JSX.Element {
     },
     [selectLayoutNode, setActiveRightPanelTab],
   );
+
+  const handleOpenSearchPanel = useCallback(() => {
+    if (!isLeftPanelOpen) {
+      toggleLeftPanel();
+    }
+    setActiveTab('搜索');
+    setSearchFocusRequestKey((currentKey) => currentKey + 1);
+  }, [isLeftPanelOpen, setActiveTab, toggleLeftPanel]);
+
+  const handleSelectSearchResult = useCallback(
+    (result: DocumentSearchResult) => {
+      setSelectedSearchResultId(result.id);
+      selectLayoutNode(result.nodeId);
+      setActiveRightPanelTab('对象属性');
+      setRequestedScrollToNodeId(result.nodeId);
+      if (workspaceViewMode === 'source') {
+        setWorkspaceViewMode('split');
+      }
+      setCanvasTextSelection({
+        nodeId: result.nodeId,
+        text: '',
+        selection: null,
+        isEditing: false,
+        draftTextRuns: null,
+      });
+    },
+    [selectLayoutNode, setActiveRightPanelTab, setWorkspaceViewMode, workspaceViewMode],
+  );
+
+  const handleReplaceSearchResults = useCallback(
+    (resultsToReplace: DocumentSearchResult[], successMessage: (matchCount: number, nodeCount: number) => string) => {
+      if (resultsToReplace.length === 0) {
+        showMessage('当前没有可替换的搜索结果');
+        return;
+      }
+
+      const drafts = createDocumentSearchReplacementDrafts(resultsToReplace, searchReplacementText);
+      const replaceResult = replaceMultipleLayoutNodeTexts({
+        replacements: drafts,
+        selectedNodeId: resultsToReplace[0]?.nodeId ?? null,
+      });
+
+      if (!replaceResult.didUpdate) {
+        showMessage('没有内容需要替换');
+        return;
+      }
+
+      if (replaceResult.selectedNodeId) {
+        setRequestedScrollToNodeId(replaceResult.selectedNodeId);
+      }
+      setSelectedSearchResultId(null);
+      showMessage(successMessage(resultsToReplace.length, replaceResult.updatedCount));
+    },
+    [replaceMultipleLayoutNodeTexts, searchReplacementText, showMessage],
+  );
+
+  const handleReplaceSelectedSearchResult = useCallback(() => {
+    const selectedResult = selectedSearchResultId
+      ? searchResults.find((result) => result.id === selectedSearchResultId) ?? null
+      : searchResults[0] ?? null;
+
+    if (!selectedResult) {
+      showMessage('请先选择一个搜索结果');
+      return;
+    }
+
+    handleReplaceSearchResults([selectedResult], () => '已替换当前命中');
+  }, [handleReplaceSearchResults, searchResults, selectedSearchResultId, showMessage]);
+
+  const handleReplaceAllSearchResults = useCallback(() => {
+    handleReplaceSearchResults(
+      searchResults,
+      (matchCount, nodeCount) => `已替换 ${matchCount} 处命中，影响 ${nodeCount} 个节点`,
+    );
+  }, [handleReplaceSearchResults, searchResults]);
+
+  useEffect(() => {
+    if (!selectedSearchResultId) {
+      return;
+    }
+
+    if (!searchResults.some((result) => result.id === selectedSearchResultId)) {
+      setSelectedSearchResultId(null);
+    }
+  }, [searchResults, selectedSearchResultId]);
 
   const handleRefreshAiGenerationRecords = useCallback(async () => {
     try {
@@ -513,6 +619,13 @@ export function AppShell(): JSX.Element {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && key === 'f') {
+        event.preventDefault();
+        handleOpenSearchPanel();
+        return;
+      }
+
       const target = event.target as HTMLElement | null;
       const isEditingTarget =
         !!target &&
@@ -521,8 +634,6 @@ export function AppShell(): JSX.Element {
       if (isEditingTarget || !(event.ctrlKey || event.metaKey)) {
         return;
       }
-
-      const key = event.key.toLowerCase();
       if (key === 'z' && event.shiftKey) {
         event.preventDefault();
         handleRedoLayoutDocument();
@@ -543,7 +654,7 @@ export function AppShell(): JSX.Element {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleRedoLayoutDocument, handleUndoLayoutDocument]);
+  }, [handleOpenSearchPanel, handleRedoLayoutDocument, handleUndoLayoutDocument]);
 
   const handleDragStart = (e: React.DragEvent, entry: WorkspaceDirectoryEntry) => {
     setDragSource(entry.path);
@@ -593,11 +704,13 @@ export function AppShell(): JSX.Element {
         onSaveDocument={handleSaveDocument}
         onSaveDocumentAs={handleSaveDocumentAs}
         onExportPdf={handleExportPdf}
+        onExportDocx={handleExportDocx}
         onUndo={handleUndoLayoutDocument}
         onRedo={handleRedoLayoutDocument}
         onImportFont={handleImportFont}
         onInsertImage={handleInsertImage}
         onInsertChemistryApparatus={handleInsertChemistryApparatus}
+        onInsertChemistryComposition={handleInsertChemistryComposition}
         onInsertEquation={handleInsertEquation}
         onInsertTable={handleInsertTable}
         onInsertList={handleInsertList}
@@ -608,6 +721,7 @@ export function AppShell(): JSX.Element {
         onToggleLeftPanel={toggleLeftPanel}
         onToggleRightPanel={toggleRightPanel}
         onChangeViewMode={setWorkspaceViewMode}
+        onOpenSearchPanel={handleOpenSearchPanel}
         onOpenAiPanel={() => {
           // 确保右侧面板打开，然后切换到 AI 助手 Tab
           if (!isRightPanelOpen) {
@@ -641,6 +755,18 @@ export function AppShell(): JSX.Element {
             onDeleteEntry={handleDeleteEntry}
             searchQuery={searchQuery}
             onSearchQueryChange={setSearchQuery}
+            searchResults={searchResults}
+            selectedSearchResultId={selectedSearchResultId}
+            searchCaseSensitive={searchCaseSensitive}
+            onSearchCaseSensitiveChange={setSearchCaseSensitive}
+            searchWholeWord={searchWholeWord}
+            onSearchWholeWordChange={setSearchWholeWord}
+            searchReplacementText={searchReplacementText}
+            onSearchReplacementTextChange={setSearchReplacementText}
+            searchFocusRequestKey={searchFocusRequestKey}
+            onSelectSearchResult={handleSelectSearchResult}
+            onReplaceSelectedSearchResult={handleReplaceSelectedSearchResult}
+            onReplaceAllSearchResults={handleReplaceAllSearchResults}
             aiGenerationRecords={aiGenerationRecords}
             aiGenerationRecordDirectoryPath={aiGenerationRecordDirectoryPath}
             aiGenerationRecordsError={aiGenerationRecordsError}
@@ -692,6 +818,7 @@ export function AppShell(): JSX.Element {
                 documentBlocks={layoutDocument?.blocks ?? []}
                 documentResources={layoutDocument?.resources ?? []}
                 documentStyles={layoutDocument?.styles ?? { blockStyles: {}, textStyles: {} }}
+                semanticRoleConfig={layoutDocument?.meta.semanticRoleConfig}
                 pageLayouts={displayedPageLayouts}
                 parseError={parseError}
                 parseState={parseState}

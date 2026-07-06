@@ -64,6 +64,7 @@ button {
 }
 
 .topbar {
+  position: relative;
   display: grid;
   grid-template-rows: 52px 43px;
   min-width: 0;
@@ -224,8 +225,9 @@ button {
   min-width: 76px;
 }
 
-.chemistry-apparatus-select {
-  min-width: 118px;
+.chemistry-apparatus-trigger {
+  min-width: 98px;
+  font-weight: 650;
 }
 
 .format-number-input {
@@ -300,12 +302,611 @@ button {
   border-color: #bfe0e2;
 }
 
+.format-select-button.active {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
+}
+
 .insert-placeholder-button {
   color: #6b7280;
 }
 
 .insert-group {
   position: relative;
+}
+
+.chemistry-apparatus-panel {
+  position: absolute;
+  top: 96px;
+  right: 16px;
+  z-index: 1300;
+  width: min(430px, calc(100vw - 24px));
+  max-height: min(640px, calc(100vh - 118px));
+  padding: 12px;
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid #cfdbe5;
+  border-radius: 8px;
+  box-shadow:
+    0 20px 44px rgb(31 42 55 / 22%),
+    0 0 0 1px rgb(255 255 255 / 86%);
+}
+
+.chemistry-apparatus-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.chemistry-apparatus-panel-head strong {
+  color: #1f2a37;
+  font-size: 14px;
+}
+
+.chemistry-apparatus-panel-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chemistry-composer-open-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  color: #0d5663;
+  background: #edf8f8;
+  border: 1px solid #bfe0e2;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chemistry-composer-open-button:hover {
+  background: #e4f3f4;
+  border-color: #99cfd3;
+}
+
+.chemistry-apparatus-close {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: #5d6a7c;
+  background: #f5f8fa;
+  border: 1px solid #d7e1ea;
+  border-radius: 6px;
+}
+
+.chemistry-apparatus-close:hover {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
+}
+
+.chemistry-apparatus-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.chemistry-apparatus-tabs button {
+  height: 28px;
+  color: #475467;
+  background: #f7f9fb;
+  border: 1px solid #d9e3eb;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.chemistry-apparatus-tabs button:hover,
+.chemistry-apparatus-tabs button.active {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
+}
+
+.chemistry-apparatus-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.chemistry-apparatus-card {
+  display: grid;
+  grid-template-rows: 106px 34px 18px;
+  gap: 6px;
+  min-width: 0;
+  height: 176px;
+  padding: 8px;
+  color: #263646;
+  text-align: left;
+  background: #fbfcfd;
+  border: 1px solid #d9e3eb;
+  border-radius: 8px;
+}
+
+.chemistry-apparatus-card:hover {
+  color: #0d5663;
+  background: #f1f8f8;
+  border-color: #a9d5d8;
+  box-shadow: 0 10px 22px rgb(31 42 55 / 10%);
+}
+
+.chemistry-apparatus-thumb {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: 106px;
+  padding: 5px;
+  background: #ffffff;
+  border: 1px solid #e1e8ef;
+  border-radius: 6px;
+}
+
+.chemistry-apparatus-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.chemistry-apparatus-name {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.chemistry-apparatus-source {
+  color: #667085;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.chemistry-composer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 34%);
+}
+
+.chemistry-composer-dialog {
+  display: grid;
+  grid-template-rows: 54px minmax(0, 1fr) 56px;
+  width: min(1360px, calc(100vw - 48px));
+  height: min(760px, calc(100vh - 48px));
+  min-height: 620px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #cfdbe5;
+  border-radius: 8px;
+  box-shadow: 0 26px 70px rgb(15 23 42 / 30%);
+}
+
+.chemistry-composer-header,
+.chemistry-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  background: #fbfcfd;
+  border-bottom: 1px solid #d9e3eb;
+}
+
+.chemistry-composer-header div {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.chemistry-composer-header strong {
+  color: #1f2a37;
+  font-size: 15px;
+}
+
+.chemistry-composer-header span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.chemistry-composer-close {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #475467;
+  background: #ffffff;
+  border: 1px solid #d7e1ea;
+  border-radius: 6px;
+}
+
+.chemistry-composer-close:hover {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
+}
+
+.chemistry-composer-body {
+  display: grid;
+  grid-template-columns: 278px minmax(0, 1fr) 248px;
+  min-height: 0;
+  background: #f4f7f9;
+}
+
+.chemistry-composer-library {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  padding: 12px;
+  background: #ffffff;
+  border-right: 1px solid #d9e3eb;
+}
+
+.chemistry-composer-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.chemistry-composer-tabs button {
+  height: 28px;
+  color: #475467;
+  background: #f7f9fb;
+  border: 1px solid #d9e3eb;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chemistry-composer-tabs button:hover,
+.chemistry-composer-tabs button.active {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
+}
+
+.chemistry-composer-part-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.chemistry-composer-part-card {
+  display: grid;
+  grid-template-rows: 74px 18px;
+  gap: 5px;
+  height: 105px;
+  min-width: 0;
+  padding: 7px;
+  color: #263646;
+  text-align: center;
+  background: #fbfcfd;
+  border: 1px solid #d9e3eb;
+  border-radius: 8px;
+}
+
+.chemistry-composer-part-card:hover {
+  color: #0d5663;
+  background: #f1f8f8;
+  border-color: #a9d5d8;
+}
+
+.chemistry-composer-part-card span {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: 74px;
+  background: #ffffff;
+  border: 1px solid #e1e8ef;
+  border-radius: 6px;
+}
+
+.chemistry-composer-part-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.chemistry-composer-part-card strong {
+  overflow: hidden;
+  color: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chemistry-composer-workbench {
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+}
+
+.chemistry-composer-inspector {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  background: #fbfcfd;
+  border-left: 1px solid #d9e3eb;
+}
+
+.chemistry-composer-inspector-head {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.chemistry-composer-inspector-head strong {
+  color: #1f2a37;
+  font-size: 14px;
+}
+
+.chemistry-composer-inspector-head span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.chemistry-composer-inspector-body {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.chemistry-composer-inspector-card,
+.chemistry-composer-inspector-toggle,
+.chemistry-composer-inspector-group,
+.chemistry-composer-inspector-range,
+.chemistry-composer-inspector-hint,
+.chemistry-composer-inspector-empty {
+  background: #ffffff;
+  border: 1px solid #d9e3eb;
+  border-radius: 8px;
+}
+
+.chemistry-composer-inspector-card {
+  display: grid;
+  gap: 4px;
+  padding: 10px 11px;
+}
+
+.chemistry-composer-inspector-card strong {
+  color: #1f2a37;
+  font-size: 13px;
+}
+
+.chemistry-composer-inspector-card span,
+.chemistry-composer-inspector-range small,
+.chemistry-composer-inspector-group small,
+.chemistry-composer-inspector-hint,
+.chemistry-composer-inspector-empty {
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.chemistry-composer-inspector-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 11px;
+  color: #263646;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.chemistry-composer-inspector-toggle input {
+  width: 14px;
+  height: 14px;
+  accent-color: #176b7a;
+}
+
+.chemistry-composer-inspector-range {
+  display: grid;
+  gap: 8px;
+  padding: 10px 11px;
+}
+
+.chemistry-composer-inspector-range span,
+.chemistry-composer-inspector-group > span {
+  color: #263646;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chemistry-composer-inspector-range input[type='range'] {
+  width: 100%;
+  accent-color: #176b7a;
+}
+
+.chemistry-composer-inspector-group {
+  display: grid;
+  gap: 8px;
+  padding: 10px 11px;
+}
+
+.chemistry-composer-preset-group {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.chemistry-composer-preset-button {
+  height: 30px;
+  color: #344054;
+  background: #ffffff;
+  border: 1px solid #d9e3eb;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chemistry-composer-preset-button:hover,
+.chemistry-composer-preset-button.active {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
+}
+
+.chemistry-composer-inspector-hint,
+.chemistry-composer-inspector-empty {
+  padding: 10px 11px;
+}
+
+.chemistry-composer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 7px 8px;
+  background: #ffffff;
+  border: 1px solid #d9e3eb;
+  border-radius: 8px 8px 0 0;
+}
+
+.chemistry-composer-toolbar > span {
+  width: 1px;
+  height: 22px;
+  margin: 0 3px;
+  background: #d9e3eb;
+}
+
+.chemistry-composer-toolbar button,
+.chemistry-composer-label-input {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 28px;
+  color: #344054;
+  background: #ffffff;
+  border: 1px solid #d9e3eb;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chemistry-composer-toolbar button {
+  min-width: 30px;
+  padding: 0 8px;
+}
+
+.chemistry-composer-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.chemistry-composer-toolbar button:not(:disabled):hover {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
+}
+
+.chemistry-composer-label-input {
+  width: 170px;
+  padding: 0 7px;
+}
+
+.chemistry-composer-label-input input {
+  min-width: 0;
+  width: 100%;
+  height: 24px;
+  color: #344054;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font: inherit;
+}
+
+.chemistry-composer-stage-shell {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background:
+    linear-gradient(90deg, rgb(209 216 225 / 35%) 1px, transparent 1px),
+    linear-gradient(rgb(209 216 225 / 35%) 1px, transparent 1px),
+    #edf1f5;
+  background-size: 20px 20px;
+  border: 1px solid #d9e3eb;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+}
+
+.chemistry-composer-stage {
+  width: 760px;
+  height: 460px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #cfdbe5;
+  box-shadow: 0 12px 34px rgb(31 42 55 / 10%);
+}
+
+.chemistry-composer-footer {
+  justify-content: flex-end;
+  border-top: 1px solid #d9e3eb;
+  border-bottom: 0;
+}
+
+.chemistry-composer-primary,
+.chemistry-composer-secondary {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.chemistry-composer-primary {
+  color: #ffffff;
+  background: #176b7a;
+  border: 1px solid #176b7a;
+}
+
+.chemistry-composer-primary:hover {
+  background: #0d5663;
+  border-color: #0d5663;
+}
+
+.chemistry-composer-secondary {
+  color: #344054;
+  background: #ffffff;
+  border: 1px solid #d9e3eb;
+}
+
+.chemistry-composer-secondary:hover {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
 }
 
 .equation-template-group {
@@ -418,6 +1019,108 @@ button {
 
 .floating-format-toolbar-below {
   transform-origin: center top;
+}
+
+.floating-toolbar-menu-control {
+  position: relative;
+  display: inline-flex;
+}
+
+.floating-toolbar-select-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 92px;
+  max-width: 132px;
+  height: 24px;
+  padding: 0 7px;
+  color: #344054;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.floating-toolbar-select-button.compact {
+  min-width: 58px;
+  max-width: 72px;
+}
+
+.floating-toolbar-select-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-toolbar-select-button:hover,
+.floating-toolbar-select-button[aria-expanded='true'] {
+  color: #0d5663;
+  background: #eef7f7;
+  border-color: #c7e1e2;
+}
+
+.floating-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  z-index: 1;
+  display: grid;
+  gap: 6px;
+  min-width: 132px;
+  max-height: 260px;
+  padding: 8px;
+  overflow: auto;
+  background: rgb(255 255 255 / 99%);
+  border: 1px solid #c9dde6;
+  border-radius: 8px;
+  box-shadow: 0 14px 28px rgb(31 42 55 / 18%);
+}
+
+.floating-format-toolbar-below .floating-toolbar-menu {
+  top: auto;
+  bottom: calc(100% + 7px);
+}
+
+.floating-toolbar-font-menu {
+  width: 176px;
+}
+
+.floating-toolbar-size-menu {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 118px;
+}
+
+.floating-toolbar-menu-section {
+  display: grid;
+  gap: 4px;
+}
+
+.floating-toolbar-menu-title {
+  padding: 2px 4px;
+  color: #718096;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.floating-toolbar-menu-item {
+  min-width: 0;
+  min-height: 24px;
+  padding: 4px 7px;
+  color: #314253;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.floating-toolbar-menu-item:hover,
+.floating-toolbar-menu-item.active {
+  color: #0d5663;
+  background: #eef7f7;
+  border-color: #c7e1e2;
 }
 
 .block-selection-toolbar {
@@ -1155,15 +1858,102 @@ button {
 
 .search-results {
   display: grid;
-  gap: 4px;
+  gap: 6px;
+}
+
+.search-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.search-option-chip {
+  min-height: 28px;
+  padding: 5px 10px;
+  color: #526170;
+  background: #ffffff;
+  border: 1px solid #d9e1e8;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.search-option-chip:hover {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
+}
+
+.search-option-chip.active {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #8ec7cf;
+}
+
+.replace-box {
+  display: grid;
+  gap: 8px;
+}
+
+.search-replace-input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 12px;
+  color: #304050;
+  font-size: 13px;
+  background: #ffffff;
+  border: 1px solid #d9e1e8;
+  border-radius: 10px;
+  outline: none;
+}
+
+.search-replace-input:focus {
+  border-color: #0d5663;
+}
+
+.search-replace-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.search-action-btn {
+  min-height: 30px;
+  padding: 6px 12px;
+  color: #526170;
+  background: #ffffff;
+  border: 1px solid #d9e1e8;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.search-action-btn:hover:not(:disabled) {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #bfe0e2;
+}
+
+.search-action-btn.primary {
+  color: #ffffff;
+  background: #0d5663;
+  border-color: #0d5663;
+}
+
+.search-action-btn.primary:hover:not(:disabled) {
+  color: #ffffff;
+  background: #0a4650;
+  border-color: #0a4650;
+}
+
+.search-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .search-result-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 10px;
+  display: block;
+  min-height: 58px;
+  padding: 9px 10px;
   color: #304050;
   text-align: left;
   background: transparent;
@@ -1179,10 +1969,42 @@ button {
   border-color: #bfe0e2;
 }
 
-.search-result-name {
+.search-result-row.active {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #79b5c1;
+}
+
+.search-result-content {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.search-result-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: #66788a;
+  font-size: 11px;
+}
+
+.search-result-kind {
+  color: #223243;
+  font-weight: 700;
+}
+
+.search-result-range {
+  flex-shrink: 0;
+}
+
+.search-result-preview {
   overflow: hidden;
+  color: #344256;
+  font-size: 12px;
+  line-height: 1.45;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .search-highlight {
@@ -1693,8 +2515,93 @@ button {
   box-shadow: 0 0 0 3px rgb(22 111 77 / 16%), inset 0 0 0 2px rgb(22 111 77 / 24%);
 }
 
-.semantic-role[data-semantic-role] {
+.page-body .semantic-block-preset[data-semantic-preset] {
+  position: relative;
   scroll-margin-top: 16px;
+}
+
+.page-body .semantic-role[data-semantic-role] {
+  position: relative;
+  scroll-margin-top: 16px;
+}
+
+.page-body .semantic-block-preset-defaultSemanticFrame[data-semantic-preset] {
+  border-left: 3px solid var(--semantic-role-color, #3b82f6);
+}
+
+.page-body .semantic-block-preset-defaultSemanticFrame[data-semantic-preset]:not(.selected):not(.block-range-selected) {
+  background-color: var(--semantic-role-bg, rgb(59 130 246 / 8%));
+}
+
+.page-body .semantic-block-preset-sideAccent[data-semantic-preset] {
+  border-left: 4px solid var(--semantic-role-color, #3b82f6);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--semantic-role-color, #3b82f6) 18%, transparent);
+}
+
+.page-body .semantic-block-preset-sideAccent[data-semantic-preset]:not(.selected):not(.block-range-selected) {
+  background-color: var(--semantic-role-bg, rgb(59 130 246 / 6%));
+}
+
+.page-body .semantic-block-preset-softCard[data-semantic-preset] {
+  border-radius: 8px;
+  outline: 1px solid color-mix(in srgb, var(--semantic-role-color, #3b82f6) 36%, #ffffff);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+}
+
+.page-body .semantic-block-preset-softCard[data-semantic-preset]:not(.selected):not(.block-range-selected) {
+  background-color: var(--semantic-role-bg, rgb(59 130 246 / 8%));
+}
+
+.page-body .semantic-block-preset-warningFrame[data-semantic-preset] {
+  border-left: 4px solid var(--semantic-role-color, #d97706);
+  border-radius: 8px;
+  outline: 1px solid color-mix(in srgb, var(--semantic-role-color, #d97706) 52%, #ffffff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--semantic-role-color, #d97706) 12%, transparent);
+}
+
+.page-body .semantic-block-preset-warningFrame[data-semantic-preset]:not(.selected):not(.block-range-selected) {
+  background-color: var(--semantic-role-bg, rgb(217 119 6 / 10%));
+}
+
+.semantic-role-label {
+  position: absolute;
+  top: -11px;
+  left: 8px;
+  z-index: 2;
+  display: inline-flex;
+  max-width: min(190px, calc(100% - 16px));
+  pointer-events: none;
+}
+
+.semantic-role-label::before,
+.page-body :is(ol.semantic-role, ul.semantic-role)[data-semantic-label]::before {
+  display: block;
+  max-width: 100%;
+  padding: 1px 6px;
+  overflow: hidden;
+  color: var(--semantic-role-color, #3b82f6);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--semantic-role-color, #3b82f6) 48%, #ffffff);
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 8%);
+}
+
+.semantic-role-label::before {
+  content: attr(data-semantic-label);
+}
+
+.page-body :is(ol.semantic-role, ul.semantic-role)[data-semantic-label]::before {
+  content: attr(data-semantic-label);
+  position: absolute;
+  top: -11px;
+  left: 8px;
+  z-index: 2;
+  pointer-events: none;
 }
 
 /* 选中图片显示可拖动手势 */

@@ -246,7 +246,71 @@
       "type": "返工",
       "description": "V1 化学图式虽然打通了插入、保存和导出链路，但素材表现偏单个仪器图标，缺少教材/试卷常用的组合装置、导管、橡胶塞、液面、箭头和实验标签，用户反馈“太简陋”，无法满足真实教学资源使用预期。",
       "impactScope": "PH2-05B 化学实验图式插入、Toolbar 顶端插入入口、化学图式素材库、LayoutDocument 图片块预览与导出",
-      "currentHandling": "已确认按 `PH2-05B-chemistry-apparatus-template-gallery-v2` 返工：把素材升级为教材式组合装置模板，并把顶栏下拉改为带缩略图的小型素材面板；仍坚持项目原创 SVG 与现有图片块链路，不抓取版权不明教学图片。"
+      "currentHandling": "已完成 `PH2-05B-chemistry-apparatus-template-gallery-v2` 返工：`src/constants/chemistryApparatus.ts` 已升级为 10 个项目原创教材式组合实验装置 SVG 模板，顶端“化学图式”入口已从普通下拉改为带分类、缩略图、中文名称和授权提示的小型素材面板；插入仍复用现有图片块链路，未抓取或内置版权不明教学图片。`npm run typecheck` 与 `npm run build` 已通过。"
+    },
+    {
+      "id": "RISK-032",
+      "date": "2026-07-05",
+      "type": "范围调整",
+      "description": "化学图式从成套模板升级到可组合编辑器后，范围会扩展到画布引擎、素材部件管理、选中拖拽、缩放旋转、导管线、文字标签、撤销重做和导出插入等多条链路；若自研底层画布能力，会显著增加交互缺陷和维护成本。",
+      "impactScope": "PH2-05B 化学线稿图库、化学图式组合编辑器、Toolbar 顶端插入入口、LayoutDocument 图片块插入、CanvasPane 画布预览、HTML/PDF 导出",
+      "currentHandling": "已完成 `PH2-05B-chemistry-line-art-gallery-and-composer-v1` 最小闭环：已安装 React 18 兼容的 `konva@10.3.0` 与 `react-konva@18.2.16`，新增 14 个项目原创化学线稿部件，并建立 Konva 组合设计器，支持部件添加、移动、缩放、旋转、删除、撤销重做、中文标签、简单导管线和导出图片插入；未做完整仿真、复杂吸附布线、外部素材服务或分子结构式编辑。`npm run typecheck` 与 `npm run build` 已通过。"
+    },
+    {
+      "id": "RISK-033",
+      "date": "2026-07-05",
+      "type": "缺陷",
+      "description": "Markdown 导入时会把同一个顶层列表中的多个一级列表项合并到一个 `list` 块里，导致用户期望的“每个一级列表单独成块”无法成立；后续分页、块选择和用户自行合并的语义边界都会被提前合并。",
+      "impactScope": "PH2-04 Markdown 导入到文档模型、Document Model 列表结构、CanvasPane 块选择、HTML/PDF 导出、分页块粒度",
+      "currentHandling": "已完成 `PH2-04-top-level-list-single-block-v1` 最小修复：Markdown 导入时每个一级列表项会产出独立 `list` 块；子列表仍保留在同块内；有序列表通过 `metadata.start` 保留原编号。定向回归、`typecheck` 和 `build` 均已通过。"
+    },
+    {
+      "id": "RISK-034",
+      "date": "2026-07-06",
+      "type": "返工",
+      "description": "当前化学部件和模板虽然已具备原创 SVG、可组合和可插入链路，但视觉仍偏粗线示意图，器皿轮廓、液面、塞子、导管和局部细节不够精细，用户明确反馈“画的也太粗糙了”，会影响真实教学场景采用意愿。",
+      "impactScope": "PH2-05B 化学线稿图库、化学图式组合编辑器缩略图、Toolbar 顶端化学图式入口、LayoutDocument 图片块预览与导出",
+      "currentHandling": "已完成 `PH2-05B-chemistry-svg-refinement-v1` 返工：保持现有图库分类、组合编辑器和插入链路不变，已重绘 `src/constants/chemistryApparatus.ts` 中的 14 个部件和 10 个模板 SVG，统一提升器皿比例、厚薄线层级、液面、刻度、塞子、导管与支架细节，继续坚持项目原创 SVG。`npm run typecheck` 与 `npm run build` 已通过。"
+    },
+    {
+      "id": "RISK-035",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "化学组合设计器若直接进入容器属性编辑，会在基础器材不完整时继续放大交互复杂度；用户已明确要求先把基本元素做齐，再做容器编辑能力。",
+      "impactScope": "PH2-05B 化学线稿图库、化学图式组合编辑器、Toolbar 顶端化学图式入口、LayoutDocument 图片块插入与导出",
+      "currentHandling": "已完成 `PH2-05B-chemistry-basic-elements-library-v1`：项目原创可组合部件已从 14 个扩充到 40 个，并按容器、计量器具、导管与塞、支架与加热、分离器材、操作器材 6 类组织；继续复用现有组合设计器添加、拖拽、缩放、旋转、撤销重做和导出插入链路。液面高度、刻度显隐、瓶塞状态、导管连接点吸附、成组/解组和模板另存继续后续拆步。"
+    },
+    {
+      "id": "RISK-036",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "容器编辑若直接扩到所有化学部件，会把当前组合设计器从“基础状态编辑”膨胀成完整图形约束系统；同时，动态液面、刻度和塞子需要和现有拖拽、缩放、旋转、导出链路保持一致，否则容易出现画面和导出不一致。",
+      "impactScope": "PH2-05B 化学容器编辑 V1、ChemistryComposerDialog、化学部件动态渲染、组合设计器导出插入链路",
+      "currentHandling": "已完成 `PH2-05B-chemistry-container-editing-v1`：当前先覆盖 10 类基础容器与计量器具，并补齐液面显示、液面高度、刻度显示、塞子显示和姿态预设；继续复用现有拖拽、缩放、旋转、撤销重做和导出 PNG 链路。随后已完成 `PH2-05B-chemistry-special-container-editing-v1`：继续只把 `分液漏斗` 与 `滴定管` 两类特殊容器纳入可编辑范围，并在既有容器状态模型上最小补齐阀门开关；不把其余器材、连接点扩容、动画放液或实验仿真一起带入本步，避免范围再次膨胀。导管连接点吸附扩容、成组/解组、模板另存和插入文档后的二次编辑继续留在后续拆步。"
+    },
+    {
+      "id": "RISK-037",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "导管连接点吸附若一步扩到自动避障布线、导管部件互吸附和成组约束，会把当前最小导管交互放大成完整连线编辑器；同时，吸附关系必须和容器移动、缩放、旋转保持一致，否则会出现导管端点漂移或导出位置错误。",
+      "impactScope": "PH2-05B 化学导管连接点吸附 V1、ChemistryComposerDialog、化学部件连接点元数据、组合设计器导出插入链路",
+      "currentHandling": "已完成 `PH2-05B-chemistry-connector-snap-v1`：当前只覆盖导管线端点到 10 类容器与单孔塞 / 双孔塞连接点的吸附；吸附后端点会跟随目标部件移动、缩放、旋转同步更新，手动整体拖动、缩放或旋转导管线时会主动解除吸附。自动避障布线、导管 SVG 部件互吸附、自动对齐、成组/解组和模板另存继续留在后续拆步。"
+    },
+    {
+      "id": "RISK-038",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "当前导出主链路围绕 `exportHtml + printToPDF` 建立，导出 HTML 大量依赖 `layout-asset://` 本地资源协议、主题背景纹理、SVG 装饰和复杂 CSS；若在同一步强行追求 DOCX 与 PDF 1:1 保真，会把范围放大到资源协议改造、图片嵌入、公式渲染、多栏分页和 Word 专属版式映射等多条链路。",
+      "impactScope": "PH2-21 DOCX 导出 V1、ExportService、Electron IPC、Toolbar 导出入口、图片资源协议、页眉页脚与页面设置导出映射",
+      "currentHandling": "已完成 `PH2-21-docx-export-v1` 最小闭环：工具栏已新增 `导出 DOCX`，renderer / preload / 主进程已形成独立 DOCX 保存链路；已覆盖标题、段落、列表、表格、图片、代码块、引用块、分页符、基础页尺寸页边距、基础页眉页脚与页码；本地图片会读取真实资源嵌入，SVG 会先转 PNG 再嵌入，避免 `layout-asset://` 直接泄漏到 DOCX。`npm run typecheck`、`npm run build` 与最小 DOCX 烟测已通过。2026-07-06 用户进一步反馈：当前问题不是表格，而是预览里能填满的内容在 DOCX 中因为“预览每页一个 section + nextPage”被提前强制翻页，导致页面底部留下大块空白。该问题已通过 `PH2-21-docx-pagination-flow-fix-v1` 完成返修：同页设置一致时，DOCX 现已改为连续正文流导出，不再按预览每页硬切 `nextPage` section；用户显式 `pageBreak` 仍会输出为真实分页符。连续流模式下 `{本页标题}` 不再承诺与预览页逐页 1:1，对应更高保真的页眉语义留待后续深化。主题纹理、SVG 装饰、多栏、复杂图片环绕/裁剪和公式高保真 1:1 继续留在后续任务。"
+    },
+    {
+      "id": "RISK-039",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "语义块模板如果一步扩到所有块类型、允许改变块高度，或与现有文档模板/主题同权叠加，会同时牵动分页高度、标题主题装饰、列表/引用外壳冲突和旧 `.layout` 文件迁移脏写风险。",
+      "impactScope": "PH2-07 语义块模板 V1、LayoutDocument 块级样式状态、RightPanel 对象属性、CanvasPane 画布预览、HTML/PDF 导出、`.layout` 保存恢复、旧文件兼容",
+      "currentHandling": "已完成 `PH2-07-semantic-block-template-v1`：当前已把风险收口为最小闭环并落地代码，只支持 `paragraph / heading / list / blockquote` 4 类块；内置 `默认语义框 / 侧边强调 / 浅色卡片 / 警示框` 4 种不改高度的块模板；块模板只接管外壳样式，普通块和语义块共用同一套模板库；旧文件只在运行时按“语义角色 -> 默认块模板”解析，不批量回填新字段；只有用户手动改块模板或触发语义前备份时才写入块级状态。后续若继续扩到更多块类型、可改高度模板或模板编辑器，需另拆小步并重新评估分页与主题冲突。"
     }
   ]
 }

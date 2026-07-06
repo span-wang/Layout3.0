@@ -142,13 +142,62 @@
       "title": "搜索与替换",
       "priority": "P2",
       "moduleIds": [
-        "editor-module"
+        "editor-module",
+        "ui-components"
       ],
       "milestoneIds": [
         "M4"
       ],
-      "status": "未开始",
-      "acceptance": "支持全文搜索与替换。"
+      "status": "已完成",
+      "acceptance": "支持全文搜索与替换。",
+      "startedOn": "2026-07-05",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH3-04-current-document-search-replace-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：当前文档搜索与替换 V1",
+        "confirmedOn": "2026-07-05",
+        "startedOn": "2026-07-05",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成当前文档搜索与替换 V1：左侧“搜索”已从文件名搜索升级为当前 `.layout` 文档全文搜索，覆盖标题、段落、列表项、表格单元格、代码、公式、图片 alt 与引用块子内容；支持区分大小写、全字匹配、结果列表、点击定位、替换当前命中和替换全部，并复用现有撤销栈支持撤销替换。本步继续保持边界，不扩展跨文件/当前文件夹全文搜索和正则搜索，避免扩大到文件系统索引、批量打开和跨文件写回链路。",
+        "included": [
+          "当前 `.layout` 文档全文搜索，覆盖标题、段落、列表项、表格单元格、代码、公式、图片 alt 与引用块子内容。",
+          "搜索选项支持区分大小写和全字匹配。",
+          "搜索结果列表展示命中数量、内容类型、上下文片段和关键词高亮。",
+          "点击搜索结果后选中对应节点，并滚动到画布位置。",
+          "顶栏“搜索”按钮和 Ctrl/Cmd + F 打开左侧搜索面板，并聚焦搜索输入框。",
+          "替换当前命中和替换全部，替换前通过结果列表预览受影响内容。",
+          "替换写回复用现有 LayoutDocument 节点文字更新链路，并进入既有撤销历史。",
+          "界面文案、按钮、提示和必要代码注释继续使用中文。",
+          "完成后运行 `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不做当前文件夹或跨文件全文搜索。",
+          "不做正则搜索。",
+          "不做跨节点复杂选区替换。",
+          "不新增搜索索引数据库、后台扫描进程或文件系统监听。",
+          "不修改 `.layout` 顶层结构、分页算法、导出链路或图片资源协议。"
+        ],
+        "followup": [
+          "当前文件夹和跨文件全文搜索：后续继续归属 `PH3-04` 增强小步。",
+          "正则搜索、搜索历史、结果筛选和批量范围限制：后续继续归属 `PH3-04` 增强小步。",
+          "仅替换当前选区、跨节点复杂替换和更细粒度命中高亮编辑：后续归属搜索替换增强或富文本编辑增强任务。",
+          "大文档搜索性能优化与后台索引：后续归属第四阶段性能优化。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前搜索模块 V1 边界可以执行。",
+          "开工前写回本步边界，明确本步纳入、本步明确不纳入和后续归属任务。",
+          "`src/services/DocumentSearchService.ts` 已完成当前文档搜索、命中片段预览与替换草稿生成逻辑。",
+          "`src/components/layout/SearchPanel.tsx` 已新增搜索与替换面板，支持匹配选项、结果列表和替换按钮。",
+          "`src/components/layout/AppShell.tsx`、`LeftPanel.tsx`、`Toolbar.tsx` 已接通顶栏搜索按钮、Ctrl/Cmd + F、结果定位和批量替换入口。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\DocumentSearchService.test.ts`，2 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "`npm run progress:build` 成功。",
+          "`npm run progress:check` 成功。"
+        ],
+        "resolution": "已完成 `PH3-04-current-document-search-replace-v1`：当前文档全文搜索与替换能力已经可用，搜索结果可定位到画布，替换当前命中和替换全部会进入统一撤销历史；跨文件搜索、正则搜索和复杂选区替换继续留在后续增强小步。"
+      }
     },
     {
       "id": "PH3-05",

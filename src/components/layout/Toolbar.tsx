@@ -37,12 +37,22 @@ import {
   Type,
   Underline,
   Undo2,
+  X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
 import { useState, type MouseEvent } from 'react';
 import { ToolButton } from '@/components/common/ToolButton';
-import { chemistryApparatusItems, type ChemistryApparatusId } from '@/constants/chemistryApparatus';
+import {
+  ChemistryComposerDialog,
+  type ChemistryCompositionInsertPayload,
+} from '@/components/layout/ChemistryComposerDialog';
+import {
+  chemistryApparatusCategories,
+  chemistryApparatusItems,
+  type ChemistryApparatusCategory,
+  type ChemistryApparatusId,
+} from '@/constants/chemistryApparatus';
 import { fontFamilyPlaceholderValue, textFontFamilyGroups } from '@/constants/fontFamilies';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import { workspaceViewModes } from '@/constants/workspace';
@@ -82,11 +92,13 @@ interface ToolbarProps {
   onSaveDocument: () => void;
   onSaveDocumentAs: () => void;
   onExportPdf: () => void;
+  onExportDocx: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onImportFont: () => void;
   onInsertImage: () => void;
   onInsertChemistryApparatus: (apparatusId: ChemistryApparatusId) => void;
+  onInsertChemistryComposition: (payload: ChemistryCompositionInsertPayload) => void;
   onInsertEquation: () => void;
   onInsertTable: () => void;
   onInsertList: (kind: InsertListBlockKind) => void;
@@ -97,6 +109,7 @@ interface ToolbarProps {
   onToggleLeftPanel: () => void;
   onToggleRightPanel: () => void;
   onChangeViewMode: (mode: WorkspaceViewMode) => void;
+  onOpenSearchPanel: () => void;
   onOpenAiPanel: () => void;
 }
 
@@ -293,11 +306,13 @@ export function Toolbar({
   onSaveDocument,
   onSaveDocumentAs,
   onExportPdf,
+  onExportDocx,
   onUndo,
   onRedo,
   onImportFont,
   onInsertImage,
   onInsertChemistryApparatus,
+  onInsertChemistryComposition,
   onInsertEquation,
   onInsertTable,
   onInsertList,
@@ -308,6 +323,7 @@ export function Toolbar({
   onToggleLeftPanel,
   onToggleRightPanel,
   onChangeViewMode,
+  onOpenSearchPanel,
   onOpenAiPanel,
 }: ToolbarProps): JSX.Element {
   const layoutDocument = useAppStore((state) => state.layoutDocument);
@@ -343,7 +359,11 @@ export function Toolbar({
   const [quickFontSizeDraft, setQuickFontSizeDraft] = useState('');
   const [batchQuickFontFamily, setBatchQuickFontFamily] = useState(fontFamilyPlaceholderValue);
   const [batchQuickFontSize, setBatchQuickFontSize] = useState(String(defaultQuickFontSize));
-  const [chemistryApparatusSelectValue, setChemistryApparatusSelectValue] = useState('');
+  const [isChemistryPanelOpen, setIsChemistryPanelOpen] = useState(false);
+  const [isChemistryComposerOpen, setIsChemistryComposerOpen] = useState(false);
+  const [chemistryCategory, setChemistryCategory] = useState<ChemistryApparatusCategory>(
+    chemistryApparatusCategories[0],
+  );
   const inheritedTextStyle = selectedNodeInfo
     ? resolveQuickTextStyleForBlock(selectedNodeInfo.ownerBlock, layoutDocument?.styles)
     : {};
@@ -363,6 +383,9 @@ export function Toolbar({
   const currentTextAlign = selectedNodeInfo?.ownerBlock.blockStyleOverrides.textAlign ?? 'left';
   const canApplyBatchFontFamily = !!layoutDocument && batchQuickFontFamily !== fontFamilyPlaceholderValue;
   const canApplyBatchFontSize = !!layoutDocument && normalizeQuickFontSizeValue(batchQuickFontSize) !== null;
+  const visibleChemistryApparatusItems = chemistryApparatusItems.filter(
+    (item) => item.category === chemistryCategory,
+  );
 
   const syncEditingTextBeforeStyleAction = (nodeId: string) => {
     if (!canvasTextSelection.isEditing || canvasTextSelection.nodeId !== nodeId) {
@@ -540,13 +563,26 @@ export function Toolbar({
     window.alert(`${label}：该插入入口已预留，后续小步接入真实逻辑。`);
   };
 
-  const handleChemistryApparatusChange = (apparatusId: string) => {
-    setChemistryApparatusSelectValue('');
-    if (!apparatusId) {
+  const toggleChemistryPanel = () => {
+    if (!layoutDocument) {
       return;
     }
 
-    onInsertChemistryApparatus(apparatusId as ChemistryApparatusId);
+    setIsChemistryPanelOpen((currentValue) => !currentValue);
+  };
+
+  const insertChemistryApparatusTemplate = (apparatusId: ChemistryApparatusId) => {
+    setIsChemistryPanelOpen(false);
+    onInsertChemistryApparatus(apparatusId);
+  };
+
+  const openChemistryComposer = () => {
+    if (!layoutDocument) {
+      return;
+    }
+
+    setIsChemistryPanelOpen(false);
+    setIsChemistryComposerOpen(true);
   };
 
   return (
@@ -585,6 +621,13 @@ export function Toolbar({
           >
             <FileDown size={18} />
           </ToolButton>
+          <ToolButton
+            label={isExporting ? '正在导出 DOCX' : '导出 DOCX'}
+            disabled={isExporting}
+            onClick={onExportDocx}
+          >
+            <FileDown size={18} />
+          </ToolButton>
           <span className="toolbar-divider" />
           <ToolButton label="撤销" disabled={!canUndo} onClick={onUndo}>
             <Undo2 size={18} />
@@ -592,7 +635,7 @@ export function Toolbar({
           <ToolButton label="重做" disabled={!canRedo} onClick={onRedo}>
             <Redo2 size={18} />
           </ToolButton>
-          <ToolButton label="搜索">
+          <ToolButton label="搜索" onClick={onOpenSearchPanel}>
             <Search size={18} />
           </ToolButton>
         </nav>
@@ -956,24 +999,22 @@ export function Toolbar({
             >
               <ImagePlus size={17} />
             </button>
-            <label className={layoutDocument ? 'format-select-shell compact chemistry-apparatus-select' : 'format-select-shell compact chemistry-apparatus-select disabled'}>
+            <button
+              type="button"
+              className={
+                isChemistryPanelOpen
+                  ? 'format-select-button chemistry-apparatus-trigger active'
+                  : 'format-select-button chemistry-apparatus-trigger'
+              }
+              title="插入化学图式"
+              aria-label="插入化学图式"
+              aria-expanded={isChemistryPanelOpen}
+              disabled={!layoutDocument}
+              onClick={toggleChemistryPanel}
+            >
               <FlaskConical size={15} />
-              <select
-                className="format-select-input"
-                aria-label="插入化学图式"
-                title="插入化学图式"
-                disabled={!layoutDocument}
-                value={chemistryApparatusSelectValue}
-                onChange={(event) => handleChemistryApparatusChange(event.target.value)}
-              >
-                <option value="">化学图式</option>
-                {chemistryApparatusItems.map((item) => (
-                  <option key={item.id} value={item.id} title={`${item.sourceLabel}，授权：${item.license}`}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <span>化学图式</span>
+            </button>
             <button
               type="button"
               className="format-icon-button"
@@ -1051,6 +1092,72 @@ export function Toolbar({
           </div>
         </section>
       </nav>
+
+      {isChemistryPanelOpen && layoutDocument ? (
+        <div className="chemistry-apparatus-panel" role="dialog" aria-label="化学图式模板库">
+          <div className="chemistry-apparatus-panel-head">
+            <strong>化学图式</strong>
+            <div className="chemistry-apparatus-panel-actions">
+              <button
+                type="button"
+                className="chemistry-composer-open-button"
+                title="打开化学图式组合设计器"
+                aria-label="打开化学图式组合设计器"
+                onClick={openChemistryComposer}
+              >
+                <PanelsTopLeft size={15} />
+                <span>组合设计</span>
+              </button>
+              <button
+                type="button"
+                className="chemistry-apparatus-close"
+                title="关闭化学图式面板"
+                aria-label="关闭化学图式面板"
+                onClick={() => setIsChemistryPanelOpen(false)}
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+          <div className="chemistry-apparatus-tabs" role="tablist" aria-label="化学图式分类">
+            {chemistryApparatusCategories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                className={category === chemistryCategory ? 'active' : ''}
+                role="tab"
+                aria-selected={category === chemistryCategory}
+                onClick={() => setChemistryCategory(category)}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+          <div className="chemistry-apparatus-grid">
+            {visibleChemistryApparatusItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="chemistry-apparatus-card"
+                title={`${item.description}；${item.sourceLabel}，授权：${item.license}`}
+                onClick={() => insertChemistryApparatusTemplate(item.id)}
+              >
+                <span className="chemistry-apparatus-thumb" aria-hidden="true">
+                  <img src={item.src} alt="" />
+                </span>
+                <span className="chemistry-apparatus-name">{item.name}</span>
+                <span className="chemistry-apparatus-source">{item.license}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <ChemistryComposerDialog
+        isOpen={isChemistryComposerOpen && !!layoutDocument}
+        onClose={() => setIsChemistryComposerOpen(false)}
+        onInsertComposition={onInsertChemistryComposition}
+      />
     </header>
   );
 }

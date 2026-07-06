@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { exportCurrentDocumentAsPdf } from '@/services/ExportService';
+import { exportCurrentDocumentAsDocx, exportCurrentDocumentAsPdf } from '@/services/ExportService';
 import { clearDraft, loadDraft, saveDraft } from '@/services/DraftService';
 import {
   createBlankDocument,
@@ -65,6 +65,7 @@ interface WorkspaceFileCommands {
   handleMoveEntry: (sourcePath: string, destinationPath: string) => Promise<void>;
   handleImportFont: () => Promise<void>;
   handleExportPdf: () => Promise<void>;
+  handleExportDocx: () => Promise<void>;
 }
 
 export function useWorkspaceFileCommands({
@@ -607,6 +608,7 @@ export function useWorkspaceFileCommands({
         resources: layoutDocument.resources,
         styles: layoutDocument.styles,
         styleSettings,
+        semanticRoleConfig: layoutDocument.meta.semanticRoleConfig,
       });
       showMessage(`PDF 已导出到：${exportedPath}`);
     } catch (error) {
@@ -615,6 +617,37 @@ export function useWorkspaceFileCommands({
         return;
       }
       const message = error instanceof Error ? error.message : '导出 PDF 失败';
+      showMessage(`导出失败：${message}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportDocx = async (): Promise<void> => {
+    if (!layoutDocument || isExporting || displayedPageLayouts.length === 0) return;
+
+    const documentTitle = layoutDocument.title || tocItems[0]?.text || '未命名文档';
+    setIsExporting(true);
+    showMessage('正在导出 DOCX…');
+
+    try {
+      const exportedPath = await exportCurrentDocumentAsDocx({
+        pages: displayedPageLayouts,
+        blocks: layoutDocument.blocks,
+        title: documentTitle,
+        resources: layoutDocument.resources,
+        styles: layoutDocument.styles,
+        styleSettings,
+        documentFilePath: filePath,
+        workspaceRootPath,
+      });
+      showMessage(`DOCX 已导出到：${exportedPath}`);
+    } catch (error) {
+      if (error instanceof Error && error.message === '已取消导出 DOCX') {
+        showMessage('已取消导出 DOCX');
+        return;
+      }
+      const message = error instanceof Error ? error.message : '导出 DOCX 失败';
       showMessage(`导出失败：${message}`);
     } finally {
       setIsExporting(false);
@@ -642,5 +675,6 @@ export function useWorkspaceFileCommands({
     handleMoveEntry,
     handleImportFont,
     handleExportPdf,
+    handleExportDocx,
   };
 }

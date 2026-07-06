@@ -1,3 +1,4 @@
+import { exportDocx } from './docx-handlers';
 import { app, ipcMain } from 'electron';
 import {
   deleteEntry,
@@ -64,5 +65,8 @@ export function registerIpcHandlers(): void {
   );
   ipcMain.handle('file:exportPdf', (_event, payload: { html: string; title: string }) =>
     exportPdf(payload),
+  );
+  ipcMain.handle('file:exportDocx', (_event, payload: { data: Uint8Array; title: string }) =>
+    exportDocx(payload),
   );
 }

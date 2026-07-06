@@ -7,6 +7,7 @@ import type {
   InsertListBlockKind,
   LayoutBlock,
   LayoutBlockSemantic,
+  LayoutSemanticRoleConfig,
   ListBatchCheckedAction,
   ListBatchCheckedScope,
   ListIndentAction,
@@ -16,6 +17,8 @@ import type {
   LayoutDocument,
   LayoutFontResource,
   ParseState,
+  SemanticBlockPresetId,
+  SemanticKeywordScanResult,
   SyntaxMappingConfig,
   TableColumnAlign,
   TableCellRangeSelection,
@@ -103,6 +106,13 @@ export interface DocumentSlice {
   setParseState: (nextState: ParseState) => void;
   setLayoutDocument: (document: LayoutDocument) => void;
   updateSyntaxMappingConfig: (config: SyntaxMappingConfig) => void;
+  updateSemanticRoleConfig: (config: LayoutSemanticRoleConfig) => void;
+  scanSemanticKeywordRules: (payload?: {
+    overwriteExisting?: boolean;
+  }) => SemanticKeywordScanResult;
+  applySemanticKeywordRules: (payload?: {
+    overwriteExisting?: boolean;
+  }) => SemanticKeywordScanResult;
   appendLayoutParagraphBlock: (payload: { text: string }) => string | null;
   insertLayoutMarkdownBlocks: (payload: {
     markdown: string;
@@ -118,6 +128,14 @@ export interface DocumentSlice {
   redoLayoutDocument: () => boolean;
   updateLayoutNodeText: (payload: { nodeId: string; text: string }) => void;
   replaceLayoutNodeRichText: (payload: { nodeId: string; textRuns: TextRun[] }) => void;
+  replaceMultipleLayoutNodeTexts: (payload: {
+    replacements: Array<{
+      nodeId: string;
+      text?: string;
+      textRuns?: TextRun[];
+    }>;
+    selectedNodeId?: string | null;
+  }) => { didUpdate: boolean; updatedCount: number; selectedNodeId: string | null };
   toggleLayoutNodeTextMark: (payload: {
     nodeId: string;
     selection: TextRangeSelection | null;
@@ -293,6 +311,10 @@ export interface DocumentSlice {
   updateLayoutBlockSemantic: (payload: {
     nodeId: string;
     semantic: LayoutBlockSemantic | null;
+  }) => void;
+  updateLayoutBlockSemanticPreset: (payload: {
+    nodeId: string;
+    presetId: SemanticBlockPresetId | null;
   }) => void;
   applyLayoutQuickTextStyle: (payload: {
     scope: QuickTextStyleScope;

@@ -13,6 +13,10 @@ import {
   isImageTextWrapMode,
   buildLayoutListTree,
   buildSemanticClassName,
+  buildSemanticPresetClassName,
+  getSemanticBlockPresetPresentation,
+  buildSemanticRoleStyleVariables,
+  getSemanticRolePresentation,
   getLayoutListItemKind,
   getLayoutListItemLevel,
   shouldHideLayoutListItemMarker,
@@ -20,6 +24,7 @@ import {
   type LayoutBlock,
   type LayoutStyleSheet,
   type LayoutResource,
+  type LayoutSemanticRoleConfig,
   type LayoutListTreeNode,
   type LayoutListItem,
   type TextRun,
@@ -50,6 +55,7 @@ export interface PdfExportPayload {
   resources?: LayoutResource[];
   styles?: LayoutStyleSheet;
   styleSettings?: StyleSettings;
+  semanticRoleConfig?: LayoutSemanticRoleConfig;
 }
 
 function escapeHtml(value: string): string {
@@ -100,10 +106,31 @@ function resolveBlockLineHeightStyle(
   return block.blockStyleOverrides.lineHeight;
 }
 
+function buildSemanticRoleStyleDeclarations(
+  block: LayoutBlock,
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
+): string[] {
+  return Object.entries(buildSemanticRoleStyleVariables(block, semanticRoleConfig))
+    .map(([name, value]) => `${name}:${value}`);
+}
+
+function buildSemanticRoleLabelHtml(
+  block: LayoutBlock,
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
+): string {
+  const presentation = getSemanticRolePresentation(block, semanticRoleConfig);
+  if (!presentation) {
+    return '';
+  }
+
+  return `<span class="semantic-role-label" data-semantic-label="${escapeHtml(presentation.label)}" aria-hidden="true"></span>`;
+}
+
 function buildBlockStyle(
   block: LayoutBlock,
   styles?: LayoutStyleSheet,
   contract?: ResolvedStyleContract,
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
 ): string {
   const supportsBlockIndent = block.type === 'heading' || block.type === 'paragraph';
   const indentStyle = supportsBlockIndent ? resolveHangingIndentStyle(block.blockStyleOverrides) : null;
@@ -115,6 +142,7 @@ function buildBlockStyle(
   const hasTextIndentOverride =
     block.blockStyleOverrides.firstLineIndent !== undefined || block.blockStyleOverrides.hangingIndent !== undefined;
   const declarations = [
+    ...buildSemanticRoleStyleDeclarations(block, semanticRoleConfig),
     block.blockStyleOverrides.textAlign ? `text-align:${block.blockStyleOverrides.textAlign}` : '',
     lineHeight ? `line-height:${lineHeight}px` : '',
     block.blockStyleOverrides.spaceBefore !== undefined ? `margin-top:${block.blockStyleOverrides.spaceBefore}px` : '',
@@ -133,20 +161,31 @@ function buildBlockAttributes(
   styles?: LayoutStyleSheet,
   contract?: ResolvedStyleContract,
   classNames: string[] = [],
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
 ): string {
+  const semanticPresentation = getSemanticRolePresentation(block, semanticRoleConfig);
+  const semanticPresetPresentation = getSemanticBlockPresetPresentation(block, semanticRoleConfig);
   const semanticClassName = buildSemanticClassName(block);
+  const semanticPresetClassName = buildSemanticPresetClassName(block, semanticRoleConfig);
   const mergedClassNames = [
     ...classNames,
+    ...semanticPresetClassName.split(/\s+/).filter(Boolean),
     ...semanticClassName.split(/\s+/).filter(Boolean),
   ].filter(Boolean);
   const classAttribute = mergedClassNames.length > 0
     ? ` class="${escapeHtml(mergedClassNames.join(' '))}"`
     : '';
+  const semanticPresetAttribute = semanticPresetPresentation
+    ? ` data-semantic-preset="${escapeHtml(semanticPresetPresentation.presetId)}"`
+    : '';
   const semanticAttribute = block.semantic?.roleId
     ? ` data-semantic-role="${escapeHtml(block.semantic.roleId)}"`
     : '';
+  const semanticLabelAttribute = semanticPresentation
+    ? ` data-semantic-label="${escapeHtml(semanticPresentation.label)}"`
+    : '';
 
-  return `${classAttribute}${semanticAttribute}${buildBlockStyle(block, styles, contract)}`;
+  return `${classAttribute}${semanticPresetAttribute}${semanticAttribute}${semanticLabelAttribute}${buildBlockStyle(block, styles, contract, semanticRoleConfig)}`;
 }
 
 function renderInlineText(text: string): string {
@@ -280,8 +319,10 @@ function renderBlock(
   block: LayoutBlock,
   styles?: LayoutStyleSheet,
   contract?: ResolvedStyleContract,
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
 ): string {
   const inheritedStyle = resolveQuickTextStyleForBlock(block, styles);
+  const semanticRoleLabelHtml = buildSemanticRoleLabelHtml(block, semanticRoleConfig);
   switch (block.type) {
     case 'pageBreak':
       return '';
@@ -297,12 +338,12 @@ function renderBlock(
             ? 'h3'
             : 'h4';
       const classNames = shouldLayoutBlockSpanAllColumns(block, contract) ? ['column-span-all'] : [];
-      return `<${tagName}${buildBlockAttributes(block, styles, contract, classNames)}>${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
+      return `<${tagName}${buildBlockAttributes(block, styles, contract, classNames, semanticRoleConfig)}>${semanticRoleLabelHtml}${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
     }
     case 'toc':
       return '';
     case 'paragraph':
-      return `<p${buildBlockAttributes(block, styles, contract)}>${renderTextRuns(block.textRuns, inheritedStyle)}</p>`;
+      return `<p${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}${renderTextRuns(block.textRuns, inheritedStyle)}</p>`;
     case 'list': {
       if (block.metadata.kind !== 'list') {
         return '';
@@ -314,17 +355,17 @@ function renderBlock(
         inheritedStyle,
         true,
       );
-      return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockAttributes(block, styles, contract)}>`);
+      return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>`);
     }
     case 'blockquote':
       return block.metadata.kind === 'blockquote'
-        ? `<blockquote${buildBlockAttributes(block, styles, contract)}>${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract)).join('')}</blockquote>`
+        ? `<blockquote${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract, semanticRoleConfig)).join('')}</blockquote>`
         : '';
     case 'code':
-      return `<pre${buildBlockAttributes(block, styles, contract)}><code>${renderTextRuns(block.textRuns, inheritedStyle)}</code></pre>`;
+      return `<pre${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}<code>${renderTextRuns(block.textRuns, inheritedStyle)}</code></pre>`;
     case 'equation':
       return block.metadata.kind === 'equation'
-        ? `<div${buildBlockAttributes(block, styles, contract, ['equation-shell'])}>${renderEquationToHtml(block.metadata.value).html}</div>`
+        ? `<div${buildBlockAttributes(block, styles, contract, ['equation-shell'], semanticRoleConfig)}>${semanticRoleLabelHtml}${renderEquationToHtml(block.metadata.value).html}</div>`
         : '';
     case 'table':
       if (block.metadata.kind !== 'table') {
@@ -358,13 +399,13 @@ function renderBlock(
           return `<tr style="height:${rowHeightPx}px">${rowCellsHtml}</tr>`;
         })
         .join('');
-      return `<div class="table-shell"><table${buildBlockAttributes(block, styles, contract, ['preview-table'])}><colgroup>${colgroupHtml}</colgroup><tbody>${tableRowsHtml}</tbody></table></div>`;
+      return `<div class="table-shell"><table${buildBlockAttributes(block, styles, contract, ['preview-table'], semanticRoleConfig)}><colgroup>${colgroupHtml}</colgroup><tbody>${tableRowsHtml}</tbody></table></div>`;
     case 'image':
       if (block.metadata.kind !== 'image') {
         return '';
       }
 
-      return renderImageBlock(block);
+      return renderImageBlock(block, semanticRoleConfig);
     case 'horizontalRule':
       return '<hr />';
     default:
@@ -372,7 +413,10 @@ function renderBlock(
   }
 }
 
-function renderImageBlock(block: LayoutBlock): string {
+function renderImageBlock(
+  block: LayoutBlock,
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
+): string {
   if (block.type !== 'image' || block.metadata.kind !== 'image') {
     return '';
   }
@@ -380,9 +424,11 @@ function renderImageBlock(block: LayoutBlock): string {
   const layout = resolveImageLayout(block.metadata);
   const offsetX = layout.offsetX ?? 0;
   const offsetY = layout.offsetY ?? 0;
+  const semanticPresentation = getSemanticRolePresentation(block, semanticRoleConfig);
+  const semanticRoleLabelHtml = buildSemanticRoleLabelHtml(block, semanticRoleConfig);
 
   // 预览与导出统一使用同一套图片环绕语义，旧 block/center/left/right 只在解析层兼容。
-  const wrapperStyleParts: string[] = [];
+  const wrapperStyleParts: string[] = buildSemanticRoleStyleDeclarations(block, semanticRoleConfig);
   if (layout.wrapMode === 'topBottom') {
     if (offsetX !== 0) {
       const widthPx = layout.widthPx ?? 320;
@@ -432,13 +478,20 @@ function renderImageBlock(block: LayoutBlock): string {
   const figureClassNames = [
     'image-shell',
     getImageWrapClassName(layout),
+    ...buildSemanticPresetClassName(block, semanticRoleConfig).split(/\s+/).filter(Boolean),
     ...buildSemanticClassName(block).split(/\s+/).filter(Boolean),
   ].filter(Boolean);
+  const semanticPresetAttribute = getSemanticBlockPresetPresentation(block, semanticRoleConfig)
+    ? ` data-semantic-preset="${escapeHtml(getSemanticBlockPresetPresentation(block, semanticRoleConfig)?.presetId ?? '')}"`
+    : '';
   const semanticAttribute = block.semantic?.roleId
     ? ` data-semantic-role="${escapeHtml(block.semantic.roleId)}"`
     : '';
+  const semanticLabelAttribute = semanticPresentation
+    ? ` data-semantic-label="${escapeHtml(semanticPresentation.label)}"`
+    : '';
 
-  return `<figure class="${escapeHtml(figureClassNames.join(' '))}"${semanticAttribute}${wrapperStyleParts.length > 0 ? ` style="${escapeHtml(wrapperStyleParts.join(';'))}"` : ''}>${
+  return `<figure class="${escapeHtml(figureClassNames.join(' '))}"${semanticPresetAttribute}${semanticAttribute}${semanticLabelAttribute}${wrapperStyleParts.length > 0 ? ` style="${escapeHtml(wrapperStyleParts.join(';'))}"` : ''}>${semanticRoleLabelHtml}${
     block.metadata.src
       ? `<span class="image-viewport"${viewportStyleParts.length > 0 ? ` style="${escapeHtml(viewportStyleParts.join(';'))}"` : ''}><img class="preview-image preview-image-fit preview-image-cropped" src="${escapeHtml(resolveAssetSrc(block.metadata.src))}" alt="${escapeHtml(block.metadata.alt || '图片')}"${block.metadata.title ? ` title="${escapeHtml(block.metadata.title)}"` : ''}${imageStyleParts.length > 0 ? ` style="${escapeHtml(imageStyleParts.join(';'))}"` : ''} /></span>`
       : '<div class="preview-image placeholder">图片占位</div>'
@@ -465,6 +518,7 @@ function renderPages(
   styles?: LayoutStyleSheet,
   headerFooterContent: HeaderFooterContent = defaultStyleSettings.headerFooterContent,
   documentTitle = '未命名文档',
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
 ): string {
   const allBlocks = pages.flatMap((page) => page.blocks);
   const tocItems = applyPageNumbersToTocItems(
@@ -517,11 +571,11 @@ function renderPages(
                   .join('')
               : '<div class="toc-empty-state-export">当前文档还没有符合当前目录层级的标题。</div>';
 
-          bodyParts.push(`<section${buildBlockAttributes(block, styles, page.contract, ['toc-block-export'])}><div class="toc-block-export-title">${escapeHtml(getTocBlockDisplayTitle(block))}</div>${entries}</section>`);
+          bodyParts.push(`<section${buildBlockAttributes(block, styles, page.contract, ['toc-block-export'], semanticRoleConfig)}>${buildSemanticRoleLabelHtml(block, semanticRoleConfig)}<div class="toc-block-export-title">${escapeHtml(getTocBlockDisplayTitle(block))}</div>${entries}</section>`);
           continue;
         }
 
-        bodyParts.push(renderBlock(block, styles, page.contract));
+        bodyParts.push(renderBlock(block, styles, page.contract, semanticRoleConfig));
       }
 
       const pageStyleDeclarations = [
@@ -559,7 +613,14 @@ function renderPages(
     .join('');
 }
 
-export function buildExportHtml({ pages, title, resources, styles, styleSettings }: PdfExportPayload): string {
+export function buildExportHtml({
+  pages,
+  title,
+  resources,
+  styles,
+  styleSettings,
+  semanticRoleConfig,
+}: PdfExportPayload): string {
   const firstPage = pages[0];
   const pageSizeRule = firstPage
     ? `${firstPage.contract.pageWidthMm}mm ${firstPage.contract.pageHeightMm}mm`
@@ -781,6 +842,93 @@ export function buildExportHtml({ pages, title, resources, styles, styleSettings
 
       .page-body.page-body-columns > .page-column-flow > .column-span-all {
         column-span: all;
+      }
+
+      .semantic-block-preset[data-semantic-preset] {
+        position: relative;
+      }
+
+      .semantic-role[data-semantic-role] {
+        position: relative;
+      }
+
+      .semantic-block-preset-defaultSemanticFrame[data-semantic-preset] {
+        border-left: 3px solid var(--semantic-role-color, #3b82f6);
+      }
+
+      .semantic-block-preset-defaultSemanticFrame[data-semantic-preset]:not(.selected):not(.block-range-selected) {
+        background-color: var(--semantic-role-bg, rgb(59 130 246 / 8%));
+      }
+
+      .semantic-block-preset-sideAccent[data-semantic-preset] {
+        border-left: 4px solid var(--semantic-role-color, #3b82f6);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--semantic-role-color, #3b82f6) 18%, transparent);
+      }
+
+      .semantic-block-preset-sideAccent[data-semantic-preset]:not(.selected):not(.block-range-selected) {
+        background-color: var(--semantic-role-bg, rgb(59 130 246 / 6%));
+      }
+
+      .semantic-block-preset-softCard[data-semantic-preset] {
+        border-radius: 8px;
+        outline: 1px solid color-mix(in srgb, var(--semantic-role-color, #3b82f6) 36%, #ffffff);
+        box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
+      }
+
+      .semantic-block-preset-softCard[data-semantic-preset]:not(.selected):not(.block-range-selected) {
+        background-color: var(--semantic-role-bg, rgb(59 130 246 / 8%));
+      }
+
+      .semantic-block-preset-warningFrame[data-semantic-preset] {
+        border-left: 4px solid var(--semantic-role-color, #d97706);
+        border-radius: 8px;
+        outline: 1px solid color-mix(in srgb, var(--semantic-role-color, #d97706) 52%, #ffffff);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--semantic-role-color, #d97706) 12%, transparent);
+      }
+
+      .semantic-block-preset-warningFrame[data-semantic-preset]:not(.selected):not(.block-range-selected) {
+        background-color: var(--semantic-role-bg, rgb(217 119 6 / 10%));
+      }
+
+      .semantic-role-label {
+        position: absolute;
+        top: -11px;
+        left: 8px;
+        z-index: 2;
+        display: inline-flex;
+        max-width: min(190px, calc(100% - 16px));
+        pointer-events: none;
+      }
+
+      .semantic-role-label::before,
+      .page-body :is(ol.semantic-role, ul.semantic-role)[data-semantic-label]::before {
+        display: block;
+        max-width: 100%;
+        padding: 1px 6px;
+        overflow: hidden;
+        color: var(--semantic-role-color, #3b82f6);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.45;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        background: #ffffff;
+        border: 1px solid color-mix(in srgb, var(--semantic-role-color, #3b82f6) 48%, #ffffff);
+        border-radius: 4px;
+        box-shadow: 0 1px 2px rgb(15 23 42 / 8%);
+      }
+
+      .semantic-role-label::before {
+        content: attr(data-semantic-label);
+      }
+
+      .page-body :is(ol.semantic-role, ul.semantic-role)[data-semantic-label]::before {
+        content: attr(data-semantic-label);
+        position: absolute;
+        top: -11px;
+        left: 8px;
+        z-index: 2;
+        pointer-events: none;
       }
 
       .page h1,
@@ -1459,7 +1607,7 @@ export function buildExportHtml({ pages, title, resources, styles, styleSettings
     </style>
   </head>
   <body>
-    <div class="export-shell">${renderPages(pages, styles, styleSettings?.headerFooterContent, title)}</div>
+    <div class="export-shell">${renderPages(pages, styles, styleSettings?.headerFooterContent, title, semanticRoleConfig)}</div>
   </body>
 </html>`;
 }

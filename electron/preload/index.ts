@@ -116,6 +116,8 @@ const layoutAPI = {
   }): Promise<{ filePath: string }> => ipcRenderer.invoke('file:save', payload),
   exportPdf: (payload: { html: string; title: string }): Promise<{ filePath: string }> =>
     ipcRenderer.invoke('file:exportPdf', payload),
+  exportDocx: (payload: { data: Uint8Array; title: string }): Promise<{ filePath: string }> =>
+    ipcRenderer.invoke('file:exportDocx', payload),
   requestAi: (payload: AiRequestPayload): Promise<AiRequestResult> =>
     ipcRenderer.invoke('ai:request', payload),
   cancelAiRequest: (requestId: string): Promise<boolean> =>

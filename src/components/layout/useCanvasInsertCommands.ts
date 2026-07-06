@@ -15,6 +15,12 @@ interface UseCanvasInsertCommandsPayload {
 interface CanvasInsertCommands {
   handleInsertImage: () => Promise<void>;
   handleInsertChemistryApparatus: (apparatusId: ChemistryApparatusId) => void;
+  handleInsertChemistryComposition: (payload: {
+    src: string;
+    title: string;
+    widthPx: number;
+    heightPx: number;
+  }) => void;
   handleInsertEquation: () => void;
   handleInsertTable: () => void;
   handleInsertList: (kind: InsertListBlockKind) => void;
@@ -121,6 +127,38 @@ export function useCanvasInsertCommands({
 
     selectInsertedNode(insertedBlockId);
     showMessage(`已插入化学图式：${apparatus.name}`);
+  };
+
+  const handleInsertChemistryComposition = (payload: {
+    src: string;
+    title: string;
+    widthPx: number;
+    heightPx: number;
+  }): void => {
+    if (!layoutDocument) {
+      showMessage('当前没有可插入化学组合图式的文档');
+      return;
+    }
+
+    const insertedBlockId = insertLayoutImageBlock({
+      src: payload.src,
+      alt: payload.title,
+      title: payload.title,
+      widthPx: payload.widthPx,
+      heightPx: payload.heightPx,
+      lockAspectRatio: true,
+      objectFit: 'contain',
+      wrapMode: 'inline',
+      insertAfterNodeId: selectedNodeId,
+    });
+
+    if (!insertedBlockId) {
+      showMessage('化学组合图式插入失败：当前文档不可写');
+      return;
+    }
+
+    selectInsertedNode(insertedBlockId);
+    showMessage(`已插入化学组合图式：${payload.title}`);
   };
 
   const handleInsertEquation = (): void => {
@@ -271,6 +309,7 @@ export function useCanvasInsertCommands({
   return {
     handleInsertImage,
     handleInsertChemistryApparatus,
+    handleInsertChemistryComposition,
     handleInsertEquation,
     handleInsertTable,
     handleInsertList,

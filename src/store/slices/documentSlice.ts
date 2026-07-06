@@ -1,8 +1,10 @@
 import { starterMarkdown, starterTitle } from '@/constants/workspace';
 import {
+  applySemanticPresetToLayoutBlock,
   applyTextRunPatchToTextRuns,
   applyBlockStyleOverridesToBlock,
   applySemanticToLayoutBlock,
+  applySemanticKeywordRulesToBlocks,
   autoFitTablesInLayoutDocument,
   buildBlockRangeSelection,
   convertListItemTaskStateByItem,
@@ -40,7 +42,9 @@ import {
   mergeTableCellsByRange,
   mergeTopLevelTextBlocksByIds,
   normalizeLayoutDocumentSyntaxMappingConfig,
+  normalizeSemanticRoleConfig,
   normalizeSyntaxMappingConfig,
+  scanSemanticKeywordRulesInBlocks,
   updateLayoutBlockText as updateLayoutBlockTextModel,
   updateLayoutImageAttributes as updateLayoutImageAttributesModel,
   updateLayoutListItemText,
@@ -62,6 +66,7 @@ import type {
   LayoutDocument,
   LayoutFontResource,
   LayoutResource,
+  SemanticKeywordScanResult,
   ListBatchCheckedAction,
   ListBatchCheckedScope,
   ListIndentAction,
@@ -84,6 +89,12 @@ import type { DocumentSlice, StoreSlice } from '@/store/types';
 import { getDocumentFormatFromPath } from '@/utils/filePath';
 
 type DocumentSliceWithStyleSettings = DocumentSlice & { styleSettings: StyleSettings };
+
+const emptySemanticKeywordScanResult: SemanticKeywordScanResult = {
+  items: [],
+  applicableCount: 0,
+  skippedExistingCount: 0,
+};
 
 function replaceNodeText(
   blocks: LayoutBlock[],
@@ -1284,6 +1295,72 @@ function applyDocumentMutation(
   state.parseError = null;
 }
 
+function applyMultipleTextReplacements(
+  state: DocumentSliceWithStyleSettings,
+  replacements: Array<{
+    nodeId: string;
+    text?: string;
+    textRuns?: TextRun[];
+  }>,
+  selectedNodeId?: string | null,
+): { didUpdate: boolean; updatedCount: number; selectedNodeId: string | null } {
+  if (!state.layoutDocument || replacements.length === 0) {
+    return { didUpdate: false, updatedCount: 0, selectedNodeId: null };
+  }
+
+  let nextBlocks = state.layoutDocument.blocks;
+  let updatedCount = 0;
+  const updatedNodeIds: string[] = [];
+
+  for (const replacement of replacements) {
+    const result = replacement.textRuns
+      ? replaceNodeRichText(nextBlocks, replacement.nodeId, replacement.textRuns)
+      : replaceNodeText(nextBlocks, replacement.nodeId, replacement.text ?? '');
+
+    if (!result.didUpdate) {
+      continue;
+    }
+
+    nextBlocks = result.blocks;
+    updatedCount += 1;
+    updatedNodeIds.push(replacement.nodeId);
+
+    const autoFitResult = autoFitTableBlocksByEditedNode(state, nextBlocks, replacement.nodeId);
+    if (autoFitResult.didUpdate) {
+      nextBlocks = autoFitResult.blocks;
+    }
+  }
+
+  if (updatedCount === 0) {
+    return { didUpdate: false, updatedCount: 0, selectedNodeId: null };
+  }
+
+  const nextSelectedNodeId = selectedNodeId ?? updatedNodeIds[updatedNodeIds.length - 1] ?? null;
+
+  pushDocumentHistory(state);
+  state.layoutDocument.blocks = nextBlocks;
+  for (const nodeId of updatedNodeIds) {
+    const imageResourceSnapshot = getImageResourceSnapshotForNodeId(nextBlocks, nodeId);
+    if (imageResourceSnapshot !== null) {
+      state.layoutDocument.resources = syncImageResource(
+        state.layoutDocument.resources,
+        nodeId,
+        imageResourceSnapshot,
+      );
+    }
+  }
+  state.layoutDocument.title = getFirstHeadingTitle(nextBlocks) ?? state.layoutDocument.title;
+  refreshDocumentMeta(state, nextBlocks);
+  state.layoutDocument.viewState.selectedNodeId = nextSelectedNodeId;
+  state.layoutDocument.viewState.tableSelection = null;
+  state.layoutDocument.viewState.blockSelection = null;
+  state.isDirty = true;
+  state.parseState = 'ready';
+  state.parseError = null;
+
+  return { didUpdate: true, updatedCount, selectedNodeId: nextSelectedNodeId };
+}
+
 const initialLayoutDocument = createEmptyLayoutDocument({ title: starterTitle, source: starterMarkdown });
 
 export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
@@ -1417,6 +1494,60 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       state.parseState = 'ready';
       state.parseError = null;
     }),
+  updateSemanticRoleConfig: (config) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      pushDocumentHistory(state);
+      // 自定义语义块规则属于文档级配置，随 .layout 一起保存。
+      state.layoutDocument.meta.semanticRoleConfig = normalizeSemanticRoleConfig(config);
+      state.layoutDocument.meta.updatedAt = new Date().toISOString();
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    }),
+  scanSemanticKeywordRules: (payload = {}) => {
+    const document = get().layoutDocument;
+    if (!document) {
+      return emptySemanticKeywordScanResult;
+    }
+
+    return scanSemanticKeywordRulesInBlocks(
+      document.blocks,
+      normalizeSemanticRoleConfig(document.meta.semanticRoleConfig),
+      payload,
+    );
+  },
+  applySemanticKeywordRules: (payload = {}) => {
+    const document = get().layoutDocument;
+    if (!document) {
+      return emptySemanticKeywordScanResult;
+    }
+
+    const config = normalizeSemanticRoleConfig(document.meta.semanticRoleConfig);
+    const result = applySemanticKeywordRulesToBlocks(document.blocks, config, payload);
+    if (!result.didUpdate) {
+      return result;
+    }
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      pushDocumentHistory(state);
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return result;
+  },
   appendLayoutParagraphBlock: ({ text }) => {
     let insertedBlockId: string | null = null;
 
@@ -1647,6 +1778,15 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       const result = replaceNodeRichText(state.layoutDocument.blocks, nodeId, textRuns);
       applyDocumentMutation(state, nodeId, result);
     }),
+  replaceMultipleLayoutNodeTexts: ({ replacements, selectedNodeId }) => {
+    let result = { didUpdate: false, updatedCount: 0, selectedNodeId: null as string | null };
+
+    set((state) => {
+      result = applyMultipleTextReplacements(state, replacements, selectedNodeId);
+    });
+
+    return result;
+  },
   toggleLayoutNodeTextMark: ({ nodeId, selection, markType }) =>
     set((state) => {
       if (!state.layoutDocument) {
@@ -2755,8 +2895,21 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
         return;
       }
 
+      const semanticRoleConfig = normalizeSemanticRoleConfig(state.layoutDocument.meta.semanticRoleConfig);
       const result = replaceOwnerBlock(state.layoutDocument.blocks, nodeId, (block) =>
-        applySemanticToLayoutBlock(block, semantic),
+        applySemanticToLayoutBlock(block, semantic, semanticRoleConfig),
+      );
+      applyDocumentMutation(state, nodeId, result);
+    }),
+  updateLayoutBlockSemanticPreset: ({ nodeId, presetId }) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const normalizedPresetId = presetId ?? null;
+      const result = replaceOwnerBlock(state.layoutDocument.blocks, nodeId, (block) =>
+        applySemanticPresetToLayoutBlock(block, normalizedPresetId),
       );
       applyDocumentMutation(state, nodeId, result);
     }),

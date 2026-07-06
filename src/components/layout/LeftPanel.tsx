@@ -4,7 +4,6 @@ import {
   ArrowUpAZ,
   ChevronRight,
   ChevronsDownUp,
-  Clock,
   FilePlus2,
   FileText,
   Folder,
@@ -14,12 +13,13 @@ import {
   Images,
   ListTree,
   Search,
-  X,
 } from 'lucide-react';
 import { AiGenerationRecordsPanel } from '@/components/ai/AiGenerationRecordsPanel';
 import { ContextMenu, type ContextMenuEntry } from '@/components/common/ContextMenu';
-import { emptyFolderHints, outlineTips, resourceHints, searchHints } from '@/constants/workspace';
+import { SearchPanel } from './SearchPanel';
+import { emptyFolderHints, outlineTips, resourceHints } from '@/constants/workspace';
 import type { TocItem } from '@/engine/document-model';
+import type { DocumentSearchResult } from '@/services/DocumentSearchService';
 import type { AiGenerationRecord } from '@/types/ai';
 import type {
   LeftPanelTab,
@@ -62,6 +62,18 @@ interface LeftPanelProps {
   onDeleteEntry: (entry: WorkspaceDirectoryEntry) => void;
   searchQuery: string;
   onSearchQueryChange: (q: string) => void;
+  searchResults: DocumentSearchResult[];
+  selectedSearchResultId: string | null;
+  searchCaseSensitive: boolean;
+  onSearchCaseSensitiveChange: (enabled: boolean) => void;
+  searchWholeWord: boolean;
+  onSearchWholeWordChange: (enabled: boolean) => void;
+  searchReplacementText: string;
+  onSearchReplacementTextChange: (text: string) => void;
+  searchFocusRequestKey: number;
+  onSelectSearchResult: (result: DocumentSearchResult) => void;
+  onReplaceSelectedSearchResult: () => void;
+  onReplaceAllSearchResults: () => void;
   aiGenerationRecords: AiGenerationRecord[];
   aiGenerationRecordDirectoryPath: string | null;
   aiGenerationRecordsError: string | null;
@@ -364,8 +376,8 @@ function renderExplorerActions({
       <button
         type="button"
         className="explorer-icon-button"
-        title="搜索文件"
-        aria-label="搜索文件"
+        title="搜索当前文档"
+        aria-label="搜索当前文档"
         onClick={onOpenSearch}
       >
         <Search size={19} />
@@ -528,6 +540,18 @@ function renderPanelContent(
   onContextMenu: (e: React.MouseEvent, entry: WorkspaceDirectoryEntry) => void,
   searchQuery: string,
   onSearchQueryChange: (q: string) => void,
+  searchResults: DocumentSearchResult[],
+  selectedSearchResultId: string | null,
+  searchCaseSensitive: boolean,
+  onSearchCaseSensitiveChange: (enabled: boolean) => void,
+  searchWholeWord: boolean,
+  onSearchWholeWordChange: (enabled: boolean) => void,
+  searchReplacementText: string,
+  onSearchReplacementTextChange: (text: string) => void,
+  searchFocusRequestKey: number,
+  onSelectSearchResult: (result: DocumentSearchResult) => void,
+  onReplaceSelectedSearchResult: () => void,
+  onReplaceAllSearchResults: () => void,
   aiGenerationRecords: AiGenerationRecord[],
   aiGenerationRecordDirectoryPath: string | null,
   aiGenerationRecordsError: string | null,
@@ -601,113 +625,29 @@ function renderPanelContent(
         </div>
       );
 
-    case '搜索': {
-      const allFiles = flattenEntries(directoryEntries);
-      const filtered = searchQuery.trim()
-        ? allFiles.filter((file) =>
-            file.kind === 'file' && file.name.toLowerCase().includes(searchQuery.toLowerCase()),
-          )
-        : [];
-
+    case '搜索':
       return (
-        <div className="panel-section-list">
-          <section className="panel-section">
-            <div className="panel-section-header">
-              <h2>文件搜索</h2>
-              {searchQuery ? <span>{filtered.length} 个结果</span> : null}
-            </div>
-            <div className="search-box">
-              <Search size={15} className="search-icon" />
-              <input
-                type="text"
-                className="search-input"
-                placeholder="输入文件名关键词搜索..."
-                value={searchQuery}
-                onChange={(e) => onSearchQueryChange(e.target.value)}
-              />
-              {searchQuery ? (
-                <button
-                  type="button"
-                  className="search-clear-btn"
-                  onClick={() => onSearchQueryChange('')}
-                >
-                  <X size={14} />
-                </button>
-              ) : null}
-            </div>
-
-            {searchQuery.trim() && filtered.length === 0 ? (
-              <div className="empty-panel-state">
-                <p>未找到包含「{searchQuery}」的文件</p>
-              </div>
-            ) : null}
-
-            {filtered.length > 0 ? (
-              <div className="search-results">
-                {filtered.map((file) => (
-                  <button
-                    key={file.id}
-                    type="button"
-                    className="search-result-row"
-                    onClick={() => onOpenEntry(file)}
-                  >
-                    <FileText size={15} className="entry-icon file-icon" />
-                    <span className="search-result-name">{highlightMatch(file.name, searchQuery)}</span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {!searchQuery.trim() ? (
-              <div className="empty-panel-state">
-                {searchHints.map((hint) => (
-                  <p key={hint}>{hint}</p>
-                ))}
-              </div>
-            ) : null}
-          </section>
-
-          {recentFiles.length > 0 ? (
-            <section className="panel-section">
-              <div className="panel-section-header">
-                <h2>最近打开</h2>
-                <button
-                  type="button"
-                  className="text-btn danger-text"
-                  onClick={onClearRecentFiles}
-                  title="清除历史"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-              <div className="recent-list">
-                {recentFiles.map((entry) => (
-                  <div key={entry.filePath} className="recent-row-wrap">
-                    <button
-                      type="button"
-                      className="recent-row"
-                      onClick={() => onOpenRecentFile(entry)}
-                      title={entry.filePath}
-                    >
-                      <Clock size={14} className="entry-icon recent-icon" />
-                      <span className="recent-name">{entry.title}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="recent-remove-btn"
-                      title="从历史中移除"
-                      onClick={() => onRemoveRecentFile(entry.filePath)}
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-        </div>
+        <SearchPanel
+          searchQuery={searchQuery}
+          onSearchQueryChange={onSearchQueryChange}
+          caseSensitive={searchCaseSensitive}
+          onCaseSensitiveChange={onSearchCaseSensitiveChange}
+          wholeWord={searchWholeWord}
+          onWholeWordChange={onSearchWholeWordChange}
+          replacementText={searchReplacementText}
+          onReplacementTextChange={onSearchReplacementTextChange}
+          results={searchResults}
+          selectedResultId={selectedSearchResultId}
+          focusRequestKey={searchFocusRequestKey}
+          onSelectResult={onSelectSearchResult}
+          onReplaceSelected={onReplaceSelectedSearchResult}
+          onReplaceAll={onReplaceAllSearchResults}
+          recentFiles={recentFiles}
+          onOpenRecentFile={onOpenRecentFile}
+          onRemoveRecentFile={onRemoveRecentFile}
+          onClearRecentFiles={onClearRecentFiles}
+        />
       );
-    }
 
     case '资源':
       return (
@@ -748,30 +688,6 @@ function renderPanelContent(
   }
 }
 
-function flattenEntries(entries: WorkspaceDirectoryEntry[]): WorkspaceDirectoryEntry[] {
-  const result: WorkspaceDirectoryEntry[] = [];
-  for (const entry of entries) {
-    result.push(entry);
-    if (entry.kind === 'directory' && entry.children) {
-      result.push(...flattenEntries(entry.children));
-    }
-  }
-  return result;
-}
-
-function highlightMatch(text: string, query: string): JSX.Element {
-  const idx = text.toLowerCase().indexOf(query.toLowerCase());
-  if (idx < 0) return <>{text}</>;
-
-  return (
-    <>
-      {text.slice(0, idx)}
-      <mark className="search-highlight">{text.slice(idx, idx + query.length)}</mark>
-      {text.slice(idx + query.length)}
-    </>
-  );
-}
-
 export function LeftPanel({
   activeTab,
   onTabChange,
@@ -793,6 +709,18 @@ export function LeftPanel({
   onDeleteEntry,
   searchQuery,
   onSearchQueryChange,
+  searchResults,
+  selectedSearchResultId,
+  searchCaseSensitive,
+  onSearchCaseSensitiveChange,
+  searchWholeWord,
+  onSearchWholeWordChange,
+  searchReplacementText,
+  onSearchReplacementTextChange,
+  searchFocusRequestKey,
+  onSelectSearchResult,
+  onReplaceSelectedSearchResult,
+  onReplaceAllSearchResults,
   aiGenerationRecords,
   aiGenerationRecordDirectoryPath,
   aiGenerationRecordsError,
@@ -898,6 +826,18 @@ export function LeftPanel({
             handleContextMenu,
             searchQuery,
             onSearchQueryChange,
+            searchResults,
+            selectedSearchResultId,
+            searchCaseSensitive,
+            onSearchCaseSensitiveChange,
+            searchWholeWord,
+            onSearchWholeWordChange,
+            searchReplacementText,
+            onSearchReplacementTextChange,
+            searchFocusRequestKey,
+            onSelectSearchResult,
+            onReplaceSelectedSearchResult,
+            onReplaceAllSearchResults,
             aiGenerationRecords,
             aiGenerationRecordDirectoryPath,
             aiGenerationRecordsError,

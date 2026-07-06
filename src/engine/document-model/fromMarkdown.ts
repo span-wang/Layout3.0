@@ -20,7 +20,7 @@ import type { Position } from 'unist';
 import { createRemarkProcessor } from '@/engine/parser/remark';
 import { PAGE_BREAK_COMMAND } from '@/engine/parser/pageBreak';
 import { mergeAdjacentTextRuns } from './operations';
-import { parseSemanticRolePrefix } from './semanticRole';
+import { normalizeSemanticRoleConfig, parseSemanticRolePrefix } from './semanticRole';
 import { normalizeSyntaxMappingConfig } from './syntaxMappingConfig';
 import type {
   BlockPagination,
@@ -544,22 +544,38 @@ function buildHeadingBlock(state: BuilderState, node: Heading): LayoutBlock {
   };
 }
 
-function buildListBlock(state: BuilderState, node: List): LayoutBlock {
-  const plainText = node.children.map((item) => extractPlainTextFromListItem(item)).join('\n');
+function buildListBlock(
+  state: BuilderState,
+  node: List,
+  items: ListItem[] = node.children,
+  startOffset = 0,
+  sourcePosition: Position | undefined = node.position,
+): LayoutBlock {
+  const plainText = items.map((item) => extractPlainTextFromListItem(item)).join('\n');
   const blockId = createBlockId(state, 'list', plainText);
+  const listStart = node.ordered ? (node.start ?? 1) + startOffset : node.start ?? null;
 
   return {
-    ...createBaseBlock(blockId, 'list', createSourceRange(node.position), 'list'),
+    ...createBaseBlock(blockId, 'list', createSourceRange(sourcePosition), 'list'),
     textRuns: [],
     pagination: createBlockPagination(),
     metadata: {
       kind: 'list',
       ordered: node.ordered ?? false,
-      start: node.start ?? null,
+      start: listStart,
       spread: node.spread ?? false,
-      items: flattenListItems(blockId, node, 1),
+      items: flattenListItems(blockId, { ...node, children: items }, 1),
     },
   };
+}
+
+function buildListBlocks(state: BuilderState, node: List): LayoutBlock[] {
+  // 一级列表项是用户可独立选择和合并的块边界；子列表仍保留在当前一级项块里。
+  if (node.children.length === 0) {
+    return [buildListBlock(state, node)];
+  }
+
+  return node.children.map((item, index) => buildListBlock(state, node, [item], index, item.position ?? node.position));
 }
 
 function buildBlockquoteBlock(state: BuilderState, node: Blockquote): LayoutBlock {
@@ -672,7 +688,7 @@ function buildBlocks(state: BuilderState, nodes: LayoutBlockContentNode[]): Layo
       case 'heading':
         return [buildHeadingBlock(state, node)];
       case 'list':
-        return [buildListBlock(state, node)];
+        return buildListBlocks(state, node);
       case 'blockquote':
         return [buildBlockquoteBlock(state, node)];
       case 'code':
@@ -779,6 +795,7 @@ export function createEmptyLayoutDocument(payload: {
       blockCount: 0,
       updatedAt: new Date().toISOString(),
       syntaxMappingConfig: normalizeSyntaxMappingConfig(),
+      semanticRoleConfig: normalizeSemanticRoleConfig(),
     },
   };
 }
@@ -831,6 +848,7 @@ export async function createLayoutDocumentFromMarkdown(
       blockCount: blocks.length,
       updatedAt: new Date().toISOString(),
       syntaxMappingConfig: normalizedSyntaxMappingConfig,
+      semanticRoleConfig: normalizeSemanticRoleConfig(),
     },
   };
 }

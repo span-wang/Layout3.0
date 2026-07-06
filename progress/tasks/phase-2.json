@@ -258,6 +258,44 @@
             "`npm run typecheck` 成功。",
             "`npm run build` 成功。"
           ]
+        },
+        {
+          "id": "PH2-04-top-level-list-single-block-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：一级列表项独立块导入 V1",
+          "confirmedOn": "2026-07-05",
+          "startedOn": "2026-07-05",
+          "completedOn": "2026-07-05",
+          "summary": "本步已完成 `PH2-04-top-level-list-single-block-v1`：用户要求一级列表项不要被自动合并到同一个块。修复后，Markdown 导入时同一个顶层 mdast `List` 会按一级 `ListItem` 拆成多个独立 `list` 块；每个一级项自己的嵌套子列表仍保留在该块内，并继续使用现有 `LayoutListItem.level` 与 `listKind` 表达层级和有序/无序类型；有序列表拆块后通过每个块的 `metadata.start` 保留原编号连续性。新增回归覆盖连续一级无序列表拆块、外层有序/内层无序保真和第二个有序块从 2 开始。",
+          "included": [
+            "修改 `src/engine/document-model/fromMarkdown.ts` 的顶层列表导入逻辑，让一个顶层 mdast `List` 产出多个 `LayoutBlock`：每个一级 `ListItem` 对应一个独立列表块。",
+            "每个独立列表块只包含该一级列表项及其子列表项；子列表继续由现有 flatten 逻辑展开成同块内的 2/3 级列表项。",
+            "有序列表拆成多个块后，按原一级项下标写入 `metadata.start`，确保画布预览和 HTML/PDF 导出仍显示 1、2、3 等连续编号。",
+            "补充定向回归，验证连续一级列表导入后不会合并为一个列表块，并验证有序编号起点和嵌套子列表仍保真。",
+            "完成后执行定向测试、`npm run typecheck`、必要构建和进度同步。"
+          ],
+          "excluded": [
+            "不改画布列表树渲染、右侧列表编辑、拖拽排序、快捷键缩进或列表右键菜单。",
+            "不做用户手动合并多个列表块的 UI 或命令。",
+            "不新增 `.layout` 顶层结构字段，不反写 Markdown 源码快照。",
+            "不改分页算法；本步只让分页算法拿到拆得更细的列表块。"
+          ],
+          "followup": [
+            "如果后续需要“用户自行合并多个一级列表块”，归属 `PH2-05B` 列表编辑增强或块多选合并增强。",
+            "如果后续需要 Markdown 导出完整还原拆块前后的源码风格，继续归属 `PH2-04` 或 AI 上下文导出链路。",
+            "列表分页质量、孤寡行与真实测量分页继续归属 `PH2-09`。"
+          ],
+          "verification": [
+            "用户已回复“确定”，确认当前最小修复方案可以执行。",
+            "开工前先写回 `progress/tasks/phase-2.json`、`progress/risks.json` 和 `progress/logs.json`。",
+            "开工前执行 `npm run progress:build` 与 `npm run progress:check`，确保展示文档与结构化真相源一致。",
+            "`src/engine/document-model/fromMarkdown.ts` 已新增 `buildListBlocks`，顶层列表按一级项拆成独立 `list` 块。",
+            "`src/engine/document-model/fromMarkdown.test.ts` 已新增一级列表项独立块导入回归，并更新混合嵌套列表用例以验证拆块后的编号起点。",
+            "`src/components/layout/CanvasPane.tsx` 已补齐既有 `semanticRoleConfig` 参数传递错位，解除全量类型检查阻塞。",
+            "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，4 个测试 pass。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。"
+          ]
         }
       ]
     },
@@ -759,10 +797,11 @@
         {
           "id": "PH2-05B-chemistry-apparatus-template-gallery-v2",
           "confirmed": true,
-          "statusLabel": "已确认边界：教材式化学实验装置模板图库 V2",
+          "statusLabel": "已完成：教材式化学实验装置模板图库 V2",
           "confirmedOn": "2026-07-05",
           "startedOn": "2026-07-05",
-          "summary": "用户反馈 V1 化学图式过于简陋、偏图标化，确认按 V2 返工增强。本步按 `PH2-05B-chemistry-apparatus-template-gallery-v2` 推进：把化学图式从单个仪器图标升级为更接近教材/试卷可直接使用的实验装置模板，并把顶栏下拉升级为带缩略图的小型素材面板；素材仍为项目原创 SVG，继续复用现有图片块插入、保存、预览和导出链路。",
+          "completedOn": "2026-07-05",
+          "summary": "本步已完成 `PH2-05B-chemistry-apparatus-template-gallery-v2`：已把 V1 偏图标化的化学图式升级为教材/试卷风格的组合实验装置模板，并把顶端“化学图式”入口从普通下拉框改为带分类、缩略图、中文名称和授权提示的小型素材面板。当前第一批覆盖 CO2 通入澄清石灰水、CO2 收集、O2 排水法收集、O2 向上排空气法收集、加热试管制气体、锥形瓶反应制气体、检验 CO2 是否集满、检查装置气密性、过滤装置、蒸发皿加热等 10 个项目原创 SVG 模板；点击模板后继续复用现有图片块插入、保存、预览和 HTML/PDF 导出链路。",
           "included": [
             "重做 `src/constants/chemistryApparatus.ts`，把 V1 图标式素材升级为教材式组合装置模板，第一批至少覆盖 CO2 通入澄清石灰水、CO2 收集、O2 排水法收集、O2 向上排空气法收集、加热试管制气体、锥形瓶反应制气体、检验 CO2 是否集满、检查装置气密性、过滤装置、蒸发皿加热等 10 个模板。",
             "统一模板视觉为黑白教材线稿：细线、统一笔触、导管、橡胶塞、液面、箭头、中文标注和气体标签。",
@@ -788,8 +827,262 @@
           "verification": [
             "用户已回复“确认”，确认 V2 返工增强方案可以执行。",
             "开工前写回本步边界，明确本步纳入、本步明确不纳入和后续归属任务。",
-            "`progress/risks.json` 将新增 V1 过于图标化的体验返工记录。",
-            "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+            "`progress/risks.json` 已新增 `RISK-031`，记录 V1 偏图标化、无法满足教材式实验装置图预期的返工风险。",
+            "`src/constants/chemistryApparatus.ts` 已重做为 10 个项目原创教材式组合 SVG 模板，并登记分类、说明、授权来源和默认尺寸。",
+            "`src/components/layout/Toolbar.tsx` 已把化学图式入口从下拉框升级为分类缩略图素材面板，点击素材卡片后自动关闭面板并插入图片块。",
+            "`src/styles.css` 已补充化学图式面板、分类按钮、缩略图卡片和稳定尺寸样式。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。",
+            "`npm run progress:build` 成功。",
+            "`npm run progress:check` 成功。"
+          ]
+        },
+        {
+          "id": "PH2-05B-chemistry-line-art-gallery-and-composer-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：化学线稿图库扩容与组合编辑器 V1",
+          "confirmedOn": "2026-07-05",
+          "startedOn": "2026-07-05",
+          "completedOn": "2026-07-05",
+          "summary": "本步已完成 `PH2-05B-chemistry-line-art-gallery-and-composer-v1`：在现有 10 个项目原创成套化学实验装置模板基础上，新增 14 个可组合化学线稿部件，并接入 Konva / React Konva 建立最小可用组合设计器。用户可从部件库添加试管、烧杯、锥形瓶、集气瓶、漏斗、长颈漏斗、分液漏斗、直导管、弯导管、橡胶塞、水槽、铁架台、酒精灯、玻璃棒等元素，在画布中选中、拖拽、缩放、旋转、删除、撤销、重做、清空，添加中文标签和简单导管线，最后导出为 data URL 图片并复用现有图片块链路插入当前文档。本步未抓取授权不明教学图片，未新增 `.layout` 顶层字段，也未接分子结构式编辑器。",
+          "included": [
+            "扩充 `src/constants/chemistryApparatus.ts`，新增一批项目原创化学单部件线稿素材，至少覆盖试管、烧杯、锥形瓶、集气瓶、漏斗、长颈漏斗、分液漏斗、导管、橡胶塞、水槽、铁架台、酒精灯、玻璃棒等可组合元素。",
+            "保留并继续提供 V2 已完成的成套实验装置模板，组合编辑器可从部件素材开始拼装，不直接抓取国内教材、教辅、题库或商业素材图片。",
+            "新增化学图式组合设计入口，接入 Konva / React Konva 作为成熟 2D 画布内核，避免从零自研拖拽、选中、缩放和导出底层能力。",
+            "组合编辑器 V1 支持添加部件到画布、选中、拖拽移动、缩放、旋转、删除、撤销、重做和清空画布。",
+            "组合编辑器 V1 支持添加中文标签和简单导管线，满足基础教材式实验装置拼图需要。",
+            "组合结果导出为 data URL 图片并复用现有 `insertLayoutImageBlock` 插入当前文档，默认写入 alt/title、等比锁定和内联环绕。",
+            "完成后运行 `npm run progress:build`、`npm run progress:check`、`npm run typecheck` 和 `npm run build` 验证。"
+          ],
+          "excluded": [
+            "不实现完整化学仿真、反应过程模拟、自动识别实验流程或自动纠错。",
+            "不做复杂导管连接点吸附、自动避障布线、部件碰撞检测或高级图形约束系统。",
+            "不接在线素材服务、外部素材搜索、素材上传审核或商业素材包管理。",
+            "不接入 Ketcher、RDKit.js、OpenChemLib 等分子结构式/反应式编辑能力。",
+            "不新增 `.layout` 顶层字段或新的化学块类型，组合结果 V1 仍以图片块形式插入文档。",
+            "不修改分页算法、导出主流程、图片块深层编辑器或右侧对象属性体系。"
+          ],
+          "followup": [
+            "导管连接点吸附、自动对齐、组合成组/解组和模板另存：后续归属化学图式编辑器 V2。",
+            "外部开源/商业素材包导入、授权台账、素材搜索和分类管理：后续归属素材库治理任务。",
+            "分子结构式/反应式编辑：后续如需要另拆 Ketcher 或轻量结构式渲染接入任务。",
+            "图片块深度编辑、替换、重置尺寸和对象排版增强：继续归属 `PH2-10`。"
+          ],
+          "verification": [
+            "用户已回复“确认”，确认线稿图库扩容与成熟组合编辑器方案可以执行。",
+            "开工前写回本步边界，明确本步纳入、本步明确不纳入和后续归属任务。",
+            "`progress/risks.json` 已新增 `RISK-032`，记录组合编辑器范围和第三方依赖接入风险。",
+            "`package.json` 与 `package-lock.json` 已新增 `konva@10.3.0` 和 `react-konva@18.2.16`，避开要求 React 19 的 `react-konva@19`。",
+            "`src/constants/chemistryApparatus.ts` 已新增 14 个项目原创化学线稿部件，并保留 10 个成套实验装置模板。",
+            "`src/components/layout/ChemistryComposerDialog.tsx` 已新增 Konva 组合设计器，支持部件、标签、导管线、选中变换、撤销重做和导出插入。",
+            "`src/components/layout/Toolbar.tsx`、`src/components/layout/AppShell.tsx` 和 `src/components/layout/useCanvasInsertCommands.ts` 已接通“组合设计”入口与组合图插入链路。",
+            "`src/styles.css` 已补充组合设计器弹窗、部件库、工具条和画布工作区样式。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。",
+            "`npm run progress:build` 成功。",
+            "`npm run progress:check` 成功。"
+          ]
+        },
+        {
+          "id": "PH2-05B-chemistry-svg-refinement-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：化学 SVG 精细版 V1",
+          "confirmedOn": "2026-07-06",
+          "startedOn": "2026-07-06",
+          "completedOn": "2026-07-06",
+          "summary": "本步已完成 `PH2-05B-chemistry-svg-refinement-v1`：保持现有图库分类、组合编辑器和插入链路不变，只重绘了 `src/constants/chemistryApparatus.ts` 中的化学部件与模板 SVG。当前 14 个可组合部件与 10 个成套模板都已统一为更细的教材式线稿风格，重点提升了器皿外轮廓、厚薄线层级、液面、塞子、导管、刻度、支架和局部细节，减少上一版粗线示意图的观感；素材 ID、分类、默认尺寸、组合编辑器数据结构和图片块插入链路保持不变。",
+          "included": [
+            "重绘 `src/constants/chemistryApparatus.ts` 中现有 14 个可组合化学部件 SVG，重点提升器皿弧线、厚薄线层级、液面形状、细节部件和整体比例。",
+            "同步重绘现有 10 个成套实验装置模板 SVG，使其与精细部件风格保持一致，减少现在偏示意图式的粗线感。",
+            "保持现有素材 ID、分类、名称、默认尺寸、组合编辑器数据结构和插入链路不变，避免影响 `Toolbar`、`ChemistryComposerDialog` 和图片块写回逻辑。",
+            "继续坚持项目原创 SVG，不抓取、不复制国内教材、教辅、题库平台或商业素材站图片。",
+            "完成后运行 `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check` 验证。"
+          ],
+          "excluded": [
+            "不新增新的组合编辑器功能，不做连接点吸附、自动对齐、成组/解组或模板另存。",
+            "不接入外部 SVG 素材包、在线素材服务或商业图库。",
+            "不修改 `.layout` 顶层字段、图片块模型、分页算法或导出主流程。",
+            "不接分子结构式/反应式编辑器，也不做化学仿真。"
+          ],
+          "followup": [
+            "若后续还需要更接近印刷教材的整套图库规范，可继续拆 SVG 视觉规范 V2 或素材工厂化任务。",
+            "若后续要做导管连接点吸附、部件自动对齐、组合成组/解组和模板另存，继续归属化学图式编辑器 V2。",
+            "外部开源/商业素材包导入、授权台账、素材搜索和分类管理：后续归属素材库治理任务。"
+          ],
+          "verification": [
+            "用户已回复“继续”，确认本步可直接开工。",
+            "开工前写回本步边界，明确本步纳入、本步明确不纳入和后续归属任务。",
+            "`progress/risks.json` 已新增 `RISK-034`，记录 SVG 视觉质量返工风险。",
+            "`src/constants/chemistryApparatus.ts` 已重绘 14 个可组合部件和 10 个成套模板 SVG，保持现有素材 ID 与数据结构不变。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。",
+            "`npm run progress:build` 成功。",
+            "`npm run progress:check` 成功。"
+          ]
+        },
+        {
+          "id": "PH2-05B-chemistry-basic-elements-library-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：化学基础元素库补齐 V1",
+          "confirmedOn": "2026-07-06",
+          "startedOn": "2026-07-06",
+          "completedOn": "2026-07-06",
+          "summary": "本步已完成 `PH2-05B-chemistry-basic-elements-library-v1`：按用户确认先补齐化学组合设计器基础元素库，再做容器编辑能力。`src/constants/chemistryApparatus.ts` 已在现有 14 个项目原创可组合部件基础上新增 26 个基础元素，使可组合部件总数达到 40 个；新增元素覆盖量筒、圆底烧瓶、平底烧瓶、广口瓶、试剂瓶、蒸发皿、坩埚、T 形管、U 形管、乳胶管、玻璃片、单孔塞、双孔塞、三脚架、石棉网、铁圈、铁夹、试管夹、燃烧匙、滴管、滴定管、冷凝管、药匙、镊子、研钵、表面皿。部件分类已扩为容器、计量器具、导管与塞、支架与加热、分离器材、操作器材 6 类；新增元素继续使用项目原创 SVG 线稿，并复用现有 Konva 组合设计器的添加、拖拽、缩放、旋转、删除、撤销重做和导出插入链路。本步未提前实现液面高度、刻度显隐、瓶塞状态等容器属性编辑，也未做导管连接点吸附。",
+          "included": [
+            "扩充 `src/constants/chemistryApparatus.ts` 的可组合化学部件库，在现有 14 个部件基础上新增约 26 个基础元素，使总数达到约 40 个。",
+            "新增元素优先覆盖容器、导管与塞、支架与加热、分离器材四类教材/试卷高频器材。",
+            "所有新增素材继续使用项目原创 SVG 线稿，不抓取、不复制国内教材、教辅、题库平台或商业素材站图片。",
+            "必要时调整 `ChemistryLineArtPartCategory` 和组合设计器左侧分类文案，让新增元素在中文分类中更容易查找。",
+            "新增元素沿用现有 `ChemistryComposerDialog` 添加部件、拖动、缩放、旋转、删除、撤销重做、清空和导出 PNG 插入文档链路。",
+            "必要时微调组合设计器部件库网格样式，保证新增部件缩略图稳定展示、不挤压、不变形。",
+            "完成后运行 `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check` 验证。"
+          ],
+          "excluded": [
+            "不做液面高度、刻度显隐、瓶塞状态、倒置/正置等可编辑容器属性。",
+            "不做导管连接点吸附、自动对齐、自动避障布线、碰撞检测或图形约束系统。",
+            "不做组合成组/解组、模板另存、素材搜索、素材导入导出或在线素材服务。",
+            "不接入 Ketcher、RDKit.js、OpenChemLib 等分子结构式/反应式编辑能力。",
+            "不新增 `.layout` 顶层字段或新的化学块类型，组合结果仍以图片块形式插入文档。",
+            "不修改分页算法、导出主流程、图片块深层编辑器或右侧对象属性体系。"
+          ],
+          "followup": [
+            "容器液面、刻度、塞子、口径/高矮和倒置状态编辑：后续归属 `PH2-05B-chemistry-container-editing-v1`。",
+            "导管连接点吸附、自动对齐、组合成组/解组和模板另存：后续归属化学图式编辑器 V2。",
+            "外部开源/商业素材包导入、授权台账、素材搜索和分类管理：后续归属素材库治理任务。",
+            "分子结构式/反应式编辑：后续如需要另拆 Ketcher 或轻量结构式渲染接入任务。"
+          ],
+          "verification": [
+            "用户已回复“确定”，确认先补齐基础元素库，再做容器编辑能力。",
+            "开工前写回本步边界，明确本步纳入、本步明确不纳入和后续归属任务。",
+            "`progress/risks.json` 已新增 `RISK-035`，记录基础元素扩容与容器编辑顺序调整。",
+            "`src/constants/chemistryApparatus.ts` 已新增 26 个项目原创基础 SVG 部件。",
+            "`ChemistryLineArtPartCategory` 已扩为 6 个中文分类：容器、计量器具、导管与塞、支架与加热、分离器材、操作器材。",
+            "轻量校验通过：`chemistryLineArtParts.length === 40` 且 40 个 ID 全部唯一。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。"
+          ]
+        },
+        {
+          "id": "PH2-05B-chemistry-container-editing-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：化学容器编辑 V1",
+          "confirmedOn": "2026-07-06",
+          "startedOn": "2026-07-06",
+          "completedOn": "2026-07-06",
+          "summary": "本步已完成 `PH2-05B-chemistry-container-editing-v1`：组合设计器中的 10 类容器已从纯静态 SVG 部件升级为可编辑容器，覆盖试管、烧杯、锥形瓶、集气瓶、圆底烧瓶、平底烧瓶、广口瓶、试剂瓶、量筒、水槽。`src/constants/chemistryApparatus.ts` 已为这 10 类部件补齐可编辑容器元数据、默认状态和动态 SVG 生成 helper；`ChemistryComposerDialog.tsx` 已接入容器状态到元素模型，并在组合设计器右侧新增中文属性区，支持液面显示、液面高度、刻度显示、塞子显示，以及正放 / 倒置 / 斜放预设。动态容器继续复用现有 Konva 组合设计器拖拽、缩放、旋转、撤销重做和导出 PNG 插入文档链路；本步未接入导管连接点吸附、自动对齐、成组/解组、模板另存或插入文档后的二次编辑。",
+          "included": [
+            "扩展 `src/constants/chemistryApparatus.ts` 中可编辑容器元数据，明确哪些部件支持液面、刻度、塞子和姿态预设。",
+            "在 `ChemistryComposerDialog` 中给选中的容器显示独立中文属性区，至少包含液面显示开关、液面高度调节、刻度显示开关、塞子显示开关和正放 / 倒置 / 斜放预设。",
+            "把上述 10 类容器从纯静态 `src` 图片渲染升级为可根据当前属性实时变化的动态渲染结果。",
+            "动态容器继续复用现有选中、拖拽、缩放、旋转、删除、撤销重做、清空和导出 PNG 插入文档链路。",
+            "保持现有图片块插入链路和 `.layout` 顶层结构不变，插入文档后仍作为图片块使用。",
+            "完成后运行 `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check` 验证。"
+          ],
+          "excluded": [
+            "不做导管连接点吸附、自动对齐、自动避障布线、碰撞检测或图形约束系统。",
+            "不做组合成组/解组、模板另存、素材搜索、素材导入导出或在线素材服务。",
+            "不做插入文档后的二次进入编辑，也不新增 `.layout` 顶层化学块类型。",
+            "不接入 Ketcher、RDKit.js、OpenChemLib 等分子结构式/反应式编辑能力。",
+            "不修改分页算法、导出主流程、图片块深层编辑器或右侧对象属性体系。"
+          ],
+          "followup": [
+            "导管连接点吸附、自动对齐、组合成组/解组和模板另存：后续归属化学图式编辑器 V2。",
+            "若后续需要插入文档后再次打开组合设计器编辑，另拆化学图式可回编任务。",
+            "外部开源/商业素材包导入、授权台账、素材搜索和分类管理：后续归属素材库治理任务。"
+          ],
+          "verification": [
+            "用户已回复“确定”，确认当前容器编辑 V1 边界可以执行。",
+            "开工前写回本步边界，明确本步纳入、本步明确不纳入和后续归属任务。",
+            "`progress/risks.json` 已新增 `RISK-036`，记录容器动态渲染范围与一致性风险。",
+            "`src/constants/chemistryApparatus.ts` 已为 10 类容器补齐 `editableContainer` 元数据、默认状态与动态 SVG 渲染 helper。",
+            "`src/components/layout/ChemistryComposerDialog.tsx` 已新增容器状态模型与右侧中文属性区，支持液面、刻度、塞子和姿态预设编辑。",
+            "`src/styles.css` 已补充组合设计器三栏布局和容器属性区样式。",
+            "轻量校验通过：可编辑容器数量为 10，且 10 类容器都能生成 `data:image/svg+xml` 动态渲染结果。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。"
+          ]
+        },
+        {
+          "id": "PH2-05B-chemistry-connector-snap-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：化学导管连接点吸附 V1",
+          "confirmedOn": "2026-07-06",
+          "startedOn": "2026-07-06",
+          "completedOn": "2026-07-06",
+          "summary": "本步已完成 `PH2-05B-chemistry-connector-snap-v1`：在容器编辑 V1 的基础上，组合设计器已为试管、烧杯、锥形瓶、集气瓶、圆底烧瓶、平底烧瓶、广口瓶、试剂瓶、量筒、水槽，以及单孔塞、双孔塞补齐连接点元数据；导管线元素已新增起点/终点吸附关系，拖拽端点时会在连接点附近高亮并自动吸附，吸附后容器或塞子移动、缩放、旋转时，导管端点会跟随更新。导管线手动整体拖动、缩放或旋转时会主动解除吸附，避免旧连接关系强行回拉；本步未实现自动避障布线、导管 SVG 部件之间的互吸附、自动对齐、成组/解组、模板另存或插入文档后的二次编辑。",
+          "included": [
+            "扩展 `src/constants/chemistryApparatus.ts`，为 10 类容器和单孔塞 / 双孔塞补齐连接点定义。",
+            "在 `ChemistryComposerDialog.tsx` 中为导管线新增起点 / 终点吸附关系模型，并基于连接点计算最近吸附目标。",
+            "选中导管线时显示两个端点拖拽手柄；拖到连接点附近时显示高亮并在释放后自动吸附。",
+            "吸附后的导管端点会随着目标容器或塞子的移动、缩放、旋转同步更新。",
+            "导管线整体拖动、缩放或旋转后会主动解除吸附关系，保持用户手动调整优先。",
+            "完成后运行 `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check` 验证。"
+          ],
+          "excluded": [
+            "不做自动避障布线、折线导管、路径重算或碰撞检测。",
+            "不做直导管、弯导管、U 形管、T 形管、乳胶管这些 SVG 部件之间的互吸附。",
+            "不做自动对齐、成组/解组、模板另存或在线素材服务。",
+            "不做插入文档后的二次进入编辑，也不新增 `.layout` 顶层化学块类型。",
+            "不修改分页算法、导出主流程、图片块深层编辑器或右侧对象属性体系。"
+          ],
+          "followup": [
+            "自动避障布线、导管 SVG 部件互吸附、自动对齐、成组/解组和模板另存：后续归属化学图式编辑器 V2。",
+            "若后续需要多段折线导管或可编辑连接路径，另拆导管布线增强任务。",
+            "若后续需要插入文档后再次打开组合设计器编辑，继续归属化学图式可回编任务。"
+          ],
+          "verification": [
+            "用户已回复“确认”，确认当前导管连接点吸附 V1 边界可以执行。",
+            "开工前写回本步边界，明确本步纳入、本步明确不纳入和后续归属任务。",
+            "`progress/risks.json` 已新增 `RISK-037`，记录连接点吸附范围与一致性风险。",
+            "`src/constants/chemistryApparatus.ts` 已为 12 个可连接部件补齐连接点定义。",
+            "`src/components/layout/ChemistryComposerDialog.tsx` 已新增导管线端点手柄、吸附关系模型和目标高亮逻辑。",
+            "轻量校验通过：带连接点的部件数量为 12，其中双孔塞包含 2 个连接点。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。"
+          ]
+        },
+        {
+          "id": "PH2-05B-chemistry-special-container-editing-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：分液漏斗与滴定管容器扩展 V1",
+          "confirmedOn": "2026-07-06",
+          "startedOn": "2026-07-06",
+          "completedOn": "2026-07-06",
+          "summary": "本步已完成 `PH2-05B-chemistry-special-container-editing-v1`：继续沿着容器编辑链路补强，只把 `分液漏斗` 与 `滴定管` 两个高频器材从静态 SVG 部件升级为可编辑容器。`src/constants/chemistryApparatus.ts` 已在现有容器状态模型中新增 `valveOpen` 与 `supportsValve`，并将 `separatoryFunnel`、`burette` 两类特殊器材接入 `editableContainer` 定义与动态 SVG 渲染；`ChemistryComposerDialog.tsx` 右侧中文属性区已为支持阀门的器材补充“打开阀门”控制，并继续沿用液面显示、液面高度与刻度显示入口。现有 Konva 组合设计器的拖拽、缩放、旋转、撤销重做和导出 PNG 插入文档链路保持不变；本步未扩到其他器材、连接点扩容、动画放液、实验仿真或插入文档后的二次回编。",
+          "included": [
+            "扩展 `src/constants/chemistryApparatus.ts` 中的可编辑容器种类，把 `分液漏斗` 与 `滴定管` 纳入可编辑容器范围。",
+            "在现有容器状态模型与定义中新增最小可用的阀门状态字段，并明确哪些容器支持阀门开关。",
+            "为 `分液漏斗` 与 `滴定管` 补齐动态 SVG 渲染 helper，使液面、刻度和阀门开关能实时反映到组合设计器画面与最终导出图片。",
+            "在 `ChemistryComposerDialog.tsx` 右侧中文属性区中，为支持阀门的器材补充“阀门开关”控制，并继续沿用现有液面显示、液面高度和刻度显示入口。",
+            "保持现有拖拽、缩放、旋转、撤销重做、清空和导出 PNG 插入文档链路不变，不新增新的导出协议或 `.layout` 顶层字段。",
+            "补充最小验证，至少确认这两个器材都能创建默认容器状态、生成 `data:image/svg+xml` 动态结果，并通过类型检查、构建和进度同步校验。"
+          ],
+          "excluded": [
+            "不把全部剩余器材一次性升级为可编辑容器，本步只覆盖 `分液漏斗` 与 `滴定管` 两类特殊容器。",
+            "不做导管连接点吸附扩容，不给这两个器材补新的自动吸附、自动对齐、自动避障布线或碰撞检测。",
+            "不做分液漏斗放液动画、滴定过程动画、液滴生成、体积自动计算或实验仿真。",
+            "不做组合成组/解组、模板另存、素材搜索、在线素材服务或插入文档后的二次回编。",
+            "不修改分页算法、导出主流程、图片块深层编辑器或右侧对象属性总体系。"
+          ],
+          "followup": [
+            "若后续需要把 `长颈漏斗`、`冷凝管` 等更多器材升级为可编辑特殊容器，继续归属化学容器编辑增强小步。",
+            "若后续需要给 `分液漏斗` 与 `滴定管` 增加连接点吸附扩容，继续归属导管连接点吸附增强小步。",
+            "动画放液、滴定体积联动、实验过程仿真：后续另拆化学图式交互增强任务。",
+            "组合成组/解组、模板另存与插入文档后的再次编辑：继续归属化学图式编辑器 V2 / 可回编任务。"
+          ],
+          "verification": [
+            "用户已回复“1”，确认按推荐方向继续推进容器编辑增强，而不是切到成组/自动对齐或模板另存。",
+            "开工前写回本步边界，明确本步纳入、本步明确不纳入和后续归属任务。",
+            "`progress/risks.json` 已同步更新 `RISK-036` 当前处理方式，记录特殊容器扩展的范围控制。",
+            "开工前已执行 `npm run progress:build` 与 `npm run progress:check`，确保展示文档与结构化真相源一致。",
+            "`src/constants/chemistryApparatus.ts` 已新增 `separatoryFunnel` / `burette` 两类可编辑容器定义，并补齐阀门状态、动态 SVG 渲染和部件挂接。",
+            "`src/components/layout/ChemistryComposerDialog.tsx` 已为支持阀门的器材补充“打开阀门”中文控制。",
+            "`src/constants/chemistryApparatus.test.ts` 已新增 2 个定向测试，覆盖可编辑容器范围与阀门状态渲染差异。",
+            "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\constants\\chemistryApparatus.test.ts`。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。",
+            "`npm run progress:build` 成功。",
+            "`npm run progress:check` 成功。"
           ]
         }
       ]
@@ -928,10 +1221,11 @@
         {
           "id": "PH2-06-floating-toolbar-font-family-size-v1",
           "confirmed": true,
-          "statusLabel": "已确认边界：浮动工具条字体字号调整 V1",
+          "statusLabel": "已完成：浮动工具条字体字号调整 V1",
           "confirmedOn": "2026-07-05",
           "startedOn": "2026-07-05",
-          "summary": "用户确认完善浮动工具条，在画布原位富文本编辑态选中文字后，可直接通过浮动工具条调整字体和字号。本步只补齐当前选区的局部字体/字号写回能力，继续复用现有 `TextRun.styleOverrides.fontFamily/fontSize` 草稿链路，不扩展 `.layout` 数据结构、不修改批量字体字号规则、不恢复分页算法主线。",
+          "completedOn": "2026-07-05",
+          "summary": "本步已完成 `PH2-06-floating-toolbar-font-family-size-v1`：画布原位富文本编辑态选中文字后，浮动工具条新增字体与字号菜单，可直接把当前选区写入局部 `TextRun.styleOverrides.fontFamily/fontSize` 草稿；字体菜单复用现有基础字体与导入字体资源，字号菜单复用 10-72px 常用预设。新增菜单使用按钮式浮层，避免原生下拉抢焦点导致选区丢失；失焦时仍沿用既有草稿提交链路写回模型。本步未扩展 `.layout` 数据结构，未修改批量字体字号规则，未恢复分页算法主线。",
           "included": [
             "在画布选中文字后的浮动工具条中新增字体选择控件，复用现有字体列表与已导入字体资源。",
             "在浮动工具条中新增字号调整控件，支持常用字号预设或紧凑输入，并继续限制在 10-72px。",
@@ -956,7 +1250,12 @@
           "verification": [
             "用户已回复“确定”，确认当前最小方案可以执行。",
             "本边界已写回 `progress/tasks/phase-2.json`，明确本步纳入、本步明确不纳入和后续归属任务。",
-            "`npm run progress:build` 和 `npm run progress:check` 即将执行。"
+            "`src/components/layout/CanvasPane.tsx` 已接入浮动工具条字体/字号菜单和局部样式写回函数。",
+            "`src/styles.css` 已新增浮动工具条专用紧凑菜单样式。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。",
+            "`npm run progress:build` 成功。",
+            "`npm run progress:check` 成功。"
           ]
         }
       ],
@@ -1328,19 +1627,21 @@
       "milestoneIds": [
         "M2"
       ],
-      "status": "进行中",
+      "status": "已完成",
       "acceptance": "用户可在前端创建自定义语义角色，配置 `【答案解析】` 等关键词前缀规则，并对当前文档扫描后批量写入 `LayoutBlock.semantic`；本步仅做前缀匹配和块级语义，不扩展复杂正则、深层列表/表格单元格语义或分页规则。",
       "owner": "语义块与可视化编辑组",
       "dependsOn": [
         "PH2-07-semantic-role-model"
       ],
       "startedOn": "2026-07-05",
+      "completedOn": "2026-07-05",
       "executionBoundary": {
         "id": "PH2-07-custom-semantic-keyword-rules-v1",
         "confirmed": true,
-        "statusLabel": "进行中：自定义语义块规则 V1",
+        "statusLabel": "已完成：自定义语义块规则 V1",
         "confirmedOn": "2026-07-05",
         "startedOn": "2026-07-05",
+        "completedOn": "2026-07-05",
         "summary": "用户确认下一步设计并实现自定义语义块：用户可在前端自定义语义角色，并可根据 `【答案解析】` 这类关键词前缀自动批量应用语义。本步在现有 `LayoutBlock.semantic` 基础上新增文档级语义角色配置与关键词前缀规则，提供扫描和应用入口；先收口为块级前缀匹配，不做复杂正则、实时监听、AI 自动识别或结构化容器块。",
         "included": [
           "新增文档级自定义语义角色配置，随 `.layout` 保存恢复。",
@@ -1371,8 +1672,166 @@
         ],
         "verification": [
           "用户已确认按“自定义语义块规则 V1”方案执行。",
-          "开工前先写回本边界，并执行 `npm run progress:build` 与 `npm run progress:check`。"
-        ]
+          "开工前先写回本边界，并执行 `npm run progress:build` 与 `npm run progress:check`。",
+          "`LayoutDocument.meta.semanticRoleConfig` 已新增文档级自定义语义角色与关键词规则配置，旧文档缺字段时回退为空配置。",
+          "`src/engine/document-model/semanticRole.ts` 已支持自定义角色归一化、角色查询、前缀规则匹配和自定义语义 class 安全输出。",
+          "`src/engine/document-model/operations.ts` 已新增扫描与批量应用纯函数，支持跳过或覆盖已有语义、移除关键词前缀并保留正文 TextRun 格式。",
+          "右侧面板已新增“语义规则”标签，可创建自定义语义块、配置关键词前缀、扫描全文并应用语义；对象属性里的语义下拉也会显示自定义角色。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，2 个测试全部 pass。",
+          "内置语义导入回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，3 个测试全部 pass。",
+          "`npm run typecheck` 成功。"
+        ],
+        "resolution": "已完成自定义语义块规则 V1：用户现在可在右侧“语义规则”中创建自定义语义块、添加 `【答案解析】` 等关键词前缀规则、扫描全文并批量应用语义；应用结果写入 `LayoutBlock.semantic`，来源为 `keyword`，支持移除前缀并保留正文格式，配置随 `.layout` 保存恢复。"
+      }
+    },
+    {
+      "id": "PH2-07-semantic-role-style-binding",
+      "sequence": "7d",
+      "order": 74,
+      "title": "语义块样式绑定 V1：语义标签、色条与导出视觉",
+      "priority": "P1",
+      "moduleIds": [
+        "style-module",
+        "document-model",
+        "ui-components",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "在不改分页主算法、不做完整样式编辑器的前提下，让内置语义块和自定义语义块在画布预览与 HTML/PDF 导出中具备可感知的轻量视觉：标签、左侧色条、浅色背景，并消费自定义语义角色颜色。",
+      "owner": "语义块与样式协作组",
+      "dependsOn": [
+        "PH2-07-custom-semantic-keyword-rules"
+      ],
+      "startedOn": "2026-07-05",
+      "completedOn": "2026-07-05",
+      "executionBoundary": {
+        "id": "PH2-07-semantic-role-style-binding-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：语义块样式绑定 V1",
+        "confirmedOn": "2026-07-05",
+        "startedOn": "2026-07-05",
+        "completedOn": "2026-07-05",
+        "summary": "本步已完成语义块样式绑定 V1：内置语义块与自定义语义块共用 `SemanticRolePresentation` 展示信息；画布预览中带语义的块会显示轻量语义标签、左侧色条和浅色背景；自定义语义角色颜色会进入 CSS 变量，并被画布与 HTML/PDF 导出共同消费；右侧对象属性补充语义类型与颜色展示；新增导出最小回归验证自定义语义标签和颜色变量。",
+        "included": [
+          "让内置语义块和自定义语义块统一生成展示信息，包括名称、颜色、是否自定义。",
+          "画布预览中给带语义的块显示轻量语义标签。",
+          "画布预览中使用自定义角色颜色或内置默认颜色生成左侧色条和浅色背景。",
+          "HTML/PDF 导出同步输出基础语义标签、色条和背景视觉。",
+          "右侧“对象属性”语义块区域补充当前语义颜色和类型展示。",
+          "补充最小验证，确认自定义语义角色颜色可进入导出 HTML。"
+        ],
+        "excluded": [
+          "不做复杂模板市场。",
+          "不做每个语义块的完整样式编辑器。",
+          "不做拖拽调整语义块样式。",
+          "不做语义块分页规则，例如 keep-with-next。",
+          "不做结构化答案解析容器。",
+          "不做 AI 自动识别。"
+        ],
+        "followup": [
+          "语义角色绑定完整样式预设和模板库：后续归属样式模板增强。",
+          "语义块分页规则：后续归属 `PH2-09`。",
+          "结构化答案解析、提示、知识点容器：后续可归属 `PH2-07` 或新增语义块增强任务。",
+          "AI 自动识别已有文档语义：后续归属第三阶段 AI 任务。"
+        ],
+        "verification": [
+          "用户已确认按“语义块样式绑定 V1”方案执行。",
+          "开工前先写回本边界，并执行 `npm run progress:build` 与 `npm run progress:check`。",
+          "`src/engine/document-model/semanticRole.ts` 已新增语义展示信息、内置语义默认色、自定义语义颜色消费和 CSS 变量生成 helper。",
+          "`CanvasPane` 已消费 `layoutDocument.meta.semanticRoleConfig`，在画布块节点输出 `data-semantic-label`、语义 CSS 变量和轻量标签节点。",
+          "`src/styles.css` 已新增语义块左侧色条、浅色背景和标签样式，避免覆盖标题主题装饰。",
+          "`src/services/exportHtml.ts` 已把语义标签、class、CSS 变量和基础视觉写入 HTML/PDF 导出。",
+          "`src/components/layout/useWorkspaceFileCommands.ts` 已将当前文档语义配置传入导出 payload。",
+          "`src/components/layout/RightPanel.tsx` 已在对象属性中展示当前语义类型和颜色。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，3 个测试全部 pass。",
+          "Markdown / 导出回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，4 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ],
+        "resolution": "已完成语义块样式绑定 V1：自定义语义块和内置语义块现在能在画布与 HTML/PDF 导出中显示标签、色条和浅色背景；自定义角色颜色随 `.layout` 配置进入导出链路。"
+      }
+    },
+    {
+      "id": "PH2-07-semantic-block-template",
+      "sequence": "7e",
+      "order": 75,
+      "title": "语义块模板 V1：块模板覆盖、默认绑定与恢复链路",
+      "priority": "P1",
+      "moduleIds": [
+        "style-module",
+        "document-model",
+        "ui-components",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "在不改 `block.type`、不改变块高度、不做模板编辑器的前提下，为 `paragraph / heading / list / blockquote` 落地内置块模板、语义默认绑定、块级手动覆盖与清除语义恢复链路；画布预览、HTML/PDF 导出和 `.layout` 保存恢复共同消费同一套块模板结果。",
+      "owner": "语义块与样式协作组",
+      "dependsOn": [
+        "PH2-07-semantic-role-style-binding"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-07-semantic-block-template-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：语义块模板 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-07-semantic-block-template-v1`：1) 在 `LayoutBlock` 顶层新增 `semanticPreset` 聚合状态，并在自定义语义角色定义上补齐 `defaultBlockPresetId`，让块模板不再绑死在 `semantic` 子对象里，同时兼容旧 `.layout` 文件；2) 新增 4 种内置块模板 `默认语义框 / 侧边强调 / 浅色卡片 / 警示框`，把当前已上线的语义标签 + 左侧色条 + 浅色背景收编为 `默认语义框`；3) 文档模型层已接通“普通块手动模板 -> 进入语义后切到语义默认模板 -> 清除语义恢复语义前模板”的恢复链路，并显式保存“进入语义前原本无模板 = null”这一状态；4) 右侧“对象属性”新增独立“块模板”区，自定义语义角色新增默认块模板配置入口，支持当前块手动选择、清除和恢复跟随语义默认；5) 画布预览与 HTML/PDF 导出统一输出 `data-semantic-preset` 与 `semantic-block-preset-*` class，并按语义角色色或模板中性色渲染外壳；6) 旧文件不做批量迁移，只在运行时按“语义角色 -> 默认块模板”解析表现，用户未手动改模板时不会因此进入脏状态。",
+        "included": [
+          "新增 4 种内置块模板：`默认语义框`、`侧边强调`、`浅色卡片`、`警示框`，并把当前语义块已上线样式收编为 `默认语义框`。",
+          "块模板只定义不改高度的外壳形态：背景、边框、色条、圆角、轻量阴影等；不引入内边距和额外上下留白。",
+          "语义角色继续负责标签文案和颜色；普通块手动套块模板时只显示外壳，不显示语义标签，并回退到模板默认中性色。",
+          "支持范围先收口为 `paragraph / heading / list / blockquote`；其中 `list / blockquote` 只包最外层容器，不深入 `li` 或内部子块。",
+          "块模板与文档模板 / 主题冲突时，块模板优先覆盖重叠壳层字段；未命中的字段继续回退到现有模板 / 主题。",
+          "普通块和语义块共用同一套块模板库；普通块也可独立手动选择块模板。",
+          "块模板相关状态挂在 `LayoutBlock` 顶层聚合对象中，至少支持块级手动模板覆盖和“进入语义前的块模板备份”；进入语义前原本无模板时也要显式保存为 `null`。",
+          "语义默认模板只在当前块没有手动块模板时生效；如果当前块原先有手动块模板，设定语义后会切到语义默认模板，但要暂存原手动模板，清除语义后恢复。",
+          "语义状态下切换不同语义角色时，语义前模板备份只记录第一次进入语义前的状态，不在语义之间切换时重写。",
+          "右侧“对象属性”新增独立“块模板”区：当前块有语义时展示当前模板、跟随语义默认 / 手动覆盖状态和“恢复跟随语义默认”；无语义时支持手动选择和清除块模板。",
+          "自定义语义角色可配置默认块模板；内置语义角色先使用固定默认绑定，其中 `warning / pitfall` 走 `警示框`，`key-point / summary` 走 `侧边强调`，`question / answer / explanation / example / step / caption` 走 `默认语义框`，`浅色卡片` 暂只作为可手动选择的内置块模板。",
+          "旧 `.layout` 文件不批量回填新字段；运行时按“语义角色 -> 默认块模板”解析表现，只有用户手动修改块模板或产生语义前备份时才写入新字段。",
+          "补充最小验证，覆盖模型归一化、旧文件兼容、语义默认模板解析、清除语义恢复、画布预览、HTML/PDF 导出和 `.layout` 保存恢复。"
+        ],
+        "excluded": [
+          "不改 `LayoutBlock.type`，不新增 `answer-block`、`brush-callout` 等结构化容器块。",
+          "不支持 `table / image / code / equation / toc` 的块模板接入。",
+          "不做块模板编辑器、块模板增删改、块模板导入导出或模板市场。",
+          "不开放内置语义角色默认块模板的完整可视化配置；第一版只开放自定义语义角色默认块模板。",
+          "不让块模板改变块高度，不接入内边距、额外段前段后距或分页高度新参数。",
+          "不做语义块分页规则，例如 keep-with-next、avoid-break-inside、孤儿寡妇行等。",
+          "不改 AI 自动识别、关键词规则批量应用和 Markdown 语义前缀导入链路。",
+          "不对旧文件做打开即写回的新字段迁移，不让旧文件因为运行时默认块模板解析而自动进入脏状态。"
+        ],
+        "followup": [
+          "内置语义角色默认块模板的完整可视化配置：后续继续归属 `PH2-07` 样式增强小步。",
+          "块模板编辑器、用户自定义块模板和模板导入导出：后续归属样式模板增强任务。",
+          "`table / image / code / equation / toc` 等其他块类型接入块模板：后续按块类型另拆小步。",
+          "块模板改变块高度后的分页、测量和导出统一：后续归属 `PH2-09` 或样式系统深化。",
+          "结构化答案解析、提示、知识点容器：后续继续归属 `PH2-07` 或新增语义增强任务。",
+          "AI 自动标注语义与更复杂语义分页规则：后续归属第三阶段 AI 或 `PH2-09`。"
+        ],
+        "verification": [
+          "用户已明确回复“1，不再问了，直接按照当前的开始做”，确认当前最小闭环方案可以进入实施。",
+          "开工前先写回本边界，并执行 `npm run progress:build` 与 `npm run progress:check`。",
+          "实现过程中继续保持中文文案和中文注释。",
+          "`.layout` 保存恢复、画布预览和 HTML/PDF 导出已共同消费同一套块模板解析结果。",
+          "旧文件打开后若用户没有手动改块模板，不会仅因为运行时默认块模板解析而被标记为未保存。",
+          "`src/engine/document-model/types.ts`、`semanticRole.ts`、`operations.ts` 与 `syntaxMappingConfig.ts` 已补齐块模板类型、默认模板解析、语义前模板备份与归一化逻辑。",
+          "`src/components/layout/RightPanel.tsx` 已新增独立“块模板”区，并为自定义语义角色补齐默认块模板选择入口。",
+          "`src/components/layout/CanvasPane.tsx`、`src/services/exportHtml.ts` 与 `src/styles.css` 已接通块模板 class / data 属性和 4 种内置块模板外壳样式。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts src\\engine\\document-model\\fromMarkdown.test.ts`，9 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ],
+        "resolution": "已完成语义块模板 V1：当前 `paragraph / heading / list / blockquote` 4 类块已支持块模板默认映射、块级手动覆盖和清除语义恢复；普通块与语义块共用同一套内置块模板库；自定义语义角色可配置默认块模板；画布预览、HTML/PDF 导出与 `.layout` 保存恢复已经共用同一套块模板解析结果。"
       }
     },
     {
@@ -4847,67 +5306,6 @@
       "status": "已完成",
       "acceptance": "多栏下可继续拆开的正文块（标题、段落、列表、表格、引用容器、代码块、TOC）通过统一的 `trySplitBlockToFitHeight` 入口走切分，统一由 `placeBlockInColumns` 三段式调度；切分失败换页时只把 `currentColumnIndex += 1`，不盲目重置 `columnHeights`；以表格作为首个 PoC 完成接入并通过定向回归。",
       "executionBoundary": {
-        "id": "PH2-20-block-split-unified-interface-v1",
-        "confirmed": true,
-        "statusLabel": "已完成：多栏块切分通用机制 + 表格 PoC V1",
-        "confirmedOn": "2026-07-05",
-        "startedOn": "2026-07-05",
-        "completedOn": "2026-07-05",
-        "summary": "本步已完成 `PH2-20-block-split-unified-interface-v1`：1) `types.ts` 已在 `TableBlockMetadata` 与 `ListBlockMetadata` 上扩展 `runtimeSlice` 字段，参考 TOC 已有口径表达运行时切片位置；2) `estimatedMaxFill.ts` 已新增 `BlockSplitContext` / `TrySplitTableToFitHeightPayload` 类型和表格统一接口 `trySplitTableToFitHeight`，并新增 `advanceToNextColumn` 帮助按栏推进栏位而不重置 `columnHeights`；3) 表格分片主循环入口判断已从 `columnPlacementCandidate.fits && blockHeight <= availableHeightForBlock`（会被 `resolveColumnPlacementCandidate` 的向后找栏误判为 true）改为 `columnPlacementCandidate.columnIndex === currentColumnIndex && blockHeight <= currentColumnRemainingHeight`，确保只有当前栏能放下整表才走整放；4) 切分失败与切分成功剩余行的换页逻辑已改为先调用 `advanceToNextColumn` 推进栏位，栏满才真正换页，避免整块跳到新页第一栏；5) 已新增 `src/engine/typesetting/algorithms/estimatedMaxFill.table.test.ts` 定向回归脚本（双栏下表格按行切分填满当前栏、第二栏从剩余行开始），与现有 blockquote 测试一起 `pass 4 / fail 0`；6) `npm run typecheck`、`npm run build` 均通过。本步未重写测量缓存键、未接入列表/引用/代码块等其他块类型、未修改 CanvasPane / exportHtml、未新增调参 UI。",
-        "inScope": [
-          "在 `src/engine/typesetting/algorithms/estimatedMaxFill.ts` 新增 `trySplitBlockToFitHeight(block, context, contract, ...)` 统一接口，承载标题/段落、列表、表格、TOC、引用容器、代码块的切分逻辑。",
-          "新增 `placeBlockInColumns` 三段式调度：先尝试整块放入 → 否则调用统一切分 → 切分失败再换页，避免各块类型各自独立 `if` 分支导致调用顺序不一致。",
-          "修复 `resetColumnFlowState` 误清空栏状态的次因：换页时只推进 `currentColumnIndex`，不重置 `columnHeights`；只有在所有栏都填满时才真正重置。",
-          "复用 TOC 已有的 `runtimeSlice: { startIndex, endIndex, fragmentIndex, totalItems }` 模式，扩展到 `TableBlockMetadata` 和 `ListBlockMetadata`，让表格/列表的运行时片段也能携带切片元数据。",
-          "在表格上落地首个 PoC：让 `buildTableFragment` 通过统一接口被调度，并保证切分片段的 `runtimeSlice` 进入片段 metadata。",
-          "补充定向回归脚本（`scripts/m2-smoke.ts` 新增用例或独立 `node --test`），覆盖“双栏下表格放不下当前栏 → 按行切分填满当前栏、第二栏从片段后开始”的最小场景。",
-          "中文注释重点说明：多栏分页不能因为 `resolveColumnPlacementCandidate` 把块指向下一栏就直接整块推进；切分接口必须先于换页被尝试。"
-        ],
-        "interactionRules": [
-          "用户现有分栏配置、标题跨栏规则、分栏断点、代码块编辑交互和导出入口保持不变。",
-          "不新增调参 UI、不新增 `.layout` 顶层字段，不修改 `StyleSettings.columns` 数据结构。",
-          "本步只重构分页主循环的调度口径，不重写为第二套分页引擎。"
-        ],
-        "writebackRules": [
-          "仅扩展 `TableBlockMetadata.runtimeSlice` 和 `ListBlockMetadata.runtimeSlice` 两个 metadata 字段；`.layout` 顶层结构、列宽、行高、样式覆盖字段保持不变。",
-          "表格片段运行时 metadata 仅在分页结果中存在，不写回 `.layout` 文档模型。",
-          "进度变更先写入 `progress/` 真相源，再通过 `progress:build` 生成展示文档。"
-        ],
-        "consistencyRules": [
-          "实现过程中继续保持中文注释，必要时分段说明三段式调度的判断顺序。",
-          "隐藏 DOM 测量层和导出层继续消费同一套 `runtimeSlice`，避免一端接入另一端漏接。",
-          "PoC 选表格；其他块类型的接入延后到后续子步，本轮不强行扩展。"
-        ],
-        "outOfScope": [
-          "不接入列表、TOC、引用容器、代码块、文本块等其他块类型到统一接口；这些块类型本轮继续走原切分函数，由后续子步迁移。",
-          "不修改 `CanvasPane.tsx` 渲染层对其他块类型 `runtimeSlice` 的识别；表格片段 id 已使用 `-page-fragment-` 命名，渲染层无须改动。",
-          "不修改 `exportHtml.ts` 导出层对其他块类型片段的识别；表格片段导出已通过现有 `tableMeta.rows` 通路消费。",
-          "不做图片、公式、分隔线的切分；这些对象继续保持整块翻页。",
-          "不重写测量缓存键、不重写 Node 冒烟环境、不重写字体测量 provider。",
-          "不展开通用容器分页框架、keep-with-next、孤儿/寡妇行、局部分栏或分节分栏。"
-        ],
-        "deferredTo": [
-          "列表、TOC、引用容器、代码块、文本块逐一接入统一接口：归属 `PH2-20` 后续子步（建议命名 `PH2-20-block-split-types-adoption-v1` 等）。",
-          "测量缓存键扩展（按栏宽 + fragmentIndex 区分）：归属 `PH2-09` 测量链路深化。",
-          "渲染层适配其他块类型的 `runtimeSlice` 识别模式：归属 `PH2-09` 后续子步。",
-          "导出层适配其他块类型的片段导出：归属 `PH2-19` 导出链路深化。",
-          "图片、公式的等比缩放/部分渲染策略：继续归属 `PH2-10` 或新增对象排版增强任务。",
-          "通用容器分页框架、keep-with-next、孤儿/寡妇行：归属 `PH2-09` 后续子步。",
-          "局部分栏、分节分栏：归属 `PH2-19` 后续子步。"
-        ],
-        "verification": [
-          "用户已回复“都按方案走，编号 PH2-20 开始”，确认本步进入实施阶段。",
-          "`progress/tasks/phase-2.json` 已新增顶层任务卡 `PH2-20` 并将其 executionBoundary 标记为已完成，写明本步纳入 / 不纳入 / 后续归属 / 验证方式。",
-          "`progress/config.json` 已将 `M2 排版可用` 里程碑状态回退为 `进行中`，因为 PH2-20 多栏块切分通用机制仍在推进（实施完成后已随任务完成重新进入闭环）。",
-          "`progress/risks.json` 已更新 `RISK-023` 当前处理方式，记录本次返工从“可拆正文块统一续排”推进为“统一块切分接口 + 栏状态保护 + 表格 PoC”并完成实现。",
-          "`progress/logs.json` 已追加 `LOG-342`（开工登记）和 `LOG-343`（实施完成登记）。",
-          "`npm run progress:build` 和 `npm run progress:check` 成功，生成文档与真相源一致。",
-          "`npm run typecheck` 成功。",
-          "定向回归通过：`node .\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs --test src\\\\engine\\\\typesetting\\\\algorithms\\\\estimatedMaxFill.table.test.ts` 与 `estimatedMaxFill.blockquote.test.ts` 一起 `pass 4 / fail 0`，覆盖“双栏下表格按行切分填满当前栏、第二栏从剩余行开始”与“引用块/代码块切分填满当前栏”。",
-          "`npm run build` 成功。"
-        ]
-      },
-      "executionBoundary": {
         "id": "PH2-20-block-split-types-adoption-v1",
         "confirmed": true,
         "statusLabel": "已确认边界：多栏块切分通用机制接入剩余 5 种块类型",
@@ -4943,6 +5341,124 @@
           "定向回归通过：estimatedMaxFill.types-adoption.test.ts 与 existing blockquote + table 测试一起全部 pass / fail 0，覆盖列表双栏续排、TOC 双栏续排、引用/代码/文本 advanceToNextColumn 间接验证。",
           "`npm run build` 成功。",
           "`progress/logs.json` 已追加 LOG-345（实施完成登记）。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-21",
+      "sequence": "21",
+      "order": 85,
+      "title": "新增 DOCX 导出 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "可从当前文档导出 `.docx` 文件；Word/WPS 可正常打开；至少覆盖标题、段落、列表、表格、图片、代码块、引用块、分页符、基础页尺寸页边距、基础页眉页脚和页码；不破坏现有 PDF 导出链路。",
+      "owner": "导出链路组",
+      "dependsOn": [
+        "PH1-08",
+        "PH2-18",
+        "PH2-19"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-21-docx-export-v1",
+        "confirmed": true,
+        "statusLabel": "已确认边界：DOCX 导出 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "summary": "用户确认新增导出 `docx`。结合当前项目现状：现有导出链路已围绕 `LayoutBlock / PageLayout -> exportHtml -> Electron printToPDF` 建立稳定闭环，但导出 HTML 大量依赖 `layout-asset://` 资源协议、主题背景纹理和复杂 CSS。为避免一步扩成“完整 Word 渲染器”，本步按最小可交付能力收口为结构化 DOCX 导出：复用当前文档模型与分页结果，新增独立的 DOCX 生成链路和保存对话框，优先覆盖常用正文块和基础页面信息，先让用户拿到可打开、可分发的 `.docx` 文件。",
+        "included": [
+          "新增工具栏 `导出 DOCX` 入口、导出中状态与成功/失败中文提示。",
+          "新增 renderer 导出服务、preload 暴露、主进程 IPC 和 DOCX 保存对话框，形成与 PDF 并行的独立导出链路。",
+          "新增基于当前文档模型 / 分页结果的 DOCX 生成逻辑，优先覆盖标题、段落、列表、表格、图片、代码块、引用块和分页符。",
+          "把当前页面尺寸、页边距、基础页眉页脚与页码接入 DOCX 输出，保持与现有页面设置主链路同源。",
+          "为本地图片资源补齐 DOCX 可消费的读取/嵌入处理，避免 `layout-asset://` 自定义协议直接泄漏到 DOCX 生成层。",
+          "补充最小验证：类型检查、构建验证，以及至少 1 个 DOCX 生成定向验证。"
+        ],
+        "excluded": [
+          "不追求主题纹理、SVG 装饰、手绘边框、页面背景和复杂 CSS 效果在 DOCX 中 1:1 还原。",
+          "不实现多栏分页、复杂图片环绕/裁剪、公式高保真渲染和导出前检查面板。",
+          "不新增 DOCX 反向导入、DOCX 再编辑、DOCX 与 PDF 像素级一致性承诺。",
+          "不重写现有 PDF 导出主链路，不把当前导出模块整体迁移为统一抽象框架。",
+          "不顺手扩展 PNG/JPG、HTML、长图或模板包导出。"
+        ],
+        "followup": [
+          "DOCX 主题视觉保真、多栏、复杂环绕和公式增强：后续归属 `PH2-21` 深化小步或新增导出增强任务。",
+          "导出前检查与风险提示：后续继续归属 `PH4-02`。",
+          "PNG/JPG、HTML、长图和模板包导出：后续归属导出能力扩展任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-21-docx-export-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增顶层任务卡 `PH2-21` 与 executionBoundary 边界记录。",
+          "`progress/risks.json` 已新增 DOCX 导出实现风险，说明为何本步只做结构化 DOCX 最小闭环。",
+          "`progress/logs.json` 已追加 `LOG-369`（边界确认登记）。",
+          "`npm run progress:build` 与 `npm run progress:check` 成功，展示文档与真相源一致。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "DOCX 最小烟测成功：`node --import tsx -` 调用 `buildDocxArrayBuffer` 生成 `DOCX smoke ok: 10540 bytes`。",
+          "`progress/logs.json` 已追加 `LOG-399`（实施完成登记）。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-21A",
+      "sequence": "21a",
+      "order": 86,
+      "title": "DOCX 导出分页策略修正 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "进行中",
+      "acceptance": "DOCX 导出不再按预览每页强制创建 `nextPage` section；同页设置一致时按连续正文流导出，由 Word/WPS 自然填满页面；用户显式插入的分页符仍保留为真实分页符；不破坏现有 PDF 导出与 DOCX 基础能力。",
+      "owner": "导出链路组",
+      "dependsOn": [
+        "PH2-21"
+      ],
+      "startedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-21-docx-pagination-flow-fix-v1",
+        "confirmed": true,
+        "statusLabel": "已确认边界：DOCX 连续流式分页修正 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "summary": "用户进一步确认当前问题不是表格宽度，而是 DOCX 导出把预览分页结果一页一页硬映射成 Word `section + nextPage`，导致 Word 实际排版比预览更省空间时，当前页仍然提前结束，出现“页面没有填满却被强制翻页”。本步按最小修复收口：DOCX 改为连续正文流导出，只有文档里用户显式插入的分页符继续保留为真实分页符；同页设置一致时不再按预览每页强制切 section。",
+        "included": [
+          "只调整 `src/services/exportDocx.ts` 的分页策略，不改 PDF 导出、画布预览和分页算法主链路。",
+          "把 DOCX 导出从“预览每页一个 section”调整为“连续 section 正文流”；同页设置一致时合并内容，不再对第 2 页起统一写 `SectionType.NEXT_PAGE`。",
+          "文档模型里的 `pageBreak` 继续在 DOCX 中输出为真实分页符，保留用户显式分页意图。",
+          "尽量保持现有页尺寸、页边距、页眉页脚与页码导出能力；如需 section 切换，仅在页面设置发生变化时才保留。",
+          "补充最小验证：类型检查、构建验证，以及至少 1 个 DOCX 连续流烟测。"
+        ],
+        "excluded": [
+          "不改 PDF 导出分页结果，不反向影响预览页布局。",
+          "不追求 DOCX 与预览页码、`{本页标题}` 页眉语义完全 1:1 对齐。",
+          "不在本步实现多栏、复杂主题装饰、公式高保真或 DOCX 再导入。",
+          "不改表格自动适应策略、列宽策略或图片排版策略。"
+        ],
+        "followup": [
+          "若后续需要按预览页码精确保留 DOCX 页眉中的 `{本页标题}` 语义，可继续拆 `PH2-21` 深化小步。",
+          "DOCX 主题保真、多栏、公式和复杂环绕增强：继续归属 `PH2-21` 后续小步。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-21-docx-pagination-flow-fix-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-21A` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已更新 `RISK-038`，记录当前 DOCX 强制分页导致页面填充不满的问题与处理方式。",
+          "`progress/logs.json` 已追加 `LOG-400`（边界确认登记）。",
+          "`npm run progress:build` 与 `npm run progress:check` 成功，展示层与真相源一致。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "DOCX 连续流烟测成功：`node --import tsx -` 生成双页同设置样例后，`document.xml` 中不再出现 `nextPage` 强制分节，且显式分页符 `w:type=\"page\"` 仍保留。",
+          "`progress/logs.json` 已追加 `LOG-402`（实施完成登记）。"
         ]
       }
     }

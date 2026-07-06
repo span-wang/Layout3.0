@@ -25,7 +25,7 @@ export type LayoutBlockType =
 
 export type LayoutListKind = 'ordered' | 'unordered';
 
-export type SemanticRoleId =
+export type BuiltInSemanticRoleId =
   | 'title'
   | 'section'
   | 'question'
@@ -39,13 +39,34 @@ export type SemanticRoleId =
   | 'summary'
   | 'warning';
 
-export type SemanticRoleCategory = 'general' | 'note' | 'exam' | 'reading';
+export type SemanticRoleId = BuiltInSemanticRoleId | (string & {});
+
+export type SemanticRoleCategory = 'general' | 'note' | 'exam' | 'reading' | 'custom';
+
+export type SemanticBlockPresetId =
+  | 'defaultSemanticFrame'
+  | 'sideAccent'
+  | 'softCard'
+  | 'warningFrame';
 
 export interface SemanticRole {
   id: SemanticRoleId;
   name: string;
   category: SemanticRoleCategory;
   description?: string;
+  color?: string;
+  enabled?: boolean;
+  builtIn?: boolean;
+  // 语义角色只负责“默认推荐哪种块模板”；块自身仍可手动覆盖。
+  defaultBlockPresetId?: SemanticBlockPresetId | null;
+}
+
+export interface SemanticBlockPresetDefinition {
+  id: SemanticBlockPresetId;
+  name: string;
+  description?: string;
+  // 普通块手动套模板时，没有语义颜色可跟随，回退到模板自己的中性色。
+  neutralColor?: string;
 }
 
 export interface LayoutBlockSemantic {
@@ -53,6 +74,31 @@ export interface LayoutBlockSemantic {
   alias?: string;
   source: 'manual' | 'markdown-prefix' | 'keyword' | 'ai';
   confidence?: number;
+}
+
+export interface LayoutSemanticRoleDefinition {
+  id: SemanticRoleId;
+  name: string;
+  description?: string;
+  color?: string;
+  enabled: boolean;
+  // 只给自定义语义角色使用：允许用户指定该角色默认跟随哪一种块模板。
+  defaultBlockPresetId?: SemanticBlockPresetId | null;
+}
+
+export interface LayoutSemanticKeywordRule {
+  id: string;
+  roleId: SemanticRoleId;
+  keyword: string;
+  matchMode: 'prefix';
+  stripKeyword: boolean;
+  enabled: boolean;
+}
+
+export interface LayoutSemanticRoleConfig {
+  version: '1.0.0';
+  customRoles: LayoutSemanticRoleDefinition[];
+  keywordRules: LayoutSemanticKeywordRule[];
 }
 
 export interface SourcePoint {
@@ -176,6 +222,13 @@ export interface RuntimeRowMeasurement {
 }
 
 export type TableColumnAlign = 'left' | 'center' | 'right' | null;
+
+export interface LayoutBlockSemanticPresetState {
+  // 当前块手动指定的块模板；有语义时表示“手动覆盖语义默认模板”，无语义时表示普通块的手动模板。
+  manualPresetId?: SemanticBlockPresetId;
+  // 只在块进入语义默认接管后存在；null 表示进入语义前原本没有块模板。
+  preSemanticPresetId?: SemanticBlockPresetId | null;
+}
 
 export interface ParagraphBlockMetadata {
   kind: 'paragraph';
@@ -344,6 +397,8 @@ export interface LayoutBlock {
   sourceRange: SourceRange | null;
   // 语义块基础层：不改变块类型，只记录当前块承担的内容角色。
   semantic?: LayoutBlockSemantic;
+  // 块模板状态放在块顶层，避免“普通块也能独立套模板”时被 semantic 壳结构绑死。
+  semanticPreset?: LayoutBlockSemanticPresetState;
   blockStyleRef: string | null;
   blockStyleOverrides: BlockStyleOverrides;
   textRuns: TextRun[];
@@ -443,6 +498,8 @@ export interface LayoutDocumentMeta {
       priority?: number;
     }>;
   };
+  /** 自定义语义块与关键词规则配置（可选，不存在时使用空配置） */
+  semanticRoleConfig?: LayoutSemanticRoleConfig;
 }
 
 export interface LayoutDocument {

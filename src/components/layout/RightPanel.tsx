@@ -6,17 +6,30 @@ import {
   getSelectedBlockquoteContext,
   getSelectedLayoutNodeInfo,
   findTopLevelBlockForSelectedNode,
-  BUILT_IN_SEMANTIC_ROLES,
+  createCustomSemanticRoleId,
+  getEnabledSemanticRoles,
   getLayoutBlockPlainText,
   getLayoutListItemLevel,
+  getManualSemanticBlockPresetId,
+  getPreSemanticBlockPresetId,
+  getSemanticBlockPresetById,
+  getSemanticBlockPresetDefinitions,
+  getSemanticBlockPresetPresentation,
+  getSemanticBlockPresetSource,
+  getSemanticRoleDefaultBlockPresetId,
+  getSemanticRolePresentation,
   getSemanticRoleById,
+  normalizeSemanticRoleConfig,
+  supportsSemanticBlockPreset,
   type BlockquoteStructureAction,
   type ListStructureAction,
   type LayoutBlock,
   type LayoutResource,
+  type LayoutSemanticRoleConfig,
   type SourceRange,
   type SelectedBlockquoteContext,
   type SelectedLayoutNodeInfo,
+  type SemanticKeywordScanResult,
   type TableCellRangeSelection,
   type TableColumnAlign,
   type TableStructureAction,
@@ -32,6 +45,7 @@ import {
   type ImageWrapMode,
   type ImageWrapSide,
   type LayoutBlockSemantic,
+  type SemanticBlockPresetId,
 } from '@/engine/document-model';
 import { buildFontFamilyGroupsWithImportedFonts } from '@/engine/document-model/fontResources';
 import { isImageTextWrapMode, resolveImageLayout } from '@/engine/document-model/imageLayout';
@@ -86,7 +100,7 @@ interface RightPanelProps {
   canvasTextSelection: CanvasTextSelectionState;
 }
 
-type RightMainTab = '对象属性' | '页面设置' | '语法映射' | 'AI助手';
+type RightMainTab = '对象属性' | '页面设置' | '语法映射' | '语义规则' | 'AI助手';
 
 const rightMainTabs: Array<{
   id: RightMainTab;
@@ -107,6 +121,11 @@ const rightMainTabs: Array<{
     id: '语法映射',
     label: '语法映射',
     description: '配置文本标记与块级指令映射',
+  },
+  {
+    id: '语义规则',
+    label: '语义规则',
+    description: '配置语义块和关键词识别',
   },
   {
     id: 'AI助手',
@@ -404,27 +423,73 @@ function renderObjectPropertyRow(label: string, value: string): JSX.Element {
   );
 }
 
-function getSemanticRoleSummary(semantic: LayoutBlockSemantic | undefined): string {
+function getSemanticRoleSummary(
+  semantic: LayoutBlockSemantic | undefined,
+  semanticRoleConfig: LayoutSemanticRoleConfig,
+): string {
   if (!semantic) {
     return '未设置';
   }
 
-  const role = getSemanticRoleById(semantic.roleId);
+  const role = getSemanticRoleById(semantic.roleId, semanticRoleConfig);
   return semantic.alias
     ? `${semantic.alias} -> ${role?.name ?? semantic.roleId}`
     : role?.name ?? semantic.roleId;
 }
 
+function getSemanticBlockPresetSummary(
+  block: LayoutBlock,
+  semanticRoleConfig: LayoutSemanticRoleConfig,
+): string {
+  const presentation = getSemanticBlockPresetPresentation(block, semanticRoleConfig);
+  return presentation?.label ?? '未设置';
+}
+
+function getSemanticBlockPresetSourceSummary(
+  block: LayoutBlock,
+  semanticRoleConfig: LayoutSemanticRoleConfig,
+): string {
+  const source = getSemanticBlockPresetSource(block, semanticRoleConfig);
+  if (source === 'semantic-default') {
+    return '跟随语义默认';
+  }
+
+  if (source === 'manual') {
+    return block.semantic?.roleId ? '手动覆盖' : '普通块手动';
+  }
+
+  return block.semantic?.roleId ? '当前语义未绑定默认块模板' : '未设置';
+}
+
+function getSemanticBlockPresetFallbackSummary(
+  block: LayoutBlock,
+): string {
+  const fallbackPresetId = getPreSemanticBlockPresetId(block);
+  if (fallbackPresetId === undefined) {
+    return '未进入语义接管';
+  }
+
+  if (fallbackPresetId === null) {
+    return '无块模板';
+  }
+
+  return getSemanticBlockPresetById(fallbackPresetId)?.name ?? fallbackPresetId;
+}
+
 function renderSemanticRolePanel({
   block,
+  semanticRoleConfig,
   onChange,
 }: {
   block: LayoutBlock;
+  semanticRoleConfig: LayoutSemanticRoleConfig;
   onChange: (semantic: LayoutBlockSemantic | null) => void;
 }): JSX.Element {
   const currentSemantic = block.semantic;
   const currentRoleId = currentSemantic?.roleId ?? '';
-  const currentRole = getSemanticRoleById(currentRoleId);
+  const currentRole = getSemanticRoleById(currentRoleId, semanticRoleConfig);
+  const currentPresentation = getSemanticRolePresentation(block, semanticRoleConfig);
+  const semanticRoles = getEnabledSemanticRoles(semanticRoleConfig);
 
   return (
     <section className="detail-panel object-detail-panel">
@@ -433,8 +498,10 @@ function renderSemanticRolePanel({
         <span>{currentRole ? currentRole.name : '为当前块标记内容角色'}</span>
       </div>
       <div className="object-property-list">
-        {renderObjectPropertyRow('当前语义', getSemanticRoleSummary(currentSemantic))}
+        {renderObjectPropertyRow('当前语义', getSemanticRoleSummary(currentSemantic, semanticRoleConfig))}
         {renderObjectPropertyRow('来源', currentSemantic ? semanticSourceLabels[currentSemantic.source] : '未设置')}
+        {renderObjectPropertyRow('类型', currentPresentation ? (currentPresentation.isCustom ? '自定义语义' : '内置语义') : '未设置')}
+        {renderObjectPropertyRow('颜色', currentPresentation?.color ?? '未设置')}
       </div>
       <div className="property-stack">
         <label>
@@ -443,7 +510,7 @@ function renderSemanticRolePanel({
             className="style-select"
             value={currentRoleId}
             onChange={(event) => {
-              const nextRole = getSemanticRoleById(event.target.value);
+              const nextRole = getSemanticRoleById(event.target.value, semanticRoleConfig);
               onChange(
                 nextRole
                   ? {
@@ -456,9 +523,9 @@ function renderSemanticRolePanel({
             }}
           >
             <option value="">无</option>
-            {BUILT_IN_SEMANTIC_ROLES.map((role) => (
+            {semanticRoles.map((role) => (
               <option key={role.id} value={role.id}>
-                {role.name}
+                {role.builtIn === false ? `${role.name}（自定义）` : role.name}
               </option>
             ))}
           </select>
@@ -473,6 +540,335 @@ function renderSemanticRolePanel({
         </button>
       </div>
     </section>
+  );
+}
+
+function renderSemanticBlockPresetPanel({
+  block,
+  semanticRoleConfig,
+  onChange,
+}: {
+  block: LayoutBlock;
+  semanticRoleConfig: LayoutSemanticRoleConfig;
+  onChange: (presetId: SemanticBlockPresetId | null) => void;
+}): JSX.Element | null {
+  if (!supportsSemanticBlockPreset(block)) {
+    return null;
+  }
+
+  const presetOptions = getSemanticBlockPresetDefinitions();
+  const currentManualPresetId = getManualSemanticBlockPresetId(block);
+  const currentPresetPresentation = getSemanticBlockPresetPresentation(block, semanticRoleConfig);
+  const roleDefaultPresetId = getSemanticRoleDefaultBlockPresetId(block.semantic?.roleId, semanticRoleConfig);
+  const roleDefaultPresetLabel = roleDefaultPresetId
+    ? getSemanticBlockPresetById(roleDefaultPresetId)?.name ?? roleDefaultPresetId
+    : '未设置';
+  const selectValue = block.semantic?.roleId
+    ? currentManualPresetId ?? '__follow__'
+    : currentManualPresetId ?? '';
+  const hasManualOverride = Boolean(currentManualPresetId);
+  const hasSemanticRole = Boolean(block.semantic?.roleId);
+
+  return (
+    <section className="detail-panel object-detail-panel">
+      <div className="detail-panel-head">
+        <h3>块模板</h3>
+        <span>{currentPresetPresentation?.label ?? '为当前块选择外壳表现'}</span>
+      </div>
+      <div className="object-property-list">
+        {renderObjectPropertyRow('当前块模板', getSemanticBlockPresetSummary(block, semanticRoleConfig))}
+        {renderObjectPropertyRow('来源', getSemanticBlockPresetSourceSummary(block, semanticRoleConfig))}
+        {renderObjectPropertyRow('语义默认', roleDefaultPresetLabel)}
+        {renderObjectPropertyRow('清除语义后恢复', getSemanticBlockPresetFallbackSummary(block))}
+      </div>
+      <div className="property-stack">
+        <label>
+          块模板
+          <select
+            className="style-select"
+            value={selectValue}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              if (nextValue === '' || nextValue === '__follow__') {
+                onChange(null);
+                return;
+              }
+
+              onChange(nextValue as SemanticBlockPresetId);
+            }}
+          >
+            {hasSemanticRole ? <option value="__follow__">跟随语义默认</option> : <option value="">无</option>}
+            {presetOptions.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className="micro-button"
+          disabled={hasSemanticRole ? !hasManualOverride : !currentManualPresetId}
+          onClick={() => onChange(null)}
+        >
+          {hasSemanticRole ? '恢复跟随语义默认' : '清除块模板'}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function renderSemanticRulesPanel({
+  semanticRoleConfig,
+  newRoleName,
+  newRoleDescription,
+  newRoleColor,
+  newRoleDefaultPresetId,
+  newKeyword,
+  newKeywordRoleId,
+  overwriteExisting,
+  scanResult,
+  onNewRoleNameChange,
+  onNewRoleDescriptionChange,
+  onNewRoleColorChange,
+  onNewRoleDefaultPresetIdChange,
+  onNewKeywordChange,
+  onNewKeywordRoleIdChange,
+  onOverwriteExistingChange,
+  onAddRole,
+  onToggleRole,
+  onUpdateRoleDefaultPreset,
+  onDeleteRole,
+  onAddKeywordRule,
+  onToggleKeywordRule,
+  onDeleteKeywordRule,
+  onScan,
+  onApply,
+}: {
+  semanticRoleConfig: LayoutSemanticRoleConfig;
+  newRoleName: string;
+  newRoleDescription: string;
+  newRoleColor: string;
+  newRoleDefaultPresetId: string;
+  newKeyword: string;
+  newKeywordRoleId: string;
+  overwriteExisting: boolean;
+  scanResult: SemanticKeywordScanResult | null;
+  onNewRoleNameChange: (value: string) => void;
+  onNewRoleDescriptionChange: (value: string) => void;
+  onNewRoleColorChange: (value: string) => void;
+  onNewRoleDefaultPresetIdChange: (value: string) => void;
+  onNewKeywordChange: (value: string) => void;
+  onNewKeywordRoleIdChange: (value: string) => void;
+  onOverwriteExistingChange: (value: boolean) => void;
+  onAddRole: () => void;
+  onToggleRole: (roleId: string) => void;
+  onUpdateRoleDefaultPreset: (roleId: string, presetId: string) => void;
+  onDeleteRole: (roleId: string) => void;
+  onAddKeywordRule: () => void;
+  onToggleKeywordRule: (ruleId: string) => void;
+  onDeleteKeywordRule: (ruleId: string) => void;
+  onScan: () => void;
+  onApply: () => void;
+}): JSX.Element {
+  const semanticRoles = getEnabledSemanticRoles(semanticRoleConfig);
+  const selectedRoleId = newKeywordRoleId || semanticRoles[0]?.id || '';
+  const presetOptions = getSemanticBlockPresetDefinitions();
+
+  return (
+    <>
+      <section className="detail-panel object-detail-panel">
+        <div className="detail-panel-head">
+          <h3>自定义语义块</h3>
+          <span>创建后可手动设置，也可被关键词规则批量应用</span>
+        </div>
+        <div className="property-stack">
+          <label>
+            语义名称
+            <input
+              className="style-select-input"
+              value={newRoleName}
+              onChange={(event) => onNewRoleNameChange(event.target.value)}
+              placeholder="例如：答案解析"
+            />
+          </label>
+          <label>
+            说明
+            <input
+              className="style-select-input"
+              value={newRoleDescription}
+              onChange={(event) => onNewRoleDescriptionChange(event.target.value)}
+              placeholder="例如：用于标记题目解析说明"
+            />
+          </label>
+          <label>
+            标签颜色
+            <input
+              className="style-select-input"
+              type="color"
+              value={newRoleColor}
+              onChange={(event) => onNewRoleColorChange(event.target.value)}
+            />
+          </label>
+          <label>
+            默认块模板
+            <select
+              className="style-select"
+              value={newRoleDefaultPresetId}
+              onChange={(event) => onNewRoleDefaultPresetIdChange(event.target.value)}
+            >
+              <option value="">无默认块模板</option>
+              {presetOptions.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="micro-button" onClick={onAddRole} disabled={!newRoleName.trim()}>
+            新增语义块
+          </button>
+        </div>
+        <div className="object-property-list">
+          {semanticRoleConfig.customRoles.length === 0 ? (
+            <div className="object-empty-state">暂无自定义语义块</div>
+          ) : (
+            semanticRoleConfig.customRoles.map((role) => (
+              <div key={role.id} className="property-stack">
+                <div className="object-property-row">
+                  <span>{role.name}</span>
+                  <strong>{role.enabled ? '已启用' : '已停用'}</strong>
+                  <button type="button" className="micro-button" onClick={() => onToggleRole(role.id)}>
+                    {role.enabled ? '停用' : '启用'}
+                  </button>
+                  <button type="button" className="micro-button" onClick={() => onDeleteRole(role.id)}>
+                    删除
+                  </button>
+                </div>
+                <label>
+                  默认块模板
+                  <select
+                    className="style-select"
+                    value={role.defaultBlockPresetId ?? ''}
+                    onChange={(event) => onUpdateRoleDefaultPreset(role.id, event.target.value)}
+                  >
+                    <option value="">无默认块模板</option>
+                    {presetOptions.map((preset) => (
+                      <option key={preset.id} value={preset.id}>
+                        {preset.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="detail-panel object-detail-panel">
+        <div className="detail-panel-head">
+          <h3>关键词前缀规则</h3>
+          <span>按块开头匹配，匹配后可移除前缀</span>
+        </div>
+        <div className="property-stack">
+          <label>
+            目标语义
+            <select
+              className="style-select"
+              value={selectedRoleId}
+              onChange={(event) => onNewKeywordRoleIdChange(event.target.value)}
+            >
+              {semanticRoles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  {role.builtIn === false ? `${role.name}（自定义）` : role.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            关键词前缀
+            <input
+              className="style-select-input"
+              value={newKeyword}
+              onChange={(event) => onNewKeywordChange(event.target.value)}
+              placeholder="例如：【答案解析】"
+            />
+          </label>
+          <button
+            type="button"
+            className="micro-button"
+            onClick={onAddKeywordRule}
+            disabled={!selectedRoleId || !newKeyword.trim()}
+          >
+            新增关键词规则
+          </button>
+        </div>
+        <div className="object-property-list">
+          {semanticRoleConfig.keywordRules.length === 0 ? (
+            <div className="object-empty-state">暂无关键词规则</div>
+          ) : (
+            semanticRoleConfig.keywordRules.map((rule) => {
+              const role = getSemanticRoleById(rule.roleId, semanticRoleConfig);
+              return (
+                <div key={rule.id} className="object-property-row">
+                  <span>{rule.keyword}</span>
+                  <strong>{role?.name ?? rule.roleId}</strong>
+                  <button type="button" className="micro-button" onClick={() => onToggleKeywordRule(rule.id)}>
+                    {rule.enabled ? '停用' : '启用'}
+                  </button>
+                  <button type="button" className="micro-button" onClick={() => onDeleteKeywordRule(rule.id)}>
+                    删除
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
+
+      <section className="detail-panel object-detail-panel">
+        <div className="detail-panel-head">
+          <h3>批量应用</h3>
+          <span>扫描当前文档中的关键词前缀</span>
+        </div>
+        <div className="property-stack">
+          <label>
+            <input
+              type="checkbox"
+              checked={overwriteExisting}
+              onChange={(event) => onOverwriteExistingChange(event.target.checked)}
+            />
+            覆盖已有语义
+          </label>
+          <button type="button" className="micro-button" onClick={onScan}>
+            扫描全文
+          </button>
+          <button
+            type="button"
+            className="micro-button"
+            onClick={onApply}
+            disabled={!scanResult || scanResult.applicableCount === 0}
+          >
+            应用语义
+          </button>
+        </div>
+        <div className="object-property-list">
+          {renderObjectPropertyRow('可应用', String(scanResult?.applicableCount ?? 0))}
+          {renderObjectPropertyRow('跳过已有语义', String(scanResult?.skippedExistingCount ?? 0))}
+        </div>
+        {scanResult && scanResult.items.length > 0 ? (
+          <div className="object-property-list">
+            {scanResult.items.slice(0, 8).map((item) => (
+              <div key={`${item.blockId}-${item.ruleId}`} className="object-property-row">
+                <span>{item.keyword}</span>
+                <strong>{`${item.roleName} / ${item.status === 'applicable' ? '可应用' : '跳过'}`}</strong>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </section>
+    </>
   );
 }
 
@@ -708,6 +1104,7 @@ function renderObjectPropertiesPanel(
   selectedNodeId: string | null,
   canvasTextSelection: CanvasTextSelectionState,
   layoutResources: LayoutResource[],
+  semanticRoleConfig: LayoutSemanticRoleConfig,
   resolvedStyleContract: ReturnType<typeof useResolvedStyleContract>,
   toggleLayoutNodeTextMark: (payload: {
     nodeId: string;
@@ -841,6 +1238,10 @@ function renderObjectPropertiesPanel(
   updateLayoutBlockSemantic: (payload: {
     nodeId: string;
     semantic: LayoutBlockSemantic | null;
+  }) => void,
+  updateLayoutBlockSemanticPreset: (payload: {
+    nodeId: string;
+    presetId: SemanticBlockPresetId | null;
   }) => void,
   tableSelection: TableCellRangeSelection | null,
   tableStructureFeedback: string | null,
@@ -1404,11 +1805,24 @@ function renderObjectPropertiesPanel(
 
       {renderSemanticRolePanel({
         block: selectedNodeInfo.ownerBlock,
+        semanticRoleConfig,
         onChange: (semantic) => {
           syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
           updateLayoutBlockSemantic({
             nodeId: selectedNodeInfo.nodeId,
             semantic,
+          });
+        },
+      })}
+
+      {renderSemanticBlockPresetPanel({
+        block: selectedNodeInfo.ownerBlock,
+        semanticRoleConfig,
+        onChange: (presetId) => {
+          syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+          updateLayoutBlockSemanticPreset({
+            nodeId: selectedNodeInfo.nodeId,
+            presetId,
           });
         },
       })}
@@ -3604,6 +4018,9 @@ export function RightPanel({
   const addBlockSpacingPreset = useAppStore((state) => state.addBlockSpacingPreset);
   const updateBlockSpacingPreset = useAppStore((state) => state.updateBlockSpacingPreset);
   const updateSyntaxMappingConfig = useAppStore((state) => state.updateSyntaxMappingConfig);
+  const updateSemanticRoleConfig = useAppStore((state) => state.updateSemanticRoleConfig);
+  const scanSemanticKeywordRules = useAppStore((state) => state.scanSemanticKeywordRules);
+  const applySemanticKeywordRules = useAppStore((state) => state.applySemanticKeywordRules);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
   const updateLayoutNodeText = useAppStore((state) => state.updateLayoutNodeText);
   const toggleLayoutNodeTextMark = useAppStore((state) => state.toggleLayoutNodeTextMark);
@@ -3627,6 +4044,7 @@ export function RightPanel({
   const updateLayoutBlockquoteStructure = useAppStore((state) => state.updateLayoutBlockquoteStructure);
   const applyLayoutNodeBlockStyle = useAppStore((state) => state.applyLayoutNodeBlockStyle);
   const updateLayoutBlockSemantic = useAppStore((state) => state.updateLayoutBlockSemantic);
+  const updateLayoutBlockSemanticPreset = useAppStore((state) => state.updateLayoutBlockSemanticPreset);
   const updateLayoutTocMaxDepth = useAppStore((state) => state.updateLayoutTocMaxDepth);
   const refreshLayoutTocBlock = useAppStore((state) => state.refreshLayoutTocBlock);
   const deleteLayoutTopLevelBlock = useAppStore((state) => state.deleteLayoutTopLevelBlock);
@@ -3650,7 +4068,17 @@ export function RightPanel({
   const [backgroundColorDraft, setBackgroundColorDraft] = useState(styleSettings.pageBackground.color);
   const [newBlockSpacingPresetName, setNewBlockSpacingPresetName] = useState('');
   const [newBlockSpacingPresetDescription, setNewBlockSpacingPresetDescription] = useState('');
+  const [newSemanticRoleName, setNewSemanticRoleName] = useState('');
+  const [newSemanticRoleDescription, setNewSemanticRoleDescription] = useState('');
+  const [newSemanticRoleColor, setNewSemanticRoleColor] = useState('#3b82f6');
+  const [newSemanticRoleDefaultPresetId, setNewSemanticRoleDefaultPresetId] = useState<string>('defaultSemanticFrame');
+  const [newSemanticKeyword, setNewSemanticKeyword] = useState('');
+  const [newSemanticKeywordRoleId, setNewSemanticKeywordRoleId] = useState('');
+  const [semanticOverwriteExisting, setSemanticOverwriteExisting] = useState(false);
+  const [semanticScanResult, setSemanticScanResult] = useState<SemanticKeywordScanResult | null>(null);
   const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
+  const semanticRoleConfig = normalizeSemanticRoleConfig(layoutDocument?.meta.semanticRoleConfig);
+  const semanticRoleConfigKey = JSON.stringify(semanticRoleConfig);
   const selectedNodeInfo = getSelectedLayoutNodeInfo(layoutDocument);
   const selectedBlockquoteContext = getSelectedBlockquoteContext(layoutDocument);
   const selectedTopLevelBlock =
@@ -3689,6 +4117,17 @@ export function RightPanel({
   useEffect(() => {
     setBackgroundColorDraft(styleSettings.pageBackground.color);
   }, [styleSettings.pageBackground.color]);
+
+  useEffect(() => {
+    const roles = getEnabledSemanticRoles(semanticRoleConfig);
+    if (!newSemanticKeywordRoleId || !roles.some((role) => role.id === newSemanticKeywordRoleId)) {
+      setNewSemanticKeywordRoleId(roles[0]?.id ?? '');
+    }
+  }, [newSemanticKeywordRoleId, semanticRoleConfigKey]);
+
+  useEffect(() => {
+    setSemanticScanResult(null);
+  }, [layoutDocument?.id, semanticRoleConfigKey, semanticOverwriteExisting]);
 
   const handleMarginDraftChange = (side: MarginSide, value: string) => {
     setMarginDrafts((current) => ({
@@ -3752,6 +4191,119 @@ export function RightPanel({
       nodeId,
       text: canvasTextSelection.text,
     });
+  };
+
+  const handleAddSemanticRole = () => {
+    const name = newSemanticRoleName.trim();
+    if (!name) {
+      return;
+    }
+
+    const id = createCustomSemanticRoleId(name, [
+      ...semanticRoleConfig.customRoles.map((role) => role.id),
+      ...semanticRoleConfig.keywordRules.map((rule) => rule.roleId),
+    ]);
+
+    updateSemanticRoleConfig({
+      ...semanticRoleConfig,
+      customRoles: [
+        ...semanticRoleConfig.customRoles,
+        {
+          id,
+          name,
+          description: newSemanticRoleDescription.trim() || undefined,
+          color: newSemanticRoleColor,
+          enabled: true,
+          defaultBlockPresetId: newSemanticRoleDefaultPresetId
+            ? (newSemanticRoleDefaultPresetId as SemanticBlockPresetId)
+            : undefined,
+        },
+      ],
+    });
+    setNewSemanticRoleName('');
+    setNewSemanticRoleDescription('');
+    setNewSemanticRoleDefaultPresetId('defaultSemanticFrame');
+    setNewSemanticKeywordRoleId(id);
+  };
+
+  const handleToggleSemanticRole = (roleId: string) => {
+    updateSemanticRoleConfig({
+      ...semanticRoleConfig,
+      customRoles: semanticRoleConfig.customRoles.map((role) =>
+        role.id === roleId ? { ...role, enabled: !role.enabled } : role,
+      ),
+    });
+  };
+
+  const handleDeleteSemanticRole = (roleId: string) => {
+    updateSemanticRoleConfig({
+      ...semanticRoleConfig,
+      customRoles: semanticRoleConfig.customRoles.filter((role) => role.id !== roleId),
+      keywordRules: semanticRoleConfig.keywordRules.filter((rule) => rule.roleId !== roleId),
+    });
+  };
+
+  const handleUpdateSemanticRoleDefaultPreset = (roleId: string, presetId: string) => {
+    updateSemanticRoleConfig({
+      ...semanticRoleConfig,
+      customRoles: semanticRoleConfig.customRoles.map((role) =>
+        role.id === roleId
+          ? {
+              ...role,
+              defaultBlockPresetId: presetId ? (presetId as SemanticBlockPresetId) : undefined,
+            }
+          : role,
+      ),
+    });
+  };
+
+  const handleAddSemanticKeywordRule = () => {
+    const keyword = newSemanticKeyword.trim();
+    const roleId = newSemanticKeywordRoleId || getEnabledSemanticRoles(semanticRoleConfig)[0]?.id;
+    if (!keyword || !roleId) {
+      return;
+    }
+
+    updateSemanticRoleConfig({
+      ...semanticRoleConfig,
+      keywordRules: [
+        ...semanticRoleConfig.keywordRules,
+        {
+          id: `semantic-rule-${Date.now().toString(36)}`,
+          roleId,
+          keyword,
+          matchMode: 'prefix',
+          stripKeyword: true,
+          enabled: true,
+        },
+      ],
+    });
+    setNewSemanticKeyword('');
+  };
+
+  const handleToggleSemanticKeywordRule = (ruleId: string) => {
+    updateSemanticRoleConfig({
+      ...semanticRoleConfig,
+      keywordRules: semanticRoleConfig.keywordRules.map((rule) =>
+        rule.id === ruleId ? { ...rule, enabled: !rule.enabled } : rule,
+      ),
+    });
+  };
+
+  const handleDeleteSemanticKeywordRule = (ruleId: string) => {
+    updateSemanticRoleConfig({
+      ...semanticRoleConfig,
+      keywordRules: semanticRoleConfig.keywordRules.filter((rule) => rule.id !== ruleId),
+    });
+  };
+
+  const handleScanSemanticKeywords = () => {
+    setSemanticScanResult(scanSemanticKeywordRules({ overwriteExisting: semanticOverwriteExisting }));
+  };
+
+  const handleApplySemanticKeywords = () => {
+    const result = applySemanticKeywordRules({ overwriteExisting: semanticOverwriteExisting });
+    setSemanticScanResult(result);
   };
 
   const renderActiveSettingsPanel = (): JSX.Element => {
@@ -3850,6 +4402,7 @@ export function RightPanel({
             selectedNodeId,
             canvasTextSelection,
             layoutDocument?.resources ?? [],
+            semanticRoleConfig,
             resolvedStyleContract,
             toggleLayoutNodeTextMark,
             applyLayoutNodeTextStyle,
@@ -3876,6 +4429,7 @@ export function RightPanel({
             deleteLayoutTopLevelBlock,
             applyLayoutNodeBlockStyle,
             updateLayoutBlockSemantic,
+            updateLayoutBlockSemanticPreset,
             tableSelection,
             tableStructureFeedback,
             setTableStructureFeedback,
@@ -3900,6 +4454,40 @@ export function RightPanel({
             config={layoutDocument?.meta.syntaxMappingConfig}
             onChange={updateSyntaxMappingConfig}
           />
+        </div>
+      );
+    }
+
+    if (activeRightPanelTab === '语义规则') {
+      return (
+        <div className="right-panel-detail">
+          {renderSemanticRulesPanel({
+            semanticRoleConfig,
+            newRoleName: newSemanticRoleName,
+            newRoleDescription: newSemanticRoleDescription,
+            newRoleColor: newSemanticRoleColor,
+            newRoleDefaultPresetId: newSemanticRoleDefaultPresetId,
+            newKeyword: newSemanticKeyword,
+            newKeywordRoleId: newSemanticKeywordRoleId,
+            overwriteExisting: semanticOverwriteExisting,
+            scanResult: semanticScanResult,
+            onNewRoleNameChange: setNewSemanticRoleName,
+            onNewRoleDescriptionChange: setNewSemanticRoleDescription,
+            onNewRoleColorChange: setNewSemanticRoleColor,
+            onNewRoleDefaultPresetIdChange: setNewSemanticRoleDefaultPresetId,
+            onNewKeywordChange: setNewSemanticKeyword,
+            onNewKeywordRoleIdChange: setNewSemanticKeywordRoleId,
+            onOverwriteExistingChange: setSemanticOverwriteExisting,
+            onAddRole: handleAddSemanticRole,
+            onToggleRole: handleToggleSemanticRole,
+            onUpdateRoleDefaultPreset: handleUpdateSemanticRoleDefaultPreset,
+            onDeleteRole: handleDeleteSemanticRole,
+            onAddKeywordRule: handleAddSemanticKeywordRule,
+            onToggleKeywordRule: handleToggleSemanticKeywordRule,
+            onDeleteKeywordRule: handleDeleteSemanticKeywordRule,
+            onScan: handleScanSemanticKeywords,
+            onApply: handleApplySemanticKeywords,
+          })}
         </div>
       );
     }

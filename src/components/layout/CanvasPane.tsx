@@ -13,6 +13,11 @@ import {
   type RefObject,
 } from 'react';
 import { formulaTemplateGroups } from '@/constants/formulaTemplates';
+import {
+  fontFamilyPlaceholderValue,
+  textFontFamilyGroups,
+  type FontFamilyGroup,
+} from '@/constants/fontFamilies';
 import { Bold, Combine, Eraser, Highlighter, Italic, Strikethrough, Underline, X } from 'lucide-react';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import {
@@ -22,6 +27,10 @@ import {
   getHeadingText,
   getLayoutBlockPlainText,
   buildSemanticClassName,
+  buildSemanticPresetClassName,
+  getSemanticBlockPresetPresentation,
+  buildSemanticRoleStyleVariables,
+  getSemanticRolePresentation,
   getLayoutListItemKind,
   getLayoutListItemLevel,
   getTocBlockDisplayTitle,
@@ -31,6 +40,7 @@ import {
   shouldHideLayoutListItemMarker,
   toggleTextMarkInTextRuns,
   type LayoutBlock,
+  type LayoutSemanticRoleConfig,
   type LayoutStyleSheet,
   type LayoutResource,
   type LayoutListTreeNode,
@@ -46,7 +56,7 @@ import {
   type TocItem,
   type TextStyleOverrides,
 } from '@/engine/document-model';
-import { buildFontFaceCss } from '@/engine/document-model/fontResources';
+import { buildFontFaceCss, buildFontFamilyGroupsWithImportedFonts } from '@/engine/document-model/fontResources';
 import { renderEquationToHtml, splitInlineEquations, renderInlineEquationToHtml } from '@/engine/document-model/equation';
 import {
   resolveImageLayout,
@@ -97,6 +107,7 @@ interface CanvasPaneProps {
   documentBlocks: LayoutBlock[];
   documentResources: LayoutResource[];
   documentStyles: LayoutStyleSheet;
+  semanticRoleConfig?: LayoutSemanticRoleConfig;
   pageLayouts: PageLayout[];
   parseError: string | null;
   parseState: ParseState;
@@ -189,6 +200,8 @@ interface FloatingToolbarPosition {
   top: number;
   placement: 'above' | 'below';
 }
+
+type FloatingToolbarMenu = 'fontFamily' | 'fontSize';
 
 interface ActiveEquationEditor {
   nodeId: string;
@@ -296,6 +309,8 @@ const floatingTextMarkOptions: Array<{
   { id: 'strike', label: '删除线', icon: Strikethrough },
 ];
 
+const floatingFontSizePresetOptions = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 60, 72];
+
 function hasNonCollapsedSelection(selection: TextRangeSelection | null): selection is TextRangeSelection {
   return !!selection && selection.start < selection.end;
 }
@@ -357,8 +372,18 @@ function isFloatingTextMarkActive(
 function getSharedFloatingTextStyleValue(
   textRuns: TextRun[],
   selection: TextRangeSelection | null,
-  key: 'color' | 'highlightColor',
-): string | undefined {
+  key: 'fontSize',
+): number | undefined;
+function getSharedFloatingTextStyleValue(
+  textRuns: TextRun[],
+  selection: TextRangeSelection | null,
+  key: 'color' | 'highlightColor' | 'fontFamily',
+): string | undefined;
+function getSharedFloatingTextStyleValue(
+  textRuns: TextRun[],
+  selection: TextRangeSelection | null,
+  key: 'color' | 'highlightColor' | 'fontFamily' | 'fontSize',
+): string | number | undefined {
   const selectedRuns = collectFloatingSelectedRuns(textRuns, selection);
   if (selectedRuns.length === 0) {
     return undefined;
@@ -367,6 +392,29 @@ function getSharedFloatingTextStyleValue(
   const firstValue = selectedRuns[0].styleOverrides[key];
   const isShared = selectedRuns.every((run) => run.styleOverrides[key] === firstValue);
   return isShared ? firstValue : undefined;
+}
+
+function normalizeFloatingFontSizeValue(value: number): number | null {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(10, Math.min(72, Math.round(value)));
+}
+
+function getFloatingFontFamilyLabel(fontFamilyGroups: FontFamilyGroup[], fontFamily: string | undefined): string {
+  if (!fontFamily || fontFamily === fontFamilyPlaceholderValue) {
+    return '字体';
+  }
+
+  for (const group of fontFamilyGroups) {
+    const option = group.options.find((item) => item.value === fontFamily);
+    if (option) {
+      return option.label;
+    }
+  }
+
+  return fontFamily;
 }
 
 function buildTextRunStyle(run: TextRun, inheritedStyle: TextStyleOverrides = {}): CSSProperties {
@@ -564,6 +612,7 @@ function buildBlockStyle(
   block: LayoutBlock,
   effectiveLineHeight?: number,
   contract?: ResolvedStyleContract,
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
 ): CSSProperties {
   const supportsBlockIndent = block.type === 'heading' || block.type === 'paragraph';
   const indentStyle = supportsBlockIndent ? resolveHangingIndentStyle(block.blockStyleOverrides) : null;
@@ -575,7 +624,10 @@ function buildBlockStyle(
   const hasTextIndentOverride =
     block.blockStyleOverrides.firstLineIndent !== undefined || block.blockStyleOverrides.hangingIndent !== undefined;
 
+  const semanticStyleVariables = buildSemanticRoleStyleVariables(block, semanticRoleConfig) as CSSProperties;
+
   return {
+    ...semanticStyleVariables,
     textAlign: block.blockStyleOverrides.textAlign,
     lineHeight: effectiveLineHeight !== undefined
       ? `${effectiveLineHeight}px`
@@ -618,13 +670,18 @@ function resolveBlockLineHeightStyle(
   return block.blockStyleOverrides.lineHeight;
 }
 
-function buildImageStyle(block: LayoutBlock): CSSProperties | undefined {
+function buildImageStyle(
+  block: LayoutBlock,
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
+): CSSProperties | undefined {
   if (block.type !== 'image' || block.metadata.kind !== 'image') {
     return undefined;
   }
 
   const layout = resolveImageLayout(block.metadata);
-  const styles: CSSProperties = {};
+  const styles = {
+    ...buildSemanticRoleStyleVariables(block, semanticRoleConfig),
+  } as CSSProperties;
 
   if (layout.wrapMode === 'topBottom') {
     styles.marginLeft = 'auto';
@@ -1280,6 +1337,7 @@ function findEditableNodeTextRunsInBlocks(blocks: LayoutBlock[], nodeId: string)
 
 function createSelectableBlockProps(
   block: LayoutBlock,
+  semanticRoleConfig: LayoutSemanticRoleConfig | undefined,
   selectedNodeId: string | null,
   onSelectNode: (nodeId: string) => void,
   onPrepareSelectNode: (nodeId: string) => void,
@@ -1288,6 +1346,8 @@ function createSelectableBlockProps(
   selectedBlockIds: string[] = [],
   onSelectBlock?: (blockId: string, extendRange: boolean) => void,
 ) {
+  const semanticPresentation = getSemanticRolePresentation(block, semanticRoleConfig);
+  const semanticPresetPresentation = getSemanticBlockPresetPresentation(block, semanticRoleConfig);
   const isBlockRangeSelected = selectedBlockIds.includes(block.id);
   const selectBlockOrNode = (extendRange: boolean) => {
     if (onSelectBlock) {
@@ -1300,6 +1360,7 @@ function createSelectableBlockProps(
   const classNames = [
     'selectable-layout-block',
     className,
+    buildSemanticPresetClassName(block, semanticRoleConfig),
     buildSemanticClassName(block),
     block.id === selectedNodeId ? 'selected' : '',
     isBlockRangeSelected ? 'block-range-selected' : '',
@@ -1310,7 +1371,9 @@ function createSelectableBlockProps(
   return {
     className: classNames,
     'data-layout-node-id': block.id,
+    ...(semanticPresetPresentation ? { 'data-semantic-preset': semanticPresetPresentation.presetId } : {}),
     ...(block.semantic?.roleId ? { 'data-semantic-role': block.semantic.roleId } : {}),
+    ...(semanticPresentation ? { 'data-semantic-label': semanticPresentation.label } : {}),
     onMouseDown: (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
       onPrepareSelectNode(block.id);
@@ -1345,6 +1408,7 @@ function createSelectableBlockProps(
 
 function createSelectableEquationBlockProps({
   block,
+  semanticRoleConfig,
   selectedNodeId,
   selectedBlockIds = [],
   editingNodeId,
@@ -1354,6 +1418,7 @@ function createSelectableEquationBlockProps({
   onStartEditing,
 }: {
   block: LayoutBlock;
+  semanticRoleConfig?: LayoutSemanticRoleConfig;
   selectedNodeId: string | null;
   selectedBlockIds?: string[];
   editingNodeId: string | null;
@@ -1362,6 +1427,8 @@ function createSelectableEquationBlockProps({
   onPrepareSelectNode: (nodeId: string) => void;
   onStartEditing: (node: EditableCanvasNode) => void;
 }) {
+  const semanticPresentation = getSemanticRolePresentation(block, semanticRoleConfig);
+  const semanticPresetPresentation = getSemanticBlockPresetPresentation(block, semanticRoleConfig);
   const isBlockRangeSelected = selectedBlockIds.includes(block.id);
   const selectBlockOrNode = (extendRange: boolean) => {
     if (onSelectBlock) {
@@ -1374,6 +1441,7 @@ function createSelectableEquationBlockProps({
   const classNames = [
     'selectable-layout-block',
     'equation-shell',
+    buildSemanticPresetClassName(block, semanticRoleConfig),
     buildSemanticClassName(block),
     block.id === selectedNodeId ? 'selected' : '',
     isBlockRangeSelected ? 'block-range-selected' : '',
@@ -1384,7 +1452,9 @@ function createSelectableEquationBlockProps({
   return {
     className: classNames,
     'data-layout-node-id': block.id,
+    ...(semanticPresetPresentation ? { 'data-semantic-preset': semanticPresetPresentation.presetId } : {}),
     ...(block.semantic?.roleId ? { 'data-semantic-role': block.semantic.roleId } : {}),
+    ...(semanticPresentation ? { 'data-semantic-label': semanticPresentation.label } : {}),
     onMouseDown: (event: MouseEvent<HTMLElement>) => {
       event.stopPropagation();
       onPrepareSelectNode(block.id);
@@ -1410,6 +1480,25 @@ function createSelectableEquationBlockProps({
       }
     },
   };
+}
+
+function renderSemanticRoleLabel(
+  block: LayoutBlock,
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
+): ReactNode {
+  const semanticPresentation = getSemanticRolePresentation(block, semanticRoleConfig);
+  if (!semanticPresentation) {
+    return null;
+  }
+
+  // 标签文本通过 CSS content 渲染，避免进入真实文本测量结果。
+  return (
+    <span
+      className="semantic-role-label"
+      data-semantic-label={semanticPresentation.label}
+      aria-hidden="true"
+    />
+  );
 }
 
 function createSelectableTextNodeProps({
@@ -2509,6 +2598,7 @@ function renderBlock(
   tableResizeState?: TableResizeRenderState,
   tableSelection?: TableCellRangeSelection | null,
   documentStyles?: LayoutStyleSheet,
+  semanticRoleConfig?: LayoutSemanticRoleConfig,
   onListItemContextMenu?: (event: MouseEvent<HTMLElement>, itemId: string) => void,
   pageScale?: number,
   imageTextWrapBundle = false,
@@ -2519,11 +2609,13 @@ function renderBlock(
     tableResizeState?.pageContract,
     documentStyles,
   );
-  const blockStyle = buildBlockStyle(block, effectiveLineHeight, tableResizeState?.pageContract);
+  const blockStyle = buildBlockStyle(block, effectiveLineHeight, tableResizeState?.pageContract, semanticRoleConfig);
+  const semanticRoleLabel = renderSemanticRoleLabel(block, semanticRoleConfig);
   const isEditing = editingNodeId === block.id;
   const getSelectableBlockProps = (className = '') =>
     createSelectableBlockProps(
       block,
+      semanticRoleConfig,
       selectedNodeId,
       onSelectNode,
       onPrepareSelectNode,
@@ -2605,6 +2697,7 @@ function renderBlock(
             data-measure-text-node-id={block.id}
             style={blockStyle}
           >
+            {semanticRoleLabel}
             {content}
           </h1>
         );
@@ -2618,6 +2711,7 @@ function renderBlock(
             data-measure-text-node-id={block.id}
             style={blockStyle}
           >
+            {semanticRoleLabel}
             {content}
           </h2>
         );
@@ -2631,6 +2725,7 @@ function renderBlock(
             data-measure-text-node-id={block.id}
             style={blockStyle}
           >
+            {semanticRoleLabel}
             {content}
           </h4>
         );
@@ -2643,6 +2738,7 @@ function renderBlock(
           data-measure-text-node-id={block.id}
           style={blockStyle}
         >
+          {semanticRoleLabel}
           {content}
         </h3>
       );
@@ -2661,6 +2757,7 @@ function renderBlock(
             {...getSelectableBlockProps()}
             className="toc-block"
           >
+            {semanticRoleLabel}
             <div className="toc-block-title">{getTocBlockDisplayTitle(block)}</div>
             {visibleTocItems.length > 0 ? (
               <div className="toc-block-list">
@@ -2695,6 +2792,7 @@ function renderBlock(
           data-measure-text-node-id={block.id}
           style={blockStyle}
         >
+          {semanticRoleLabel}
           {isEditing
             ? isRichTextCanvasEditorKind(editingKind ?? 'paragraph')
               ? (
@@ -2769,6 +2867,7 @@ function renderBlock(
           {...getSelectableBlockProps('quote-block')}
           style={blockStyle}
         >
+          {semanticRoleLabel}
           {block.metadata.blocks.map((item, childIndex) =>
             renderBlock(
               item,
@@ -2806,7 +2905,9 @@ function renderBlock(
               tableResizeState,
               tableSelection,
               documentStyles,
+              semanticRoleConfig,
               onListItemContextMenu,
+              pageScale,
             ),
           )}
         </blockquote>
@@ -2818,6 +2919,7 @@ function renderBlock(
           {...getSelectableBlockProps('code-block')}
           style={blockStyle}
         >
+          {semanticRoleLabel}
           <code>
             {isEditing
               ? isRichTextCanvasEditorKind(editingKind ?? 'code')
@@ -2869,7 +2971,9 @@ function renderBlock(
           <div
             key={`table-${block.id}-${index}`}
             {...getSelectableBlockProps('table-shell')}
+            style={buildSemanticRoleStyleVariables(block, semanticRoleConfig) as CSSProperties}
           >
+            {semanticRoleLabel}
             <table className="preview-table" style={blockStyle}>
               <colgroup>
                 {resolvedColumnWidths.map((width, columnIndex) => (
@@ -3028,8 +3132,9 @@ function renderBlock(
           <figure
             key={`image-${block.id}-${index}`}
             {...getSelectableBlockProps(buildImageShellClassName(block, selectedNodeId))}
-            style={buildImageStyle(block)}
+            style={buildImageStyle(block, semanticRoleConfig)}
           >
+            {semanticRoleLabel}
             {block.metadata.src ? (
               <>
                 <span
@@ -3136,6 +3241,7 @@ function renderBlock(
           key={`equation-${block.id}-${index}`}
           {...createSelectableEquationBlockProps({
             block,
+            semanticRoleConfig,
             selectedNodeId,
             selectedBlockIds,
             editingNodeId: activeEquationEditorNodeId,
@@ -3144,7 +3250,9 @@ function renderBlock(
             onPrepareSelectNode,
             onStartEditing,
           })}
+          style={blockStyle}
         >
+          {semanticRoleLabel}
           <div
             className="equation-preview"
             dangerouslySetInnerHTML={renderEquationPreview(block.metadata.value)}
@@ -3210,6 +3318,7 @@ function CanvasPaneComponent({
   documentBlocks,
   documentResources,
   documentStyles,
+  semanticRoleConfig,
   pageLayouts,
   parseError,
   parseState,
@@ -3266,6 +3375,7 @@ function CanvasPaneComponent({
   const [measuredImageVisibleSizes, setMeasuredImageVisibleSizes] = useState<Record<string, ImageMeasuredVisibleSize>>({});
   const [imageMeasureEpoch, setImageMeasureEpoch] = useState(0);
   const [floatingToolbarPosition, setFloatingToolbarPosition] = useState<FloatingToolbarPosition | null>(null);
+  const [floatingToolbarMenu, setFloatingToolbarMenu] = useState<FloatingToolbarMenu | null>(null);
   const [blockToolbarPosition, setBlockToolbarPosition] = useState<FloatingToolbarPosition | null>(null);
   const [pageStackWidth, setPageStackWidth] = useState<number | null>(null);
   const [listItemContextMenu, setListItemContextMenu] = useState<ListItemContextMenuState | null>(null);
@@ -3301,6 +3411,10 @@ function CanvasPaneComponent({
     !!floatingToolbarTextRuns &&
     hasNonCollapsedSelection(editingSelection);
   const shouldShowBlockSelectionToolbar = selectedBlockIds.length >= 2 && !shouldShowFloatingToolbar;
+  const floatingFontFamilyGroups = buildFontFamilyGroupsWithImportedFonts(
+    textFontFamilyGroups,
+    documentResources,
+  );
   const currentFloatingTextColor =
     floatingToolbarTextRuns && shouldShowFloatingToolbar
       ? getSharedFloatingTextStyleValue(floatingToolbarTextRuns, editingSelection, 'color')
@@ -3309,6 +3423,20 @@ function CanvasPaneComponent({
     floatingToolbarTextRuns && shouldShowFloatingToolbar
       ? getSharedFloatingTextStyleValue(floatingToolbarTextRuns, editingSelection, 'highlightColor')
       : undefined;
+  const currentFloatingFontFamily =
+    floatingToolbarTextRuns && shouldShowFloatingToolbar
+      ? getSharedFloatingTextStyleValue(floatingToolbarTextRuns, editingSelection, 'fontFamily')
+      : undefined;
+  const currentFloatingFontSize =
+    floatingToolbarTextRuns && shouldShowFloatingToolbar
+      ? getSharedFloatingTextStyleValue(floatingToolbarTextRuns, editingSelection, 'fontSize')
+      : undefined;
+  const currentFloatingFontFamilyLabel = getFloatingFontFamilyLabel(
+    floatingFontFamilyGroups,
+    currentFloatingFontFamily,
+  );
+  const currentFloatingFontSizeLabel =
+    typeof currentFloatingFontSize === 'number' ? `${currentFloatingFontSize}px` : '字号';
   const measurementPageStyle = {
     ...buildPageStyleVariables(resolvedStyleContract),
     '--page-padding-left': '0px',
@@ -3376,6 +3504,12 @@ function CanvasPaneComponent({
   useEffect(() => {
     draftImageOffsetsRef.current = draftImageOffsets;
   }, [draftImageOffsets]);
+
+  useEffect(() => {
+    if (!shouldShowFloatingToolbar) {
+      setFloatingToolbarMenu(null);
+    }
+  }, [shouldShowFloatingToolbar]);
 
   useLayoutEffect(() => {
     if (
@@ -4616,6 +4750,34 @@ function CanvasPaneComponent({
     );
   };
 
+  const applyFloatingFontFamily = (fontFamily: string) => {
+    if (fontFamily === fontFamilyPlaceholderValue) {
+      return;
+    }
+
+    applyFloatingToolbarRuns((textRuns, nodeId) =>
+      applyTextRunPatchToTextRuns(textRuns, nodeId, editingSelection, {
+        styleOverrides: { fontFamily },
+      }),
+    );
+    setFloatingToolbarMenu(null);
+  };
+
+  const applyFloatingFontSize = (fontSize: number) => {
+    const nextFontSize = normalizeFloatingFontSizeValue(fontSize);
+    if (!nextFontSize) {
+      return;
+    }
+
+    // 浮动条字号只写当前选区的局部覆盖；批量字体字号规则仍由顶端工具栏负责。
+    applyFloatingToolbarRuns((textRuns, nodeId) =>
+      applyTextRunPatchToTextRuns(textRuns, nodeId, editingSelection, {
+        styleOverrides: { fontSize: nextFontSize },
+      }),
+    );
+    setFloatingToolbarMenu(null);
+  };
+
   const clearFloatingTextFormatting = () => {
     applyFloatingToolbarRuns((textRuns, nodeId) =>
       clearTextFormattingInTextRuns(textRuns, nodeId, editingSelection),
@@ -4813,6 +4975,84 @@ function CanvasPaneComponent({
               );
             })}
             <span className="floating-toolbar-divider" aria-hidden="true" />
+            <div className="floating-toolbar-menu-control">
+              <button
+                type="button"
+                className="floating-toolbar-select-button"
+                title="选择字体"
+                aria-label="选择字体"
+                aria-expanded={floatingToolbarMenu === 'fontFamily'}
+                onMouseDown={handleFloatingToolbarMouseDown}
+                onClick={() =>
+                  setFloatingToolbarMenu((current) => (current === 'fontFamily' ? null : 'fontFamily'))
+                }
+              >
+                <span>{currentFloatingFontFamilyLabel}</span>
+              </button>
+              {floatingToolbarMenu === 'fontFamily' ? (
+                <div className="floating-toolbar-menu floating-toolbar-font-menu" role="menu" aria-label="浮动工具条字体">
+                  {floatingFontFamilyGroups.map((group) => (
+                    <div key={`floating-font-group-${group.label}`} className="floating-toolbar-menu-section">
+                      <span className="floating-toolbar-menu-title">{group.label}</span>
+                      {group.options.map((option) => (
+                        <button
+                          key={`floating-font-${option.value}`}
+                          type="button"
+                          className={
+                            currentFloatingFontFamily === option.value
+                              ? 'floating-toolbar-menu-item active'
+                              : 'floating-toolbar-menu-item'
+                          }
+                          title={`字体：${option.label}`}
+                          aria-label={`字体：${option.label}`}
+                          onMouseDown={handleFloatingToolbarMouseDown}
+                          onClick={() => applyFloatingFontFamily(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="floating-toolbar-menu-control">
+              <button
+                type="button"
+                className="floating-toolbar-select-button compact"
+                title="选择字号"
+                aria-label="选择字号"
+                aria-expanded={floatingToolbarMenu === 'fontSize'}
+                onMouseDown={handleFloatingToolbarMouseDown}
+                onClick={() =>
+                  setFloatingToolbarMenu((current) => (current === 'fontSize' ? null : 'fontSize'))
+                }
+              >
+                <span>{currentFloatingFontSizeLabel}</span>
+              </button>
+              {floatingToolbarMenu === 'fontSize' ? (
+                <div className="floating-toolbar-menu floating-toolbar-size-menu" role="menu" aria-label="浮动工具条字号">
+                  {floatingFontSizePresetOptions.map((fontSize) => (
+                    <button
+                      key={`floating-font-size-${fontSize}`}
+                      type="button"
+                      className={
+                        currentFloatingFontSize === fontSize
+                          ? 'floating-toolbar-menu-item active'
+                          : 'floating-toolbar-menu-item'
+                      }
+                      title={`字号：${fontSize}px`}
+                      aria-label={`字号：${fontSize}px`}
+                      onMouseDown={handleFloatingToolbarMouseDown}
+                      onClick={() => applyFloatingFontSize(fontSize)}
+                    >
+                      {fontSize}px
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <span className="floating-toolbar-divider" aria-hidden="true" />
             <span className="format-color-label text-color-mark" aria-hidden="true">A</span>
             <div className="format-swatch-list" aria-label="浮动工具条文字颜色">
               {standardColorOptions.map((option) => (
@@ -4995,6 +5235,7 @@ function CanvasPaneComponent({
                               },
                               tableSelection,
                               documentStyles,
+                              semanticRoleConfig,
                               (event, itemId) => {
                                 event.preventDefault();
                                 event.stopPropagation();
@@ -5082,6 +5323,7 @@ function CanvasPaneComponent({
                     },
                     null,
                     documentStyles,
+                    semanticRoleConfig,
                     () => undefined,
                     1,
                   )}
@@ -5134,6 +5376,7 @@ function CanvasPaneComponent({
                     },
                     null,
                     documentStyles,
+                    semanticRoleConfig,
                     () => undefined,
                     1,
                   )}
@@ -5186,6 +5429,7 @@ function CanvasPaneComponent({
                     },
                     null,
                     documentStyles,
+                    semanticRoleConfig,
                     () => undefined,
                     1,
                   )}
