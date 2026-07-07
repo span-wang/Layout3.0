@@ -1619,6 +1619,265 @@ button {
   min-width: 0;
 }
 
+.knowledge-panel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.knowledge-overview-card {
+  display: grid;
+  gap: 6px;
+  padding: 11px 12px;
+  color: #4a5c6f;
+  background: #f7fafc;
+  border: 1px solid #dfe8ef;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.knowledge-overview-card.compact {
+  gap: 5px;
+}
+
+.knowledge-overview-card p {
+  margin: 0;
+}
+
+.knowledge-service-card {
+  display: grid;
+  gap: 12px;
+}
+
+.knowledge-service-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.knowledge-service-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #223243;
+}
+
+.knowledge-service-header span {
+  color: #66788a;
+  font-size: 11px;
+}
+
+.knowledge-form {
+  display: grid;
+  gap: 10px;
+}
+
+.knowledge-field {
+  display: grid;
+  gap: 5px;
+  color: #344256;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.knowledge-field-compact {
+  max-width: 140px;
+}
+
+.knowledge-input {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  color: #223243;
+  background: #ffffff;
+  border: 1px solid #d7e2ea;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.knowledge-input:focus {
+  outline: none;
+  border-color: #6fa9b5;
+  box-shadow: 0 0 0 3px rgba(111, 169, 181, 0.16);
+}
+
+.knowledge-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #344256;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.knowledge-checkbox-row input {
+  margin-top: 2px;
+}
+
+.knowledge-actions,
+.knowledge-dataset-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.knowledge-button,
+.knowledge-link-anchor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 12px;
+  color: #415061;
+  background: #ffffff;
+  border: 1px solid #d7e2ea;
+  border-radius: 8px;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.knowledge-button:hover:not(:disabled),
+.knowledge-link-anchor:hover {
+  color: #0d5663;
+  background: #edf8f8;
+  border-color: #b8d8e0;
+}
+
+.knowledge-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.knowledge-button-primary {
+  color: #f8fcff;
+  background: #256c7a;
+  border-color: #256c7a;
+}
+
+.knowledge-button-primary:hover:not(:disabled) {
+  color: #f8fcff;
+  background: #1e5c67;
+  border-color: #1e5c67;
+}
+
+.knowledge-link-button {
+  padding: 0;
+  color: #256c7a;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+}
+
+.knowledge-link-button:hover {
+  color: #0d5663;
+  text-decoration: underline;
+}
+
+.knowledge-feedback {
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.knowledge-feedback.success {
+  color: #0f5132;
+  background: #f2fbf7;
+  border: 1px solid #b7e4c7;
+}
+
+.knowledge-feedback.error {
+  color: #b42318;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  white-space: pre-wrap;
+}
+
+.knowledge-dataset-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #344256;
+  font-size: 12px;
+}
+
+.knowledge-dataset-list,
+.knowledge-result-list {
+  display: grid;
+  gap: 8px;
+}
+
+.knowledge-dataset-item,
+.knowledge-result-card {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #dfe8ef;
+  border-radius: 8px;
+}
+
+.knowledge-dataset-item {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.knowledge-dataset-item.active {
+  background: #eef8fb;
+  border-color: #79b5c1;
+}
+
+.knowledge-dataset-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.knowledge-dataset-main strong,
+.knowledge-dataset-main span,
+.knowledge-dataset-main small,
+.knowledge-result-card strong,
+.knowledge-result-card span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-dataset-main strong,
+.knowledge-result-card strong {
+  color: #223243;
+  font-size: 12px;
+}
+
+.knowledge-dataset-main span,
+.knowledge-dataset-main small,
+.knowledge-result-card span {
+  color: #66788a;
+  font-size: 11px;
+}
+
+.knowledge-result-card p {
+  margin: 0;
+  color: #344256;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-test-box {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
 .ai-record-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -2609,6 +2868,37 @@ button {
   column-span: all;
 }
 
+.local-column-section {
+  width: 100%;
+  max-width: 100%;
+}
+
+.local-column-flow {
+  width: 100%;
+  max-width: 100%;
+  column-count: var(--local-column-count, 2);
+  column-gap: var(--local-column-gap, 24px);
+  column-rule: var(--local-column-rule-width, 0px) solid var(--local-column-rule-color, #e4ecf2);
+}
+
+.local-column-flow > .selectable-layout-block,
+.local-column-flow > .toc-block-export,
+.local-column-flow > .table-shell,
+.local-column-flow > .equation-shell,
+.local-column-flow > .local-column-section,
+.local-column-flow > blockquote,
+.local-column-flow > pre,
+.local-column-flow > p,
+.local-column-flow > ul,
+.local-column-flow > ol,
+.local-column-flow > hr {
+  break-inside: avoid-column;
+}
+
+.local-column-flow > .column-span-all {
+  column-span: all;
+}
+
 .page-measurement-layer {
   position: absolute;
   left: -100000px;
@@ -2626,7 +2916,13 @@ button {
 }
 
 .measurement-block {
+  display: block;
+}
+
+.measurement-text-fragment,
+.measurement-table-row {
   display: flow-root;
+  clear: both;
 }
 
 .page-body .selectable-layout-block {

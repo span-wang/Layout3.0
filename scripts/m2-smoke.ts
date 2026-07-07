@@ -3987,7 +3987,7 @@ async function main(): Promise<void> {
     pages: paginateBlocks([imageWithOffset, styledParagraph], resolveStyleContract(defaultStyleSettings)),
     title: '图片环绕导出验证',
   });
-  for (const fragment of ['image-wrap-square', 'image-wrap-side-right', 'float:right', 'margin-left:16px']) {
+  for (const fragment of ['image-wrap-square', 'image-wrap-side-right', 'float:right', 'margin-left:16px', 'margin-right:15px', 'margin-top:-8px']) {
     assert(wrappedImageHtml.includes(fragment), `M2 冒烟失败：图片环绕导出 HTML 缺少关键片段 ${fragment}`);
   }
 

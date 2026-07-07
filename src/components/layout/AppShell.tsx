@@ -97,6 +97,13 @@ function findImageBlockById(blocks: LayoutBlock[], blockId: string): LayoutBlock
         return nestedBlock;
       }
     }
+
+    if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
+      const nestedBlock = findImageBlockById(block.metadata.blocks, blockId);
+      if (nestedBlock) {
+        return nestedBlock;
+      }
+    }
   }
 
   return null;
@@ -179,6 +186,7 @@ export function AppShell(): JSX.Element {
   const updateLayoutImageAttributes = useAppStore((state) => state.updateLayoutImageAttributes);
   const insertLayoutMarkdownBlocks = useAppStore((state) => state.insertLayoutMarkdownBlocks);
   const mergeLayoutSelectedBlocks = useAppStore((state) => state.mergeLayoutSelectedBlocks);
+  const wrapLayoutSelectedBlocksInColumns = useAppStore((state) => state.wrapLayoutSelectedBlocksInColumns);
   const undoLayoutDocument = useAppStore((state) => state.undoLayoutDocument);
   const redoLayoutDocument = useAppStore((state) => state.redoLayoutDocument);
   const canUndoLayoutDocument = useAppStore((state) => state.documentHistoryPast.length > 0);
@@ -681,6 +689,30 @@ export function AppShell(): JSX.Element {
     showMessage(failureMessage[result.reason]);
   }, [mergeLayoutSelectedBlocks, showMessage]);
 
+  const handleWrapSelectedBlocksInColumns = useCallback(() => {
+    const result = wrapLayoutSelectedBlocksInColumns();
+    if (result.didUpdate) {
+      setCanvasTextSelection({
+        nodeId: result.selectedNodeId,
+        text: '',
+        selection: null,
+        isEditing: false,
+        draftTextRuns: null,
+      });
+      showMessage(result.wrappedCount > 0 ? '已设为局部双栏' : '已设为双栏');
+      return;
+    }
+
+    const failureMessage: Record<typeof result.reason, string> = {
+      wrapped: '已设为局部双栏',
+      invalidSelection: '请选择连续的顶层块',
+      notEnoughBlocks: '至少需要选择 2 个块',
+      nonContiguous: '只能选择连续块',
+      unsupportedBlockType: '当前选区包含暂不支持局部分栏的块',
+    };
+    showMessage(failureMessage[result.reason]);
+  }, [showMessage, wrapLayoutSelectedBlocksInColumns]);
+
   const handleUndoLayoutDocument = useCallback(() => {
     const didUndo = undoLayoutDocument();
     if (!didUndo) {
@@ -935,6 +967,7 @@ export function AppShell(): JSX.Element {
                 onSelectTableCell={handleSelectLayoutTableCell}
                 onClearSelection={handleClearLayoutSelection}
                 onMergeSelectedBlocks={handleMergeSelectedBlocks}
+                onWrapSelectedBlocksInColumns={handleWrapSelectedBlocksInColumns}
                 onCommitNodeText={handleCommitLayoutNodeText}
                 onCommitNodeRichText={handleCommitLayoutNodeRichText}
                 onTextSelectionChange={setCanvasTextSelection}

@@ -24,6 +24,7 @@ import {
   type AnswerBlockPlacementMode,
   type AnswerDisplayMode,
   type BlockquoteStructureAction,
+  type ColumnSectionColumnCount,
   type ListStructureAction,
   type LayoutBlock,
   type LayoutResource,
@@ -163,6 +164,7 @@ const blockTypeLabels: Record<LayoutBlock['type'], string> = {
   blockquote: '引用',
   code: '代码块',
   horizontalRule: '分隔线',
+  columnSection: '局部分栏区段',
   columnBreak: '分栏断点',
   pageBreak: '分页符',
 };
@@ -176,6 +178,7 @@ const topLevelBlockDeleteLabels: Partial<Record<LayoutBlock['type'], string>> = 
   image: '图片',
   equation: '公式',
   blockquote: '引用',
+  columnSection: '局部分栏区段',
   code: '代码块',
   columnBreak: '分栏断点',
   pageBreak: '分页符',
@@ -1240,6 +1243,16 @@ function renderObjectPropertiesPanel(
     targetNodeId: string;
     action: BlockquoteStructureAction;
   }) => string | null,
+  updateLayoutColumnSectionAttributes: (payload: {
+    nodeId: string;
+    columnCount?: ColumnSectionColumnCount;
+    columnGapMm?: number;
+    divider?: boolean;
+    headingsSpanAll?: boolean;
+  }) => void,
+  unwrapLayoutColumnSection: (payload: {
+    nodeId: string;
+  }) => { didUpdate: boolean; selectedNodeId: string | null; unwrappedCount: number },
   deleteLayoutTopLevelBlock: (payload: {
     nodeId: string;
   }) => { didDelete: boolean; selectedNodeId: string | null; deletedBlockType: LayoutBlock['type'] | null },
@@ -1273,6 +1286,8 @@ function renderObjectPropertiesPanel(
   onTocRefreshFeedback: (message: string | null) => void,
   blockquoteStructureFeedback: string | null,
   onBlockquoteStructureFeedback: (message: string) => void,
+  columnSectionFeedback: string | null,
+  onColumnSectionFeedback: (message: string | null) => void,
   topLevelBlockFeedback: string | null,
   onTopLevelBlockFeedback: (message: string) => void,
   syncEditingTextBeforeStyleAction: (nodeId: string) => void,
@@ -1338,6 +1353,10 @@ function renderObjectPropertiesPanel(
       : null;
   const selectedEquationMetadata =
     selectedNodeInfo.ownerBlock.type === 'equation' && selectedNodeInfo.ownerBlock.metadata.kind === 'equation'
+      ? selectedNodeInfo.ownerBlock.metadata
+      : null;
+  const selectedColumnSectionMetadata =
+    selectedNodeInfo.ownerBlock.type === 'columnSection' && selectedNodeInfo.ownerBlock.metadata.kind === 'columnSection'
       ? selectedNodeInfo.ownerBlock.metadata
       : null;
   const isHeaderRowEnabled = selectedTableMetadata?.rows[0]?.cells.every((cell) => cell.isHeader) ?? false;
@@ -1806,6 +1825,57 @@ function renderObjectPropertiesPanel(
     );
   };
 
+  const commitColumnSectionAttributePatch = (patch: {
+    columnCount?: ColumnSectionColumnCount;
+    columnGapMm?: number;
+    divider?: boolean;
+    headingsSpanAll?: boolean;
+  }) => {
+    if (!selectedColumnSectionMetadata) {
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    updateLayoutColumnSectionAttributes({
+      nodeId: selectedNodeInfo.nodeId,
+      ...patch,
+    });
+    onColumnSectionFeedback(null);
+  };
+
+  const handleColumnSectionGapChange = (rawValue: string) => {
+    if (!selectedColumnSectionMetadata) {
+      return;
+    }
+
+    const nextValue = Number(rawValue);
+    if (!Number.isFinite(nextValue)) {
+      onColumnSectionFeedback('栏间距需要填写数字');
+      return;
+    }
+
+    commitColumnSectionAttributePatch({
+      columnGapMm: Math.max(4, Math.min(30, Math.round(nextValue))),
+    });
+  };
+
+  const handleUnwrapColumnSection = () => {
+    if (!selectedColumnSectionMetadata) {
+      onColumnSectionFeedback('当前不是局部分栏区段');
+      return;
+    }
+
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+    const result = unwrapLayoutColumnSection({
+      nodeId: selectedNodeInfo.nodeId,
+    });
+    onColumnSectionFeedback(
+      result.didUpdate
+        ? `已解除双栏，恢复 ${result.unwrappedCount} 个顶层块`
+        : '解除双栏失败',
+    );
+  };
+
   return (
     <>
       <section className="detail-panel object-detail-panel">
@@ -1847,6 +1917,84 @@ function renderObjectPropertiesPanel(
           });
         },
       })}
+
+      {selectedColumnSectionMetadata ? (
+        <section className="detail-panel object-detail-panel">
+          <div className="detail-panel-head">
+            <h3>局部分栏</h3>
+            <span>当前区段共 {selectedColumnSectionMetadata.blocks.length} 个子块</span>
+          </div>
+          <div className="object-property-list">
+            {renderObjectPropertyRow('当前栏数', `${selectedColumnSectionMetadata.columnCount} 栏`)}
+            {renderObjectPropertyRow('栏间距', `${selectedColumnSectionMetadata.columnGapMm} mm`)}
+            {renderObjectPropertyRow('栏分割线', selectedColumnSectionMetadata.divider ? '显示' : '不显示')}
+            {renderObjectPropertyRow('标题跨栏', selectedColumnSectionMetadata.headingsSpanAll ? '开启' : '关闭')}
+          </div>
+          <div className="property-stack">
+            <label>
+              栏数
+              <div className="segmented-group">
+                {([2, 3] as const).map((count) => (
+                  <button
+                    key={`column-section-count-${count}`}
+                    type="button"
+                    className={selectedColumnSectionMetadata.columnCount === count ? 'segment-chip active' : 'segment-chip'}
+                    onClick={() => commitColumnSectionAttributePatch({ columnCount: count })}
+                  >
+                    {count} 栏
+                  </button>
+                ))}
+              </div>
+            </label>
+            <label>
+              栏间距
+              <div className="number-input-shell">
+                <input
+                  key={`column-section-gap-${selectedNodeInfo.nodeId}-${selectedColumnSectionMetadata.columnGapMm}`}
+                  type="number"
+                  min={4}
+                  max={30}
+                  step={1}
+                  defaultValue={selectedColumnSectionMetadata.columnGapMm}
+                  onBlur={(event) => handleColumnSectionGapChange(event.currentTarget.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.currentTarget.blur();
+                    }
+                  }}
+                />
+                <span>mm</span>
+              </div>
+            </label>
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={selectedColumnSectionMetadata.divider}
+                onChange={(event) => commitColumnSectionAttributePatch({ divider: event.target.checked })}
+              />
+              <span>显示栏分割线</span>
+            </label>
+            <label className="toggle-row">
+              <input
+                type="checkbox"
+                checked={selectedColumnSectionMetadata.headingsSpanAll}
+                onChange={(event) => commitColumnSectionAttributePatch({ headingsSpanAll: event.target.checked })}
+              />
+              <span>标题不参与分栏</span>
+            </label>
+          </div>
+          <div className="table-structure-grid">
+            <button
+              type="button"
+              className="segment-chip table-structure-button"
+              onClick={handleUnwrapColumnSection}
+            >
+              解除双栏
+            </button>
+          </div>
+          {columnSectionFeedback ? <p className="table-structure-feedback">{columnSectionFeedback}</p> : null}
+        </section>
+      ) : null}
 
       {selectedImageMetadata ? (
         <section className="detail-panel object-detail-panel">
@@ -3017,6 +3165,7 @@ function renderObjectPropertiesPanel(
 
       {!selectedImageMetadata &&
       !selectedBlockquoteContext &&
+      !selectedColumnSectionMetadata &&
       !isTextStyleEditable(selectedNodeInfo) &&
       !isBlockStyleEditable(selectedNodeInfo) ? (
         <section className="detail-panel object-detail-panel">
@@ -4116,6 +4265,8 @@ export function RightPanel({
   const convertLayoutListItemTaskState = useAppStore((state) => state.convertLayoutListItemTaskState);
   const updateLayoutListBatchChecked = useAppStore((state) => state.updateLayoutListBatchChecked);
   const updateLayoutBlockquoteStructure = useAppStore((state) => state.updateLayoutBlockquoteStructure);
+  const updateLayoutColumnSectionAttributes = useAppStore((state) => state.updateLayoutColumnSectionAttributes);
+  const unwrapLayoutColumnSection = useAppStore((state) => state.unwrapLayoutColumnSection);
   const applyLayoutNodeBlockStyle = useAppStore((state) => state.applyLayoutNodeBlockStyle);
   const updateLayoutBlockSemantic = useAppStore((state) => state.updateLayoutBlockSemantic);
   const updateLayoutBlockSemanticPreset = useAppStore((state) => state.updateLayoutBlockSemanticPreset);
@@ -4126,6 +4277,7 @@ export function RightPanel({
   const [listStructureFeedback, setListStructureFeedback] = useState<string | null>(null);
   const [tocRefreshFeedback, setTocRefreshFeedback] = useState<string | null>(null);
   const [blockquoteStructureFeedback, setBlockquoteStructureFeedback] = useState<string | null>(null);
+  const [columnSectionFeedback, setColumnSectionFeedback] = useState<string | null>(null);
   const [topLevelBlockFeedback, setTopLevelBlockFeedback] = useState<string | null>(null);
   const [backgroundFeedback, setBackgroundFeedback] = useState<string | null>(null);
   const [marginDrafts, setMarginDrafts] = useState<Record<MarginSide, string>>({
@@ -4167,6 +4319,7 @@ export function RightPanel({
     setListStructureFeedback(null);
     setTocRefreshFeedback(null);
     setBlockquoteStructureFeedback(null);
+    setColumnSectionFeedback(null);
     setTopLevelBlockFeedback(null);
   }, [selectedNodeId]);
 
@@ -4506,6 +4659,8 @@ export function RightPanel({
             convertLayoutListItemTaskState,
             updateLayoutListBatchChecked,
             updateLayoutBlockquoteStructure,
+            updateLayoutColumnSectionAttributes,
+            unwrapLayoutColumnSection,
             deleteLayoutTopLevelBlock,
             applyLayoutNodeBlockStyle,
             updateLayoutBlockSemantic,
@@ -4519,6 +4674,8 @@ export function RightPanel({
             setTocRefreshFeedback,
             blockquoteStructureFeedback,
             setBlockquoteStructureFeedback,
+            columnSectionFeedback,
+            setColumnSectionFeedback,
             topLevelBlockFeedback,
             setTopLevelBlockFeedback,
             syncEditingTextBeforeStyleAction,

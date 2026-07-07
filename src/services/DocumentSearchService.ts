@@ -203,6 +203,11 @@ function collectSearchableNodes(
 
     if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
       nodes.push(...collectSearchableNodes(block.metadata.blocks, [...containerLabels, '引用']));
+      continue;
+    }
+
+    if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
+      nodes.push(...collectSearchableNodes(block.metadata.blocks, [...containerLabels, '局部分栏']));
     }
   }
 

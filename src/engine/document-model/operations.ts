@@ -1,6 +1,7 @@
 import type {
   BlockStyleOverrides,
   BlockRangeSelection,
+  ColumnSectionColumnCount,
   LayoutBlock,
   LayoutDocument,
   LayoutResource,
@@ -118,6 +119,10 @@ export interface InsertTocBlockResult {
   insertedBlockId: string;
 }
 
+function normalizeColumnSectionGapMm(value: number): number {
+  return Math.max(4, Math.min(30, Math.round(value)));
+}
+
 export interface InsertParagraphBlockPayload {
   insertAfterNodeId?: string | null;
   text?: string;
@@ -157,6 +162,21 @@ export interface BlockMergeResult {
   didUpdate: boolean;
   reason: BlockMergeReason;
   mergedCount: number;
+}
+
+export type ColumnSectionWrapReason =
+  | 'wrapped'
+  | 'invalidSelection'
+  | 'notEnoughBlocks'
+  | 'nonContiguous'
+  | 'unsupportedBlockType';
+
+export interface ColumnSectionWrapResult {
+  blocks: LayoutBlock[];
+  selectedNodeId: string | null;
+  didUpdate: boolean;
+  reason: ColumnSectionWrapReason;
+  wrappedCount: number;
 }
 
 export type ListStructureAction =
@@ -599,6 +619,40 @@ function createInsertedColumnBreakBlock(blocks: LayoutBlock[]): LayoutBlock {
   };
 }
 
+function isColumnSectionSupportedChild(block: LayoutBlock): boolean {
+  // 局部分栏 V1 只包装真实内容块；分页符/分栏断点属于页面结构控制，
+  // 已有局部分栏也不允许再次嵌套，避免当前小步扩成完整分节系统。
+  return block.type !== 'pageBreak' &&
+    block.type !== 'columnBreak' &&
+    block.type !== 'horizontalRule' &&
+    block.type !== 'columnSection';
+}
+
+function createColumnSectionBlock(blocks: LayoutBlock[], childBlocks: LayoutBlock[]): LayoutBlock {
+  const blockId = createInsertedBlockId(blocks, 'columnSection', '局部分栏');
+
+  return {
+    id: blockId,
+    type: 'columnSection',
+    sourceRange: null,
+    blockStyleRef: null,
+    blockStyleOverrides: {},
+    textRuns: [],
+    pagination: {},
+    metadata: {
+      kind: 'columnSection',
+      columnCount: 2,
+      columnGapMm: defaultStyleSettings.columns.gapMm,
+      divider: defaultStyleSettings.columns.divider,
+      headingsSpanAll: defaultStyleSettings.columns.headingsSpanAll,
+      blocks: childBlocks.map((block) => ({
+        ...block,
+        sourceRange: null,
+      })),
+    },
+  };
+}
+
 function collectTableNodeIds(block: LayoutBlock): Set<string> {
   const ids = new Set<string>();
   if (block.type !== 'table' || block.metadata.kind !== 'table') {
@@ -643,6 +697,10 @@ function collectNestedNodeIds(blocks: LayoutBlock[]): Set<string> {
       }
 
       if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+        visitBlocks(block.metadata.blocks);
+      }
+
+      if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
         visitBlocks(block.metadata.blocks);
       }
     });
@@ -1355,6 +1413,55 @@ export function mergeTopLevelTextBlocksByIds(
     didUpdate: true,
     reason: 'merged',
     mergedCount: selectedEntries.length,
+  };
+}
+
+export function wrapTopLevelBlocksInColumnSectionByIds(
+  blocks: LayoutBlock[],
+  blockIds: string[],
+): ColumnSectionWrapResult {
+  const uniqueBlockIds = Array.from(new Set(blockIds));
+  if (uniqueBlockIds.length < 2) {
+    return { blocks, selectedNodeId: null, didUpdate: false, reason: 'notEnoughBlocks', wrappedCount: 0 };
+  }
+
+  const selectedEntries = uniqueBlockIds
+    .map((blockId) => {
+      const index = blocks.findIndex((block) => block.id === blockId);
+      return index >= 0 ? { index, block: blocks[index] } : null;
+    })
+    .filter((entry): entry is { index: number; block: LayoutBlock } => !!entry)
+    .sort((left, right) => left.index - right.index);
+
+  if (selectedEntries.length !== uniqueBlockIds.length) {
+    return { blocks, selectedNodeId: null, didUpdate: false, reason: 'invalidSelection', wrappedCount: 0 };
+  }
+
+  const firstIndex = selectedEntries[0].index;
+  const isContiguous = selectedEntries.every((entry, index) => entry.index === firstIndex + index);
+  if (!isContiguous) {
+    return { blocks, selectedNodeId: null, didUpdate: false, reason: 'nonContiguous', wrappedCount: 0 };
+  }
+
+  if (!selectedEntries.every((entry) => isColumnSectionSupportedChild(entry.block))) {
+    return { blocks, selectedNodeId: null, didUpdate: false, reason: 'unsupportedBlockType', wrappedCount: 0 };
+  }
+
+  const selectedBlocks = selectedEntries.map((entry) => entry.block);
+  const columnSectionBlock = createColumnSectionBlock(blocks, selectedBlocks);
+  const selectedBlockIds = new Set(selectedBlocks.map((block) => block.id));
+  const nextBlocks = [
+    ...blocks.slice(0, firstIndex),
+    columnSectionBlock,
+    ...blocks.slice(firstIndex).filter((block) => !selectedBlockIds.has(block.id)),
+  ];
+
+  return {
+    blocks: nextBlocks,
+    selectedNodeId: columnSectionBlock.id,
+    didUpdate: true,
+    reason: 'wrapped',
+    wrappedCount: selectedBlocks.length,
   };
 }
 
@@ -2305,6 +2412,21 @@ export function autoFitTablesInLayoutDocument(
         }
       }
 
+      if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
+        const nestedResult = visitBlocks(block.metadata.blocks);
+        if (nestedResult.didUpdate) {
+          didUpdateBlocks = true;
+          return {
+            ...block,
+            sourceRange: null,
+            metadata: {
+              ...block.metadata,
+              blocks: nestedResult.blocks,
+            },
+          };
+        }
+      }
+
       return block;
     });
 
@@ -2706,6 +2828,101 @@ export function updateLayoutImageAttributes(
       offsetX: attributes.offsetX === undefined ? (block.metadata.offsetX ?? 0) : normalizeOffsetValue(attributes.offsetX),
       offsetY: attributes.offsetY === undefined ? (block.metadata.offsetY ?? 0) : normalizeOffsetValue(attributes.offsetY),
     },
+  };
+}
+
+export function updateColumnSectionAttributes(
+  block: LayoutBlock,
+  attributes: {
+    columnCount?: ColumnSectionColumnCount;
+    columnGapMm?: number;
+    divider?: boolean;
+    headingsSpanAll?: boolean;
+  },
+): LayoutBlock {
+  if (block.type !== 'columnSection' || block.metadata.kind !== 'columnSection') {
+    return block;
+  }
+
+  const nextColumnCount = attributes.columnCount ?? block.metadata.columnCount;
+  const nextColumnGapMm = attributes.columnGapMm === undefined
+    ? block.metadata.columnGapMm
+    : normalizeColumnSectionGapMm(attributes.columnGapMm);
+  const nextDivider = attributes.divider ?? block.metadata.divider;
+  const nextHeadingsSpanAll = attributes.headingsSpanAll ?? block.metadata.headingsSpanAll;
+
+  if (
+    nextColumnCount === block.metadata.columnCount &&
+    nextColumnGapMm === block.metadata.columnGapMm &&
+    nextDivider === block.metadata.divider &&
+    nextHeadingsSpanAll === block.metadata.headingsSpanAll
+  ) {
+    return block;
+  }
+
+  return {
+    ...block,
+    sourceRange: null,
+    metadata: {
+      ...block.metadata,
+      columnCount: nextColumnCount,
+      columnGapMm: nextColumnGapMm,
+      divider: nextDivider,
+      headingsSpanAll: nextHeadingsSpanAll,
+    },
+  };
+}
+
+export function unwrapTopLevelColumnSectionById(
+  blocks: LayoutBlock[],
+  columnSectionId: string,
+): {
+  blocks: LayoutBlock[];
+  selectedNodeId: string | null;
+  didUpdate: boolean;
+  unwrappedCount: number;
+} {
+  const blockIndex = blocks.findIndex((block) =>
+    block.id === columnSectionId &&
+    block.type === 'columnSection' &&
+    block.metadata.kind === 'columnSection',
+  );
+
+  if (blockIndex < 0) {
+    return {
+      blocks,
+      selectedNodeId: null,
+      didUpdate: false,
+      unwrappedCount: 0,
+    };
+  }
+
+  const targetBlock = blocks[blockIndex];
+  if (targetBlock.type !== 'columnSection' || targetBlock.metadata.kind !== 'columnSection') {
+    return {
+      blocks,
+      selectedNodeId: null,
+      didUpdate: false,
+      unwrappedCount: 0,
+    };
+  }
+
+  // 解除局部分栏后直接恢复内部块顺序，不再保留容器壳。
+  const restoredBlocks = targetBlock.metadata.blocks.map((block) => ({
+    ...block,
+    sourceRange: null,
+  }));
+  const nextBlocks = [
+    ...blocks.slice(0, blockIndex),
+    ...restoredBlocks,
+    ...blocks.slice(blockIndex + 1),
+  ];
+
+  return {
+    blocks: nextBlocks,
+    selectedNodeId: restoredBlocks[0]?.id ?? blocks[blockIndex + 1]?.id ?? blocks[blockIndex - 1]?.id ?? null,
+    didUpdate: true,
+    unwrappedCount: restoredBlocks.length,
   };
 }
 
@@ -3207,6 +3424,11 @@ function collectSemanticKeywordScanItems(
     }
 
     if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      items.push(...collectSemanticKeywordScanItems(block.metadata.blocks, config, options));
+      continue;
+    }
+
+    if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
       items.push(...collectSemanticKeywordScanItems(block.metadata.blocks, config, options));
     }
   }

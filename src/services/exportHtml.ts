@@ -46,7 +46,7 @@ import {
   resolveBlockDefaultTextMetrics,
   resolveBlockEffectiveTextMetrics,
 } from '@/engine/style/blockStyleResolution';
-import { shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
+import { resolveColumnSectionContract, shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
 import { renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
 import { defaultStyleSettings } from '@/engine/style/presets';
 import type { HeaderFooterContent, ResolvedStyleContract, StyleSettings } from '@/engine/style/types';
@@ -198,6 +198,17 @@ function buildBlockAttributes(
     : '';
 
   return `${classAttribute}${semanticPresetAttribute}${semanticAttribute}${semanticLabelAttribute}${buildBlockStyle(block, styles, contract, semanticRoleConfig)}`;
+}
+
+function appendStyleAttribute(attributes: string, declarations: string[]): string {
+  if (declarations.length === 0) {
+    return attributes;
+  }
+
+  const styleText = escapeHtml(declarations.join(';'));
+  return attributes.includes(' style="')
+    ? attributes.replace(' style="', ` style="${styleText};`)
+    : `${attributes} style="${styleText}"`;
 }
 
 function renderInlineText(text: string): string {
@@ -434,6 +445,24 @@ function renderBlock(
       return block.metadata.kind === 'blockquote'
         ? `<blockquote${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract, semanticRoleConfig, answerDisplayMode)).join('')}</blockquote>`
         : '';
+    case 'columnSection':
+      if (block.metadata.kind !== 'columnSection') {
+        return '';
+      }
+
+      {
+        const sectionContract = contract ? resolveColumnSectionContract(contract, block.metadata) : undefined;
+        const sectionAttributes = appendStyleAttribute(
+          buildBlockAttributes(block, styles, contract, ['local-column-section'], semanticRoleConfig),
+          [
+            `--local-column-count:${block.metadata.columnCount}`,
+            `--local-column-gap:${sectionContract?.columnGapPx ?? block.metadata.columnGapMm * (96 / 25.4)}px`,
+            `--local-column-rule-width:${block.metadata.divider ? '1px' : '0px'}`,
+            `--local-column-rule-color:${sectionContract?.themeTokens.bodyOutlineColor ?? '#e4ecf2'}`,
+          ],
+        );
+        return `<section${sectionAttributes}>${semanticRoleLabelHtml}<div class="local-column-flow">${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, sectionContract, semanticRoleConfig, answerDisplayMode)).join('')}</div></section>`;
+      }
     case 'code':
       return `<pre${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}<code>${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</code></pre>`;
     case 'equation':
@@ -509,11 +538,19 @@ function renderImageBlock(
     } else {
       wrapperStyleParts.push('margin-left:auto', 'margin-right:auto');
     }
+    if (offsetY !== 0) {
+      wrapperStyleParts.push(`margin-top:${offsetY}px`);
+    }
   } else if (isImageTextWrapMode(layout.wrapMode)) {
     wrapperStyleParts.push(`float:${layout.wrapSide}`, 'clear:none');
+    if (offsetY !== 0) {
+      wrapperStyleParts.push(`margin-top:${offsetY}px`);
+    }
     if (layout.wrapSide === 'left') {
+      wrapperStyleParts.push(`margin-left:${Math.max(0, offsetX)}px`);
       wrapperStyleParts.push('margin-right:16px');
     } else {
+      wrapperStyleParts.push(`margin-right:${Math.max(0, offsetX)}px`);
       wrapperStyleParts.push('margin-left:16px');
     }
   } else {
@@ -523,7 +560,7 @@ function renderImageBlock(
     } else if (offsetX < 0) {
       wrapperStyleParts.push(`margin-right:${Math.abs(offsetX)}px`);
     }
-    if (offsetY > 0) {
+    if (offsetY !== 0) {
       wrapperStyleParts.push(`margin-top:${offsetY}px`);
     }
   }
@@ -916,6 +953,40 @@ export function buildExportHtml({
       }
 
       .page-body.page-body-columns > .page-column-flow > .column-span-all {
+        column-span: all;
+      }
+
+      .local-column-section {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .local-column-flow {
+        width: 100%;
+        max-width: 100%;
+        column-count: var(--local-column-count, 2);
+        column-gap: var(--local-column-gap, 24px);
+        column-rule: var(--local-column-rule-width, 0px) solid var(--local-column-rule-color, #e4ecf2);
+      }
+
+      .local-column-flow > h1,
+      .local-column-flow > h2,
+      .local-column-flow > h3,
+      .local-column-flow > h4,
+      .local-column-flow > .toc-block-export,
+      .local-column-flow > .table-shell,
+      .local-column-flow > .local-column-section,
+      .local-column-flow > blockquote,
+      .local-column-flow > pre,
+      .local-column-flow > p,
+      .local-column-flow > ul,
+      .local-column-flow > ol,
+      .local-column-flow > hr,
+      .local-column-flow > .equation-shell {
+        break-inside: avoid-column;
+      }
+
+      .local-column-flow > .column-span-all {
         column-span: all;
       }
 

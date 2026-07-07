@@ -24,6 +24,7 @@ import {
   VerticalMergeType,
   WidthType,
   type FileChild,
+  type ParagraphChild,
 } from 'docx';
 import {
   applyPageNumbersToTocItems,
@@ -62,6 +63,7 @@ import {
 } from '@/engine/style/quickTextStyle';
 import type { HeaderFooterLineContent, ResolvedStyleContract, StyleSettings } from '@/engine/style/types';
 import type { PageLayout } from '@/engine/typesetting/types';
+import { splitInlineEquations } from '@/engine/document-model/equation';
 import {
   getBaseNameFromPath,
   getParentPath,
@@ -69,6 +71,7 @@ import {
   toLayoutAssetUrl,
 } from '@/utils/filePath';
 import { pageSizeDefinitions } from '@/engine/style/presets';
+import { buildDocxMathFromLatex } from './docxMath';
 
 export interface DocxExportPayload {
   pages: PageLayout[];
@@ -275,12 +278,45 @@ function splitRunTextByLineBreak(text: string): string[] {
   return text.split(/\r?\n/);
 }
 
+function buildStyledDocxTextRun(payload: {
+  text: string;
+  run: TextRun;
+  color?: string;
+  fillColor?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  characterSpacing?: number;
+  breakCount?: number;
+}): DocxTextRun {
+  return new DocxTextRun({
+    text: payload.text,
+    break: payload.breakCount,
+    bold: payload.run.marks.some((mark) => mark.type === 'bold'),
+    italics: payload.run.marks.some((mark) => mark.type === 'italic'),
+    underline: payload.run.marks.some((mark) => mark.type === 'underline')
+      ? { type: UnderlineType.SINGLE }
+      : undefined,
+    strike: payload.run.marks.some((mark) => mark.type === 'strike'),
+    color: payload.color,
+    font: payload.fontFamily,
+    size: payload.fontSize,
+    characterSpacing: payload.characterSpacing,
+    shading: payload.fillColor
+      ? {
+          fill: payload.fillColor,
+          color: payload.fillColor,
+          type: ShadingType.CLEAR,
+        }
+      : undefined,
+  });
+}
+
 function buildDocxTextRuns(
   textRuns: TextRun[],
   inheritedStyle = {},
   answerDisplayMode: AnswerDisplayMode = 'show',
-): DocxTextRun[] {
-  const children: DocxTextRun[] = [];
+): ParagraphChild[] {
+  const children: ParagraphChild[] = [];
 
   for (const run of textRuns) {
     const resolvedStyle = resolveQuickTextStyleForRun(run, inheritedStyle);
@@ -293,33 +329,73 @@ function buildDocxTextRuns(
     const segments = splitRunTextByLineBreak(run.text);
 
     segments.forEach((segment, index) => {
-      children.push(
-        new DocxTextRun({
-          text: segment || (index === 0 ? '' : ' '),
-          break: index === 0 ? undefined : 1,
-          bold: run.marks.some((mark) => mark.type === 'bold'),
-          italics: run.marks.some((mark) => mark.type === 'italic'),
-          underline: run.marks.some((mark) => mark.type === 'underline')
-            ? { type: UnderlineType.SINGLE }
-            : undefined,
-          strike: run.marks.some((mark) => mark.type === 'strike'),
-          color,
-          font: resolvedStyle.fontFamily,
-          size: fontSize,
-          characterSpacing: resolvedStyle.letterSpacing,
-          shading: fillColor
-            ? {
-                fill: fillColor,
-                color: fillColor,
-                type: ShadingType.CLEAR,
-              }
-            : undefined,
-        }),
-      );
+      let pendingBreakCount = index === 0 ? undefined : 1;
+
+      const appendText = (text: string): void => {
+        children.push(
+          buildStyledDocxTextRun({
+            text,
+            run,
+            breakCount: pendingBreakCount,
+            color,
+            fillColor,
+            fontSize,
+            fontFamily: resolvedStyle.fontFamily,
+            characterSpacing: resolvedStyle.letterSpacing,
+          }),
+        );
+        pendingBreakCount = undefined;
+      };
+
+      const appendMath = (formulaText: string): void => {
+        const math = buildDocxMathFromLatex(formulaText);
+        if (!math) {
+          appendText(`$${formulaText}$`);
+          return;
+        }
+
+        // Word 的公式节点自身不能承载换行属性，换行先用一个空文字 run 承接。
+        if (pendingBreakCount) {
+          appendText('');
+        }
+        children.push(math);
+      };
+
+      if (!segment) {
+        appendText(index === 0 ? '' : ' ');
+        return;
+      }
+
+      const fragments = splitInlineEquations(segment);
+      fragments.forEach((fragment) => {
+        if (fragment.type === 'equation') {
+          appendMath(fragment.content);
+          return;
+        }
+
+        appendText(fragment.content);
+      });
     });
   }
 
   return children.length > 0 ? children : [new DocxTextRun(' ')];
+}
+
+function buildDocxEquationChildren(value: string): ParagraphChild[] {
+  const normalizedValue = value.trim();
+  if (!normalizedValue) {
+    return [new DocxTextRun(' ')];
+  }
+
+  const math = buildDocxMathFromLatex(normalizedValue);
+  return math
+    ? [math]
+    : [
+        new DocxTextRun({
+          text: normalizedValue,
+          italics: true,
+        }),
+      ];
 }
 
 function buildParagraphFromTextRuns(payload: {
@@ -958,12 +1034,7 @@ async function buildDocxChildrenForBlock(
     case 'equation':
       return [
         new Paragraph({
-          children: [
-            new DocxTextRun({
-              text: block.metadata.kind === 'equation' ? block.metadata.value || ' ' : ' ',
-              italics: true,
-            }),
-          ],
+          children: buildDocxEquationChildren(block.metadata.kind === 'equation' ? block.metadata.value : ''),
           alignment: AlignmentType.CENTER,
           spacing: resolveBlockSpacing(block, context.contract),
         }),

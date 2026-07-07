@@ -106,6 +106,7 @@ export interface SyntaxMappingConfig {
 
 const validTextMarkTypes: TextMarkType[] = ['bold', 'italic', 'underline', 'strike', 'code', 'link', 'color'];
 const validTargetBlockTypes: BlockCommandMapping['targetBlockType'][] = ['blockquote', 'code', 'paragraph'];
+const DEFAULT_COLUMN_SECTION_GAP_MM = 8;
 
 // ===================== 默认预置映射 =====================
 
@@ -256,6 +257,26 @@ function normalizeLayoutBlockSemantics(
       ...(semantic ? { semantic } : {}),
       ...(semanticPreset ? { semanticPreset } : {}),
     };
+
+    if (normalizedBlock.type === 'columnSection' && normalizedBlock.metadata.kind === 'columnSection') {
+      const rawColumnCount = normalizedBlock.metadata.columnCount;
+      const columnCount = rawColumnCount === 3 ? 3 : 2;
+      const rawGap = normalizedBlock.metadata.columnGapMm;
+
+      return {
+        ...normalizedBlock,
+        metadata: {
+          ...normalizedBlock.metadata,
+          columnCount,
+          columnGapMm: typeof rawGap === 'number' && Number.isFinite(rawGap)
+            ? Math.max(4, Math.min(30, Math.round(rawGap)))
+            : DEFAULT_COLUMN_SECTION_GAP_MM,
+          divider: normalizedBlock.metadata.divider === true,
+          headingsSpanAll: normalizedBlock.metadata.headingsSpanAll === true,
+          blocks: normalizeLayoutBlockSemantics(normalizedBlock.metadata.blocks, semanticRoleConfig),
+        },
+      };
+    }
 
     if (normalizedBlock.type !== 'blockquote' || normalizedBlock.metadata.kind !== 'blockquote') {
       return normalizedBlock;

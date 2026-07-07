@@ -81,6 +81,8 @@ export interface GenerateOptions {
   selectedTitle?: string;
   /** 小红书使用：用户选定或生成的小红书文案 */
   selectedCopy?: string;
+  /** 个人知识库提供的检索上下文 */
+  knowledgeContext?: string;
 }
 
 /**

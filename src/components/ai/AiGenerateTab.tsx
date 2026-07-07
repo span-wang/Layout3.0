@@ -7,6 +7,7 @@ import { useRef, useState } from 'react';
 import { useAppStore } from '@/store';
 import { aiService } from '@/services/AiService';
 import { addAiGenerationRecord } from '@/services/AiGenerationRecordService';
+import { knowledgeBaseService } from '@/services/KnowledgeBaseService';
 import { layoutDocumentToMarkdown } from '@/services/layoutDocumentMarkdown';
 import type { GenerateOptions, GenerateType } from '@/types/ai';
 import { GENERATE_TYPE_LABELS, LENGTH_LABELS } from '@/types/ai';
@@ -32,6 +33,22 @@ function getFirstUsefulLine(content: string): string {
   return line ?? '';
 }
 
+function buildKnowledgeRetrievalQuery(options: {
+  generateType: GenerateType;
+  topic: string;
+  grade: string;
+  subject: string;
+}): string {
+  return [
+    options.subject.trim(),
+    options.grade.trim(),
+    options.topic.trim(),
+    GENERATE_TYPE_LABELS[options.generateType],
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 export function AiGenerateTab(): JSX.Element {
   const isGenerating = useAppStore((state) => state.isGenerating);
   const generatedContent = useAppStore((state) => state.generatedContent);
@@ -47,6 +64,10 @@ export function AiGenerateTab(): JSX.Element {
   const setAiGenerationRecordDirectory = useAppStore((state) => state.setAiGenerationRecordDirectory);
   const setAiGenerationRecordsError = useAppStore((state) => state.setAiGenerationRecordsError);
   const layoutDocument = useAppStore((state) => state.layoutDocument);
+  const ragflowConfig = useAppStore((state) => state.ragflowConfig);
+  const ragflowDatasets = useAppStore((state) => state.ragflowDatasets);
+  const selectedRagflowDatasetIds = useAppStore((state) => state.selectedRagflowDatasetIds);
+  const useRagflowKnowledgeForGenerate = useAppStore((state) => state.useRagflowKnowledgeForGenerate);
 
   const [generateType, setGenerateType] = useState<GenerateType>('lecture');
   const [topic, setTopic] = useState('');
@@ -68,6 +89,7 @@ export function AiGenerateTab(): JSX.Element {
     const articleTitle = layoutDocument?.title?.trim() || '';
     const articleContent = layoutDocument ? layoutDocumentToMarkdown(layoutDocument) : '';
     const normalizedTopic = topic.trim() || articleTitle || selectedXiaohongshuTitle.trim();
+    const shouldUseKnowledgeContext = !isXiaohongshuMode && useRagflowKnowledgeForGenerate;
 
     if (!normalizedTopic && !articleContent.trim()) {
       setGenerateError('请输入主题');
@@ -90,6 +112,42 @@ export function AiGenerateTab(): JSX.Element {
 
       startGenerating();
       setAiGenerationRecordsError(null);
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      let knowledgeContext: string | undefined;
+      if (shouldUseKnowledgeContext) {
+        if (selectedRagflowDatasetIds.length === 0) {
+          setGenerateError('请先在「个人知识库」里至少选择一个 RAGFlow 数据集');
+          finishGenerating();
+          return;
+        }
+
+        const datasetNameMap = new Map(ragflowDatasets.map((dataset) => [dataset.id, dataset.name]));
+        const knowledgeQuery = buildKnowledgeRetrievalQuery({
+          generateType,
+          topic: normalizedTopic,
+          grade,
+          subject,
+        });
+
+        // 先从知识库拿到与主题最相关的资料片段，再交给 AI 生成完整教辅内容。
+        const retrievalResult = await knowledgeBaseService.buildRagflowKnowledgeContext({
+          config: ragflowConfig,
+          datasetIds: selectedRagflowDatasetIds,
+          query: knowledgeQuery,
+          datasetNameMap,
+          signal: abortController.signal,
+        });
+
+        if (!retrievalResult.context.trim()) {
+          setGenerateError('当前主题没有检索到可用知识片段，请先在「个人知识库」里调整数据集或检索词');
+          finishGenerating();
+          return;
+        }
+
+        knowledgeContext = retrievalResult.context;
+      }
 
       const options: GenerateOptions = {
         type: generateType,
@@ -101,10 +159,8 @@ export function AiGenerateTab(): JSX.Element {
         articleContent: isXiaohongshuMode ? articleContent : undefined,
         selectedTitle: isXiaohongshuMode ? selectedXiaohongshuTitle.trim() || undefined : undefined,
         selectedCopy: isXiaohongshuMode ? selectedXiaohongshuCopy.trim() || undefined : undefined,
+        knowledgeContext,
       };
-
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
 
       const finalContent = await aiService.generate(options, (content) => {
         updateGeneratedContent(content);
@@ -194,6 +250,7 @@ export function AiGenerateTab(): JSX.Element {
   const currentArticleSummary = currentArticleContent.trim()
     ? `已读取当前文档内容，约 ${currentArticleContent.trim().length} 字。`
     : '当前文档内容为空，将主要根据你填写的选题生成。';
+  const selectedKnowledgeDatasetCount = selectedRagflowDatasetIds.length;
 
   return (
     <div className="ai-generate-tab">
@@ -338,6 +395,18 @@ export function AiGenerateTab(): JSX.Element {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="ai-form-group">
+                <label>个人知识库</label>
+                <div className="ai-context-box">
+                  <strong>{useRagflowKnowledgeForGenerate ? '已启用' : '未启用'}</strong>
+                  <span>
+                    {useRagflowKnowledgeForGenerate
+                      ? `已选 ${selectedKnowledgeDatasetCount} 个数据集`
+                      : '可在左侧个人知识库开启'}
+                  </span>
+                </div>
               </div>
             </>
           )}

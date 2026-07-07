@@ -343,6 +343,7 @@ export function createGenerateSystemPrompt(type: GenerateType): string {
 8. 练习题和试卷初稿中，题目正文优先使用 role:题干，参考答案使用 role:答案，解题说明使用 role:解析。
 9. 讲义和知识点总结中，核心概念优先使用 role:重点，示例使用 role:例题，过程说明使用 role:步骤，常见错误使用 role:易错，章节收束使用 role:总结。
 10. 不要为每一行都机械添加 role:；只有承担明确语义的正文块才添加。
+11. 如果用户提供了个人知识库资料，优先依据资料生成，不要编造资料里没有的具体事实。
 
 示例：
 role:重点 一次函数的图像是一条直线。
@@ -904,6 +905,10 @@ ${content}`;
       message += `\n科目：${options.subject}`;
     }
     message += `\n长度要求：${lengthLabels[options.length || 'medium'] || '中等长度'}`;
+
+    if (options.knowledgeContext?.trim()) {
+      message += `\n\n请优先依据以下个人知识库资料生成，资料不足时才做合理补全，但不要编造具体事实：\n\n${options.knowledgeContext.trim()}`;
+    }
 
     return message;
   }

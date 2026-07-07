@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownAZ,
   ArrowUpAZ,
+  BookOpenText,
   ChevronRight,
   ChevronsDownUp,
   FilePlus2,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { AiGenerationRecordsPanel } from '@/components/ai/AiGenerationRecordsPanel';
 import { ContextMenu, type ContextMenuEntry } from '@/components/common/ContextMenu';
+import { KnowledgeBasePanel } from '@/components/knowledge/KnowledgeBasePanel';
 import { SearchPanel } from './SearchPanel';
 import { emptyFolderHints, outlineTips, resourceHints } from '@/constants/workspace';
 import type {
@@ -48,6 +50,7 @@ const leftPanelRailItems: Array<{
   { tab: '大纲', icon: ListTree, description: '文档大纲' },
   { tab: '搜索', icon: Search, description: '内容搜索' },
   { tab: '资源', icon: Images, description: '资源素材' },
+  { tab: '个人知识库', icon: BookOpenText, description: '个人知识库' },
   { tab: 'AI生成记录', icon: History, description: 'AI生成记录' },
 ];
 
@@ -812,6 +815,9 @@ function renderPanelContent(
         onSelectResourceBlock,
         onReplaceImageResource,
       });
+
+    case '个人知识库':
+      return <KnowledgeBasePanel />;
 
     case 'AI生成记录':
       return (

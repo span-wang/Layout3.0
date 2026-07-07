@@ -27,6 +27,7 @@ import {
   resolveTableColumnWidths,
   resolveTableRowHeightPx,
   type BlockquoteBlockMetadata,
+  type ColumnSectionBlockMetadata,
   type LayoutBlock,
   type LayoutListItem,
   type LayoutStyleSheet,
@@ -49,7 +50,7 @@ import type {
   ResolvedStyleContract,
   TextBlockStyleRule,
 } from '@/engine/style/types';
-import { shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
+import { resolveColumnSectionContract, shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
 import {
   getEffectiveListItemMaxFontSize,
   getEffectiveListItemFontFamily,
@@ -96,6 +97,11 @@ type ListLayoutBlock = LayoutBlock & {
 type BlockquoteLayoutBlock = LayoutBlock & {
   type: 'blockquote';
   metadata: BlockquoteBlockMetadata;
+};
+
+type ColumnSectionLayoutBlock = LayoutBlock & {
+  type: 'columnSection';
+  metadata: ColumnSectionBlockMetadata;
 };
 
 interface RuntimeTextMeasurable {
@@ -191,6 +197,8 @@ interface BlockquoteFragmentBuildResult {
   height: number;
   remainingBlock?: LayoutBlock;
 }
+
+const MM_TO_PX = 96 / 25.4;
 
 interface TableRowSplitResult {
   currentRow: LayoutTableRow;
@@ -542,6 +550,10 @@ function isListBlock(block: LayoutBlock): block is ListLayoutBlock {
 
 function isBlockquoteBlock(block: LayoutBlock): block is BlockquoteLayoutBlock {
   return block.type === 'blockquote' && block.metadata.kind === 'blockquote';
+}
+
+function isColumnSectionBlock(block: LayoutBlock): block is ColumnSectionLayoutBlock {
+  return block.type === 'columnSection' && block.metadata.kind === 'columnSection';
 }
 
 function resolveTextBlockStyle(
@@ -1416,6 +1428,27 @@ function resolveListBlockStyle(
   };
 }
 
+function createColumnSectionFragmentBlock(
+  block: ColumnSectionLayoutBlock,
+  blocks: LayoutBlock[],
+  idSuffix: string,
+  options: {
+    preserveOriginalIdentity?: boolean;
+    runtimeSlice?: NonNullable<ColumnSectionBlockMetadata['runtimeSlice']>;
+  } = {},
+): LayoutBlock {
+  return {
+    ...block,
+    id: options.preserveOriginalIdentity ? block.id : `${block.id}-${idSuffix}`,
+    sourceRange: options.preserveOriginalIdentity ? block.sourceRange : null,
+    metadata: {
+      ...block.metadata,
+      blocks,
+      ...(options.runtimeSlice ? { runtimeSlice: options.runtimeSlice } : {}),
+    },
+  };
+}
+
 function resolveCompactChoiceLayoutForBlock(block: ListLayoutBlock) {
   return resolveCompactChoiceListLayoutWithOptions(block.metadata.items, {
     allowSequenceFromAnyLabel: (block.metadata.runtimeSlice?.startIndex ?? 0) > 0,
@@ -2222,6 +2255,77 @@ function buildBlockquoteFragment(payload: {
   };
 }
 
+function buildColumnSectionFragment(payload: {
+  block: ColumnSectionLayoutBlock;
+  availableHeight: number;
+  contract: ResolvedStyleContract;
+  styles?: LayoutStyleSheet;
+}): BlockquoteFragmentBuildResult | null {
+  const { block, availableHeight, contract, styles } = payload;
+  if (availableHeight <= 0) {
+    return null;
+  }
+
+  // 局部分栏复用同一套分页算法：先按“当前剩余高度”取第一页片段，
+  // 再把后续页的块扁平化回 remainingBlock，交给外层 while 循环继续排下一栏/下一页。
+  const localContract = resolveColumnSectionContract(contract, block.metadata);
+  const fragmentContentHeightPx = Math.max(1, availableHeight);
+  const fragmentContract: ResolvedStyleContract = {
+    ...localContract,
+    contentHeightPx: fragmentContentHeightPx,
+    contentHeightMm: Math.round((fragmentContentHeightPx / MM_TO_PX) * 100) / 100,
+    columnPageCapacityPx: fragmentContentHeightPx * localContract.columnCount,
+  };
+
+  const localPages = paginateMaxFillBlocks({
+    blocks: block.metadata.blocks,
+    contract: fragmentContract,
+    styles,
+  }).filter((page) => page.blocks.length > 0);
+  const firstPage = localPages[0];
+  if (!firstPage) {
+    return null;
+  }
+
+  const sectionTocItems = buildTocItemsFromBlocks(block.metadata.blocks);
+  const currentRuntimeSlice = {
+    sourceNodeId: block.metadata.runtimeSlice?.sourceNodeId ?? block.id,
+    fragmentIndex: block.metadata.runtimeSlice?.fragmentIndex ?? 1,
+    isContinuation: block.metadata.runtimeSlice?.isContinuation ?? false,
+  };
+  const remainingBlocks = localPages.slice(1).flatMap((page) => page.blocks);
+
+  return {
+    block: createColumnSectionFragmentBlock(
+      block,
+      firstPage.blocks,
+      `fragment-${currentRuntimeSlice.fragmentIndex}`,
+      {
+        preserveOriginalIdentity: remainingBlocks.length === 0,
+        runtimeSlice: currentRuntimeSlice,
+      },
+    ),
+    height:
+      (block.blockStyleOverrides.spaceBefore ?? 0) +
+      estimatePaginatedPageHeight(firstPage.blocks, localContract, styles, sectionTocItems) +
+      (block.blockStyleOverrides.spaceAfter ?? 0),
+    remainingBlock: remainingBlocks.length > 0
+      ? createColumnSectionFragmentBlock(
+          block,
+          remainingBlocks,
+          `rest-${currentRuntimeSlice.fragmentIndex}`,
+          {
+            runtimeSlice: {
+              sourceNodeId: currentRuntimeSlice.sourceNodeId,
+              fragmentIndex: currentRuntimeSlice.fragmentIndex + 1,
+              isContinuation: true,
+            },
+          },
+        )
+      : undefined,
+  };
+}
+
 // ============== 表格相关函数 ==============
 
 function getTableMarginTop(block: TableLayoutBlock, contract: ResolvedStyleContract): number {
@@ -2911,6 +3015,24 @@ function trySplitBlockquoteToFitHeight(
   });
 }
 
+interface TrySplitColumnSectionToFitHeightPayload {
+  block: ColumnSectionLayoutBlock;
+  context: BlockSplitContext;
+  contract: ResolvedStyleContract;
+  styles?: LayoutStyleSheet;
+}
+
+function trySplitColumnSectionToFitHeight(
+  payload: TrySplitColumnSectionToFitHeightPayload,
+): BlockquoteFragmentBuildResult | null {
+  return buildColumnSectionFragment({
+    block: payload.block,
+    availableHeight: payload.context.availableHeight,
+    contract: payload.contract,
+    styles: payload.styles,
+  });
+}
+
 // PH2-20 多栏块切分通用机制 V1：代码块切分统一入口。
 interface TrySplitCodeToFitHeightPayload {
   block: LayoutBlock;
@@ -3343,6 +3465,11 @@ function resolveBlockVerticalMargins(
         marginTop: block.blockStyleOverrides.spaceBefore ?? contract.blockStyles.blockquote.marginTop,
         marginBottom: block.blockStyleOverrides.spaceAfter ?? contract.blockStyles.blockquote.marginBottom,
       };
+    case 'columnSection':
+      return {
+        marginTop: block.blockStyleOverrides.spaceBefore ?? 0,
+        marginBottom: block.blockStyleOverrides.spaceAfter ?? 0,
+      };
     case 'code':
       return {
         marginTop: block.blockStyleOverrides.spaceBefore ?? contract.blockStyles.code.marginTop,
@@ -3525,6 +3652,29 @@ function estimateBlockHeight(
           : 0) +
         contract.blockStyles.blockquote.marginBottom
       );
+    case 'columnSection':
+      if (!isColumnSectionBlock(block)) {
+        return 0;
+      }
+
+      {
+        const sectionContract = resolveColumnSectionContract(contract, block.metadata);
+        const sectionTocItems = buildTocItemsFromBlocks(block.metadata.blocks);
+        const sectionPages = paginateMaxFillBlocks({
+          blocks: block.metadata.blocks,
+          contract: sectionContract,
+          styles,
+        });
+        const contentHeight = sectionPages.reduce(
+          (total, page) => total + estimatePaginatedPageHeight(page.blocks, sectionContract, styles, sectionTocItems),
+          0,
+        );
+        return (
+          (block.blockStyleOverrides.spaceBefore ?? 0) +
+          contentHeight +
+          (block.blockStyleOverrides.spaceAfter ?? 0)
+        );
+      }
     case 'code': {
       const codeFontSize = getEffectiveTextRunsMaxFontSize({
         textRuns: block.textRuns,
@@ -3831,6 +3981,8 @@ function getBlockLabel(block: LayoutBlock): string {
       return `列表（${block.metadata.kind === 'list' ? block.metadata.items.length : 0} 项）`;
     case 'blockquote':
       return '引用块';
+    case 'columnSection':
+      return '局部分栏区段';
     case 'code':
       return `代码块${block.metadata.kind === 'code' && block.metadata.language ? `（${block.metadata.language}）` : ''}`;
     case 'table':
@@ -3927,6 +4079,29 @@ function appendPlacedBlock(
   placedBlocks.push(entry);
 
   return currentHeight + delta;
+}
+
+function estimatePaginatedPageHeight(
+  blocks: LayoutBlock[],
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+  tocItems: TocItem[] = [],
+): number {
+  let currentHeight = 0;
+  const placedBlocks: PlacedBlockEntry[] = [];
+
+  for (const block of blocks) {
+    currentHeight = appendPlacedBlock(
+      placedBlocks,
+      currentHeight,
+      block,
+      estimateBlockHeight(block, contract, tocItems, styles),
+      contract,
+      styles,
+    );
+  }
+
+  return currentHeight;
 }
 
 function getAvailableHeightForBlock(
@@ -4713,6 +4888,118 @@ export function paginateMaxFillBlocks(
           if (isMultiColumn) {
             resetColumnFlowState(columnFlowState);
           }
+        }
+      }
+
+      continue;
+    }
+
+    // 局部分栏区段作为独立容器分页：当前页只取一个局部分栏片段，剩余片段继续排到后续栏或后续页。
+    if (isColumnSectionBlock(block) && block.metadata.blocks.length > 0) {
+      const currentColumnIndex = columnFlowState.currentColumnIndex;
+      const currentColumnRemainingHeight = resolveCurrentColumnRemainingHeight(
+        columnFlowState,
+        isMultiColumn,
+        currentHeight,
+        bottomSafeAreaPx,
+      );
+      if (
+        columnPlacementCandidate.columnIndex === currentColumnIndex &&
+        blockHeight <= currentColumnRemainingHeight
+      ) {
+        currentHeight = appendPlacedBlock(placedBlocks, currentHeight, block, blockHeight, contract, styles);
+        rebuildColumnFlowState(columnFlowState, placedBlocks, contract);
+        shouldPushCurrentPage = true;
+        continue;
+      }
+
+      let columnSectionBlock: LayoutBlock = block;
+      let hasMore = true;
+
+      while (hasMore) {
+        const sectionAvailableHeight = getFragmentAvailableHeightForBlock({
+          isMultiColumn,
+          columnFlowState,
+          placedBlocks,
+          currentHeight,
+          pageCapacity,
+          block: columnSectionBlock,
+          blockHeight,
+          contract,
+          styles,
+        });
+        const fragment = trySplitColumnSectionToFitHeight({
+          block: columnSectionBlock as ColumnSectionLayoutBlock,
+          context: {
+            availableHeight: sectionAvailableHeight,
+            columnIndex: columnFlowState.currentColumnIndex,
+            isCurrentColumnEmpty: placedBlocks.length === 0,
+            fragmentIndex: 1,
+          },
+          contract,
+          styles,
+        });
+
+        if (!fragment) {
+          if (placedBlocks.length === 0) {
+            currentPage.warnings.push(createOversizedWarning(block, currentPage.pageNumber));
+            currentHeight = appendPlacedBlock(
+              placedBlocks,
+              currentHeight,
+              columnSectionBlock,
+              blockHeight,
+              contract,
+              styles,
+            );
+            shouldPushCurrentPage = true;
+            break;
+          }
+
+          if (isMultiColumn && advanceToNextColumn(columnFlowState)) {
+            currentHeight = sumPlacedBlockHeights(placedBlocks);
+            continue;
+          }
+
+          syncPlacedBlocksToPage(currentPage, placedBlocks);
+          pages.push(currentPage);
+          currentPage = createEmptyPage(pages.length + 1, contract);
+          currentHeight = 0;
+          placedBlocks = [];
+          if (isMultiColumn) {
+            resetColumnFlowState(columnFlowState);
+          }
+          continue;
+        }
+
+        currentHeight = appendPlacedBlock(
+          placedBlocks,
+          currentHeight,
+          fragment.block,
+          fragment.height,
+          contract,
+          styles,
+        );
+        if (isMultiColumn) {
+          rebuildColumnFlowState(columnFlowState, placedBlocks, contract);
+        }
+        shouldPushCurrentPage = true;
+
+        if (fragment.remainingBlock) {
+          columnSectionBlock = fragment.remainingBlock;
+          if (isMultiColumn && advanceToNextColumn(columnFlowState)) {
+            currentHeight = sumPlacedBlockHeights(placedBlocks);
+            continue;
+          }
+          syncPlacedBlocksToPage(currentPage, placedBlocks);
+          pages.push(currentPage);
+          currentPage = createEmptyPage(pages.length + 1, contract);
+          currentHeight = 0;
+          placedBlocks = [];
+          if (isMultiColumn) {
+            resetColumnFlowState(columnFlowState);
+          }
+        } else {
+          hasMore = false;
         }
       }
 

@@ -60,8 +60,9 @@ import type {
   WorkspaceViewMode,
 } from '@/types/workspace';
 import type { AiSlice } from '@/store/slices/aiSlice';
+import type { KnowledgeBaseSlice } from '@/store/slices/knowledgeBaseSlice';
 
-export type AppStore = DocumentSlice & UISlice & StyleSlice & AiSlice;
+export type AppStore = DocumentSlice & UISlice & StyleSlice & KnowledgeBaseSlice & AiSlice;
 
 export interface DocumentSlice {
   documentEpoch: number;
@@ -246,6 +247,26 @@ export interface DocumentSlice {
     didUpdate: boolean;
     reason: 'merged' | 'invalidSelection' | 'notEnoughBlocks' | 'nonContiguous' | 'unsupportedBlockType' | 'mixedBlockTypes';
     mergedCount: number;
+  };
+  wrapLayoutSelectedBlocksInColumns: () => {
+    selectedNodeId: string | null;
+    didUpdate: boolean;
+    reason: 'wrapped' | 'invalidSelection' | 'notEnoughBlocks' | 'nonContiguous' | 'unsupportedBlockType';
+    wrappedCount: number;
+  };
+  updateLayoutColumnSectionAttributes: (payload: {
+    nodeId: string;
+    columnCount?: 2 | 3;
+    columnGapMm?: number;
+    divider?: boolean;
+    headingsSpanAll?: boolean;
+  }) => void;
+  unwrapLayoutColumnSection: (payload: {
+    nodeId: string;
+  }) => {
+    didUpdate: boolean;
+    selectedNodeId: string | null;
+    unwrappedCount: number;
   };
   updateLayoutListStructure: (payload: {
     itemId: string;

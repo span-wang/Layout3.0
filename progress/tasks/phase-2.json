@@ -3760,6 +3760,89 @@
       ]
     },
     {
+      "id": "PH2-10A",
+      "sequence": "10A",
+      "order": 105,
+      "title": "图片自由拖动与复杂绕排 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "editor-module",
+        "typesetting-engine",
+        "export-pipeline",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "四周型/紧密型图片支持在当前页正文区域内上下左右拖动，后续普通文本类块会在同页内持续绕开图片直到图片底部结束；画布预览、分页估算、HTML/PDF 导出与 `.layout` 保存恢复口径一致。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-10"
+      ],
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH2-10A-free-drag-complex-wrap-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：图片自由拖动与复杂绕排 V1",
+        "confirmedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH2-10A-free-drag-complex-wrap-v1`：1) `CanvasPane` 已让四周型/紧密型图片拖动时实时预览 `wrapSide / offsetX / offsetY`，图片跨过正文中线后会自动切换左右绕排侧；2) 隐藏测量层已取消普通文档块的 `flow-root` 隔离，并把浮动图片签名纳入测量缓存失效口径，让后续标题、段落、列表和选项组块能吃到被前序浮动图片压窄后的真实块高；3) HTML/PDF 导出已同步补齐四周型/紧密型图片的侧边内缩与垂直偏移样式，和画布预览保持一致；4) 当前紧密型仍按裁剪后矩形近似，DOCX 浮动对象、透明轮廓和跨页自由定位继续留待后续任务。",
+        "inScope": [
+          "让四周型/紧密型图片在画布预览中支持当前页正文区域内的上下左右拖动，并继续复用现有图片选中态、拖动预览和 `offsetX / offsetY` 写回链路。",
+          "必要时根据图片拖到正文中线左右的结果收口 `wrapSide`，避免图片已经拖到另一侧但文字仍按旧侧绕排。",
+          "让分页估算把四周型/紧密型图片视为当前页中的浮动障碍矩形，不再只把图片当成 0 高块跳过。",
+          "让标题、段落、列表、选项组等普通文本类块在同页内持续绕开图片，直到图片底部结束；表格、图片、公式自身继续保持既有块级排版口径。",
+          "让画布预览与 HTML/PDF 导出共同消费同一套图片浮动矩形与绕排方向口径，避免预览和导出出现左右侧或占高不一致。",
+          "补充最小验证，覆盖图片拖动写回、同页持续绕排、HTML/PDF 导出口径与 `.layout` 保存恢复。"
+        ],
+        "interactionRules": [
+          "继续优先复用现有画布图片拖动入口，不新增独立弹窗、复杂工具条或新的图片编辑模式。",
+          "拖动过程保持实时预览，鼠标释放后再一次性写回模型，并继续沿用现有未保存状态、撤销栈和分页刷新节奏。",
+          "嵌入型与上下型图片保留当前稳定交互，不在本步里强行改成自由浮动对象。",
+          "界面文案、提示和代码注释继续使用中文。"
+        ],
+        "writebackRules": [
+          "本步继续复用现有图片元数据字段 `wrapMode / wrapSide / offsetX / offsetY / widthPx / heightPx / crop*`，不新增 `.layout` 顶层字段。",
+          "图片浮动障碍与绕排片段只存在于运行时分页与渲染结果中，不反写到 `LayoutDocument.blocks` 原始块结构。",
+          "本步不反写 Markdown 源码快照，不改变资源记录结构。",
+          "进度变更先写入 `progress/` 真相源，再通过 `progress:build` 生成展示文档。"
+        ],
+        "consistencyRules": [
+          "实现过程中继续保持中文注释，重点说明同一张图片的浮动矩形为什么必须被画布预览、分页估算和 HTML/PDF 导出共同消费。",
+          "四周型与紧密型当前都按裁剪后的矩形可见区做绕排，不在本步引入透明像素轮廓分析。",
+          "实现不能破坏现有图片裁剪、缩放、标题显示、路径编辑、资源替换、HTML/PDF 导出和 `.layout` 保存恢复。",
+          "本步只围绕页面级浮动矩形绕排最小闭环，不顺手扩展 DOCX 浮动对象、跨页锚点、图层顺序或键盘微调系统。"
+        ],
+        "outOfScope": [
+          "不做透明像素级真实轮廓分析；紧密型先继续按裁剪后的矩形近似。",
+          "不做图片旋转、图层顺序、吸附线、键盘微调或独立图形编辑器。",
+          "不做 DOCX 中 1:1 对齐 Word 的浮动图片对象导出，本步先保证应用画布与 HTML/PDF。",
+          "不重写整个分页算法，只在现有分页链路中补齐浮动图片对普通文本类块的最小影响口径。",
+          "不做跨页自由定位，不让同一张图片在本步中穿越到下一页继续作为同一浮动对象。"
+        ],
+        "deferredTo": [
+          "透明像素轮廓紧密绕排：后续继续归属 `PH2-10A` 或图片绕排深化任务。",
+          "跨页自由定位、页内锚点和更复杂的逐行真实测量联动：后续继续归属 `PH2-09` / `PH2-10A`。",
+          "DOCX 浮动图片对象、图层顺序和更接近 Word 的对象排版兼容：后续继续归属 `PH2-21` / `PH2-10A`。",
+          "键盘微调、吸附线和更强对象编辑体验：后续继续归属图片交互增强任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-10A-free-drag-complex-wrap-v1` 边界可以执行。",
+          "`src/components/layout/CanvasPane.tsx` 已补齐四周型/紧密型图片拖动中的实时侧边切换、偏移预览与写回，并让隐藏测量层共享前序浮动图片对后续块高的影响。",
+          "`src/styles.css` 已把普通测量块从 `flow-root` 调整为共享正文流；文本片段与表格行测量继续使用独立 `flow-root + clear: both`，避免被前序浮动图片污染。",
+          "`src/services/exportHtml.ts` 已同步补齐四周型/紧密型图片的侧边内缩和垂直偏移导出样式。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "定向验证通过：自定义 `tsx` 脚本输出 `image-wrap-check: ok`，确认导出 HTML 已包含 `image-wrap-side-right / float:right / margin-right:15px / margin-top:-8px`。",
+          "`npm run smoke:m2` 在当前工作区连续两次超时，未返回断言结果；本步已改用聚焦图片绕排的定向脚本作为补充验证，全量冒烟超时需后续单独治理。",
+          "`npm run progress:build` 成功。",
+          "`npm run progress:check` 成功。"
+        ]
+      }
+    },
+    {
       "id": "PH2-11",
       "sequence": "11",
       "order": 110,
@@ -5145,6 +5228,135 @@
       ]
     },
     {
+      "id": "PH2-19A",
+      "sequence": "19A",
+      "order": 190.5,
+      "title": "局部分栏区段 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "document-model",
+        "ui-components",
+        "style-module",
+        "typesetting-engine",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "用户可将连续选中的顶层块包装为局部双栏区段；该区段在整篇单栏文档中按双栏预览并参与分页，HTML/PDF 导出口径一致，`.layout` 保存恢复后仍保留局部分栏结构；补充最小回归验证。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-19",
+        "PH2-20"
+      ],
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH2-19A-local-column-section-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：局部分栏区段 V1",
+        "confirmedOn": "2026-07-07",
+        "startedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH2-19A-local-column-section-v1`：1) Document Model 已新增 `columnSection` 局部分栏区段块，支持把连续选中的顶层块包装成一个真实容器，并保存局部栏数、栏间距、分割线和运行时分页片段信息；2) 画布块多选浮动工具条新增中文入口“设为双栏”，可直接把连续顶层块设为局部双栏区段；3) Canvas 预览、隐藏测量层、HTML/PDF 导出、搜索与 AI Markdown 上下文都已递归识别 `columnSection`；4) Typesetting Engine 已为局部分栏区段建立局部栏宽合同并复用现有分页算法递归分页，能把局部分栏内容拆成连续运行时片段续排到后续页；5) 已补定向回归并通过 `typecheck`、`build`。",
+        "included": [
+          "新增 `columnSection` 局部分栏区段块类型，用来包住一组连续顶层正文块，并保存栏数、栏间距、分割线等最小区段配置。",
+          "在画布块多选浮动工具条中新增中文入口“设为双栏”，把连续选中的顶层块包装为一个局部分栏区段。",
+          "画布预览渲染局部分栏区段：外层仍占正文整宽，区段内部按双栏、栏间距和分割线显示。",
+          "分页估算接入局部分栏区段，优先复用现有多栏块切分能力，让区段内部段落、标题、列表、表格、引用、代码和目录可按双栏续排。",
+          "HTML/PDF 导出与画布预览共用局部分栏结构与样式口径。",
+          "`.layout` 保存恢复、自动草稿和旧文档规范化链路兼容新增块类型。",
+          "补充最小测试，覆盖包装连续块、区段保存恢复或分页/导出中的局部分栏结构。"
+        ],
+        "excluded": [
+          "不在本步实现 DOCX 局部分栏；DOCX 多栏和 section 映射后续单独归属导出深化任务。",
+          "不做全局双栏页面中再嵌套局部双栏，也不做局部分栏区段嵌套局部分栏区段。",
+          "不做任意文字选区级分栏，只支持连续顶层块包装。",
+          "不做拖拽调整分栏区段边界、右键菜单、快捷键或解除分栏入口。",
+          "不做图片、表格、公式的独立跨栏开关；这些对象仍先按区段内普通块参与流动或保持现有跨栏规则。",
+          "不重写为完整分节系统，不做单页单独分栏、节级页眉页脚或节级纸张方向。"
+        ],
+        "followup": [
+          "DOCX 局部分栏映射：后续归属 `PH2-21` DOCX 导出深化小步。",
+          "解除局部分栏、拖拽调整边界、区段属性面板和局部分栏模板：后续归属 `PH2-19A` 体验增强。",
+          "图片、表格、公式的独立跨栏控制：继续归属 `PH2-10` 或对象排版增强任务。",
+          "更完整分节分栏、单页分栏和节级页眉页脚：后续另拆分节系统任务。"
+        ],
+        "verification": [
+          "`src/engine/document-model/operations.ts` 已新增连续顶层块包装为 `columnSection` 的模型操作。",
+          "`src/components/layout/CanvasPane.tsx` 已新增多选入口“设为双栏”，并完成局部分栏区段渲染。",
+          "`src/services/exportHtml.ts`、`src/services/layoutDocumentMarkdown.ts`、`src/services/DocumentSearchService.ts` 已接入 `columnSection` 递归处理。",
+          "`src/engine/typesetting/algorithms/estimatedMaxFill.ts` 已接入局部分栏区段局部分页与运行时片段续排。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\typesetting\\algorithms\\estimatedMaxFill.columnSection.test.ts`。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-19B",
+      "sequence": "19B",
+      "order": 190.6,
+      "title": "局部分栏区段属性与解除入口 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "document-model",
+        "ui-components",
+        "style-module",
+        "typesetting-engine",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "用户可在选中 `columnSection` 后修改局部分栏栏数、栏间距、分割线与标题跨栏，并可将局部分栏区段解除回原始连续顶层块；画布预览、分页、HTML/PDF 导出与 `.layout` 保存恢复口径一致。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-19A"
+      ],
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH2-19B-column-section-properties-unwrap-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：局部分栏区段属性与解除入口 V1",
+        "confirmedOn": "2026-07-07",
+        "startedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH2-19B-column-section-properties-unwrap-v1`：1) `columnSection` 已支持区段属性写回，可在右侧对象属性面板直接修改栏数（2/3 栏）、栏间距、栏分割线和标题跨栏开关；2) 已新增“解除双栏”入口，可把局部分栏区段恢复为原始连续顶层块并保持合理选中态；3) 这些变化会继续被画布预览、分页估算、HTML/PDF 导出和 `.layout` 保存恢复共同消费；4) 已补纯模型回归，覆盖区段属性更新和解除双栏后的块顺序恢复；5) 定向测试、typecheck 与 build 均已通过。",
+        "included": [
+          "选中 `columnSection` 后，在右侧对象属性面板提供局部分栏区段配置入口，至少覆盖栏数（2/3 栏）、栏间距、分割线、标题跨栏。",
+          "新增“解除双栏”入口，把局部分栏区段里的子块按原顺序还原回顶层连续块，并保持合理选中态。",
+          "区段属性改动写回 `LayoutDocument`，`.layout` 保存恢复、自动草稿和旧文档规范化继续兼容。",
+          "画布预览、隐藏测量层、分页估算与 HTML/PDF 导出继续共同消费更新后的区段属性，保持局部分栏口径一致。",
+          "补充最小回归验证，覆盖属性写回或解除双栏后的模型结构与分页/导出稳定性。"
+        ],
+        "excluded": [
+          "不在本步实现 DOCX 局部分栏或 Word section 映射。",
+          "不做拖拽调整局部分栏边界，不做任意文字选区级分栏。",
+          "不做全局双栏页面中再嵌套局部分栏，也不做局部分栏区段嵌套局部分栏区段。",
+          "不做图片、表格、公式的独立跨栏开关，不扩展到完整分节系统。",
+          "不新增模板库、右键菜单或复杂快捷键系统。"
+        ],
+        "followup": [
+          "DOCX 局部分栏映射：后续归属 `PH2-21` DOCX 导出深化小步。",
+          "拖拽调整区段边界、局部分栏模板、更多交互入口：继续归属 `PH2-19` / `PH2-19B` 体验增强后续小步。",
+          "嵌套分栏、单页分栏和完整分节系统：后续另拆分节系统任务。",
+          "对象独立跨栏控制：继续归属 `PH2-10` 或对象排版增强任务。"
+        ],
+        "verification": [
+          "`src/engine/document-model/operations.ts` 已新增 `updateColumnSectionAttributes` 与 `unwrapTopLevelColumnSectionById` 纯模型操作。",
+          "`src/store/slices/documentSlice.ts` 与 `src/store/types.ts` 已接入局部分栏属性写回和解除双栏 store 动作。",
+          "`src/components/layout/RightPanel.tsx` 已新增局部分栏区段对象属性面板和“解除双栏”入口。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\columnSection.test.ts src\\engine\\typesetting\\algorithms\\estimatedMaxFill.columnSection.test.ts`。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
       "id": "PH2-20-block-split-rendering-adaptation",
       "sequence": "20b",
       "order": 82,
@@ -5570,6 +5782,253 @@
           "`progress/logs.json` 已追加本步边界确认日志与完成日志。",
           "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，4 个测试全部 pass，已覆盖 A3 纵向/横向页面规格 XML 输出。",
           "手工烟测通过：`node --import tsx -` 抽查 A3 横向 DOCX 后，`document.xml` 中出现 `<w:pgSz w:w=\"23811\" w:h=\"16838\" w:orient=\"landscape\"/>`。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-21C",
+      "sequence": "21c",
+      "order": 86.75,
+      "title": "DOCX 原生公式导出 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "DOCX 导出中的块级公式与行内 `$...$` 公式不再以 LaTeX 源码直出，而是优先生成 Word 原生 Office Math 结构；常用公式在 Word/WPS 中可按公式对象渲染；暂不支持的复杂公式降级为原始文本且不阻断导出；补充 DOCX XML 回归验证。",
+      "owner": "导出链路组",
+      "dependsOn": [
+        "PH2-21",
+        "PH2-20-inline-equation-split-guard"
+      ],
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH2-21-docx-native-equation-export-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：DOCX 原生公式导出 V1",
+        "confirmedOn": "2026-07-07",
+        "startedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH2-21-docx-native-equation-export-v1`：1) 新增 `src/services/docxMath.ts`，基于 KaTeX 解析树把常用 LaTeX 公式子集转换为 `docx` Office Math 组件；2) `exportDocx.ts` 的块级公式现在优先输出 Word 原生 `<m:oMath>`，行内 `$...$` 公式也会在标题、段落、列表、表格单元格和紧凑选项组中转成原生公式节点；3) 已覆盖普通字符、常见希腊字母、上下标、分式、根号、n 次根、括号、绝对值、求和、积分、极限和常见函数等常用结构；4) 解析失败或暂不支持的复杂公式继续降级为原始 LaTeX 文本，不阻断 DOCX 导出；5) 已补 DOCX XML 回归，确认分式、上标、根号、求和等结构进入 `m:` 节点。",
+        "included": [
+          "块级公式导出为 Word 原生 Office Math `<m:oMath>`，不再默认以斜体 LaTeX 文本显示。",
+          "行内 `$...$` 公式在标题、段落、列表项、表格单元格和紧凑选项组 DOCX 导出中优先转成 Word 原生公式。",
+          "复用 KaTeX 解析能力识别 LaTeX 结构，避免从零实现完整 LaTeX 解析器。",
+          "首批覆盖常用公式结构：普通字符、常见希腊字母、上下标、分式、根号、n 次根、小括号/中括号/大括号/绝对值、求和、积分、极限和常见函数。",
+          "暂不支持或解析失败的复杂公式降级为原始 LaTeX 文本，不阻断 DOCX 导出。",
+          "补充 DOCX XML 回归，确认输出包含 `<m:oMath>`、分式、上下标、根号和行内公式结构，并确认简单公式不再只作为 `$...$` 文本直出。"
+        ],
+        "excluded": [
+          "不在本步实现矩阵、cases、align、多行对齐公式等复杂结构的高保真 Word 原生转换。",
+          "不新增公式编号、题注、交叉引用或公式样式面板。",
+          "不改 HTML/PDF 的 KaTeX 渲染链路，不调整画布公式编辑交互。",
+          "不承诺 DOCX 与 PDF 在所有公式视觉细节上逐像素一致。",
+          "不引入额外外部转换服务或需要联网的公式转换依赖。"
+        ],
+        "followup": [
+          "矩阵、分段函数和对齐公式继续归属 DOCX 复杂公式导出 V2。",
+          "若 Word/WPS 对某些 Office Math 结构兼容表现不同，再拆单独兼容返修。",
+          "公式编号、题注和交叉引用后续归属公式增强任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-21-docx-native-equation-export-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-21C` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增并更新 `RISK-054`，记录 DOCX 公式转换覆盖范围与降级策略。",
+          "`progress/logs.json` 已追加本步边界确认日志与完成日志。",
+          "`src/services/docxMath.ts` 已新增常用 LaTeX 子集到 Office Math 的转换 helper。",
+          "`src/services/exportDocx.ts` 已接入块级公式和行内 `$...$` 公式原生输出，普通文本样式与换行逻辑保持兼容。",
+          "`src/services/exportDocx.test.ts` 已新增 DOCX XML 回归，覆盖 `<m:oMath>`、`<m:f>`、`<m:sSup>`、`<m:rad>` 与 `<m:nary>`。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，5 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-21D",
+      "sequence": "21d",
+      "order": 86.875,
+      "title": "DOCX 公式转义字符修复 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "DOCX 公式导出中的常见 LaTeX 转义字面量不再多出反斜杠；至少覆盖 `\\%`、`\\&`、`\\#`、`\\_`、`\\$`、`\\{`、`\\}` 与 `\\backslash`；块级公式与行内公式导出仍保持 Word 原生 Office Math 结构；补充 XML 回归验证。",
+      "owner": "导出链路组",
+      "dependsOn": [
+        "PH2-21C"
+      ],
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH2-21-docx-equation-escape-literal-fix-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：DOCX 公式转义字符修复 V1",
+        "confirmedOn": "2026-07-07",
+        "startedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH2-21-docx-equation-escape-literal-fix-v1`：1) `src/services/docxMath.ts` 已补齐常见 LaTeX 转义字面量映射，`\\% / \\& / \\# / \\_ / \\$ / \\{ / \\} / \\backslash` 会在 DOCX 公式中还原为真实字符；2) 块级公式和行内公式共用该转换 helper，因此两条 DOCX 公式链路都受益；3) 已新增 XML 回归，确认 `% / & / # / _ / $ / { / } / \\` 输出为真实字面量，不再保留多余反斜杠；4) 本步没有扩大到 `\\text{...}` 复杂文本模式、完整宏系统或复杂公式结构。",
+        "included": [
+          "修复 `src/services/docxMath.ts` 中常见 LaTeX 转义字面量映射，让 `\\%`、`\\&`、`\\#`、`\\_`、`\\$`、`\\{`、`\\}` 与 `\\backslash` 在 DOCX 公式中输出为真实字面字符。",
+          "覆盖块级公式和行内 `$...$` 公式，因为二者共用同一个 `docxMath` 转换 helper。",
+          "补充 DOCX XML 回归，确认上述符号不会继续以带反斜杠的源码形式写入 Word。",
+          "保持未知 LaTeX 命令继续按现有策略降级或原样处理，不扩大复杂公式覆盖范围。"
+        ],
+        "excluded": [
+          "不处理 `\\text{...}` 里的复杂文本模式和完整文本环境。",
+          "不实现完整 LaTeX 宏系统、宏展开或自定义命令。",
+          "不改 HTML/PDF 的 KaTeX 渲染链路，不调整画布公式编辑交互。",
+          "不新增矩阵、cases、align 等复杂公式结构支持。",
+          "不重构 DOCX 导出架构或引入新的外部转换依赖。"
+        ],
+        "followup": [
+          "`\\text{...}` 与更完整文本模式如后续真实需要，再拆 DOCX 公式文本模式增强任务。",
+          "矩阵、cases、align 和更完整 LaTeX 兼容继续归属 DOCX 复杂公式导出 V2。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-21-docx-equation-escape-literal-fix-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-21D` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增并更新 `RISK-056`，记录 DOCX 公式转义字符映射缺陷与处理结果。",
+          "`progress/logs.json` 已追加本步边界确认日志与完成日志。",
+          "`src/services/docxMath.ts` 已补齐常见转义字面量映射。",
+          "`src/services/exportDocx.test.ts` 已新增 DOCX XML 回归，覆盖 `% / & / # / _ / $ / { / } / \\`。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，6 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-21E",
+      "sequence": "21e",
+      "order": 86.9375,
+      "title": "DOCX 公式兼容增强 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "DOCX 公式导出在不扩展到矩阵、cases、align 的前提下，补齐常见单行公式兼容：至少覆盖 `\\mathrm` / `\\mathbf` / `\\mathit` 等 font 包装、`\\bar` / `\\hat` / `\\vec` / `\\overline` 等常见标记、`htmlmathml` 节点解包，以及 `\\neq` / `\\land` / `\\lor` / `\\Rightarrow` / `\\mid` / `\\lt` / `\\gt` 等高频逻辑或关系符；补充 XML 回归，避免这些公式继续整条降级为源码。",
+      "owner": "导出链路组",
+      "dependsOn": [
+        "PH2-21C",
+        "PH2-21D"
+      ],
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH2-21-docx-equation-compat-enhancement-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：DOCX 公式兼容增强 V1",
+        "confirmedOn": "2026-07-07",
+        "startedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH2-21-docx-equation-compat-enhancement-v1`：1) `src/services/docxMath.ts` 已补齐 `font` 节点兼容，让 `\\mathrm / \\mathbf / \\mathit` 一类字体包装内部的可转换结构继续输出 Office Math；2) 已新增自定义 Office Math accent 结构，覆盖 `\\bar`、`\\hat`、`\\vec` 与 `\\overline`；3) 已补齐 `htmlmathml` 节点解包和高频逻辑/关系符映射，覆盖 `\\neq`、`\\land`、`\\lor`、`\\Rightarrow`、`\\mid`、`\\lt`、`\\gt` 等；4) 已新增 XML 回归，确认这些常见单行公式不再整条退回 LaTeX 源码；5) 矩阵、cases、align 和 `\\binom` 仍按边界留待后续任务。",
+        "included": [
+          "为 `src/services/docxMath.ts` 补齐 `font` 节点兼容，至少覆盖 `\\mathrm`、`\\mathbf`、`\\mathit` 一类常见字体包装，让它们内部已有可转换结构继续输出 Office Math，而不是整条公式降级源码。",
+          "为 `src/services/docxMath.ts` 补齐 `accent` 与 `overline` 一类高频标记节点的最小可用转换，优先覆盖 `\\bar`、`\\hat`、`\\vec` 与 `\\overline`。",
+          "为 `src/services/docxMath.ts` 补齐 `htmlmathml` 节点解包，并同步补高频逻辑/关系符映射，至少覆盖 `\\neq`、`\\land`、`\\lor`、`\\Rightarrow`、`\\mid`、`\\lt`、`\\gt`。",
+          "保持块级公式与行内 `$...$` 公式共用同一条 DOCX 公式转换 helper，让两条导出链路同时受益。",
+          "补充 DOCX XML 回归，覆盖上述高频公式，确认不再整条回退为 LaTeX 源码。",
+          "完成后执行 `npm run progress:build`、`npm run progress:check`、定向测试、`npm run typecheck` 与 `npm run build`。"
+        ],
+        "excluded": [
+          "不在本步实现矩阵、cases、align、pmatrix、bmatrix 等二维或对齐类公式结构。",
+          "不在本步实现 `\\binom` 这类无横线二项式专用结构。",
+          "不实现完整 LaTeX 宏系统、宏展开、自定义命令或完整文本环境。",
+          "不改 HTML/PDF 的 KaTeX 渲染链路，不调整画布公式编辑交互。",
+          "不重构 DOCX 导出架构，也不引入新的外部公式转换依赖。"
+        ],
+        "followup": [
+          "矩阵、cases、align 和更完整二维结构继续归属 DOCX 复杂公式导出 V2。",
+          "`\\binom`、更高保真的 accent OOXML 结构和更多专用公式对象，后续再单拆 DOCX 公式深化任务。",
+          "若后续要追求更完整的 LaTeX 文本模式兼容，再单拆 `\\text{...}` / 宏系统增强任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-21-docx-equation-compat-enhancement-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增并更新 `PH2-21E` 任务卡，记录本步边界、完成摘要和验证项。",
+          "`progress/risks.json` 已新增并更新 `RISK-057`，记录 DOCX 公式兼容增强的收口范围与完成处理结果。",
+          "`progress/logs.json` 已追加本步边界确认日志与完成日志。",
+          "`src/services/docxMath.ts` 已补齐 `font`、`accent / overline`、`htmlmathml` 和高频逻辑/关系符映射。",
+          "`src/services/exportDocx.test.ts` 已新增 `PH2-21E DOCX 公式：常见单行公式兼容增强后不再整条退回源码` 回归。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，7 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-21F",
+      "sequence": "21f",
+      "order": 86.96875,
+      "title": "DOCX 方程组大括号兼容 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "进行中",
+      "acceptance": "DOCX 公式导出支持二元一次方程组和分段函数这类“左大括号 + 多行”结构；至少覆盖 `\\begin{cases}...\\end{cases}`、`\\left\\{\\begin{aligned}...\\end{aligned}\\right.` 与 `\\left\\{\\begin{array}...\\end{array}\\right.`；Word/WPS 中应优先输出可伸缩的大括号和多行 Office Math 结构，而不是整条退回 LaTeX 源码。",
+      "owner": "导出链路组",
+      "dependsOn": [
+        "PH2-21C",
+        "PH2-21D",
+        "PH2-21E"
+      ],
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH2-21-docx-equation-system-brace-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：DOCX 方程组大括号兼容 V1",
+        "confirmedOn": "2026-07-07",
+        "startedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH2-21-docx-equation-system-brace-v1`：1) `src/services/docxMath.ts` 已补齐 `array` 节点兼容，可把多行公式输出为 Office Math 方程数组结构；2) 已补齐左大括号 + 右省略定界符的 Office Math 定界符结构，让 `cases`、`left\\{ aligned \\right.` 和 `left\\{ array \\right.` 一类方程组 / 分段函数不再退回源码；3) 已新增 XML 回归，确认多行方程数组与可伸缩大括号写入 DOCX；4) 本步未扩展到通用矩阵、完整 `align` 语义或 `\\binom`。",
+        "included": [
+          "为 `src/services/docxMath.ts` 补齐 `array` 节点的最小可用转换，支持把多行公式输出为 Office Math 方程数组结构。",
+          "为 `src/services/docxMath.ts` 补齐“左大括号 + 右省略定界符”这类 `leftright` 结构，让方程组和分段函数输出可伸缩的大括号，而不是普通文本字符。",
+          "至少覆盖 `\\begin{cases}...\\end{cases}`、`\\left\\{\\begin{aligned}...\\end{aligned}\\right.` 和 `\\left\\{\\begin{array}...\\end{array}\\right.` 三类高频写法。",
+          "保持块级公式与行内 `$...$` 公式共用同一条 DOCX 公式转换 helper，让两条导出链路同时受益。",
+          "补充 DOCX XML 回归，覆盖方程组 / 分段函数样例，确认不再整条退回 LaTeX 源码。",
+          "完成后执行 `npm run progress:build`、`npm run progress:check`、定向测试、`npm run typecheck` 与 `npm run build`。"
+        ],
+        "excluded": [
+          "不在本步实现通用矩阵、`pmatrix`、`bmatrix`、`vmatrix` 等矩阵族结构。",
+          "不在本步实现 `align` / `align*` 的完整多行对齐语义，也不追求所有 `&` 对齐点的 1:1 还原。",
+          "不在本步实现 `\\binom`、行列式、分块矩阵或更复杂二维公式对象。",
+          "不实现完整 LaTeX 环境系统，也不改 HTML/PDF 的 KaTeX 渲染链路。",
+          "不重构 DOCX 导出架构，也不引入新的外部公式转换依赖。"
+        ],
+        "followup": [
+          "通用矩阵、`pmatrix / bmatrix / vmatrix` 和更完整二维结构继续归属 DOCX 复杂公式导出 V2。",
+          "`align` / `align*` 的更高保真对齐点还原和更多多行环境，后续再单拆 DOCX 公式深化任务。",
+          "`\\binom`、行列式和其他专用二维公式对象继续后续单拆。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-21-docx-equation-system-brace-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增并更新 `PH2-21F` 任务卡，记录本步边界、完成摘要和验证项。",
+          "`progress/risks.json` 已新增并更新 `RISK-059`，记录 DOCX 方程组大括号兼容的收口范围与完成处理结果。",
+          "`progress/logs.json` 已追加本步边界确认日志与完成日志。",
+          "`src/services/docxMath.ts` 已补齐 `array` 节点以及左大括号 + 右省略定界符结构。",
+          "`src/services/exportDocx.test.ts` 已新增 `PH2-21F DOCX 公式：方程组与分段函数的大括号多行结构不再整条退回源码` 回归。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，8 个测试全部 pass。",
+          "`src/components/layout/CanvasPane.tsx` 已补齐图片测量签名处的图片块类型窄化，恢复全项目 `typecheck` / `build` 验证。",
           "`npm run typecheck` 成功。",
           "`npm run build` 成功。"
         ]

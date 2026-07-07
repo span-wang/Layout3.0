@@ -71,6 +71,19 @@ export function layoutDocumentToMarkdown(doc: LayoutDocument): string {
         break;
       }
 
+      case 'columnSection': {
+        if (block.metadata.kind === 'columnSection') {
+          const columnSectionText = block.metadata.blocks
+            .map((childBlock) => extractBlockPlainText(childBlock))
+            .filter(Boolean)
+            .join('\n\n');
+          if (columnSectionText.trim()) {
+            lines.push(columnSectionText);
+          }
+        }
+        break;
+      }
+
       default:
         break;
     }
@@ -85,6 +98,10 @@ function extractTextFromTextRuns(block: { textRuns?: Array<{ text: string }> }):
 
 function extractBlockPlainText(block: LayoutBlock): string {
   if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+    return block.metadata.blocks.map((childBlock) => extractBlockPlainText(childBlock)).join('\n');
+  }
+
+  if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
     return block.metadata.blocks.map((childBlock) => extractBlockPlainText(childBlock)).join('\n');
   }
 

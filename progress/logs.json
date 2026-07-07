@@ -1,6 +1,374 @@
 {
   "entries": [
     {
+      "id": "LOG-446",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-19B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成局部分栏区段属性与解除入口 V1",
+      "action": "模型操作补齐/store 写回接通/右侧对象属性面板实现/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-19B-column-section-properties-unwrap-v1`：1) `src/engine/document-model/operations.ts` 已补 `updateColumnSectionAttributes` 与 `unwrapTopLevelColumnSectionById`，让局部分栏区段属性更新和解除双栏都成为纯模型操作；2) `src/store/slices/documentSlice.ts` 已接入 `updateLayoutColumnSectionAttributes` 与 `unwrapLayoutColumnSection`，负责写回 `LayoutDocument`、维护选中态和未保存标记；3) `src/components/layout/RightPanel.tsx` 已新增局部分栏区段对象属性面板，可修改 2/3 栏、栏间距、栏分割线、标题不参与分栏，并提供“解除双栏”入口；4) 这些变化继续被现有画布预览、分页估算、HTML/PDF 导出和 `.layout` 保存恢复共同消费；5) 已新增纯模型回归，验证区段属性更新和解除双栏后的顶层块顺序恢复。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\columnSection.test.ts src\\engine\\typesetting\\algorithms\\estimatedMaxFill.columnSection.test.ts`。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已把 `PH2-19B` 补齐完成状态、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-055` 当前处理方式，记录局部分栏体验增强 V1 已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/store/types.ts",
+        "src/components/layout/RightPanel.tsx",
+        "src/engine/document-model/columnSection.test.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.columnSection.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；DOCX 局部分栏映射、拖拽边界和更完整分节系统继续后续拆步。"
+    },
+    {
+      "id": "LOG-445",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-21F"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 DOCX 方程组大括号兼容 V1",
+      "action": "多行方程数组结构补齐/省略定界符大括号补齐/XML 回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-21-docx-equation-system-brace-v1`：1) `src/services/docxMath.ts` 已补齐 `array` 节点兼容，支持把多行公式输出为 Office Math 方程数组结构；2) 已补齐左大括号 + 右省略定界符的 Office Math 定界符结构，覆盖 `\\begin{cases}...\\end{cases}`、`\\left\\{\\begin{aligned}...\\end{aligned}\\right.` 与 `\\left\\{\\begin{array}...\\end{array}\\right.`；3) 已新增 XML 回归，确认方程组 / 分段函数不再整条退回 LaTeX 源码；4) 本步未扩展到通用矩阵、完整 `align` 语义或 `\\binom`。另外，验证过程中顺手补了 `CanvasPane.tsx` 图片测量签名里的图片块类型窄化，让全项目 `typecheck` / `build` 恢复通过。",
+      "verification": [
+        "`src/services/docxMath.ts` 已补齐 `array` 节点以及左大括号 + 右省略定界符结构。",
+        "`src/services/exportDocx.test.ts` 已新增 `PH2-21F DOCX 公式：方程组与分段函数的大括号多行结构不再整条退回源码` 回归。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，8 个测试全部 pass。",
+        "`src/components/layout/CanvasPane.tsx` 已补齐图片块 type predicate，恢复全项目验证。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-21F` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-059` 当前处理方式，记录 DOCX 方程组大括号兼容 V1 已完成。"
+      ],
+      "affectedFiles": [
+        "src/services/docxMath.ts",
+        "src/services/exportDocx.test.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；通用矩阵、完整 `align` 语义、`\\binom` 和更多二维公式对象继续后续单拆。"
+    },
+    {
+      "id": "LOG-444",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-19B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认局部分栏区段属性与解除入口 V1 边界",
+      "action": "用户确认下一步/边界登记/任务卡新增/风险同步",
+      "result": "用户已确认下一步按 `PH2-19B-column-section-properties-unwrap-v1` 推进。本步纳入：选中 `columnSection` 后可修改栏数、栏间距、分割线和标题跨栏，并新增“解除双栏”入口把区段还原回连续顶层块；画布预览、分页、HTML/PDF 导出与 `.layout` 保存恢复继续共同消费区段属性。本步明确不纳入：DOCX 局部分栏、拖拽调整边界、嵌套局部分栏、任意文字选区分栏、对象独立跨栏开关和完整分节系统。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-19B-column-section-properties-unwrap-v1` 最小方案可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-19B` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已更新 `RISK-055` 当前处理方式，记录局部分栏继续按体验增强小步推进。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现区段属性写回、解除双栏模型操作和右侧面板交互。"
+    },
+    {
+      "id": "LOG-443",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-21F"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 DOCX 方程组大括号兼容 V1 边界",
+      "action": "用户确认开工/KaTeX 方程组节点盘点/边界登记/风险记录",
+      "result": "用户确认继续补“二元一次方程中的大括号这些”。排查确认：`\\begin{cases}...\\end{cases}` 与 `\\left\\{\\begin{aligned}...\\end{aligned}\\right.` 在 KaTeX 解析里会落成 `leftright` 包 `array`，当前 `docxMath` 尚未支持 `array` 节点，也没有处理左大括号 + 右省略定界符，因此这类方程组和分段函数仍会整条退回源码。本步按 `PH2-21-docx-equation-system-brace-v1` 推进：只补方程组 / 分段函数这类高频二维结构，不扩展到通用矩阵、完整 `align` 或 `\\binom`。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-21-docx-equation-system-brace-v1` 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-21F` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-059`，记录 DOCX 方程组大括号兼容若扩到通用矩阵 / 完整 align 会明显放大范围的风险。",
+        "`progress/logs.json` 已追加本步边界确认日志。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后补 `array`、左大括号 + 右省略定界符的 DOCX 公式兼容，并新增 XML 回归。"
+    },
+    {
+      "id": "LOG-442",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-19A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成局部分栏区段 V1",
+      "action": "模型容器落地/画布入口接通/分页导出递归适配/定向测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-19A-local-column-section-v1`：1) `src/engine/document-model/types.ts`、`operations.ts`、`syntaxMappingConfig.ts`、`selectors.ts` 和 `documentSlice.ts` 已把 `columnSection` 接成真实局部分栏容器；2) `CanvasPane` 多选浮动工具条新增中文入口“设为双栏”，并完成局部分栏区段渲染；3) `columnLayout.ts` 已新增局部分栏合同解析，`estimatedMaxFill.ts` 已复用现有分页算法递归分页局部分栏内容，并输出连续的 `runtimeSlice` 片段；4) `exportHtml.ts`、`layoutDocumentMarkdown.ts`、`DocumentSearchService.ts`、`AppShell.tsx` 等链路已补齐 `columnSection` 递归消费；5) 已新增 `estimatedMaxFill.columnSection.test.ts`，验证连续块包装和局部分栏分页片段；本步未扩大到 DOCX 局部分栏、解除分栏、嵌套分栏或完整分节系统。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\typesetting\\algorithms\\estimatedMaxFill.columnSection.test.ts`。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已把 `PH2-19A` 补齐完成状态与验证结果。",
+        "`progress/risks.json` 已更新 `RISK-055` 当前处理方式，记录局部分栏 V1 已完成且后续范围继续拆步。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/engine/style/columnLayout.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/services/exportHtml.ts",
+        "src/services/layoutDocumentMarkdown.ts",
+        "src/services/DocumentSearchService.ts",
+        "src/styles.css",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.columnSection.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；DOCX 局部分栏映射、解除局部分栏入口和更完整分节系统继续按后续拆步推进。"
+    },
+    {
+      "id": "LOG-440",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-21E"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 DOCX 公式兼容增强 V1",
+      "action": "高频 KaTeX 节点兼容补齐/自定义 Office Math accent/XML 回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-21-docx-equation-compat-enhancement-v1`：1) `src/services/docxMath.ts` 已补齐 `font` 节点兼容，`\\mathrm / \\mathbf / \\mathit` 内部的可转换结构会继续输出 Office Math；2) 已基于 `docx` 底层 XML 组件补齐自定义 Office Math accent 结构，覆盖 `\\bar`、`\\hat`、`\\vec` 与 `\\overline`；3) 已补齐 `htmlmathml` 节点解包和高频逻辑/关系符映射，覆盖 `\\neq`、`\\land`、`\\lor`、`\\Rightarrow`、`\\mid`、`\\lt`、`\\gt`；4) 已新增 XML 回归，确认这些常见单行公式不再整条退回 LaTeX 源码；5) 本步未扩展到矩阵、cases、align 或 `\\binom`。",
+      "verification": [
+        "`src/services/docxMath.ts` 已补齐 `font`、`accent / overline`、`htmlmathml` 和高频逻辑/关系符映射。",
+        "`src/services/exportDocx.test.ts` 已新增 `PH2-21E DOCX 公式：常见单行公式兼容增强后不再整条退回源码` 回归。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，7 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-21E` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-057` 当前处理方式，记录 DOCX 公式兼容增强 V1 已完成。"
+      ],
+      "affectedFiles": [
+        "src/services/docxMath.ts",
+        "src/services/exportDocx.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；矩阵、cases、align、`\\binom` 和更完整二维结构继续后续单拆。"
+    },
+    {
+      "id": "LOG-439",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-21E"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 DOCX 公式兼容增强 V1 边界",
+      "action": "用户确认开工/KaTeX 节点盘点/边界登记/风险记录",
+      "result": "用户反馈“很多数学公式没兼容，导致导出的时候还是源码”，并确认按当前最小增强步推进。排查确认：现有 `docxMath` 对未知 KaTeX 节点采用整条公式降级策略，导致 `\\mathrm / \\mathbf / \\mathit` 等 font 包装、`\\bar / \\hat / \\vec / \\overline` 等标记、`htmlmathml` 包裹的 `\\neq`，以及部分高频逻辑/关系符会让整条公式回退源码。本步按 `PH2-21-docx-equation-compat-enhancement-v1` 推进：只补高频单行公式节点兼容，不扩展到矩阵、cases、align 或 `\\binom`。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-21-docx-equation-compat-enhancement-v1` 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-21E` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-057`，记录 DOCX 公式兼容增强若继续扩到矩阵 / cases / binom 会明显放大范围的风险。",
+        "`progress/logs.json` 已追加本步边界确认日志。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后补 `font`、`accent / overline`、`htmlmathml` 与高频逻辑/关系符的 DOCX 公式兼容，并新增 XML 回归。"
+    },
+    {
+      "id": "LOG-438",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-19A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "补齐局部分栏区段块类型标签",
+      "action": "类型检查阻断定位/中文标签补齐/全项目校验恢复",
+      "result": "复跑 `npm run typecheck` 时发现已新增的 `columnSection` 块类型没有进入右侧对象属性面板的中文块类型映射，导致 `Record<LayoutBlock['type'], string>` 缺少必需 key。已在 `src/components/layout/RightPanel.tsx` 补齐 `columnSection: '局部分栏区段'`，不改变局部分栏模型、预览、分页或导出行为，只解除全项目类型检查阻断。",
+      "verification": [
+        "`src/components/layout/RightPanel.tsx` 已补齐 `columnSection` 中文块类型标签。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/RightPanel.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "继续按 `PH2-19A` 既定后续项处理 DOCX 局部分栏映射、解除分栏、区段属性面板和完整分节系统等能力，不在本次兼容补丁中扩大范围。"
+    },
+    {
+      "id": "LOG-437",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-21D"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 DOCX 公式转义字符修复 V1",
+      "action": "转义字面量映射补齐/DOCX XML 回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-21-docx-equation-escape-literal-fix-v1`：1) `src/services/docxMath.ts` 已补齐常见 LaTeX 转义字面量映射，`\\% / \\& / \\# / \\_ / \\$ / \\{ / \\} / \\backslash` 会在 DOCX 公式中还原为真实字符；2) 块级公式和行内公式共用该转换 helper，因此两条 DOCX 公式链路都不会再把这些字面量多输出一个反斜杠；3) 已新增 DOCX XML 回归，确认 `% / & / # / _ / $ / { / } / \\` 输出为真实字面量；4) 本步未扩展 `\\text{...}` 复杂文本模式、完整宏系统、矩阵、cases 或 align。",
+      "verification": [
+        "`src/services/docxMath.ts` 已补齐 `\\%`、`\\&`、`\\#`、`\\_`、`\\$`、`\\{`、`\\}` 与 `\\backslash` 的字面量输出映射。",
+        "`src/services/exportDocx.test.ts` 已新增 `PH2-21D DOCX 公式：转义字面量导出时不保留多余反斜杠` 回归。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，6 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-21D` 更新为已完成，并补完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-056` 当前处理方式，记录转义字符修复已完成。"
+      ],
+      "affectedFiles": [
+        "src/services/docxMath.ts",
+        "src/services/exportDocx.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；`\\text{...}`、矩阵、cases、align 和更完整 LaTeX 兼容继续后续拆步。"
+    },
+    {
+      "id": "LOG-436",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-21D"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 DOCX 公式转义字符修复 V1 边界",
+      "action": "用户确认开工/KaTeX 转义节点排查/边界登记/风险记录",
+      "result": "用户反馈 `%` 这类公式符号导出到 Word 后会多一个反斜杠。排查确认：KaTeX 解析树会把 `\\% / \\& / \\# / \\_ / \\$ / \\{ / \\}` 等字面量保留为带反斜杠的文本节点，当前 `docxMath` 映射不完整。本步按 `PH2-21-docx-equation-escape-literal-fix-v1` 推进：只修复 DOCX 公式转换中的常见转义字面量映射，并补 XML 回归。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-21-docx-equation-escape-literal-fix-v1` 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-21D` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-056`，记录 DOCX 公式转义字符映射缺陷与收口范围。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后补充转义字面量映射与 DOCX XML 回归。"
+    },
+    {
+      "id": "LOG-435",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-19A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认局部分栏区段 V1 边界",
+      "action": "用户确认开工/现有分栏链路调研/边界登记/风险记录",
+      "result": "用户提出“实现文档中部分双栏”并回复“确定”，确认按 `PH2-19A-local-column-section-v1` 推进。本步纳入：新增 `columnSection` 局部分栏区段块，把连续选中的顶层块包装成双栏区段；画布多选浮动工具条新增“设为双栏”；画布预览、分页估算、HTML/PDF 导出和 `.layout` 保存恢复共同消费局部分栏结构。本步明确不纳入：DOCX 局部分栏、全局双栏中嵌套局部双栏、任意文字选区分栏、拖拽调整边界、解除分栏入口、对象独立跨栏开关和完整分节系统。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-19A-local-column-section-v1` 最小方案可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-19A` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-055`，记录局部分栏扩展为完整分节系统的范围风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后实现局部分栏区段模型、包装入口、预览/导出接线、分页估算接入和最小回归。"
+    },
+    {
+      "id": "LOG-434",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-21C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 DOCX 原生公式导出 V1",
+      "action": "Office Math 转换/helper 接入/行内公式导出/块级公式导出/XML 回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-21-docx-native-equation-export-v1`：1) 新增 `docxMath` 转换 helper，基于 KaTeX 解析树把常用 LaTeX 公式子集转换为 `docx` Office Math 组件；2) DOCX 块级公式不再默认写成斜体 LaTeX 文本，而是优先输出 Word 原生 `<m:oMath>`；3) 标题、段落、列表项、表格单元格和紧凑选项组中的行内 `$...$` 公式也会优先输出原生公式节点；4) 已覆盖常用字符、希腊字母、上下标、分式、根号、n 次根、括号、绝对值、求和、积分、极限和常见函数；5) 暂不支持的复杂公式仍降级为原始 LaTeX 文本，不阻断 DOCX 导出。",
+      "verification": [
+        "`src/services/docxMath.ts` 已新增常用 LaTeX 子集到 Office Math 的转换逻辑。",
+        "`src/services/exportDocx.ts` 已把 `buildDocxTextRuns` 返回类型扩展为 `ParagraphChild[]`，并接入行内公式和块级公式原生输出。",
+        "`src/services/exportDocx.test.ts` 已新增 DOCX XML 回归，确认生成 `<m:oMath>`、`<m:f>`、`<m:sSup>`、`<m:rad>` 与 `<m:nary>`，并确认简单公式不再以 `$...$` 源码直出。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，5 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-21C` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-054` 当前处理方式。"
+      ],
+      "affectedFiles": [
+        "src/services/docxMath.ts",
+        "src/services/exportDocx.ts",
+        "src/services/exportDocx.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；矩阵、cases、align 和更完整 LaTeX 兼容继续后续拆步。"
+    },
+    {
+      "id": "LOG-433",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-21C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 DOCX 原生公式导出 V1 边界",
+      "action": "用户确认开工/DOCX 公式导出现状定位/边界登记/风险记录",
+      "result": "用户反馈当前导出的 Word 公式会直接显示 LaTeX 行内公式语法而不是渲染。定位确认：HTML/PDF 通过 KaTeX 渲染公式，但 DOCX 导出当前把块级公式和行内 `$...$` 公式作为普通文本写入；`docx` 库已支持 Office Math 组件。本步按 `PH2-21-docx-native-equation-export-v1` 推进：块级公式和行内公式优先导出为 Word 原生 `<m:oMath>`，首批覆盖常用公式结构，复杂公式暂时降级为原始文本且不阻断导出。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-21-docx-native-equation-export-v1` 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-21C` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-054`，记录 DOCX 公式转换范围与降级策略风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后实现 DOCX 常用公式子集到 Office Math 的转换，并补 XML 回归。"
+    },
+    {
       "id": "LOG-432",
       "date": "2026-07-07",
       "taskIds": [
@@ -634,7 +1002,7 @@
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 顺序同步展示文档；后续如需继续统一所有分页分支的片段结构，可再拆分页治理任务。"
     },
     {
-      "id": "LOG-410",
+      "id": "LOG-441",
       "date": "2026-07-06",
       "taskIds": [
         "PH2-10"
@@ -908,7 +1276,7 @@
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后只修改 `src/services/exportDocx.ts` 的分页策略并补最小验证。"
     },
     {
-      "id": "LOG-401",
+      "id": "LOG-410",
       "date": "2026-07-06",
       "taskIds": [
         "PH2-21"
@@ -10911,6 +11279,155 @@
         "当前执行看板.md (待生成)"
       ],
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续如需扩到更多块类型、允许块模板改变高度，或开放块模板编辑器，再按 `PH2-07` 后续小步继续拆。"
+    },
+    {
+      "id": "LOG-401",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-10A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片自由拖动与复杂绕排 V1 边界",
+      "action": "用户确认开工/范围收口/风险登记",
+      "result": "用户已确认按 `PH2-10A-free-drag-complex-wrap-v1` 推进。当前先把范围收口为页面级浮动图片最小闭环：四周型/紧密型图片支持在当前页正文区域内上下左右拖动，拖动结果继续写回现有 `offsetX / offsetY`，必要时同步收口 `wrapSide`；分页估算、画布预览和 HTML/PDF 导出统一按同一张图片浮动矩形持续让后续普通文本类块绕开图片，直到图片底部结束；嵌入型和上下型继续保持现有块级图片口径。本步明确不纳入透明像素轮廓、跨页自由定位、DOCX 浮动对象、图层顺序和键盘微调。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小闭环边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增顶层任务卡 `PH2-10A`，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-058`，记录图片复杂绕排若一步追平 Word 全量会明显扩面的范围风险。",
+        "`progress/logs.json` 已追加本步边界确认日志。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现图片自由拖动、页面级浮动绕排、分页估算和 HTML/PDF 导出联动。"
+    },
+    {
+      "id": "LOG-447",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-10A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片自由拖动与复杂绕排 V1",
+      "action": "画布拖动预览/隐藏测量层共享正文流/导出样式同步/类型检查/定向验证/进度同步",
+      "result": "已完成 `PH2-10A-free-drag-complex-wrap-v1`：1) `CanvasPane.tsx` 已让四周型/紧密型图片拖动时实时预览 `wrapSide / offsetX / offsetY`，图片跨过正文中线后会自动切换左右绕排侧；2) `styles.css` 已把隐藏测量层中的普通文档块从 `flow-root` 隔离调整为共享正文流，同时让文本片段与表格行测量继续使用独立 `flow-root + clear: both`，使前序浮动图片开始真实影响后续标题、段落、列表与选项组块高；3) `exportHtml.ts` 已同步补齐四周型/紧密型图片的侧边内缩与垂直偏移导出样式；4) `m2-smoke.ts` 已补充新的导出 HTML 关键片段断言，后续全量冒烟恢复后可直接覆盖本步回归；5) 当前紧密型仍按裁剪后矩形近似，透明轮廓、DOCX 浮动对象和跨页自由定位继续留待后续任务。",
+      "verification": [
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "定向验证通过：自定义 `tsx` 脚本输出 `image-wrap-check: ok`，确认导出 HTML 已包含 `image-wrap-side-right / float:right / margin-right:15px / margin-top:-8px`。",
+        "`npm run smoke:m2` 在当前工作区连续两次超时，未返回断言结果；本步已改用聚焦图片绕排的定向脚本作为补充验证，全量冒烟超时需后续单独治理。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-10A` 更新为已完成，并补 `completedOn`、完成摘要与实际验证项。",
+        "`progress/risks.json` 已更新 `RISK-058` 当前处理方式，记录本步已完成且保留后续深化边界。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "src/services/exportHtml.ts",
+        "scripts/m2-smoke.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步并校验展示文档；后续如需继续贴近 Word，可优先拆透明轮廓紧密绕排、DOCX 浮动对象或跨页自由定位。"
+    },
+    {
+      "id": "LOG-448",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认个人知识库接入 V1 边界",
+      "action": "用户确认开工/范围收口/风险登记",
+      "result": "用户已确认按 `PH3-12-personal-knowledge-base-v1` 推进。当前先把范围收口为个人知识库最小闭环：左侧菜单栏新增“个人知识库”，新增知识库面板与连接配置；RAGFlow 作为正式知识检索源，负责数据集列表、知识片段检索和生成上下文供给；Open Notebook 先纳入服务健康检查、基础入口和个人工作台说明，不作为主生成链路的硬依赖；AI 生成本步只扩展到结合知识库片段生成知识清单、教辅讲义、同步练习和单元试卷草稿，不扩成完整知识库运营系统。",
+      "verification": [
+        "用户已回复“确定”，确认当前边界可以执行。",
+        "`progress/tasks/phase-3.json` 已新增 `PH3-12` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-060`，记录本机知识库服务未启动与外部接口联调不稳定的接入风险。",
+        "`progress/logs.json` 已追加本步边界确认日志。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现左侧“个人知识库”菜单、知识库面板、主进程知识库请求与 RAGFlow 检索接入。"
+    },
+    {
+      "id": "LOG-449",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成个人知识库接入 V1 第一轮实现",
+      "action": "左侧菜单接入/知识库配置存储/RAGFlow 连接器/AI 生成链路接线/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-12-personal-knowledge-base-v1` 第一轮实现：1) 左侧菜单栏已新增“个人知识库”入口，并落地独立知识库面板；2) 新增个人知识库本机状态层，保存 RAGFlow Base URL、API Key、默认检索片段数、Open Notebook Web/API 地址、已选数据集和“生成时默认带入知识库”开关；3) 新增 `KnowledgeBaseService`，统一通过主进程 HTTP 请求链路接入 RAGFlow 数据集列表、RAGFlow 检索，以及 Open Notebook 服务探活；4) 知识库面板已支持测试连接、读取 RAGFlow 数据集、勾选参与生成的数据集、检索测试，以及 Open Notebook 服务测试与工作台入口；5) AI 生成 Tab 已接入 RAGFlow 上下文：启用后会先按主题、年级、科目和生成类型检索知识片段，再把资料片段带入讲义、知识点总结、练习题和试卷初稿生成；6) 当前因为本机 `9380 / 8502 / 5055` 端口未监听、Docker 不可用，暂未完成真实双服务联调，因此 `PH3-12` 先保持“进行中”，等待服务启动后的实机验证。",
+      "verification": [
+        "`src/components/knowledge/KnowledgeBasePanel.tsx` 已新增左侧个人知识库面板，支持 RAGFlow / Open Notebook 配置、探活和检索测试。",
+        "`src/store/slices/knowledgeBaseSlice.ts`、`src/types/knowledge.ts` 已新增个人知识库本机状态与类型定义。",
+        "`src/services/KnowledgeBaseService.ts` 已新增主进程 HTTP 请求复用、RAGFlow 数据集读取、RAGFlow 检索与 Open Notebook 服务测试。",
+        "`src/components/layout/LeftPanel.tsx`、`src/types/workspace.ts` 已接通左侧“个人知识库”菜单入口。",
+        "`src/components/ai/AiGenerateTab.tsx` 与 `src/services/AiService.ts` 已接通“生成前先检索 RAGFlow 并带入知识库资料”的链路。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "本机 `http://127.0.0.1:9380`、`http://127.0.0.1:8502`、`http://127.0.0.1:5055` 当前仍不可连接，真实接口联调待服务启动后继续验证。"
+      ],
+      "affectedFiles": [
+        "src/types/knowledge.ts",
+        "src/store/slices/knowledgeBaseSlice.ts",
+        "src/store/index.ts",
+        "src/store/types.ts",
+        "src/types/workspace.ts",
+        "src/services/KnowledgeBaseService.ts",
+        "src/components/knowledge/KnowledgeBasePanel.tsx",
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/services/AiService.ts",
+        "src/types/ai.ts",
+        "src/styles.css",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；如果本机 Docker / 知识库服务恢复，再继续做 `PH3-12` 的真实接口联调和端到端生成验证。"
+    },
+    {
+      "id": "LOG-450",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "收口个人知识库面板文案",
+      "action": "界面文案精简/描述性文字移除/类型检查/构建验证/进度同步",
+      "result": "已按用户要求收口个人知识库菜单与面板文案：1) `KnowledgeBasePanel` 已移除顶部说明卡、服务副标题和 Open Notebook 底部解释卡；2) 若干字段名和按钮文案已压缩为更短表达，例如“默认检索片段数”改为“片段数”，“读取数据集”改为“数据集”，“打开工作台”改为“打开”；3) AI 生成页里的个人知识库状态提示也已改成更短的“已启用 / 未启用”“已选 X 个数据集”口径；4) 本步不改知识库接入功能，只做界面减字和菜单清爽化。",
+      "verification": [
+        "`src/components/knowledge/KnowledgeBasePanel.tsx` 已移除说明性段落和副标题，并压缩字段/按钮文案。",
+        "`src/components/ai/AiGenerateTab.tsx` 已同步压缩个人知识库状态提示文案。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/knowledge/KnowledgeBasePanel.tsx",
+        "src/components/ai/AiGenerateTab.tsx",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续如需继续压缩其他面板文案，可按同样方式继续收口。"
     }
   ]
 }

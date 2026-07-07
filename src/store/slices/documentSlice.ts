@@ -47,10 +47,13 @@ import {
   normalizeSemanticRoleConfig,
   normalizeSyntaxMappingConfig,
   scanSemanticKeywordRulesInBlocks,
+  unwrapTopLevelColumnSectionById,
   updateLayoutBlockText as updateLayoutBlockTextModel,
+  updateColumnSectionAttributes as updateColumnSectionAttributesModel,
   updateLayoutImageAttributes as updateLayoutImageAttributesModel,
   updateLayoutListItemText,
   updateLayoutTableCellText,
+  wrapTopLevelBlocksInColumnSectionByIds,
 } from '@/engine/document-model';
 import { mergeFontResource } from '@/engine/document-model/fontResources';
 import { resolveStyleContract } from '@/engine/style/resolveContract';
@@ -99,6 +102,56 @@ const emptySemanticKeywordScanResult: SemanticKeywordScanResult = {
   applicableCount: 0,
   skippedExistingCount: 0,
 };
+
+function getNestedContainerBlocks(block: LayoutBlock): LayoutBlock[] | null {
+  if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+    return block.metadata.blocks;
+  }
+
+  if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
+    return block.metadata.blocks;
+  }
+
+  return null;
+}
+
+function replaceNestedContainerBlocks(block: LayoutBlock, nestedBlocks: LayoutBlock[]): LayoutBlock {
+  if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+    return {
+      ...block,
+      metadata: {
+        ...block.metadata,
+        blocks: nestedBlocks,
+      },
+    };
+  }
+
+  if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
+    return {
+      ...block,
+      metadata: {
+        ...block.metadata,
+        blocks: nestedBlocks,
+      },
+    };
+  }
+
+  return block;
+}
+
+function findTopLevelColumnSectionIndexByNodeId(blocks: LayoutBlock[], nodeId: string): number {
+  return blocks.findIndex((block) => {
+    if (block.type !== 'columnSection' || block.metadata.kind !== 'columnSection') {
+      return false;
+    }
+
+    if (block.id === nodeId) {
+      return true;
+    }
+
+    return !!findSelectedLayoutNodeInfo(block.metadata.blocks, nodeId);
+  });
+}
 
 function replaceNodeText(
   blocks: LayoutBlock[],
@@ -167,17 +220,12 @@ function replaceNodeText(
       }
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedResult = replaceNodeText(block.metadata.blocks, nodeId, text);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedResult = replaceNodeText(nestedBlocks, nodeId, text);
       if (nestedResult.didUpdate) {
         didUpdate = true;
-        return {
-          ...block,
-          metadata: {
-            ...block.metadata,
-            blocks: nestedResult.blocks,
-          },
-        };
+        return replaceNestedContainerBlocks(block, nestedResult.blocks);
       }
     }
 
@@ -296,17 +344,14 @@ function replaceNodeRichText(
       }
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedResult = replaceNodeRichText(block.metadata.blocks, nodeId, textRuns);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedResult = replaceNodeRichText(nestedBlocks, nodeId, textRuns);
       if (nestedResult.didUpdate) {
         didUpdate = true;
         return {
-          ...block,
+          ...replaceNestedContainerBlocks(block, nestedResult.blocks),
           sourceRange: null,
-          metadata: {
-            ...block.metadata,
-            blocks: nestedResult.blocks,
-          },
         };
       }
     }
@@ -423,17 +468,14 @@ function replaceNodeTextRuns(
       }
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedResult = replaceNodeTextRuns(block.metadata.blocks, nodeId, updater);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedResult = replaceNodeTextRuns(nestedBlocks, nodeId, updater);
       if (nestedResult.didUpdate) {
         didUpdate = true;
         return {
-          ...block,
+          ...replaceNestedContainerBlocks(block, nestedResult.blocks),
           sourceRange: null,
-          metadata: {
-            ...block.metadata,
-            blocks: nestedResult.blocks,
-          },
         };
       }
     }
@@ -475,17 +517,14 @@ function replaceOwnerBlock(
       return block;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedResult = replaceOwnerBlock(block.metadata.blocks, nodeId, updater);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedResult = replaceOwnerBlock(nestedBlocks, nodeId, updater);
       if (nestedResult.didUpdate) {
         didUpdate = true;
         return {
-          ...block,
+          ...replaceNestedContainerBlocks(block, nestedResult.blocks),
           sourceRange: null,
-          metadata: {
-            ...block.metadata,
-            blocks: nestedResult.blocks,
-          },
         };
       }
     }
@@ -520,18 +559,15 @@ function replaceListStructureByItem(
       return result.block;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedResult = replaceListStructureByItem(block.metadata.blocks, itemId, action);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedResult = replaceListStructureByItem(nestedBlocks, itemId, action);
       if (nestedResult.didUpdate) {
         didUpdate = true;
         selectedNodeId = nestedResult.selectedNodeId;
         return {
-          ...block,
+          ...replaceNestedContainerBlocks(block, nestedResult.blocks),
           sourceRange: null,
-          metadata: {
-            ...block.metadata,
-            blocks: nestedResult.blocks,
-          },
         };
       }
     }
@@ -566,18 +602,15 @@ function replaceListPropertyByItem(
       return result.block;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedResult = replaceListPropertyByItem(block.metadata.blocks, itemId, updater);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedResult = replaceListPropertyByItem(nestedBlocks, itemId, updater);
       if (nestedResult.didUpdate) {
         didUpdate = true;
         selectedNodeId = nestedResult.selectedNodeId;
         return {
-          ...block,
+          ...replaceNestedContainerBlocks(block, nestedResult.blocks),
           sourceRange: null,
-          metadata: {
-            ...block.metadata,
-            blocks: nestedResult.blocks,
-          },
         };
       }
     }
@@ -612,18 +645,15 @@ function replaceTableStructureByCell(
       return result.block;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedResult = replaceTableStructureByCell(block.metadata.blocks, cellId, action);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedResult = replaceTableStructureByCell(nestedBlocks, cellId, action);
       if (nestedResult.didUpdate) {
         didUpdate = true;
         selectedNodeId = nestedResult.selectedNodeId;
         return {
-          ...block,
+          ...replaceNestedContainerBlocks(block, nestedResult.blocks),
           sourceRange: null,
-          metadata: {
-            ...block.metadata,
-            blocks: nestedResult.blocks,
-          },
         };
       }
     }
@@ -658,18 +688,15 @@ function replaceTablePropertyByCell(
       return result.block;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedResult = replaceTablePropertyByCell(block.metadata.blocks, cellId, updater);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedResult = replaceTablePropertyByCell(nestedBlocks, cellId, updater);
       if (nestedResult.didUpdate) {
         didUpdate = true;
         selectedNodeId = nestedResult.selectedNodeId;
         return {
-          ...block,
+          ...replaceNestedContainerBlocks(block, nestedResult.blocks),
           sourceRange: null,
-          metadata: {
-            ...block.metadata,
-            blocks: nestedResult.blocks,
-          },
         };
       }
     }
@@ -690,8 +717,9 @@ function findTableBlockByCellId(blocks: LayoutBlock[], cellId: string): LayoutBl
       return block;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedBlock = findTableBlockByCellId(block.metadata.blocks, cellId);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedBlock = findTableBlockByCellId(nestedBlocks, cellId);
       if (nestedBlock) {
         return nestedBlock;
       }
@@ -707,8 +735,9 @@ function findTableBlockById(blocks: LayoutBlock[], tableBlockId: string): Layout
       return block;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedBlock = findTableBlockById(block.metadata.blocks, tableBlockId);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedBlock = findTableBlockById(nestedBlocks, tableBlockId);
       if (nestedBlock) {
         return nestedBlock;
       }
@@ -731,17 +760,14 @@ function replaceTableBlockById(
       return nextTableBlock;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedResult = replaceTableBlockById(block.metadata.blocks, tableBlockId, nextTableBlock);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedResult = replaceTableBlockById(nestedBlocks, tableBlockId, nextTableBlock);
       if (nestedResult.didUpdate) {
         didUpdate = true;
         return {
-          ...block,
+          ...replaceNestedContainerBlocks(block, nestedResult.blocks),
           sourceRange: null,
-          metadata: {
-            ...block.metadata,
-            blocks: nestedResult.blocks,
-          },
         };
       }
     }
@@ -834,6 +860,21 @@ function autoFitTableBlocksByEditedNode(
     }
 
     if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedResult = autoFitTableBlocksByEditedNode(state, block.metadata.blocks, nodeId);
+      if (nestedResult.didUpdate) {
+        didUpdate = true;
+        return {
+          ...block,
+          sourceRange: null,
+          metadata: {
+            ...block.metadata,
+            blocks: nestedResult.blocks,
+          },
+        };
+      }
+    }
+
+    if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
       const nestedResult = autoFitTableBlocksByEditedNode(state, block.metadata.blocks, nodeId);
       if (nestedResult.didUpdate) {
         didUpdate = true;
@@ -942,8 +983,9 @@ function collectBlockIds(blocks: LayoutBlock[], ids = new Set<string>()): Set<st
       });
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      collectBlockIds(block.metadata.blocks, ids);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      collectBlockIds(nestedBlocks, ids);
     }
   }
 
@@ -1052,7 +1094,11 @@ function remapInsertedMarkdownBlock(
     };
   }
 
-  if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+  if (
+    (block.type === 'blockquote' && block.metadata.kind === 'blockquote') ||
+    (block.type === 'columnSection' && block.metadata.kind === 'columnSection')
+  ) {
+    const nestedBlocks = getNestedContainerBlocks(block) ?? [];
     return {
       ...block,
       id: nextBlockId,
@@ -1060,7 +1106,7 @@ function remapInsertedMarkdownBlock(
       textRuns: nextTextRuns,
       metadata: {
         ...block.metadata,
-        blocks: block.metadata.blocks.map((nestedBlock) =>
+        blocks: nestedBlocks.map((nestedBlock) =>
           remapInsertedMarkdownBlock(nestedBlock, prefix, usedIds, idMap),
         ),
       },
@@ -1125,8 +1171,9 @@ function getFirstHeadingTitle(blocks: LayoutBlock[]): string | null {
       return block.metadata.text || null;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedTitle = getFirstHeadingTitle(block.metadata.blocks);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedTitle = getFirstHeadingTitle(nestedBlocks);
       if (nestedTitle) {
         return nestedTitle;
       }
@@ -1173,8 +1220,9 @@ function getImageResourceSnapshotForNodeId(
         : null;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedSnapshot = getImageResourceSnapshotForNodeId(block.metadata.blocks, nodeId);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedSnapshot = getImageResourceSnapshotForNodeId(nestedBlocks, nodeId);
       if (nestedSnapshot !== null) {
         return nestedSnapshot;
       }
@@ -2603,6 +2651,115 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       didUpdate,
       reason,
       mergedCount,
+    };
+  },
+  wrapLayoutSelectedBlocksInColumns: () => {
+    let selectedNodeId: string | null = null;
+    let didUpdate = false;
+    let wrappedCount = 0;
+    let reason: 'wrapped' | 'invalidSelection' | 'notEnoughBlocks' | 'nonContiguous' | 'unsupportedBlockType' = 'invalidSelection';
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const selection = state.layoutDocument.viewState.blockSelection;
+      if (!selection || selection.blockIds.length < 2) {
+        reason = 'notEnoughBlocks';
+        return;
+      }
+
+      const result = wrapTopLevelBlocksInColumnSectionByIds(state.layoutDocument.blocks, selection.blockIds);
+      reason = result.reason;
+      wrappedCount = result.wrappedCount;
+      if (!result.didUpdate || !result.selectedNodeId) {
+        return;
+      }
+
+      didUpdate = true;
+      selectedNodeId = result.selectedNodeId;
+      pushDocumentHistory(state);
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return {
+      selectedNodeId,
+      didUpdate,
+      reason,
+      wrappedCount,
+    };
+  },
+  updateLayoutColumnSectionAttributes: ({ nodeId, columnCount, columnGapMm, divider, headingsSpanAll }) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const blockIndex = findTopLevelColumnSectionIndexByNodeId(state.layoutDocument.blocks, nodeId);
+      if (blockIndex < 0) {
+        return;
+      }
+
+      const targetBlock = state.layoutDocument.blocks[blockIndex];
+      const result = replaceOwnerBlock(state.layoutDocument.blocks, targetBlock.id, (block) =>
+        updateColumnSectionAttributesModel(block, {
+          columnCount,
+          columnGapMm,
+          divider,
+          headingsSpanAll,
+        }),
+      );
+      applyDocumentMutation(state, targetBlock.id, result);
+    }),
+  unwrapLayoutColumnSection: ({ nodeId }) => {
+    let didUpdate = false;
+    let selectedNodeId: string | null = null;
+    let unwrappedCount = 0;
+
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const blockIndex = findTopLevelColumnSectionIndexByNodeId(state.layoutDocument.blocks, nodeId);
+      if (blockIndex < 0) {
+        return;
+      }
+
+      const targetBlock = state.layoutDocument.blocks[blockIndex];
+      const result = unwrapTopLevelColumnSectionById(state.layoutDocument.blocks, targetBlock.id);
+      if (!result.didUpdate) {
+        return;
+      }
+
+      didUpdate = true;
+      selectedNodeId = result.selectedNodeId;
+      unwrappedCount = result.unwrappedCount;
+      pushDocumentHistory(state);
+      state.layoutDocument.blocks = result.blocks;
+      state.layoutDocument.title = getFirstHeadingTitle(result.blocks) ?? state.layoutDocument.title;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    });
+
+    return {
+      didUpdate,
+      selectedNodeId,
+      unwrappedCount,
     };
   },
   updateLayoutListStructure: ({ itemId, action }) => {

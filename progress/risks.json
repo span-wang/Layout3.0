@@ -423,6 +423,62 @@
       "description": "资源库面板若一步扩展为完整文件级资源管理器，会同时牵动本地文件复制/删除、字体授权、图片路径迁移、`.layout` 资源模型、预览资源协议和导出链路，容易造成资源记录与真实文件状态不一致。",
       "impactScope": "PH3-11 资源库面板 V1、LeftPanel 资源板块、LayoutDocument.resources、图片块选中与替换、字体资源展示、CanvasPane 画布预览",
       "currentHandling": "已完成 `PH3-11-resource-library-panel-v1`：左侧「资源」板块已收口为只消费现有 `LayoutDocument.resources` 的资源查看与图片定位/替换面板；图片可查看缩略图、定位到画布并替换文件路径，字体资源只读展示。本步未做资源入库、拖拽上传、删除磁盘文件、资源重命名、丢失扫描或 `.layout` 顶层结构变更，完整资源管理器继续后续另拆。"
+    },
+    {
+      "id": "RISK-054",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "DOCX 公式如果继续把 LaTeX 源码写成普通文本，Word/WPS 中就不会渲染成公式对象；但若在一个小步里追求完整 LaTeX 到 Office Math 转换，会牵动矩阵、分段函数、对齐环境、宏命令和复杂符号映射，范围会明显超出当前 DOCX 导出返修。",
+      "impactScope": "PH2-21C DOCX 原生公式导出 V1、src/services/exportDocx.ts、docx Office Math 结构、块级公式、行内公式、Word/WPS 打开兼容性",
+      "currentHandling": "已完成 `PH2-21-docx-native-equation-export-v1`：块级公式和行内 `$...$` 公式现在会优先输出 Word 原生 `<m:oMath>`；当前覆盖常用公式子集（普通字符、希腊字母、上下标、分式、根号、n 次根、括号、绝对值、求和、积分、极限和常见函数），解析失败或暂不支持的复杂公式降级为原始 LaTeX 文本且不阻断导出。矩阵、cases、align 和更完整 LaTeX 兼容继续后续拆步。"
+    },
+    {
+      "id": "RISK-055",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "局部分栏如果直接扩成完整分节系统，会同时牵动局部页面设置、节级页眉页脚、DOCX section 映射、分页测量和对象跨栏规则，容易让当前“部分双栏”需求失去可验收边界。",
+      "impactScope": "PH2-19A 局部分栏区段 V1、PH2-19B 局部分栏区段属性与解除入口 V1、LayoutDocument 块模型、CanvasPane 画布预览、Typesetting Engine 分页估算、HTML/PDF 导出、`.layout` 保存恢复",
+      "currentHandling": "已完成 `PH2-19A-local-column-section-v1` 与 `PH2-19B-column-section-properties-unwrap-v1`：当前局部分栏已具备设为双栏、区段属性写回和解除双栏的最小闭环，覆盖 `.layout`、画布预览、分页估算与 HTML/PDF 导出。DOCX section 映射、拖拽边界、嵌套分栏、任意文字选区分栏和完整分节系统继续后续拆步推进，避免范围回弹。"
+    },
+    {
+      "id": "RISK-056",
+      "date": "2026-07-07",
+      "type": "缺陷",
+      "description": "DOCX 原生公式导出 V1 已能把常用公式写成 Office Math，但 KaTeX 解析树会把 `% / & / # / _ / $ / { / }` 这类字面量保留为带反斜杠的 LaTeX 转义文本；如果转换层不做字面量还原，Word 里会显示多余反斜杠。",
+      "impactScope": "PH2-21D DOCX 公式转义字符修复 V1、src/services/docxMath.ts、块级公式、行内公式、Word/WPS 公式显示",
+      "currentHandling": "已完成 `PH2-21-docx-equation-escape-literal-fix-v1`：`src/services/docxMath.ts` 已补齐常见转义字面量映射，DOCX 公式中的 `\\%`、`\\&`、`\\#`、`\\_`、`\\$`、`\\{`、`\\}` 与 `\\backslash` 会还原为真实字符；`src/services/exportDocx.test.ts` 已补 XML 回归，定向测试、typecheck 与 build 均已通过。`\\text{...}` 复杂文本模式、完整宏系统和复杂公式结构继续后续另拆。"
+    },
+    {
+      "id": "RISK-057",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "DOCX 公式兼容增强如果一步追求“很多公式都支持”，很容易从单行线性公式节点扩张到矩阵、cases、align、binom 和更高保真的 Office Math 专用结构；而当前 `docx` 封装并没有现成矩阵 / accent 高级对象，直接扩大会明显提高实现和回归成本。",
+      "impactScope": "PH2-21E DOCX 公式兼容增强 V1、src/services/docxMath.ts、src/services/exportDocx.test.ts、块级公式、行内公式、Word/WPS 公式显示",
+      "currentHandling": "已完成 `PH2-21-docx-equation-compat-enhancement-v1`：`src/services/docxMath.ts` 已补齐 `font` 包装、`accent / overline`、`htmlmathml` 解包和高频逻辑/关系符映射，让 `\\mathrm / \\mathbf / \\mathit`、`\\bar / \\hat / \\vec / \\overline`、`\\neq / \\land / \\lor / \\Rightarrow / \\mid / \\lt / \\gt` 一类常见单行公式不再整条退回源码；`src/services/exportDocx.test.ts` 已补 XML 回归，定向测试、typecheck 与 build 均已通过。矩阵、cases、align、`\\binom` 和更完整 OOXML 专用结构继续后续单拆。"
+    },
+    {
+      "id": "RISK-058",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "图片复杂绕排如果一步追平 Word 全量，会同时牵动透明像素轮廓分析、逐行真实测量分页、跨页锚点、DOCX 浮动对象、图层顺序和键盘微调，容易让当前“任意方向拖动 + 正文持续绕排”失去可验收边界。",
+      "impactScope": "PH2-10A 图片自由拖动与复杂绕排 V1、CanvasPane 画布预览、Typesetting Engine 分页估算、HTML/PDF 导出、LayoutDocument 图片元数据",
+      "currentHandling": "已完成 `PH2-10A-free-drag-complex-wrap-v1`：当前已在现有 `wrapMode / wrapSide / offsetX / offsetY` 基础上补齐页面级浮动矩形绕排最小闭环，覆盖四周型/紧密型图片在当前页内自由拖动、拖动跨中线自动换侧、普通文本类块持续避让，以及画布预览 / 分页估算 / HTML/PDF 的统一口径；透明轮廓、DOCX 浮动对象、跨页自由定位、图层顺序和键盘微调继续后续另拆。"
+    },
+    {
+      "id": "RISK-059",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "DOCX 方程组大括号兼容如果一步从 `cases` 扩成完整二维公式引擎，会迅速扩张到通用矩阵、`align` / `align*`、多对齐点、行列式和更多 Office Math 专用结构；当前 `docx` 封装没有现成的方程数组或省略定界符高级对象，直接扩大会明显提高实现和回归成本。",
+      "impactScope": "PH2-21F DOCX 方程组大括号兼容 V1、src/services/docxMath.ts、src/services/exportDocx.test.ts、块级公式、行内公式、Word/WPS 公式显示",
+      "currentHandling": "已完成 `PH2-21-docx-equation-system-brace-v1`：`src/services/docxMath.ts` 已补齐 `cases`、左大括号包裹的 `aligned / array`，以及对应的多行方程数组和省略定界符结构，让二元一次方程组和分段函数不再整条退回源码；`src/services/exportDocx.test.ts` 已补 XML 回归，定向测试、typecheck 与 build 均已通过。通用矩阵、完整 `align` 语义、`\\binom`、行列式和更复杂二维公式对象继续后续单拆。"
+    },
+    {
+      "id": "RISK-060",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "个人知识库接入依赖本机外部服务状态。当前 `RAGFlow` 预期端口 `9380`、`Open Notebook` 预期端口 `8502 / 5055` 均未监听，Docker 也未处于可用状态；如果本步直接把功能边界扩成“必须完成真实双服务联调和完整生成闭环”，会把 UI、连接器开发和本地环境排障耦合在一起，导致最小可验收版本失焦。",
+      "impactScope": "PH3-12 个人知识库接入 V1、左侧知识库面板、Electron 主进程知识库请求、RAGFlow 检索接入、Open Notebook 连接管理、AI 生成知识库上下文链路",
+      "currentHandling": "已完成第一轮实现：左侧“个人知识库”面板、RAGFlow / Open Notebook 连接配置与探活、RAGFlow 数据集读取和检索测试入口、以及 AI 生成结合 RAGFlow 上下文的代码链路都已落地，并已通过 `npm run typecheck` 与 `npm run build`。当前继续保留本风险，原因是本机 `9380 / 8502 / 5055` 端口仍未监听、Docker 也未恢复，尚未完成真实双服务联调；待本机服务启动后，再补齐实机验证与更深层的 Open Notebook 检索能力。"
     }
   ]
 }

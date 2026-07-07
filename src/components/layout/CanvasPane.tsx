@@ -18,7 +18,7 @@ import {
   textFontFamilyGroups,
   type FontFamilyGroup,
 } from '@/constants/fontFamilies';
-import { Bold, Combine, Eraser, Highlighter, Italic, Strikethrough, Underline, X } from 'lucide-react';
+import { Bold, Columns2, Combine, Eraser, Highlighter, Italic, Strikethrough, Underline, X } from 'lucide-react';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import {
   shouldRenderTextRunAsDictationBlank,
@@ -52,6 +52,8 @@ import {
   type LayoutTableRow,
   type ParseState,
   type TableCellRangeSelection,
+  type ImageBlockMetadata,
+  type ImageWrapSide,
   type TextMark,
   type TextMarkType,
   type TextRangeSelection,
@@ -82,7 +84,7 @@ import {
   resolveBlockDefaultTextMetrics,
   resolveBlockEffectiveTextMetrics,
 } from '@/engine/style/blockStyleResolution';
-import { shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
+import { resolveColumnSectionContract, shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
 import {
   resolveQuickTextStyleForBlock,
   resolveQuickTextStyleForRun,
@@ -125,6 +127,7 @@ interface CanvasPaneProps {
   onSelectTableCell: (cellId: string, extendRange: boolean) => void;
   onClearSelection: () => void;
   onMergeSelectedBlocks: () => void;
+  onWrapSelectedBlocksInColumns: () => void;
   onCommitNodeText: (nodeId: string, text: string) => void;
   onCommitNodeRichText: (nodeId: string, textRuns: TextRun[]) => void;
   onTextSelectionChange: (state: CanvasTextSelectionState) => void;
@@ -235,6 +238,12 @@ interface ImageDraftCrop {
   cropLeftPx: number;
 }
 
+interface ImageDraftOffset {
+  offsetX: number;
+  offsetY: number;
+  wrapSide?: ImageWrapSide;
+}
+
 interface ActiveImageCrop {
   nodeId: string;
   edge: ImageCropEdge;
@@ -253,6 +262,10 @@ interface ActiveImageDrag {
   startClientY: number;
   startOffsetX: number;
   startOffsetY: number;
+  startRenderedLeftPx: number;
+  viewportWidthPx: number;
+  pageContentWidthPx: number;
+  isTextWrapped: boolean;
   pageScale: number;
 }
 
@@ -445,6 +458,7 @@ function buildTextRunStyle(
 function buildMeasurementStyleSignature(
   contract: ResolvedStyleContract,
   styles: LayoutStyleSheet,
+  floatingImageSignature: string,
 ): string {
   return JSON.stringify({
     contentWidthPx: contract.contentWidthPx,
@@ -457,7 +471,35 @@ function buildMeasurementStyleSignature(
     templateId: contract.templateId,
     themeId: contract.themeId,
     textStyles: styles.textStyles,
+    floatingImageSignature,
   });
+}
+
+function buildFloatingImageMeasurementSignature(blocks: LayoutBlock[]): string {
+  return JSON.stringify(
+    blocks
+      .filter(
+        (block): block is LayoutBlock & { metadata: ImageBlockMetadata } =>
+          block.type === 'image' && block.metadata.kind === 'image',
+      )
+      .map((block) => {
+        const layout = resolveImageLayout(block.metadata);
+        return {
+          id: block.id,
+          wrapMode: layout.wrapMode,
+          wrapSide: layout.wrapSide,
+          widthPx: layout.widthPx,
+          heightPx: layout.heightPx,
+          cropTopPx: layout.cropTopPx,
+          cropRightPx: layout.cropRightPx,
+          cropBottomPx: layout.cropBottomPx,
+          cropLeftPx: layout.cropLeftPx,
+          offsetX: layout.offsetX,
+          offsetY: layout.offsetY,
+          showCaption: layout.showCaption,
+        };
+      }),
+  );
 }
 
 function buildBlockMeasurementSignature(block: LayoutBlock, styleSignature: string): string {
@@ -686,12 +728,13 @@ function resolveBlockLineHeightStyle(
 function buildImageStyle(
   block: LayoutBlock,
   semanticRoleConfig?: LayoutSemanticRoleConfig,
+  layoutOverride?: ResolvedImageLayout | null,
 ): CSSProperties | undefined {
   if (block.type !== 'image' || block.metadata.kind !== 'image') {
     return undefined;
   }
 
-  const layout = resolveImageLayout(block.metadata);
+  const layout = layoutOverride ?? resolveImageLayout(block.metadata);
   const styles = {
     ...buildSemanticRoleStyleVariables(block, semanticRoleConfig),
   } as CSSProperties;
@@ -704,12 +747,22 @@ function buildImageStyle(
       styles.marginLeft = `calc(50% + ${layout.offsetX}px - ${(layout.widthPx ?? 0) / 2}px)`;
       styles.marginRight = 'auto';
     }
+    if (layout.offsetY !== 0) {
+      styles.marginTop = `${layout.offsetY}px`;
+    }
   } else if (isImageTextWrapMode(layout.wrapMode)) {
     styles.float = layout.wrapSide;
     styles.clear = 'none';
-    styles.marginRight = layout.wrapSide === 'left' ? '16px' : '0';
-    styles.marginLeft = layout.wrapSide === 'right' ? '16px' : '0';
-    // Word 式绕排需要图片作为正文流里的浮动对象，不再为图片单独占整块高度。
+    styles.marginTop = `${layout.offsetY}px`;
+    if (layout.wrapSide === 'left') {
+      styles.marginLeft = `${Math.max(0, layout.offsetX)}px`;
+      styles.marginRight = '16px';
+    } else {
+      styles.marginLeft = '16px';
+      styles.marginRight = `${Math.max(0, layout.offsetX)}px`;
+    }
+    // 四周型 / 紧密型的横向偏移继续收口为“离所在侧边的内缩量”，
+    // 这样拖动时既能在页内自由换侧，又不会把图片直接推出正文区。
   } else {
     // 嵌入型仍作为稳定图片块随文档流移动。
     if (layout.offsetX !== 0) {
@@ -717,26 +770,30 @@ function buildImageStyle(
       styles.marginRight = layout.offsetX < 0 ? `${Math.abs(layout.offsetX)}px` : 'auto';
     }
     if (layout.offsetY !== 0) {
-      styles.marginTop = layout.offsetY > 0 ? `${layout.offsetY}px` : '0';
+      styles.marginTop = `${layout.offsetY}px`;
     }
   }
 
   return styles;
 }
 
-function buildImageShellClassName(block: LayoutBlock, selectedNodeId: string | null): string {
+function buildImageShellClassName(
+  block: LayoutBlock,
+  selectedNodeId: string | null,
+  layoutOverride?: ResolvedImageLayout | null,
+): string {
   if (block.type !== 'image' || block.metadata.kind !== 'image') {
     return 'image-shell';
   }
 
-  return `image-shell ${getImageWrapClassName(resolveImageLayout(block.metadata))}`;
+  return `image-shell ${getImageWrapClassName(layoutOverride ?? resolveImageLayout(block.metadata))}`;
 }
 
 function resolveImageLayoutWithDraft(
   block: LayoutBlock,
   draftSize: { widthPx: number | null; heightPx: number | null } | null,
   draftCrop: ImageDraftCrop | null,
-  draftOffset?: { offsetX: number; offsetY: number } | null,
+  draftOffset?: ImageDraftOffset | null,
 ): ResolvedImageLayout | null {
   if (block.type !== 'image' || block.metadata.kind !== 'image') {
     return null;
@@ -750,6 +807,7 @@ function resolveImageLayoutWithDraft(
     cropRightPx: draftCrop?.cropRightPx ?? block.metadata.cropRightPx,
     cropBottomPx: draftCrop?.cropBottomPx ?? block.metadata.cropBottomPx,
     cropLeftPx: draftCrop?.cropLeftPx ?? block.metadata.cropLeftPx,
+    wrapSide: draftOffset?.wrapSide ?? block.metadata.wrapSide,
     offsetX: draftOffset?.offsetX ?? block.metadata.offsetX,
     offsetY: draftOffset?.offsetY ?? block.metadata.offsetY,
   });
@@ -764,6 +822,7 @@ function buildImageAttributePayload(
     cropRightPx?: number | null;
     cropBottomPx?: number | null;
     cropLeftPx?: number | null;
+    wrapSide?: ImageWrapSide;
     offsetX?: number | null;
     offsetY?: number | null;
   } = {},
@@ -787,7 +846,7 @@ function buildImageAttributePayload(
     cropBottomPx: overrides.cropBottomPx ?? block.metadata.cropBottomPx ?? 0,
     cropLeftPx: overrides.cropLeftPx ?? block.metadata.cropLeftPx ?? 0,
     wrapMode: layout.wrapMode,
-    wrapSide: layout.wrapSide,
+    wrapSide: overrides.wrapSide ?? layout.wrapSide,
     showCaption: block.metadata.showCaption ?? false,
     offsetX: overrides.offsetX ?? block.metadata.offsetX ?? 0,
     offsetY: overrides.offsetY ?? block.metadata.offsetY ?? 0,
@@ -993,6 +1052,13 @@ function findTableBlockByCellId(blocks: LayoutBlock[], cellId: string): LayoutBl
     }
 
     if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedBlock = findTableBlockByCellId(block.metadata.blocks, cellId);
+      if (nestedBlock) {
+        return nestedBlock;
+      }
+    }
+
+    if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
       const nestedBlock = findTableBlockByCellId(block.metadata.blocks, cellId);
       if (nestedBlock) {
         return nestedBlock;
@@ -1419,6 +1485,13 @@ function findEditableNodeByIdInBlocks(blocks: LayoutBlock[], nodeId: string): Ed
         return nestedNode;
       }
     }
+
+    if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
+      const nestedNode = findEditableNodeByIdInBlocks(block.metadata.blocks, nodeId);
+      if (nestedNode) {
+        return nestedNode;
+      }
+    }
   }
 
   return null;
@@ -1447,6 +1520,13 @@ function findEditableNodeTextRunsInBlocks(blocks: LayoutBlock[], nodeId: string)
     }
 
     if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedRuns = findEditableNodeTextRunsInBlocks(block.metadata.blocks, nodeId);
+      if (nestedRuns) {
+        return nestedRuns;
+      }
+    }
+
+    if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
       const nestedRuns = findEditableNodeTextRunsInBlocks(block.metadata.blocks, nodeId);
       if (nestedRuns) {
         return nestedRuns;
@@ -2711,7 +2791,7 @@ function renderBlock(
     edge: ImageCropEdge,
     pageScale: number,
   ) => void,
-  draftImageOffsets?: Record<string, { offsetX: number; offsetY: number }>,
+  draftImageOffsets?: Record<string, ImageDraftOffset>,
   onStartImageDrag?: (
     event: MouseEvent<HTMLElement>,
     block: LayoutBlock,
@@ -3082,6 +3162,85 @@ function renderBlock(
           )}
         </blockquote>
       ) : null;
+    case 'columnSection':
+      if (block.metadata.kind !== 'columnSection') {
+        return null;
+      }
+
+      {
+        const sectionContract = tableResizeState?.pageContract
+          ? resolveColumnSectionContract(tableResizeState.pageContract, block.metadata)
+          : undefined;
+        const sectionStyle = {
+          ...blockStyle,
+          ['--local-column-count' as string]: String(block.metadata.columnCount),
+          ['--local-column-gap' as string]: `${sectionContract?.columnGapPx ?? block.metadata.columnGapMm * (96 / 25.4)}px`,
+          ['--local-column-rule-width' as string]: block.metadata.divider ? '1px' : '0px',
+          ['--local-column-rule-color' as string]: sectionContract?.themeTokens.bodyOutlineColor ?? '#e4ecf2',
+        } as CSSProperties;
+
+        return (
+          <section
+            key={`column-section-${block.id}-${index}`}
+            {...getSelectableBlockProps('local-column-section')}
+            style={sectionStyle}
+          >
+            {semanticRoleLabel}
+            <div className="local-column-flow">
+              {block.metadata.blocks.map((item, childIndex) =>
+                renderBlock(
+                  item,
+                  childIndex,
+                  selectedNodeId,
+                  [],
+                  onSelectNode,
+                  undefined,
+                  onSelectTableCell,
+                  onPrepareSelectNode,
+                  editingNodeId,
+                  activeEquationEditorNodeId,
+                  editingKind,
+                  editingText,
+                  editingDraftTextRuns,
+                  activeSelection,
+                  onSelectionChange,
+                  editorRef,
+                  richEditorRef,
+                  onStartEditing,
+                  onEditTextChange,
+                  onEditDraftTextRunsChange,
+                  onCommitEdit,
+                  onCancelEdit,
+                  tocItems,
+                  onNavigateToNode,
+                  draftImageSizes,
+                  draftImageCrops,
+                  measuredImageVisibleSizes,
+                  onImageLoad,
+                  onStartImageResize,
+                  onStartImageCrop,
+                  draftImageOffsets,
+                  onStartImageDrag,
+                  sectionContract
+                    ? tableResizeState
+                      ? {
+                          ...tableResizeState,
+                          pageContract: sectionContract,
+                        }
+                      : { pageContract: sectionContract }
+                    : tableResizeState,
+                  tableSelection,
+                  documentStyles,
+                  semanticRoleConfig,
+                  answerDisplayMode,
+                  onListItemContextMenu,
+                  pageScale,
+                ),
+              )}
+            </div>
+          </section>
+        );
+      }
     case 'code':
       return (
         <pre
@@ -3302,8 +3461,8 @@ function renderBlock(
         return (
           <figure
             key={`image-${block.id}-${index}`}
-            {...getSelectableBlockProps(buildImageShellClassName(block, selectedNodeId))}
-            style={buildImageStyle(block, semanticRoleConfig)}
+            {...getSelectableBlockProps(buildImageShellClassName(block, selectedNodeId, imageLayout))}
+            style={buildImageStyle(block, semanticRoleConfig, imageLayout)}
           >
             {semanticRoleLabel}
             {block.metadata.src ? (
@@ -3509,6 +3668,7 @@ function CanvasPaneComponent({
   onSelectTableCell,
   onClearSelection,
   onMergeSelectedBlocks,
+  onWrapSelectedBlocksInColumns,
   onCommitNodeText,
   onCommitNodeRichText,
   onTextSelectionChange,
@@ -3547,7 +3707,7 @@ function CanvasPaneComponent({
   const [activeTableRowResize, setActiveTableRowResize] = useState<ActiveTableRowResize | null>(null);
   const [draftImageSizes, setDraftImageSizes] = useState<Record<string, { widthPx: number | null; heightPx: number | null }>>({});
   const [draftImageCrops, setDraftImageCrops] = useState<Record<string, ImageDraftCrop>>({});
-  const [draftImageOffsets, setDraftImageOffsets] = useState<Record<string, { offsetX: number; offsetY: number }>>({});
+  const [draftImageOffsets, setDraftImageOffsets] = useState<Record<string, ImageDraftOffset>>({});
   const [draftTableColumnWidths, setDraftTableColumnWidths] = useState<Record<string, number[]>>({});
   const [draftTableRowHeights, setDraftTableRowHeights] = useState<Record<string, number>>({});
   const [measuredImageVisibleSizes, setMeasuredImageVisibleSizes] = useState<Record<string, ImageMeasuredVisibleSize>>({});
@@ -3575,7 +3735,7 @@ function CanvasPaneComponent({
   const activeTableRowResizeRef = useRef<ActiveTableRowResize | null>(null);
   const draftImageSizesRef = useRef<Record<string, { widthPx: number | null; heightPx: number | null }>>({});
   const draftImageCropsRef = useRef<Record<string, ImageDraftCrop>>({});
-  const draftImageOffsetsRef = useRef<Record<string, { offsetX: number; offsetY: number }>>({});
+  const draftImageOffsetsRef = useRef<Record<string, ImageDraftOffset>>({});
   const draftTableColumnWidthsRef = useRef<Record<string, number[]>>({});
   const draftTableRowHeightsRef = useRef<Record<string, number>>({});
   const skipBlurCommitRef = useRef(false);
@@ -3703,6 +3863,7 @@ function CanvasPaneComponent({
     const styleSignature = buildMeasurementStyleSignature(
       resolvedStyleContract,
       documentStyles,
+      buildFloatingImageMeasurementSignature(documentBlocks),
     );
     const nextCache: Record<string, BlockMeasurementCacheEntry> = {};
     const nextHeights: Record<string, number> = {};
@@ -4066,7 +4227,35 @@ function CanvasPaneComponent({
       const deltaX = (event.clientX - activeImageDrag.startClientX) / Math.max(0.0001, activeImageDrag.pageScale);
       const deltaY = (event.clientY - activeImageDrag.startClientY) / Math.max(0.0001, activeImageDrag.pageScale);
 
-      // 更新 draftImageOffsets 以实时预览偏移效果
+      if (activeImageDrag.isTextWrapped) {
+        const renderedLeftPx = activeImageDrag.startRenderedLeftPx + deltaX;
+        const nextWrapSide: ImageWrapSide =
+          renderedLeftPx + activeImageDrag.viewportWidthPx / 2 <= activeImageDrag.pageContentWidthPx / 2
+            ? 'left'
+            : 'right';
+        const maxInsetPx = Math.max(0, activeImageDrag.pageContentWidthPx - activeImageDrag.viewportWidthPx);
+        const nextOffsetX = nextWrapSide === 'left'
+          ? Math.max(0, Math.min(maxInsetPx, Math.round(renderedLeftPx)))
+          : Math.max(
+              0,
+              Math.min(
+                maxInsetPx,
+                Math.round(activeImageDrag.pageContentWidthPx - activeImageDrag.viewportWidthPx - renderedLeftPx),
+              ),
+            );
+
+        setDraftImageOffsets((current) => ({
+          ...current,
+          [activeImageDrag.nodeId]: {
+            offsetX: nextOffsetX,
+            offsetY: Math.round(activeImageDrag.startOffsetY + deltaY),
+            wrapSide: nextWrapSide,
+          },
+        }));
+        return;
+      }
+
+      // 嵌入型 / 上下型仍按原始偏移量差值预览。
       setDraftImageOffsets((current) => ({
         ...current,
         [activeImageDrag.nodeId]: {
@@ -4087,18 +4276,25 @@ function CanvasPaneComponent({
       const currentOffset = draftOffsets[dragState.nodeId];
       const finalOffsetX = currentOffset?.offsetX ?? dragState.startOffsetX;
       const finalOffsetY = currentOffset?.offsetY ?? dragState.startOffsetY;
+      const finalWrapSide = currentOffset?.wrapSide;
 
       // 只有偏移量真正改变时才写回模型
       const targetBlock = documentBlocks.find((block) => block.id === dragState.nodeId);
       if (targetBlock?.type === 'image' && targetBlock.metadata.kind === 'image') {
         const originalOffsetX = targetBlock.metadata.offsetX ?? 0;
         const originalOffsetY = targetBlock.metadata.offsetY ?? 0;
+        const originalWrapSide = resolveImageLayout(targetBlock.metadata).wrapSide;
 
         // 只有偏移量变化了才写回
-        if (finalOffsetX !== originalOffsetX || finalOffsetY !== originalOffsetY) {
+        if (
+          finalOffsetX !== originalOffsetX ||
+          finalOffsetY !== originalOffsetY ||
+          (finalWrapSide && finalWrapSide !== originalWrapSide)
+        ) {
           const imageAttributes = buildImageAttributePayload(targetBlock, {
             offsetX: finalOffsetX,
             offsetY: finalOffsetY,
+            wrapSide: finalWrapSide,
           });
           if (imageAttributes) {
             updateLayoutImageAttributes({
@@ -4646,10 +4842,29 @@ function CanvasPaneComponent({
     setActiveImageCrop(null);
 
     // 获取当前偏移量
+    const currentLayout = resolveImageLayoutWithDraft(
+      block,
+      draftImageSizes[block.id] ?? null,
+      draftImageCrops[block.id] ?? null,
+      draftImageOffsets[block.id] ?? null,
+    );
     const currentOffset = draftImageOffsets[block.id] ?? {
       offsetX: block.metadata.offsetX ?? 0,
       offsetY: block.metadata.offsetY ?? 0,
+      wrapSide: currentLayout?.wrapSide,
     };
+    const viewportRect = event.currentTarget.getBoundingClientRect();
+    const pageBodyElement = event.currentTarget.closest<HTMLElement>('.page-body');
+    const pageBodyRect = pageBodyElement?.getBoundingClientRect();
+    const safeScale = Math.max(0.0001, pageScale);
+    const startRenderedLeftPx = pageBodyRect
+      ? Math.round((viewportRect.left - pageBodyRect.left) / safeScale)
+      : currentOffset.offsetX;
+    const viewportWidthPx = Math.max(1, Math.round(viewportRect.width / safeScale));
+    const pageContentWidthPx = pageBodyRect
+      ? Math.max(viewportWidthPx, Math.round(pageBodyRect.width / safeScale))
+      : resolvedStyleContract.contentWidthPx;
+    const isTextWrapped = !!currentLayout && isImageTextWrapMode(currentLayout.wrapMode);
 
     // 开始拖动（选中操作已在 mousedown 时完成）
     setActiveImageDrag({
@@ -4658,6 +4873,10 @@ function CanvasPaneComponent({
       startClientY: event.clientY,
       startOffsetX: currentOffset.offsetX,
       startOffsetY: currentOffset.offsetY,
+      startRenderedLeftPx,
+      viewportWidthPx,
+      pageContentWidthPx,
+      isTextWrapped,
       pageScale,
     });
 
@@ -5315,6 +5534,20 @@ function CanvasPaneComponent({
             >
               <Combine size={15} />
               <span>合并</span>
+            </button>
+            <button
+              type="button"
+              className="format-clear-button block-selection-merge-button"
+              title="设为双栏"
+              aria-label="设为双栏"
+              onMouseDown={handleFloatingToolbarMouseDown}
+              onClick={(event) => {
+                event.stopPropagation();
+                onWrapSelectedBlocksInColumns();
+              }}
+            >
+              <Columns2 size={15} />
+              <span>设为双栏</span>
             </button>
           </div>
         ) : null}

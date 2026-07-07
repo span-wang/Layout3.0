@@ -69,6 +69,42 @@ function isQuestionIndexLikeUnderlineText(text: string): boolean {
   return questionIndexLikePatterns.some((pattern) => pattern.test(normalizedText));
 }
 
+function getNestedContainerBlocks(block: LayoutBlock): LayoutBlock[] | null {
+  if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+    return block.metadata.blocks;
+  }
+
+  if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
+    return block.metadata.blocks;
+  }
+
+  return null;
+}
+
+function replaceNestedContainerBlocks(block: LayoutBlock, nestedBlocks: LayoutBlock[]): LayoutBlock {
+  if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+    return {
+      ...block,
+      metadata: {
+        ...block.metadata,
+        blocks: nestedBlocks,
+      },
+    };
+  }
+
+  if (block.type === 'columnSection' && block.metadata.kind === 'columnSection') {
+    return {
+      ...block,
+      metadata: {
+        ...block.metadata,
+        blocks: nestedBlocks,
+      },
+    };
+  }
+
+  return block;
+}
+
 export function shouldRenderTextRunAsDictationBlank(
   run: TextRun,
   answerDisplayMode: AnswerDisplayMode,
@@ -112,17 +148,12 @@ export function getRenderableLayoutBlocksForView(document: LayoutDocument | null
         continue;
       }
 
-      if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-        // 引用容器里的答案解析需要单独抽出来，但剩余正文仍要保留在原引用壳里继续分页和导出。
-        const nestedPartition = partitionBlocksForAnswerDisplay(block.metadata.blocks);
+      const nestedBlocks = getNestedContainerBlocks(block);
+      if (nestedBlocks) {
+        // 容器里的答案解析需要单独抽出来，但剩余正文仍要保留在原容器里继续分页和导出。
+        const nestedPartition = partitionBlocksForAnswerDisplay(nestedBlocks);
         if (nestedPartition.contentBlocks.length > 0) {
-          contentBlocks.push({
-            ...block,
-            metadata: {
-              ...block.metadata,
-              blocks: nestedPartition.contentBlocks,
-            },
-          });
+          contentBlocks.push(replaceNestedContainerBlocks(block, nestedPartition.contentBlocks));
         }
         solutionBlocks.push(...nestedPartition.solutionBlocks);
         continue;
@@ -154,8 +185,9 @@ export function findLayoutBlockById(blocks: LayoutBlock[], blockId: string): Lay
       return block;
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedBlock = findLayoutBlockById(block.metadata.blocks, blockId);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedBlock = findLayoutBlockById(nestedBlocks, blockId);
       if (nestedBlock) {
         return nestedBlock;
       }
@@ -284,8 +316,9 @@ export function findSelectedLayoutNodeInfo(
       }
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      const nestedNode = findSelectedLayoutNodeInfo(block.metadata.blocks, selectedNodeId);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      const nestedNode = findSelectedLayoutNodeInfo(nestedBlocks, selectedNodeId);
       if (nestedNode) {
         return nestedNode;
       }
@@ -385,6 +418,10 @@ export function getLayoutBlockPlainText(block: LayoutBlock): string {
       return block.metadata.kind === 'blockquote'
         ? block.metadata.blocks.map((nestedBlock) => getLayoutBlockPlainText(nestedBlock)).join('\n')
         : '';
+    case 'columnSection':
+      return block.metadata.kind === 'columnSection'
+        ? block.metadata.blocks.map((nestedBlock) => getLayoutBlockPlainText(nestedBlock)).join('\n')
+        : '';
     default:
       return '';
   }
@@ -402,8 +439,9 @@ function collectTocItems(blocks: LayoutBlock[]): TocItem[] {
       ];
     }
 
-    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-      return collectTocItems(block.metadata.blocks);
+    const nestedBlocks = getNestedContainerBlocks(block);
+    if (nestedBlocks) {
+      return collectTocItems(nestedBlocks);
     }
 
     return [];
@@ -465,8 +503,9 @@ export function buildHeadingPageNumberMap(pageLayouts: PageLayout[]): Record<str
         pageNumberMap[block.id] = pageNumber;
       }
 
-      if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
-        collectFromBlocks(block.metadata.blocks, pageNumber);
+      const nestedBlocks = getNestedContainerBlocks(block);
+      if (nestedBlocks) {
+        collectFromBlocks(nestedBlocks, pageNumber);
       }
     }
   };

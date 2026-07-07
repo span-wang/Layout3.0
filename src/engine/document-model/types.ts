@@ -18,6 +18,7 @@ export type LayoutBlockType =
   | 'image'
   | 'equation'
   | 'blockquote'
+  | 'columnSection'
   | 'code'
   | 'horizontalRule'
   | 'columnBreak'
@@ -357,6 +358,23 @@ export interface BlockquoteBlockMetadata {
   blocks: LayoutBlock[];
 }
 
+export type ColumnSectionColumnCount = 2 | 3;
+
+export interface ColumnSectionBlockMetadata {
+  kind: 'columnSection';
+  columnCount: ColumnSectionColumnCount;
+  columnGapMm: number;
+  divider: boolean;
+  headingsSpanAll: boolean;
+  blocks: LayoutBlock[];
+  // 只给分页运行时片段使用：保存本片段来自原局部分栏区段的哪一段内容。
+  runtimeSlice?: {
+    sourceNodeId: string;
+    fragmentIndex: number;
+    isContinuation: boolean;
+  };
+}
+
 export interface CodeBlockMetadata {
   kind: 'code';
   language: string | null;
@@ -386,6 +404,7 @@ export type LayoutBlockMetadata =
   | ImageBlockMetadata
   | EquationBlockMetadata
   | BlockquoteBlockMetadata
+  | ColumnSectionBlockMetadata
   | CodeBlockMetadata
   | HorizontalRuleBlockMetadata
   | ColumnBreakBlockMetadata
