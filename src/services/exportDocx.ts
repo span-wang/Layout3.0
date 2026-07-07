@@ -30,14 +30,18 @@ import {
   buildHeadingPageNumberMap,
   buildLayoutListTree,
   buildTocItems,
+  chunkCompactChoiceItems,
   getHeadingText,
   getLayoutListItemKind,
   getLayoutListItemLevel,
   getTocBlockDisplayTitle,
   getVisibleTocItemsForBlock,
   isCoveredTableCell,
+  resolveCompactChoiceListLayoutWithOptions,
   resolveTableColumnWidths,
+  shouldRenderTextRunAsDictationBlank,
   shouldHideLayoutListItemMarker,
+  type AnswerDisplayMode,
   type LayoutBlock,
   type LayoutDocument,
   type LayoutListItem,
@@ -64,6 +68,7 @@ import {
   resolveAssetSrc,
   toLayoutAssetUrl,
 } from '@/utils/filePath';
+import { pageSizeDefinitions } from '@/engine/style/presets';
 
 export interface DocxExportPayload {
   pages: PageLayout[];
@@ -74,6 +79,7 @@ export interface DocxExportPayload {
   styleSettings?: StyleSettings;
   documentFilePath?: string | null;
   workspaceRootPath?: string | null;
+  answerDisplayMode?: AnswerDisplayMode;
 }
 
 type SupportedDocxImageType = 'png' | 'jpg' | 'gif' | 'bmp';
@@ -93,6 +99,7 @@ interface BlockRenderContext {
   documentFilePath?: string | null;
   workspaceRootPath?: string | null;
   blockquoteDepth: number;
+  answerDisplayMode: AnswerDisplayMode;
 }
 
 const PX_TO_TWIP = 15;
@@ -268,13 +275,20 @@ function splitRunTextByLineBreak(text: string): string[] {
   return text.split(/\r?\n/);
 }
 
-function buildDocxTextRuns(textRuns: TextRun[], inheritedStyle = {}): DocxTextRun[] {
+function buildDocxTextRuns(
+  textRuns: TextRun[],
+  inheritedStyle = {},
+  answerDisplayMode: AnswerDisplayMode = 'show',
+): DocxTextRun[] {
   const children: DocxTextRun[] = [];
 
   for (const run of textRuns) {
     const resolvedStyle = resolveQuickTextStyleForRun(run, inheritedStyle);
-    const color = normalizeHexColor(resolvedStyle.color);
-    const fillColor = normalizeHexColor(resolvedStyle.highlightColor ?? resolvedStyle.backgroundColor);
+    const isDictationBlank = shouldRenderTextRunAsDictationBlank(run, answerDisplayMode);
+    const color = isDictationBlank ? 'FFFFFF' : normalizeHexColor(resolvedStyle.color);
+    const fillColor = isDictationBlank
+      ? undefined
+      : normalizeHexColor(resolvedStyle.highlightColor ?? resolvedStyle.backgroundColor);
     const fontSize = pxToHalfPoint(resolvedStyle.fontSize);
     const segments = splitRunTextByLineBreak(run.text);
 
@@ -313,6 +327,7 @@ function buildParagraphFromTextRuns(payload: {
   textRuns: TextRun[];
   contract: ResolvedStyleContract;
   styles?: LayoutStyleSheet;
+  answerDisplayMode: AnswerDisplayMode;
   prefixText?: string;
   overrideAlignment?: ReturnType<typeof mapTextAlignment>;
   blockquoteDepth?: number;
@@ -323,8 +338,8 @@ function buildParagraphFromTextRuns(payload: {
   const quoteDepth = payload.blockquoteDepth ?? 0;
   const leftIndent = quoteDepth > 0 ? quoteDepth * 420 + (payload.extraIndentTwip ?? 0) : payload.extraIndentTwip;
   const children = payload.prefixText
-    ? [new DocxTextRun(payload.prefixText), ...buildDocxTextRuns(payload.textRuns, inheritedStyle)]
-    : buildDocxTextRuns(payload.textRuns, inheritedStyle);
+    ? [new DocxTextRun(payload.prefixText), ...buildDocxTextRuns(payload.textRuns, inheritedStyle, payload.answerDisplayMode)]
+    : buildDocxTextRuns(payload.textRuns, inheritedStyle, payload.answerDisplayMode);
 
   return new Paragraph({
     children,
@@ -365,7 +380,7 @@ function buildRuntimeTocItems(pages: PageLayout[]) {
     resources: [],
     styles: { blockStyles: {}, textStyles: {} },
     template: { templateId: null, templateOverrides: {} },
-    viewState: { answerDisplayMode: 'show', zoom: 1, selectedNodeId: null },
+      viewState: { answerDisplayMode: 'show', answerBlockPlacementMode: 'inline', zoom: 1, selectedNodeId: null },
     meta: {
       sourceFormat: 'markdown',
       wordCount: 0,
@@ -526,6 +541,7 @@ function buildListParagraphs(
         textRuns: item.textRuns,
         contract: context.contract,
         styles: context.styles,
+        answerDisplayMode: context.answerDisplayMode,
         prefixText,
         blockquoteDepth: context.blockquoteDepth,
         extraIndentTwip: Math.max(0, getLayoutListItemLevel(item) - 1) * 420,
@@ -540,12 +556,50 @@ function buildListParagraphs(
   return paragraphs;
 }
 
+function buildCompactChoiceListParagraphs(
+  block: LayoutBlock,
+  context: BlockRenderContext,
+  compactChoiceLayout: NonNullable<ReturnType<typeof resolveCompactChoiceListLayoutWithOptions>>,
+): Paragraph[] {
+  const contentWidthTwip = mmToTwip(context.contract.contentWidthMm);
+  const columnWidthTwip = Math.max(1200, Math.floor(contentWidthTwip / compactChoiceLayout.columns));
+  const tabStops = Array.from({ length: Math.max(0, compactChoiceLayout.columns - 1) }, (_, index) => ({
+    type: TabStopType.LEFT,
+    position: columnWidthTwip * (index + 1),
+  }));
+  const inheritedStyle = resolveQuickTextStyleForBlock(block, context.styles);
+  const spacing = resolveBlockSpacing(block, context.contract);
+  const rows = chunkCompactChoiceItems(compactChoiceLayout.items, compactChoiceLayout.columns);
+
+  return rows.map((itemsInRow, rowIndex) => {
+    const children = itemsInRow.flatMap((compactItem, columnIndex) => [
+      ...(columnIndex > 0 ? [new DocxTextRun({ children: [new Tab()] })] : []),
+      new DocxTextRun({ text: `${compactItem.label} `, bold: true }),
+      ...buildDocxTextRuns(compactItem.contentTextRuns, inheritedStyle, context.answerDisplayMode),
+    ]);
+
+    return new Paragraph({
+      // DOCX 选项组使用 Word 原生制表位，避免导出后在 Word 里变成可见表格结构。
+      tabStops,
+      children: children.length > 0 ? children : [new DocxTextRun(' ')],
+      spacing: {
+        before: rowIndex === 0 ? spacing.before : 0,
+        after: rowIndex === rows.length - 1 ? spacing.after : 0,
+      },
+    });
+  });
+}
+
 function buildTableCellParagraphs(
   cell: LayoutTableCell,
   block: LayoutBlock,
   context: BlockRenderContext,
 ): Paragraph[] {
-  const children = buildDocxTextRuns(cell.textRuns, resolveQuickTextStyleForBlock(block, context.styles));
+  const children = buildDocxTextRuns(
+    cell.textRuns,
+    resolveQuickTextStyleForBlock(block, context.styles),
+    context.answerDisplayMode,
+  );
 
   return [
     new Paragraph({
@@ -833,12 +887,21 @@ async function buildDocxChildrenForBlock(
           textRuns: block.textRuns,
           contract: context.contract,
           styles: context.styles,
+          answerDisplayMode: context.answerDisplayMode,
           blockquoteDepth: context.blockquoteDepth,
         }),
       ];
     case 'list':
       if (block.metadata.kind !== 'list') {
         return [];
+      }
+      {
+        const compactChoiceLayout = resolveCompactChoiceListLayoutWithOptions(block.metadata.items, {
+          allowSequenceFromAnyLabel: (block.metadata.runtimeSlice?.startIndex ?? 0) > 0,
+        });
+        if (compactChoiceLayout) {
+          return buildCompactChoiceListParagraphs(block, context, compactChoiceLayout);
+        }
       }
       return buildListParagraphs(
         buildLayoutListTree(block.metadata.items),
@@ -979,7 +1042,7 @@ async function buildDocxChildrenForBlock(
       return children;
     }
     case 'horizontalRule':
-      return [new Paragraph({ thematicBreak: true, spacing: resolveBlockSpacing(block, context.contract) })];
+      return [];
     case 'columnBreak':
       return [
         new Paragraph({
@@ -1035,6 +1098,7 @@ async function buildBlockChildren(payload: {
   tocItems: ReturnType<typeof buildRuntimeTocItems>;
   documentFilePath?: string | null;
   workspaceRootPath?: string | null;
+  answerDisplayMode?: AnswerDisplayMode;
 }): Promise<FileChild[]> {
   const children: FileChild[] = [];
 
@@ -1047,6 +1111,7 @@ async function buildBlockChildren(payload: {
       documentFilePath: payload.documentFilePath,
       workspaceRootPath: payload.workspaceRootPath,
       blockquoteDepth: 0,
+      answerDisplayMode: payload.answerDisplayMode ?? 'show',
     });
     children.push(...nextChildren);
   }
@@ -1055,12 +1120,14 @@ async function buildBlockChildren(payload: {
 }
 
 function buildSectionProperties(page: PageLayout, sectionType?: (typeof SectionType)[keyof typeof SectionType]) {
+  const docxPageSize = resolveDocxPageSizeMm(page.contract);
   return {
     type: sectionType,
     page: {
       size: {
-        width: mmToTwip(page.contract.pageWidthMm),
-        height: mmToTwip(page.contract.pageHeightMm),
+        // `docx` 库在 landscape 时会自动交换一次宽高，这里必须回到纸张原始尺寸，避免 A3 横向被双重交换。
+        width: mmToTwip(docxPageSize.widthMm),
+        height: mmToTwip(docxPageSize.heightMm),
         orientation:
           page.contract.orientation === 'landscape'
             ? DocxPageOrientation.LANDSCAPE
@@ -1075,6 +1142,29 @@ function buildSectionProperties(page: PageLayout, sectionType?: (typeof SectionT
         footer: mmToTwip(page.contract.footerReservedMm),
       },
     },
+  };
+}
+
+function resolveDocxPageSizeMm(contract: ResolvedStyleContract): { widthMm: number; heightMm: number } {
+  const definition = pageSizeDefinitions.find((item) => item.id === contract.pageSize);
+  if (definition) {
+    return {
+      widthMm: definition.widthMm,
+      heightMm: definition.heightMm,
+    };
+  }
+
+  // 正常不会走到这里；兜底时把横向契约恢复到未交换前的纸张宽高，避免继续输出冲突的页面尺寸。
+  if (contract.orientation === 'landscape') {
+    return {
+      widthMm: contract.pageHeightMm,
+      heightMm: contract.pageWidthMm,
+    };
+  }
+
+  return {
+    widthMm: contract.pageWidthMm,
+    heightMm: contract.pageHeightMm,
   };
 }
 
@@ -1163,6 +1253,7 @@ export async function buildDocxArrayBuffer(payload: DocxExportPayload): Promise<
         tocItems,
         documentFilePath: payload.documentFilePath,
         workspaceRootPath: payload.workspaceRootPath,
+        answerDisplayMode: payload.answerDisplayMode,
       }),
     };
 
@@ -1208,6 +1299,7 @@ export async function buildDocxArrayBuffer(payload: DocxExportPayload): Promise<
           tocItems,
           documentFilePath: payload.documentFilePath,
           workspaceRootPath: payload.workspaceRootPath,
+          answerDisplayMode: payload.answerDisplayMode,
         }),
       };
     }),

@@ -19,8 +19,11 @@ import {
   getSemanticRolePresentation,
   getLayoutListItemKind,
   getLayoutListItemLevel,
+  shouldRenderTextRunAsDictationBlank,
+  resolveCompactChoiceListLayoutWithOptions,
   shouldHideLayoutListItemMarker,
   resolveTableColumnWidths,
+  type AnswerDisplayMode,
   type LayoutBlock,
   type LayoutStyleSheet,
   type LayoutResource,
@@ -56,7 +59,10 @@ export interface PdfExportPayload {
   styles?: LayoutStyleSheet;
   styleSettings?: StyleSettings;
   semanticRoleConfig?: LayoutSemanticRoleConfig;
+  answerDisplayMode?: AnswerDisplayMode;
 }
+
+const defaultExportTextColor = '#1f2937';
 
 function escapeHtml(value: string): string {
   return value
@@ -67,19 +73,25 @@ function escapeHtml(value: string): string {
     .replaceAll("'", '&#39;');
 }
 
-function buildTextRunStyle(run: TextRun, inheritedStyle = {}): string {
+function buildTextRunStyle(
+  run: TextRun,
+  inheritedStyle = {},
+  answerDisplayMode: AnswerDisplayMode = 'show',
+): string {
   const resolvedStyle = resolveQuickTextStyleForRun(run, inheritedStyle);
+  const isDictationBlank = shouldRenderTextRunAsDictationBlank(run, answerDisplayMode);
   const declarations = [
-    resolvedStyle.color ? `color:${resolvedStyle.color}` : '',
-    resolvedStyle.highlightColor
+    isDictationBlank ? 'color:transparent' : resolvedStyle.color ? `color:${resolvedStyle.color}` : '',
+    !isDictationBlank && resolvedStyle.highlightColor
       ? `background-color:${resolvedStyle.highlightColor}`
-      : resolvedStyle.backgroundColor
+      : !isDictationBlank && resolvedStyle.backgroundColor
         ? `background-color:${resolvedStyle.backgroundColor}`
         : '',
     run.marks.some((mark) => mark.type === 'italic') ? `font-style:italic` : '',
     resolvedStyle.fontFamily ? `font-family:${resolvedStyle.fontFamily}` : '',
     resolvedStyle.fontSize ? `font-size:${resolvedStyle.fontSize}px` : '',
     resolvedStyle.letterSpacing ? `letter-spacing:${resolvedStyle.letterSpacing}px` : '',
+    isDictationBlank ? '-webkit-text-fill-color:transparent' : '',
   ].filter(Boolean);
 
   return declarations.length > 0 ? ` style="${escapeHtml(declarations.join(';'))}"` : '';
@@ -204,7 +216,14 @@ function renderInlineText(text: string): string {
     .join('');
 }
 
-function applyMarks(content: string, run: TextRun): string {
+function applyMarks(
+  content: string,
+  run: TextRun,
+  answerDisplayMode: AnswerDisplayMode = 'show',
+  inheritedStyle = {},
+): string {
+  const isDictationBlank = shouldRenderTextRunAsDictationBlank(run, answerDisplayMode);
+  const blankUnderlineColor = resolveQuickTextStyleForRun(run, inheritedStyle).color ?? defaultExportTextColor;
   return run.marks.reduce((currentHtml, mark) => {
     switch (mark.type) {
       case 'bold':
@@ -212,7 +231,9 @@ function applyMarks(content: string, run: TextRun): string {
       case 'italic':
         return `<em>${currentHtml}</em>`;
       case 'underline':
-        return `<u>${currentHtml}</u>`;
+        return isDictationBlank
+          ? `<u style="text-decoration-color:${escapeHtml(blankUnderlineColor)}">${currentHtml}</u>`
+          : `<u>${currentHtml}</u>`;
       case 'strike':
         return `<s>${currentHtml}</s>`;
       case 'code':
@@ -225,7 +246,11 @@ function applyMarks(content: string, run: TextRun): string {
   }, content);
 }
 
-function renderTextRuns(textRuns: TextRun[], inheritedStyle = {}): string {
+function renderTextRuns(
+  textRuns: TextRun[],
+  inheritedStyle = {},
+  answerDisplayMode: AnswerDisplayMode = 'show',
+): string {
   return textRuns
     .map((run) => {
       const fragments = splitInlineEquations(run.text);
@@ -237,10 +262,10 @@ function renderTextRuns(textRuns: TextRun[], inheritedStyle = {}): string {
           }
           // 普通文本：HTML 转义 + 处理换行 + 应用 marks
           const escaped = escapeHtml(fragment.content).replaceAll('\n', '<br />');
-          return applyMarks(escaped, run);
+          return applyMarks(escaped, run, answerDisplayMode, inheritedStyle);
         })
         .join('');
-      return `<span${buildTextRunStyle(run, inheritedStyle)}>${content}</span>`;
+      return `<span${buildTextRunStyle(run, inheritedStyle, answerDisplayMode)}>${content}</span>`;
     })
     .join('');
 }
@@ -277,7 +302,11 @@ function getTableRowBaseHeightPx(
     : contract.blockStyles.table.rowHeight;
 }
 
-function renderListItemContent(item: LayoutListItem, inheritedStyle = {}): string {
+function renderListItemContent(
+  item: LayoutListItem,
+  inheritedStyle = {},
+  answerDisplayMode: AnswerDisplayMode = 'show',
+): string {
   const shouldHideMarker = shouldHideLayoutListItemMarker(item);
   const listItemClasses = [
     item.checked === null ? '' : 'task-list-item',
@@ -289,7 +318,7 @@ function renderListItemContent(item: LayoutListItem, inheritedStyle = {}): strin
     item.checked === null || shouldHideMarker
       ? ''
       : `<span class="task-list-checkbox">${item.checked ? '☑' : '☐'}</span>`;
-  return `<li${listItemClass} data-list-level="${getLayoutListItemLevel(item)}"${markerHiddenAttribute}>${checkedMark}${renderTextRuns(item.textRuns, inheritedStyle)}`;
+  return `<li${listItemClass} data-list-level="${getLayoutListItemLevel(item)}"${markerHiddenAttribute}>${checkedMark}${renderTextRuns(item.textRuns, inheritedStyle, answerDisplayMode)}`;
 }
 
 function renderListTreeNodes(
@@ -297,6 +326,7 @@ function renderListTreeNodes(
   ordered: boolean,
   start: number | null,
   inheritedStyle = {},
+  answerDisplayMode: AnswerDisplayMode = 'show',
   isRoot = false,
 ): string {
   const currentListKind = nodes[0] ? getLayoutListItemKind(nodes[0].item, ordered) : ordered ? 'ordered' : 'unordered';
@@ -306,13 +336,41 @@ function renderListTreeNodes(
   const childrenHtml = nodes
     .map((node) => {
       const nestedListHtml = node.children.length > 0
-        ? renderListTreeNodes(node.children, ordered, null, inheritedStyle)
+        ? renderListTreeNodes(node.children, ordered, null, inheritedStyle, answerDisplayMode)
         : '';
-      return `${renderListItemContent(node.item, inheritedStyle)}${nestedListHtml}</li>`;
+      return `${renderListItemContent(node.item, inheritedStyle, answerDisplayMode)}${nestedListHtml}</li>`;
     })
     .join('');
 
   return `<${tagName}${startAttribute}>${childrenHtml}</${tagName}>`;
+}
+
+function renderCompactChoiceList(
+  block: LayoutBlock,
+  inheritedStyle = {},
+  answerDisplayMode: AnswerDisplayMode = 'show',
+): string | null {
+  if (block.metadata.kind !== 'list') {
+    return null;
+  }
+
+  const compactChoiceLayout = resolveCompactChoiceListLayoutWithOptions(block.metadata.items, {
+    allowSequenceFromAnyLabel: (block.metadata.runtimeSlice?.startIndex ?? 0) > 0,
+  });
+  if (!compactChoiceLayout) {
+    return null;
+  }
+
+  const tagName = block.metadata.ordered ? 'ol' : 'ul';
+  const startAttribute = block.metadata.ordered && block.metadata.start !== null ? ` start="${block.metadata.start}"` : '';
+  const itemsHtml = compactChoiceLayout.items
+    .map(
+      (compactItem) =>
+        `<li class="choice-option-item" data-list-level="${getLayoutListItemLevel(compactItem.item)}"><span class="choice-option-label">${escapeHtml(compactItem.label)}</span><span class="list-item-text choice-option-text">${renderTextRuns(compactItem.contentTextRuns, inheritedStyle, answerDisplayMode)}</span></li>`,
+    )
+    .join('');
+
+  return `<${tagName}${startAttribute}>${itemsHtml}</${tagName}>`;
 }
 
 function renderBlock(
@@ -320,6 +378,7 @@ function renderBlock(
   styles?: LayoutStyleSheet,
   contract?: ResolvedStyleContract,
   semanticRoleConfig?: LayoutSemanticRoleConfig,
+  answerDisplayMode: AnswerDisplayMode = 'show',
 ): string {
   const inheritedStyle = resolveQuickTextStyleForBlock(block, styles);
   const semanticRoleLabelHtml = buildSemanticRoleLabelHtml(block, semanticRoleConfig);
@@ -338,31 +397,45 @@ function renderBlock(
             ? 'h3'
             : 'h4';
       const classNames = shouldLayoutBlockSpanAllColumns(block, contract) ? ['column-span-all'] : [];
-      return `<${tagName}${buildBlockAttributes(block, styles, contract, classNames, semanticRoleConfig)}>${semanticRoleLabelHtml}${renderTextRuns(block.textRuns, inheritedStyle)}</${tagName}>`;
+      return `<${tagName}${buildBlockAttributes(block, styles, contract, classNames, semanticRoleConfig)}>${semanticRoleLabelHtml}${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</${tagName}>`;
     }
     case 'toc':
       return '';
     case 'paragraph':
-      return `<p${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}${renderTextRuns(block.textRuns, inheritedStyle)}</p>`;
+      return `<p${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</p>`;
     case 'list': {
       if (block.metadata.kind !== 'list') {
         return '';
+      }
+      const compactChoiceHtml = renderCompactChoiceList(block, inheritedStyle, answerDisplayMode);
+      if (compactChoiceHtml) {
+        const compactChoiceLayout = resolveCompactChoiceListLayoutWithOptions(block.metadata.items, {
+          allowSequenceFromAnyLabel: (block.metadata.runtimeSlice?.startIndex ?? 0) > 0,
+        });
+        const rootAttributes = buildBlockAttributes(block, styles, contract, ['choice-option-list'], semanticRoleConfig);
+        const rootAttributesWithColumns = compactChoiceLayout
+          ? rootAttributes.includes(' style="')
+            ? rootAttributes.replace(' style="', ` style="--choice-column-count:${compactChoiceLayout.columns};`)
+            : `${rootAttributes} style="--choice-column-count:${compactChoiceLayout.columns}"`
+          : rootAttributes;
+        return compactChoiceHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${rootAttributesWithColumns}>`);
       }
       const rootListHtml = renderListTreeNodes(
         buildLayoutListTree(block.metadata.items),
         block.metadata.ordered,
         block.metadata.start,
         inheritedStyle,
+        answerDisplayMode,
         true,
       );
       return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>`);
     }
     case 'blockquote':
       return block.metadata.kind === 'blockquote'
-        ? `<blockquote${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract, semanticRoleConfig)).join('')}</blockquote>`
+        ? `<blockquote${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract, semanticRoleConfig, answerDisplayMode)).join('')}</blockquote>`
         : '';
     case 'code':
-      return `<pre${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}<code>${renderTextRuns(block.textRuns, inheritedStyle)}</code></pre>`;
+      return `<pre${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}<code>${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</code></pre>`;
     case 'equation':
       return block.metadata.kind === 'equation'
         ? `<div${buildBlockAttributes(block, styles, contract, ['equation-shell'], semanticRoleConfig)}>${semanticRoleLabelHtml}${renderEquationToHtml(block.metadata.value).html}</div>`
@@ -392,7 +465,7 @@ function renderBlock(
               const colSpan = cell.colSpan && cell.colSpan > 1 ? ` colspan="${cell.colSpan}"` : '';
               const rowSpan = cell.rowSpan && cell.rowSpan > 1 ? ` rowspan="${cell.rowSpan}"` : '';
               const widthPx = columnWidths[columnIndex];
-              return `<${tagName}${buildTableCellStyle(tableMeta.align[columnIndex] ?? null, widthPx, rowHeightPx)}${colSpan}${rowSpan}><div class="table-cell-content">${renderTextRuns(cell.textRuns, inheritedStyle)}</div></${tagName}>`;
+              return `<${tagName}${buildTableCellStyle(tableMeta.align[columnIndex] ?? null, widthPx, rowHeightPx)}${colSpan}${rowSpan}><div class="table-cell-content">${renderTextRuns(cell.textRuns, inheritedStyle, answerDisplayMode)}</div></${tagName}>`;
             })
             .join('');
 
@@ -407,7 +480,7 @@ function renderBlock(
 
       return renderImageBlock(block, semanticRoleConfig);
     case 'horizontalRule':
-      return '<hr />';
+      return '';
     default:
       return '';
   }
@@ -519,6 +592,7 @@ function renderPages(
   headerFooterContent: HeaderFooterContent = defaultStyleSettings.headerFooterContent,
   documentTitle = '未命名文档',
   semanticRoleConfig?: LayoutSemanticRoleConfig,
+  answerDisplayMode: AnswerDisplayMode = 'show',
 ): string {
   const allBlocks = pages.flatMap((page) => page.blocks);
   const tocItems = applyPageNumbersToTocItems(
@@ -531,7 +605,7 @@ function renderPages(
       resources: [],
       styles: { blockStyles: {}, textStyles: {} },
       template: { templateId: null, templateOverrides: {} },
-      viewState: { answerDisplayMode: 'show', zoom: 1, selectedNodeId: null },
+      viewState: { answerDisplayMode: 'show', answerBlockPlacementMode: 'inline', zoom: 1, selectedNodeId: null },
       meta: {
         sourceFormat: 'markdown',
         wordCount: 0,
@@ -575,7 +649,7 @@ function renderPages(
           continue;
         }
 
-        bodyParts.push(renderBlock(block, styles, page.contract, semanticRoleConfig));
+        bodyParts.push(renderBlock(block, styles, page.contract, semanticRoleConfig, answerDisplayMode));
       }
 
       const pageStyleDeclarations = [
@@ -620,6 +694,7 @@ export function buildExportHtml({
   styles,
   styleSettings,
   semanticRoleConfig,
+  answerDisplayMode = 'show',
 }: PdfExportPayload): string {
   const firstPage = pages[0];
   const pageSizeRule = firstPage
@@ -1034,6 +1109,41 @@ export function buildExportHtml({
 
       li.list-item-marker-hidden {
         list-style: none;
+      }
+
+      ul.choice-option-list,
+      ol.choice-option-list {
+        list-style: none;
+        display: grid;
+        grid-template-columns: repeat(var(--choice-column-count, 2), minmax(0, 1fr));
+        column-gap: 20px;
+        row-gap: var(--page-list-item-gap, 8px);
+        padding-left: 0;
+      }
+
+      li.choice-option-item {
+        list-style: none;
+        display: grid;
+        grid-template-columns: var(--choice-option-label-width, 22px) minmax(0, 1fr);
+        column-gap: 4px;
+        align-items: start;
+      }
+
+      ul.choice-option-list > li + li,
+      ol.choice-option-list > li + li {
+        margin-top: 0;
+      }
+
+      .choice-option-label {
+        width: var(--choice-option-label-width, 22px);
+        color: var(--page-list-marker, currentColor);
+        font-weight: 700;
+        line-height: inherit;
+        white-space: nowrap;
+      }
+
+      .choice-option-text {
+        min-width: 0;
       }
 
       .task-list-checkbox {
@@ -1607,7 +1717,7 @@ export function buildExportHtml({
     </style>
   </head>
   <body>
-    <div class="export-shell">${renderPages(pages, styles, styleSettings?.headerFooterContent, title, semanticRoleConfig)}</div>
+    <div class="export-shell">${renderPages(pages, styles, styleSettings?.headerFooterContent, title, semanticRoleConfig, answerDisplayMode)}</div>
   </body>
 </html>`;
 }

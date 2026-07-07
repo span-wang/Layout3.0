@@ -45,7 +45,7 @@ import {
   getMeasuredTextFragmentHeight,
 } from '../domMeasure/measurementCache';
 import { createDomMeasurePage, cloneRuntimeBlock } from '../domMeasure/pageBuilder';
-import { createListFragmentBlock, splitListItemTextAtOffset } from '../domMeasure/listSplit';
+import { createListContinuationBlock, createListFragmentBlock, splitListItemTextAtOffset } from '../domMeasure/listSplit';
 import { splitTableRowsAtIndex } from '../domMeasure/tableSplit';
 import { splitTextForAvailableLines } from '../domMeasure/textSplit';
 import {
@@ -835,20 +835,22 @@ function handleListBlockSplit(
 
   const remainingItems = [
     ...(remainingItem ? [remainingItem] : []),
-    ...block.metadata.items.slice(nextItemIndex + 1),
+    ...block.metadata.items.slice(nextItemIndex + (remainingItem ? 1 : 0)),
   ];
 
   if (remainingItems.length > 0) {
-    const remainingBlock = cloneRuntimeBlock(block, {
+    const remainingBlockBase = cloneRuntimeBlock(block, {
       id: `${block.id}-cell-list-remaining-${state.pages.length + 1}`,
       sourceRange: null,
       blockStyleOverrides: { ...block.blockStyleOverrides, spaceBefore: 0 },
-      metadata: {
-        ...block.metadata,
-        start: block.metadata.ordered ? (block.metadata.start ?? 1) + nextItemIndex : block.metadata.start,
-        items: remainingItems,
-      },
     });
+    const remainingBlock =
+      createListContinuationBlock(
+        remainingBlockBase,
+        remainingItems,
+        nextItemIndex,
+        state.pages.length + 2,
+      ) ?? remainingBlockBase;
     state.pages.push(state.currentPage);
     state.currentPage = createDomMeasurePage(state.pages.length + 1, contract);
     state.remainingHeight = contract.contentHeightPx;

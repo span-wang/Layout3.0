@@ -14,6 +14,8 @@ import {
   createLayoutDocumentFromMarkdown,
   createStableHash,
   deleteTopLevelBlockById,
+  findSelectedLayoutNodeInfo,
+  getRenderableLayoutBlocksForView,
   getLayoutBlockPlainText,
   insertEquationBlockAfterNode,
   insertImageBlockAfterNode,
@@ -59,6 +61,8 @@ import {
 } from '@/engine/style/quickTextStyle';
 import type { StyleSettings } from '@/engine/style/types';
 import type {
+  AnswerBlockPlacementMode,
+  AnswerDisplayMode,
   BlockStyleOverrides,
   BlockquoteStructureAction,
   BlockMergeReason,
@@ -1255,6 +1259,46 @@ function restoreLayoutDocumentSnapshot(state: DocumentSlice, document: LayoutDoc
   state.isDirty = true;
 }
 
+function syncLayoutSelectionForRenderableBlocks(state: DocumentSlice): void {
+  if (!state.layoutDocument) {
+    return;
+  }
+
+  const renderableBlocks = getRenderableLayoutBlocksForView(state.layoutDocument);
+  const selectedNodeId = state.layoutDocument.viewState.selectedNodeId;
+  if (selectedNodeId && !findSelectedLayoutNodeInfo(renderableBlocks, selectedNodeId)) {
+    // 当前选中节点已被答案显示规则隐藏或抽离，必须同步清空选中态，避免画布继续引用一个不存在的节点。
+    state.layoutDocument.viewState.selectedNodeId = null;
+    state.layoutDocument.viewState.tableSelection = null;
+    state.layoutDocument.viewState.blockSelection = null;
+    return;
+  }
+
+  const blockSelection = state.layoutDocument.viewState.blockSelection;
+  if (blockSelection) {
+    const visibleBlockIds = new Set(renderableBlocks.map((block) => block.id));
+    const nextBlockIds = blockSelection.blockIds.filter((blockId) => visibleBlockIds.has(blockId));
+    if (nextBlockIds.length < 2) {
+      state.layoutDocument.viewState.blockSelection = null;
+    } else if (nextBlockIds.length !== blockSelection.blockIds.length) {
+      state.layoutDocument.viewState.blockSelection = {
+        anchorBlockId: nextBlockIds[0] ?? blockSelection.anchorBlockId,
+        focusBlockId: nextBlockIds[nextBlockIds.length - 1] ?? blockSelection.focusBlockId,
+        blockIds: nextBlockIds,
+      };
+    }
+  }
+
+  const tableSelection = state.layoutDocument.viewState.tableSelection;
+  if (tableSelection && !visibleContainsTableBlock(renderableBlocks, tableSelection.tableBlockId)) {
+    state.layoutDocument.viewState.tableSelection = null;
+  }
+}
+
+function visibleContainsTableBlock(blocks: LayoutBlock[], tableBlockId: string): boolean {
+  return blocks.some((block) => block.id === tableBlockId && block.type === 'table');
+}
+
 function refreshDocumentMeta(state: DocumentSlice, blocks: LayoutBlock[]): void {
   const text = buildDocumentText(blocks);
   state.layoutDocument!.meta.wordCount = countWords(text);
@@ -1503,6 +1547,36 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       pushDocumentHistory(state);
       // 自定义语义块规则属于文档级配置，随 .layout 一起保存。
       state.layoutDocument.meta.semanticRoleConfig = normalizeSemanticRoleConfig(config);
+      state.layoutDocument.meta.updatedAt = new Date().toISOString();
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    }),
+  setAnswerDisplayMode: (mode: AnswerDisplayMode) =>
+    set((state) => {
+      if (!state.layoutDocument || state.layoutDocument.viewState.answerDisplayMode === mode) {
+        return;
+      }
+
+      pushDocumentHistory(state);
+      // 答案显示模式属于文档视图状态，需随 .layout 一起保存。
+      state.layoutDocument.viewState.answerDisplayMode = mode;
+      syncLayoutSelectionForRenderableBlocks(state);
+      state.layoutDocument.meta.updatedAt = new Date().toISOString();
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+    }),
+  setAnswerBlockPlacementMode: (mode: AnswerBlockPlacementMode) =>
+    set((state) => {
+      if (!state.layoutDocument || state.layoutDocument.viewState.answerBlockPlacementMode === mode) {
+        return;
+      }
+
+      pushDocumentHistory(state);
+      // 题后原位 / 文末汇总也是文档级视图规则，保存时要跟随工程文件。
+      state.layoutDocument.viewState.answerBlockPlacementMode = mode;
+      syncLayoutSelectionForRenderableBlocks(state);
       state.layoutDocument.meta.updatedAt = new Date().toISOString();
       state.isDirty = true;
       state.parseState = 'ready';

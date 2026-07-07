@@ -1,4 +1,6 @@
 import type {
+  AnswerBlockPlacementMode,
+  AnswerDisplayMode,
   BlockStyleOverrides,
   BlockquoteStructureAction,
   DocumentFormat,
@@ -107,6 +109,8 @@ export interface DocumentSlice {
   setLayoutDocument: (document: LayoutDocument) => void;
   updateSyntaxMappingConfig: (config: SyntaxMappingConfig) => void;
   updateSemanticRoleConfig: (config: LayoutSemanticRoleConfig) => void;
+  setAnswerDisplayMode: (mode: AnswerDisplayMode) => void;
+  setAnswerBlockPlacementMode: (mode: AnswerBlockPlacementMode) => void;
   scanSemanticKeywordRules: (payload?: {
     overwriteExisting?: boolean;
   }) => SemanticKeywordScanResult;

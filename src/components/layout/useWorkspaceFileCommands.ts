@@ -32,7 +32,7 @@ import {
   updateRecentFilePathPrefix,
 } from '@/services/RecentFilesService';
 import { useAppStore } from '@/store';
-import type { LayoutDocument, TocItem } from '@/engine/document-model';
+import { getRenderableLayoutBlocksForView, type LayoutDocument, type TocItem } from '@/engine/document-model';
 import type { PageLayout } from '@/engine/typesetting/types';
 import type { RecentFileEntry, WorkspaceDirectoryEntry } from '@/types/workspace';
 import { getBaseNameFromPath, isOpenableDocumentPath, isPathWithin, replacePathPrefix } from '@/utils/filePath';
@@ -609,6 +609,7 @@ export function useWorkspaceFileCommands({
         styles: layoutDocument.styles,
         styleSettings,
         semanticRoleConfig: layoutDocument.meta.semanticRoleConfig,
+        answerDisplayMode: layoutDocument.viewState.answerDisplayMode,
       });
       showMessage(`PDF 已导出到：${exportedPath}`);
     } catch (error) {
@@ -633,13 +634,14 @@ export function useWorkspaceFileCommands({
     try {
       const exportedPath = await exportCurrentDocumentAsDocx({
         pages: displayedPageLayouts,
-        blocks: layoutDocument.blocks,
+        blocks: getRenderableLayoutBlocksForView(layoutDocument),
         title: documentTitle,
         resources: layoutDocument.resources,
         styles: layoutDocument.styles,
         styleSettings,
         documentFilePath: filePath,
         workspaceRootPath,
+        answerDisplayMode: layoutDocument.viewState.answerDisplayMode,
       });
       showMessage(`DOCX 已导出到：${exportedPath}`);
     } catch (error) {

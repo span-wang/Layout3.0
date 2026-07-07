@@ -12,9 +12,15 @@
  */
 
 import {
+  CHOICE_OPTION_COLUMN_GAP_PX,
+  CHOICE_OPTION_LABEL_GAP_PX,
+  CHOICE_OPTION_LABEL_WIDTH_PX,
+  chunkCompactChoiceItems,
   getHeadingText,
   getLayoutBlockPlainText,
   getLayoutListItemLevel,
+  parseChoiceOptionPrefix,
+  resolveCompactChoiceListLayoutWithOptions,
   buildTocItemsFromBlocks,
   getTableCellColSpan,
   isCoveredTableCell,
@@ -1410,6 +1416,97 @@ function resolveListBlockStyle(
   };
 }
 
+function resolveCompactChoiceLayoutForBlock(block: ListLayoutBlock) {
+  return resolveCompactChoiceListLayoutWithOptions(block.metadata.items, {
+    allowSequenceFromAnyLabel: (block.metadata.runtimeSlice?.startIndex ?? 0) > 0,
+  });
+}
+
+function getCompactChoiceListItemTextWidthPx(
+  contract: ResolvedStyleContract,
+  columnCount: number,
+): number {
+  const columnWidth =
+    (getPaginationContentWidthPx(contract) - Math.max(0, columnCount - 1) * CHOICE_OPTION_COLUMN_GAP_PX) /
+    Math.max(1, columnCount);
+
+  return Math.max(
+    60,
+    Math.floor(columnWidth - CHOICE_OPTION_LABEL_WIDTH_PX - CHOICE_OPTION_LABEL_GAP_PX),
+  );
+}
+
+function estimateCompactChoiceListItemContentHeight(
+  item: LayoutListItem,
+  block: ListLayoutBlock,
+  contract: ResolvedStyleContract,
+  columnCount: number,
+  styles?: LayoutStyleSheet,
+  measuredTextLineBreaks?: MeasuredTextLineBreaks,
+): number {
+  const listStyle = resolveListBlockStyle(block, contract);
+  const itemText = item.textRuns.map((run) => run.text).join('');
+  const contentText = parseChoiceOptionPrefix(itemText)?.contentText ?? itemText;
+  const fontSize = getEffectiveListItemMaxFontSize({
+    item,
+    block,
+    styles,
+    fallback: listStyle.fontSize,
+  });
+  const lineHeight = resolveEffectiveTextLineHeight({
+    fontSize,
+    baseFontSize: contract.blockStyles.list.fontSize,
+    baseLineHeight: listStyle.lineHeight,
+  });
+  const measuredLineCount = measuredTextLineBreaks?.[item.id]?.length;
+  const lineCount = measuredLineCount ?? estimateTextLines(
+    contentText,
+    getCompactChoiceListItemTextWidthPx(contract, columnCount),
+    fontSize,
+    {
+      fontFamily: getEffectiveListItemFontFamily({
+        item,
+        block,
+        styles,
+      }),
+    },
+  );
+
+  return lineCount * lineHeight;
+}
+
+function estimateCompactChoiceListHeight(
+  block: ListLayoutBlock,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+  measuredTextLineBreaks?: MeasuredTextLineBreaks,
+): number | null {
+  const compactChoiceLayout = resolveCompactChoiceLayoutForBlock(block);
+  if (!compactChoiceLayout) {
+    return null;
+  }
+
+  const listStyle = resolveListBlockStyle(block, contract);
+  const rows = chunkCompactChoiceItems(block.metadata.items, compactChoiceLayout.columns);
+
+  return rows.reduce((totalHeight, row, rowIndex) => {
+    const rowHeight = Math.max(
+      ...row.map((item) =>
+        estimateCompactChoiceListItemContentHeight(
+          item,
+          block,
+          contract,
+          compactChoiceLayout.columns,
+          styles,
+          measuredTextLineBreaks,
+        ),
+      ),
+    );
+
+    return totalHeight + (rowIndex === 0 ? 0 : listStyle.itemGap) + rowHeight;
+  }, listStyle.marginTop + listStyle.marginBottom);
+}
+
 function estimateListItemHeight(
   item: LayoutListItem,
   fragmentItemIndex: number,
@@ -1514,7 +1611,36 @@ function estimateListItemsHeight(
   items: LayoutListItem[],
   contract: ResolvedStyleContract,
   styles?: LayoutStyleSheet,
+  measuredTextLineBreaks?: MeasuredTextLineBreaks,
 ): number {
+  const compactChoiceLayout =
+    block.metadata.items === items
+      ? resolveCompactChoiceLayoutForBlock(block)
+      : resolveCompactChoiceListLayoutWithOptions(items, {
+          allowSequenceFromAnyLabel: (block.metadata.runtimeSlice?.startIndex ?? 0) > 0,
+        });
+  if (compactChoiceLayout) {
+    const listStyle = resolveListBlockStyle(block, contract);
+    const rows = chunkCompactChoiceItems(items, compactChoiceLayout.columns);
+
+    return rows.reduce((totalHeight, row, rowIndex) => {
+      const rowHeight = Math.max(
+        ...row.map((item) =>
+          estimateCompactChoiceListItemContentHeight(
+            item,
+            block,
+            contract,
+            compactChoiceLayout.columns,
+            styles,
+            measuredTextLineBreaks,
+          ),
+        ),
+      );
+
+      return totalHeight + (rowIndex === 0 ? 0 : listStyle.itemGap) + rowHeight;
+    }, 0);
+  }
+
   return items.reduce(
     (total, item, itemIndex) =>
       total + estimateListItemHeight(item, itemIndex, block, contract, styles),
@@ -1528,11 +1654,79 @@ function estimateListBlockHeight(
   styles?: LayoutStyleSheet,
 ): number {
   const listStyle = resolveListBlockStyle(block, contract);
+  const compactChoiceHeight = estimateCompactChoiceListHeight(block, contract, styles);
+  if (compactChoiceHeight !== null) {
+    return compactChoiceHeight;
+  }
+
   return (
     listStyle.marginTop +
     estimateListItemsHeight(block, block.metadata.items, contract, styles) +
     listStyle.marginBottom
   );
+}
+
+function buildCompactChoiceListFragment(payload: {
+  block: ListLayoutBlock;
+  startItemIndex: number;
+  availableHeight: number;
+  fragmentIndex: number;
+  isCurrentPageEmpty: boolean;
+  contract: ResolvedStyleContract;
+  styles?: LayoutStyleSheet;
+  measuredTextLineBreaks?: MeasuredTextLineBreaks;
+}): ListFragmentBuildResult | null {
+  const { block, startItemIndex, availableHeight, fragmentIndex, isCurrentPageEmpty, contract, styles, measuredTextLineBreaks } = payload;
+  const compactChoiceLayout = resolveCompactChoiceLayoutForBlock(block);
+  if (!compactChoiceLayout) {
+    return null;
+  }
+
+  const listStyle = resolveListBlockStyle(block, contract);
+  const remainingItems = block.metadata.items.slice(startItemIndex);
+  const rows = chunkCompactChoiceItems(remainingItems, compactChoiceLayout.columns);
+  const fragmentItems: LayoutListItem[] = [];
+  let fragmentHeight = listStyle.marginTop + listStyle.marginBottom;
+  let nextItemIndex = startItemIndex;
+
+  for (const row of rows) {
+    const rowHeight = Math.max(
+      ...row.map((item) =>
+        estimateCompactChoiceListItemContentHeight(
+          item,
+          block,
+          contract,
+          compactChoiceLayout.columns,
+          styles,
+          measuredTextLineBreaks,
+        ),
+      ),
+    );
+    const candidateHeight = fragmentHeight + (fragmentItems.length === 0 ? 0 : listStyle.itemGap) + rowHeight;
+    if (candidateHeight > availableHeight && !(isCurrentPageEmpty && fragmentItems.length === 0)) {
+      break;
+    }
+
+    fragmentItems.push(...row);
+    fragmentHeight = candidateHeight;
+    nextItemIndex += row.length;
+  }
+
+  if (fragmentItems.length === 0) {
+    return null;
+  }
+
+  return {
+    block: createListFragmentBlock(
+      block,
+      fragmentItems,
+      startItemIndex,
+      fragmentIndex,
+      block.metadata.items.length,
+    ),
+    height: fragmentHeight,
+    nextItemIndex,
+  };
 }
 
 // PH2-20-block-split-rendering-adaptation-v1：列表片段构造器，一次性产出含完整 metadata.runtimeSlice 的片段。
@@ -1753,6 +1947,20 @@ function buildListFragment(payload: {
     measuredTextFragmentHeights,
     textFragmentMeasurementJobs,
   } = payload;
+  const compactChoiceLayout = resolveCompactChoiceLayoutForBlock(block);
+  if (compactChoiceLayout) {
+    return buildCompactChoiceListFragment({
+      block,
+      startItemIndex,
+      availableHeight,
+      fragmentIndex,
+      isCurrentPageEmpty,
+      contract,
+      styles,
+      measuredTextLineBreaks,
+    });
+  }
+
   const listStyle = resolveListBlockStyle(block, contract);
   const fragmentItems: LayoutListItem[] = [];
   let nextItemIndex = startItemIndex;

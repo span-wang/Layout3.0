@@ -13,12 +13,16 @@ import {
   applyPageNumbersToTocItems,
   buildHeadingPageNumberMap,
   buildTocItems,
+  getRenderableLayoutBlocksForView,
+  type LayoutBlock,
+  type LayoutImageResource,
   type TextRun,
 } from '@/engine/document-model';
-import { getDirectoryDisplayName } from '@/services/FileService';
+import { getDirectoryDisplayName, selectLocalImageFile } from '@/services/FileService';
 import { usePagination } from '@/hooks/usePagination';
 import { useResolvedStyleContract } from '@/hooks/useResolvedStyleContract';
 import { useAppStore } from '@/store';
+import { getBaseNameFromPath } from '@/utils/filePath';
 import type { AiGenerationRecord } from '@/types/ai';
 import type { CanvasTextSelectionState, WorkspaceDirectoryEntry } from '@/types/workspace';
 import type {
@@ -79,6 +83,23 @@ function areMeasuredTableRowHeightsEqual(
     currentKeys.length === nextKeys.length &&
     nextKeys.every((key) => currentHeights[key] === nextHeights[key])
   );
+}
+
+function findImageBlockById(blocks: LayoutBlock[], blockId: string): LayoutBlock | null {
+  for (const block of blocks) {
+    if (block.id === blockId && block.type === 'image' && block.metadata.kind === 'image') {
+      return block;
+    }
+
+    if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+      const nestedBlock = findImageBlockById(block.metadata.blocks, blockId);
+      if (nestedBlock) {
+        return nestedBlock;
+      }
+    }
+  }
+
+  return null;
 }
 
 export function AppShell(): JSX.Element {
@@ -155,6 +176,7 @@ export function AppShell(): JSX.Element {
   const updateLayoutNodeText = useAppStore((state) => state.updateLayoutNodeText);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
   const replaceMultipleLayoutNodeTexts = useAppStore((state) => state.replaceMultipleLayoutNodeTexts);
+  const updateLayoutImageAttributes = useAppStore((state) => state.updateLayoutImageAttributes);
   const insertLayoutMarkdownBlocks = useAppStore((state) => state.insertLayoutMarkdownBlocks);
   const mergeLayoutSelectedBlocks = useAppStore((state) => state.mergeLayoutSelectedBlocks);
   const undoLayoutDocument = useAppStore((state) => state.undoLayoutDocument);
@@ -188,6 +210,9 @@ export function AppShell(): JSX.Element {
   const currentDirectoryName = getDirectoryDisplayName(currentDirectoryPath);
   const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
   const selectedBlockIds = layoutDocument?.viewState.blockSelection?.blockIds ?? [];
+  const answerDisplayMode = layoutDocument?.viewState.answerDisplayMode ?? 'show';
+  // 答案隐藏会重排语义块，画布只需要在文档真实变化时重新拿派生块，避免分页写回造成测量层反复刷新。
+  const renderableDocumentBlocks = useMemo(() => getRenderableLayoutBlocksForView(layoutDocument), [layoutDocument]);
   const characterCount = layoutDocument?.meta.characterCount ?? 0;
   const {
     isSaving,
@@ -345,6 +370,79 @@ export function AppShell(): JSX.Element {
       });
     },
     [selectLayoutNode, setActiveRightPanelTab, setActiveTab],
+  );
+
+  const handleSelectResourceBlock = useCallback(
+    (blockId: string) => {
+      selectLayoutNode(blockId);
+      setActiveRightPanelTab('对象属性');
+      setActiveTab('资源');
+      setRequestedScrollToNodeId(blockId);
+      if (workspaceViewMode === 'source') {
+        setWorkspaceViewMode('split');
+      }
+      setCanvasTextSelection({
+        nodeId: blockId,
+        text: '',
+        selection: null,
+        isEditing: false,
+        draftTextRuns: null,
+      });
+    },
+    [selectLayoutNode, setActiveRightPanelTab, setActiveTab, setWorkspaceViewMode, workspaceViewMode],
+  );
+
+  const handleReplaceImageResource = useCallback(
+    async (resource: LayoutImageResource): Promise<void> => {
+      if (!layoutDocument) {
+        showMessage('当前没有可替换图片的文档');
+        return;
+      }
+
+      const imageBlock = findImageBlockById(layoutDocument.blocks, resource.blockId);
+      if (!imageBlock || imageBlock.metadata.kind !== 'image') {
+        showMessage('替换失败：没有找到关联的图片块');
+        return;
+      }
+
+      try {
+        const imagePath = await selectLocalImageFile();
+        const imageName = getBaseNameFromPath(imagePath);
+        const metadata = imageBlock.metadata;
+
+        // 资源面板替换图片只更换文件路径，保留原有尺寸、裁剪和环绕设置，避免意外改变排版结果。
+        updateLayoutImageAttributes({
+          nodeId: imageBlock.id,
+          src: imagePath,
+          alt: metadata.alt || imageName,
+          title: metadata.title ?? null,
+          widthPx: metadata.widthPx ?? null,
+          heightPx: metadata.heightPx ?? null,
+          lockAspectRatio: metadata.lockAspectRatio ?? true,
+          objectFit: metadata.objectFit ?? 'contain',
+          cropTopPx: metadata.cropTopPx ?? 0,
+          cropRightPx: metadata.cropRightPx ?? 0,
+          cropBottomPx: metadata.cropBottomPx ?? 0,
+          cropLeftPx: metadata.cropLeftPx ?? 0,
+          wrapMode: metadata.wrapMode ?? 'inline',
+          wrapSide: metadata.wrapSide ?? 'right',
+          showCaption: metadata.showCaption ?? false,
+          offsetX: metadata.offsetX ?? 0,
+          offsetY: metadata.offsetY ?? 0,
+        });
+        handleSelectResourceBlock(imageBlock.id);
+        showMessage(`已替换图片：${imageName}`);
+      } catch (error) {
+        if (error instanceof Error && error.message === '已取消选择图片') {
+          showMessage('已取消替换图片');
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : '替换图片失败';
+        showMessage(`替换图片失败：${message}`);
+      }
+    },
+    [handleSelectResourceBlock, layoutDocument, showMessage, updateLayoutImageAttributes],
   );
 
   const handleNavigateToNode = useCallback(
@@ -748,6 +846,10 @@ export function AppShell(): JSX.Element {
             onCreateLayoutFile={handleCreateLayoutFile}
             onOpenEntry={handleOpenEntry}
             onSelectOutlineItem={handleSelectOutlineItem}
+            documentResources={layoutDocument?.resources ?? []}
+            selectedResourceNodeId={selectedNodeId}
+            onSelectResourceBlock={handleSelectResourceBlock}
+            onReplaceImageResource={handleReplaceImageResource}
             onOpenRecentFile={handleOpenRecentFile}
             onRemoveRecentFile={handleRemoveRecentFile}
             onClearRecentFiles={handleClearRecentFiles}
@@ -814,11 +916,12 @@ export function AppShell(): JSX.Element {
             {shouldShowCanvas ? (
               <CanvasPane
                 documentTitle={layoutDocument?.title ?? '未命名文档'}
-                documentBlockCount={layoutDocument?.blocks.length ?? 0}
-                documentBlocks={layoutDocument?.blocks ?? []}
+                documentBlockCount={renderableDocumentBlocks.length}
+                documentBlocks={renderableDocumentBlocks}
                 documentResources={layoutDocument?.resources ?? []}
                 documentStyles={layoutDocument?.styles ?? { blockStyles: {}, textStyles: {} }}
                 semanticRoleConfig={layoutDocument?.meta.semanticRoleConfig}
+                answerDisplayMode={answerDisplayMode}
                 pageLayouts={displayedPageLayouts}
                 parseError={parseError}
                 parseState={parseState}

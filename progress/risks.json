@@ -311,6 +311,118 @@
       "description": "语义块模板如果一步扩到所有块类型、允许改变块高度，或与现有文档模板/主题同权叠加，会同时牵动分页高度、标题主题装饰、列表/引用外壳冲突和旧 `.layout` 文件迁移脏写风险。",
       "impactScope": "PH2-07 语义块模板 V1、LayoutDocument 块级样式状态、RightPanel 对象属性、CanvasPane 画布预览、HTML/PDF 导出、`.layout` 保存恢复、旧文件兼容",
       "currentHandling": "已完成 `PH2-07-semantic-block-template-v1`：当前已把风险收口为最小闭环并落地代码，只支持 `paragraph / heading / list / blockquote` 4 类块；内置 `默认语义框 / 侧边强调 / 浅色卡片 / 警示框` 4 种不改高度的块模板；块模板只接管外壳样式，普通块和语义块共用同一套模板库；旧文件只在运行时按“语义角色 -> 默认块模板”解析，不批量回填新字段；只有用户手动改块模板或触发语义前备份时才写入块级状态。后续若继续扩到更多块类型、可改高度模板或模板编辑器，需另拆小步并重新评估分页与主题冲突。"
+    },
+    {
+      "id": "RISK-040",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "试卷选项紧凑排版如果只改画布 CSS，而不统一导入识别、分页高度口径和导出链路，会造成“预览看起来变短，但分页仍按旧高度、导出又回退成一项一行”的结果，反而放大用户对排版结果的不信任。",
+      "impactScope": "PH2-22 试卷选项紧凑排版 V1、Markdown 导入、CanvasPane 画布预览、隐藏测量层、Typesetting Engine 分页估算、HTML/PDF 导出、DOCX 导出、旧 `.layout` 文档迁移",
+      "currentHandling": "已完成 `PH2-22-compact-choice-layout-v1`：当前修复不只改预览样式，而是已经共同覆盖导入识别、画布预览、隐藏测量层、分页估算、HTML/PDF 导出、DOCX 导出和旧文档手动合并迁移入口；紧凑排版 V1 继续严格收口在连续 `A. / B. / C. / D.` 一类短选项，默认按 2 列或 4 列自动排列，避免误伤普通列表与非题目段落。已完成 `PH2-22-choice-label-spacing-tighten-v1`：选项标签列宽和标签正文间距已同步收紧到画布预览、HTML/PDF 导出与分页估算共享口径，不再只停留在表面 CSS。通用 tab stop 编辑器、题型容器化和全文批量迁移继续后续拆步。"
+    },
+    {
+      "id": "RISK-041",
+      "date": "2026-07-06",
+      "type": "缺陷",
+      "description": "试题内容在真实来源里经常不是“题干一段、选项四段”或“标准列表项”，而是同一个题块里第一行题干、后面多行 A/B/C/D 选项。若导入层不拆分这类结构，`PH2-22` 的紧凑选项组能力虽然已经存在，但会因为吃不到结构化选项输入而失效。",
+      "impactScope": "PH2-22A 题干内多行选项拆分 V1、Markdown 导入、Document Model、CanvasPane 画布预览、Typesetting Engine 分页估算、HTML/PDF 导出、DOCX 导出",
+      "currentHandling": "已完成 `PH2-22-question-inline-choice-split-v1`：导入阶段现在会识别“首行题干 + 后续连续选项行”的同题块结构，并自动拆成题干段落块和紧凑选项块；该修复同时覆盖顶层题号列表项与普通多行段落入口，后续预览、分页和导出继续复用 `PH2-22` 已落地的紧凑选项组能力。普通多行段落仍保持原样，复杂题型、OCR 与旧 `.layout` 全文批量迁移继续后续拆步。"
+    },
+    {
+      "id": "RISK-042",
+      "date": "2026-07-06",
+      "type": "缺陷",
+      "description": "真实试卷里还经常出现“同一行内联 A/B/C 选项”和“题干前 2-3 行提示后才出现选项”的结构；如果导入识别仍只吃“首行题干 + 后续每行一个选项”，紧凑选项能力依然会在大量题面上失效。",
+      "impactScope": "PH2-22B 多行题干与同段内联选项兼容 V1、Markdown 导入、Document Model、CanvasPane 画布预览、Typesetting Engine 分页估算、HTML/PDF 导出、DOCX 导出",
+      "currentHandling": "已完成 `PH2-22-inline-and-multiline-choice-compat-v1`：导入阶段现在同时支持“题干前 1-3 行非选项内容 + 后续选项”、“同一行内联 `A. ... B. ... C. ...` 选项”，以及 `34.` 这类 Markdown 先解析成空题号列表项、后面题干和选项落到独立段落的特殊形状；识别后继续统一拆成题干块和选项块，后续渲染、分页和导出直接复用现有能力。复杂题型、OCR 与旧 `.layout` 全文批量迁移继续后续拆步。"
+    },
+    {
+      "id": "RISK-043",
+      "date": "2026-07-06",
+      "type": "缺陷",
+      "description": "分页引擎目前并不是单一路径：`estimatedMaxFill` 已能给列表片段写 `runtimeSlice.startIndex`，但 `domMeasure / offscreenMeasure / cellMeasure` 这几条分支仍沿用旧的列表片段构造方式。若续页片段缺少真实起始下标，第二页的 `C/D` 会被渲染层误判成新的普通列表，退回圆点样式。",
+      "impactScope": "PH2-22C 选项组分页续页兼容 V1、Typesetting Engine 列表续页片段、CanvasPane 画布预览、HTML/PDF 导出、DOCX 导出",
+      "currentHandling": "已完成 `PH2-22-choice-pagination-continuation-v1`：`domMeasure / offscreenMeasure / cellMeasure` 三条分页分支现在都已统一给列表片段和续页块写入真实的 `runtimeSlice.startIndex / endIndex / isContinuation / totalItems`，并同步修正剩余项入队下标；续页后的 `C/D` 不再被渲染层误判成新的普通列表。更大范围的分页分支统一治理可继续后续拆步。"
+    },
+    {
+      "id": "RISK-044",
+      "date": "2026-07-06",
+      "type": "缺陷",
+      "description": "表格自动适应列宽在内容总宽小于正文宽度时仍按“超过最小列宽的弹性宽度”分配余量，导致短词列停在 48px，而少数较宽列吃掉大部分页面宽度；随后行高估算按偏窄列宽换行，会把 `am / are / my` 这类短词误拆成两行。",
+      "impactScope": "PH2-10 表格自动适应、resolveTableAutoFitSize、导入预适应、默认表格尺寸写回、RightPanel 手动适应按钮、CanvasPane 画布预览、分页估算、HTML/PDF 导出",
+      "currentHandling": "已完成 `PH2-10-table-auto-fit-balanced-width-v1`：统一表格自动适应计算函数现在会在内容总宽小于正文宽度时，把剩余宽度均衡补给所有列，再用修正后的列宽估算行高；10 列短英文表头回归已覆盖，短词列不再卡在 48px 附近。本步未改拖拽交互、表格结构、分页主线或导出策略。"
+    },
+    {
+      "id": "RISK-045",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "DOCX 紧凑选项组若继续用无边框表格承载列布局，Word/WPS 编辑时仍会暴露表格结构、拖拽手柄和表格语义，和用户期望的“Word 原生制表位段落”不一致；但若直接把所有选项都改成制表位，也可能在长选项换行时出现列间挤压或绕排不稳定。",
+      "impactScope": "PH2-22D DOCX 选项组制表位导出 V1、src/services/exportDocx.ts、Word/WPS 二次编辑体验、DOCX XML 结构验证",
+      "currentHandling": "已完成 `PH2-22-docx-choice-tab-stop-export-v1`：DOCX 紧凑选项组已从无边框表格改为普通段落 `tabStops` + `Tab` 输出，短选项继续保持横向排列，且 XML 回归确认选项组不再生成 `w:tbl`。画布预览、HTML/PDF 导出、导入识别和分页算法不变。长选项的更高保真绕排和人工列距控制继续留到后续 DOCX 版式增强任务。"
+    },
+    {
+      "id": "RISK-046",
+      "date": "2026-07-06",
+      "type": "缺陷",
+      "description": "DOCX 选项组虽然已经写入 `w:tabs` 和 `w:tab`，但当前 `w:tab` 作为段落直接子节点输出，而不是 Word 更稳定识别的 run 内结构 `<w:r><w:tab/></w:r>`；在 Word/WPS 中可能表现为后续选项没有被制表位拉开，仍贴着前一项。",
+      "impactScope": "PH2-22F DOCX 选项组 run 内制表符兼容返修 V1、src/services/exportDocx.ts、DOCX XML 结构、Word/WPS 二次编辑体验",
+      "currentHandling": "已完成 `PH2-22-docx-choice-run-tab-compat-fix-v1`：保留段落制表位方案和 `tabStops`，只把选项间制表符改成 run 内 `<w:r><w:tab/></w:r>`，并加强 XML 回归验证。英文选项样例已抽查生成 run 内 tab；画布预览、HTML/PDF 导出、导入识别和分页算法不变。"
+    },
+    {
+      "id": "RISK-047",
+      "date": "2026-07-06",
+      "type": "返工",
+      "description": "选项组分页续页上一轮只保证了 `runtimeSlice.startIndex` 写回，但续页片段仍会按本片段文本长度重新判断是否适合紧凑排版；当 `C.` 选项较长时，`C/D` 续页片段会被判定为不紧凑并退回普通圆点列表。",
+      "impactScope": "PH2-22C 选项组分页续页兼容返工、choiceLayout 共享识别函数、CanvasPane 画布预览、Typesetting Engine 分页估算、HTML/PDF 导出、DOCX 导出",
+      "currentHandling": "已完成 `PH2-22-choice-pagination-continuation-rendering-v2`：共享选项组识别已允许续页片段在 `runtimeSlice.startIndex > 0` 时保持选项组身份；较长续页片段会降级为 1 列选项组，不再退回普通圆点列表。选项组整体禁止跨页的分页策略仍另拆后续任务。"
+    },
+    {
+      "id": "RISK-048",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "用户已明确要求彻底删除分割线；若只隐藏画布中的线而不同时收口 Markdown 导入、`.layout` 恢复、分页估算与导出链路，旧文档仍会保留 `horizontalRule` 数据并继续参与占高或导出，形成“预览没了但导出还有 / 当前文档重开又回来”的口径分叉。",
+      "impactScope": "PH2-23 分割线能力移除 V1、Markdown 导入、`.layout` 恢复、CanvasPane 画布预览、Typesetting Engine 分页估算、HTML/PDF 导出、DOCX 导出",
+      "currentHandling": "已完成 `PH2-23-remove-horizontal-rule-v1`：Markdown 导入不再生成 `horizontalRule`，旧 `.layout` 文档恢复时会自动清掉 legacy `horizontalRule`，Canvas 画布预览、HTML/PDF 导出和 DOCX 导出也已统一改为空输出兜底。标题装饰线、主题装饰线、分页符与分栏断点标记不在本步内，继续保持现状。"
+    },
+    {
+      "id": "RISK-049",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "答案显示模式与试卷答案解析位置如果只改画布展示，不同步收口分页输入、PDF/DOCX 导出、旧 `.layout` 恢复和原始块顺序重排，就会出现“预览已隐藏但导出仍显示 / 预览已文末汇总但分页仍按原位占高 / 重开文件后开关失效”的口径分叉。",
+      "impactScope": "PH2-24 答案显示与试卷解析位置 V1、LayoutViewState、CanvasPane 画布预览、Typesetting Engine 分页输入、HTML/PDF 导出、DOCX 导出、`.layout` 保存恢复",
+      "currentHandling": "已完成 `PH2-24-answer-display-and-solution-placement-v1`：视图状态持久化、预览分页输入、HTML/PDF/DOCX 导出和旧文档默认值规范化已经共同接通；默写挖空现在会在 `underline` 模式下隐藏真正的下划线内容并保留线，同时跳过 `1.`、`1、`、`（1）`、`(1)` 一类纯题号下划线；试卷/题集当前已支持顶层内置 `answer / explanation` 语义块的原位显示、文末统一和隐藏。自定义语义角色参与汇总与嵌套容器抽取继续留在后续任务。"
+    },
+    {
+      "id": "RISK-050",
+      "date": "2026-07-06",
+      "type": "缺陷",
+      "description": "A3 页面规格当前在预览与 DOCX 导出两端同时存在兼容缺陷：分页预览把不同纸张统一压到固定显示宽度后，A3 横向视觉上几乎与 A4 没有明显区分；DOCX 导出又把横向尺寸先在运行时样式契约里交换一次，再被 `docx` 库按 `landscape` 再交换一次，最终可能生成“横向标记 + 纵向宽高”的 `w:pgSz` 组合，导致 Word/WPS 打开后像默认纵向，或手动切横向后页面尺寸继续异常。",
+      "impactScope": "PH2-21B A3 页面规格兼容修正 V1、CanvasPane 分页预览缩放、styles.css 页面框、src/services/exportDocx.ts、DOCX XML 页面设置、Word/WPS 打开兼容性",
+      "currentHandling": "已完成 `PH2-21-a3-page-size-compat-fix-v1`：分页预览已改为按当前容器宽度自适应缩放，A3 / A4 / B5 会继续保持真实比例显示，不再被固定 `760px / 620px` 上限压成近似相同宽度；DOCX 页面规格输出已改为使用纸张原始尺寸 + 方向交给 `docx` 库生成，避免横向时重复交换宽高。定向回归已确认 A3 纵向输出 `w:w=\"16838\" w:h=\"23811\" w:orient=\"portrait\"`，A3 横向输出 `w:w=\"23811\" w:h=\"16838\" w:orient=\"landscape\"`。PDF、多栏 DOCX、复杂 Word 版式映射和主题高保真继续留到后续任务。"
+    },
+    {
+      "id": "RISK-051",
+      "date": "2026-07-06",
+      "type": "范围调整",
+      "description": "把自定义语义与嵌套容器内答案解析并入当前显示/文末汇总规则后，如果没有明确识别边界，就可能把只是在名称上碰巧含有“解析/答案”的普通自定义语义也一起收进来，或者在嵌套容器抽取时破坏原有正文结构与分页口径。",
+      "impactScope": "PH2-24A 答案显示与试卷解析位置扩展 V1、自定义语义角色识别、blockquote 嵌套块重排、CanvasPane 画布预览、Typesetting Engine 分页输入、HTML/PDF 导出、DOCX 导出",
+      "currentHandling": "已完成 `PH2-24A-answer-display-scope-extension-v1`：名称包含 `答案` 或 `解析` 的自定义语义角色已并入显示/隐藏与文末统一规则；`blockquote / 引用容器` 内部子块已支持递归抽取与隐藏；表格单元格、列表项内部和其他复杂容器仍暂不抽取，继续留待后续任务，以避免一次扩面过大。若后续需要显式配置参与语义或继续扩到更多容器，再单独拆后续任务。"
+    },
+    {
+      "id": "RISK-052",
+      "date": "2026-07-07",
+      "type": "缺陷",
+      "description": "答案隐藏或文末统一模式会从原始文档块派生出重排后的视图块；如果派生函数每次渲染都返回新的数组或新的嵌套块对象，分页 effect 会把它当成新输入反复写入分页结果，严重时导致 React 渲染循环并表现为画布白屏。",
+      "impactScope": "PH2-24B 答案隐藏白屏返修 V1、getRenderableLayoutBlocksForView、usePagination、AppShell、CanvasPane、Typesetting Engine 分页输入",
+      "currentHandling": "已完成 `PH2-24B-answer-hide-white-screen-fix-v1`：`usePagination` 和 `AppShell` 已分别缓存答案隐藏/文末统一模式下的视图块派生结果，文档对象未变化时分页输入和画布 `documentBlocks` 引用保持稳定，避免分页写回后再次触发同一轮分页与测量刷新。本步不改变答案识别范围、复杂容器抽取或导出策略；语义块定向回归、typecheck 与 build 均已通过。"
+    },
+    {
+      "id": "RISK-053",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "资源库面板若一步扩展为完整文件级资源管理器，会同时牵动本地文件复制/删除、字体授权、图片路径迁移、`.layout` 资源模型、预览资源协议和导出链路，容易造成资源记录与真实文件状态不一致。",
+      "impactScope": "PH3-11 资源库面板 V1、LeftPanel 资源板块、LayoutDocument.resources、图片块选中与替换、字体资源展示、CanvasPane 画布预览",
+      "currentHandling": "已完成 `PH3-11-resource-library-panel-v1`：左侧「资源」板块已收口为只消费现有 `LayoutDocument.resources` 的资源查看与图片定位/替换面板；图片可查看缩略图、定位到画布并替换文件路径，字体资源只读展示。本步未做资源入库、拖拽上传、删除磁盘文件、资源重命名、丢失扫描或 `.layout` 顶层结构变更，完整资源管理器继续后续另拆。"
     }
   ]
 }

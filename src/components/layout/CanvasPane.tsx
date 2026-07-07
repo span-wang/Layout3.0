@@ -21,6 +21,8 @@ import {
 import { Bold, Combine, Eraser, Highlighter, Italic, Strikethrough, Underline, X } from 'lucide-react';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import {
+  shouldRenderTextRunAsDictationBlank,
+  type AnswerDisplayMode,
   applyTextRunPatchToTextRuns,
   buildLayoutListTree,
   clearTextFormattingInTextRuns,
@@ -33,6 +35,7 @@ import {
   getSemanticRolePresentation,
   getLayoutListItemKind,
   getLayoutListItemLevel,
+  resolveCompactChoiceListLayoutWithOptions,
   getTocBlockDisplayTitle,
   getTextContentFromRuns,
   getVisibleTocItemsForBlock,
@@ -108,6 +111,7 @@ interface CanvasPaneProps {
   documentResources: LayoutResource[];
   documentStyles: LayoutStyleSheet;
   semanticRoleConfig?: LayoutSemanticRoleConfig;
+  answerDisplayMode: AnswerDisplayMode;
   pageLayouts: PageLayout[];
   parseError: string | null;
   parseState: ParseState;
@@ -147,6 +151,7 @@ interface BlockMeasurementCacheEntry {
 
 interface RenderListTreeOptions {
   block: LayoutBlock;
+  answerDisplayMode: AnswerDisplayMode;
   documentStyles: LayoutStyleSheet | null | undefined;
   nodes: LayoutListTreeNode[];
   selectedNodeId: string | null;
@@ -194,6 +199,8 @@ interface PageDisplayStyles {
   frameStyle: CSSProperties;
   pageStyle: CSSProperties;
 }
+
+const defaultQuickTextColor = '#344054';
 
 interface FloatingToolbarPosition {
   left: number;
@@ -417,15 +424,21 @@ function getFloatingFontFamilyLabel(fontFamilyGroups: FontFamilyGroup[], fontFam
   return fontFamily;
 }
 
-function buildTextRunStyle(run: TextRun, inheritedStyle: TextStyleOverrides = {}): CSSProperties {
+function buildTextRunStyle(
+  run: TextRun,
+  inheritedStyle: TextStyleOverrides = {},
+  answerDisplayMode: AnswerDisplayMode = 'show',
+): CSSProperties {
   const resolvedStyle = resolveQuickTextStyleForRun(run, inheritedStyle);
+  const isDictationBlank = shouldRenderTextRunAsDictationBlank(run, answerDisplayMode);
   return {
-    color: resolvedStyle.color,
-    backgroundColor: resolvedStyle.highlightColor ?? resolvedStyle.backgroundColor,
+    color: isDictationBlank ? 'transparent' : resolvedStyle.color,
+    backgroundColor: isDictationBlank ? undefined : resolvedStyle.highlightColor ?? resolvedStyle.backgroundColor,
     fontStyle: run.marks.some((mark) => mark.type === 'italic') ? 'italic' : undefined,
     fontFamily: resolvedStyle.fontFamily,
     fontSize: resolvedStyle.fontSize ? `${resolvedStyle.fontSize}px` : undefined,
     letterSpacing: resolvedStyle.letterSpacing ? `${resolvedStyle.letterSpacing}px` : undefined,
+    WebkitTextFillColor: isDictationBlank ? 'transparent' : undefined,
   };
 }
 
@@ -1036,7 +1049,15 @@ function renderInlineText(text: string, keyPrefix: string): ReactNode {
   });
 }
 
-function applyMarks(content: ReactNode, run: TextRun, keyPrefix: string): ReactNode {
+function applyMarks(
+  content: ReactNode,
+  run: TextRun,
+  keyPrefix: string,
+  answerDisplayMode: AnswerDisplayMode = 'show',
+  inheritedStyle: TextStyleOverrides = {},
+): ReactNode {
+  const isDictationBlank = shouldRenderTextRunAsDictationBlank(run, answerDisplayMode);
+  const blankUnderlineColor = resolveQuickTextStyleForRun(run, inheritedStyle).color ?? defaultQuickTextColor;
   return run.marks.reduce<ReactNode>((currentNode, mark, index) => {
     switch (mark.type) {
       case 'bold':
@@ -1044,7 +1065,14 @@ function applyMarks(content: ReactNode, run: TextRun, keyPrefix: string): ReactN
       case 'italic':
         return <em key={`${keyPrefix}-italic-${index}`}>{currentNode}</em>;
       case 'underline':
-        return <u key={`${keyPrefix}-underline-${index}`}>{currentNode}</u>;
+        return (
+          <u
+            key={`${keyPrefix}-underline-${index}`}
+            style={isDictationBlank ? { textDecorationColor: blankUnderlineColor } : undefined}
+          >
+            {currentNode}
+          </u>
+        );
       case 'strike':
         return <s key={`${keyPrefix}-strike-${index}`}>{currentNode}</s>;
       case 'code':
@@ -1070,6 +1098,7 @@ function renderTextRuns(
   textRuns: TextRun[],
   emptyLabel?: string,
   inheritedStyle: TextStyleOverrides = {},
+  answerDisplayMode: AnswerDisplayMode = 'show',
 ): ReactNode[] {
   if (textRuns.length === 0 && emptyLabel) {
     return [
@@ -1080,8 +1109,8 @@ function renderTextRuns(
   }
 
   return textRuns.map((run) => (
-    <span key={run.id} style={buildTextRunStyle(run, inheritedStyle)}>
-      {applyMarks(renderInlineText(run.text, run.id), run, run.id)}
+    <span key={run.id} style={buildTextRunStyle(run, inheritedStyle, answerDisplayMode)}>
+      {applyMarks(renderInlineText(run.text, run.id), run, run.id, answerDisplayMode, inheritedStyle)}
     </span>
   ));
 }
@@ -1158,6 +1187,7 @@ function buildListItemClassName(item: LayoutListItem): string {
 
 function renderListTreeNodes({
   block,
+  answerDisplayMode,
   documentStyles,
   nodes,
   selectedNodeId,
@@ -1236,12 +1266,13 @@ function renderListTreeNodes({
                     onCommit: onCommitEdit,
                     onCancel: onCancelEdit,
                   })
-              : renderTextRuns(item.textRuns, '空列表项', inheritedTextStyle)}
+              : renderTextRuns(item.textRuns, '空列表项', inheritedTextStyle, answerDisplayMode)}
           </span>
         </span>
         {node.children.length > 0 ? (
           <ChildListTag>{renderListTreeNodes({
             block,
+            answerDisplayMode,
             documentStyles,
             nodes: node.children,
             selectedNodeId,
@@ -1264,6 +1295,97 @@ function renderListTreeNodes({
             fallbackOrdered,
           })}</ChildListTag>
         ) : null}
+      </li>
+    );
+  });
+}
+
+function renderCompactChoiceListItems({
+  block,
+  answerDisplayMode,
+  documentStyles,
+  items,
+  selectedNodeId,
+  editingNodeId,
+  editingKind,
+  editingDraftTextRuns,
+  editingText,
+  activeSelection,
+  richEditorRef,
+  editorRef,
+  onSelectNode,
+  onPrepareSelectNode,
+  onStartEditing,
+  onSelectionChange,
+  onEditDraftTextRunsChange,
+  onEditTextChange,
+  onCommitEdit,
+  onCancelEdit,
+  onListItemContextMenu,
+}: Omit<RenderListTreeOptions, 'nodes' | 'fallbackOrdered'> & {
+  items: NonNullable<ReturnType<typeof resolveCompactChoiceListLayoutWithOptions>>['items'];
+}): ReactNode[] {
+  const inheritedTextStyle = resolveQuickTextStyleForBlock(block, documentStyles);
+
+  return items.map((compactItem) => {
+    const item = compactItem.item;
+    const itemNode = getEditableListItemNode(item);
+    const isEditingItem = editingNodeId === item.id;
+
+    return (
+      <li
+        key={item.id}
+        {...createSelectableTextNodeProps({
+          node: itemNode,
+          selectedNodeId,
+          onSelectNode,
+          onPrepareSelectNode,
+          onStartEditing,
+          className: [
+            buildListItemClassName(item),
+            'choice-option-item',
+            isEditingItem ? 'choice-option-item-editing' : '',
+          ].filter(Boolean).join(' '),
+        })}
+        data-list-level={getLayoutListItemLevel(item)}
+        onContextMenu={(event) => onListItemContextMenu(event, item.id)}
+      >
+        {isEditingItem ? (
+          <span className="list-item-text choice-option-text choice-option-text-editing">
+            {isRichTextCanvasEditorKind(editingKind ?? 'listItem')
+              ? (
+                <RichTextCanvasEditor
+                  nodeId={item.id}
+                  kind={editingKind ?? 'listItem'}
+                  textRuns={editingDraftTextRuns ?? item.textRuns}
+                  activeSelection={activeSelection}
+                  richEditorRef={richEditorRef}
+                  onSelectionChange={onSelectionChange}
+                  onDraftChange={onEditDraftTextRunsChange}
+                  onCommit={onCommitEdit}
+                  onCancel={onCancelEdit}
+                />
+              )
+              : renderBlockEditor({
+                  kind: editingKind ?? 'listItem',
+                  editorRef,
+                  editingText,
+                  onChange: onEditTextChange,
+                  onSelectionChange,
+                  onCommit: onCommitEdit,
+                  onCancel: onCancelEdit,
+                })}
+          </span>
+        ) : (
+          <>
+            <span className="choice-option-label" aria-hidden="true">
+              {compactItem.label}
+            </span>
+            <span className="list-item-text choice-option-text" data-measure-text-node-id={item.id}>
+              {renderTextRuns(compactItem.contentTextRuns, '空列表项', inheritedTextStyle, answerDisplayMode)}
+            </span>
+          </>
+        )}
       </li>
     );
   });
@@ -2599,6 +2721,7 @@ function renderBlock(
   tableSelection?: TableCellRangeSelection | null,
   documentStyles?: LayoutStyleSheet,
   semanticRoleConfig?: LayoutSemanticRoleConfig,
+  answerDisplayMode: AnswerDisplayMode = 'show',
   onListItemContextMenu?: (event: MouseEvent<HTMLElement>, itemId: string) => void,
   pageScale?: number,
   imageTextWrapBundle = false,
@@ -2687,7 +2810,7 @@ function renderBlock(
               onCommit: onCommitEdit,
               onCancel: onCancelEdit,
             })
-        : renderTextRuns(block.textRuns, '空标题', inheritedTextStyle);
+        : renderTextRuns(block.textRuns, '空标题', inheritedTextStyle, answerDisplayMode);
 
       if (depth === 1) {
         return (
@@ -2817,7 +2940,7 @@ function renderBlock(
                   onCommit: onCommitEdit,
                   onCancel: onCancelEdit,
                 })
-            : renderTextRuns(block.textRuns, '空文本块', inheritedTextStyle)}
+            : renderTextRuns(block.textRuns, '空文本块', inheritedTextStyle, answerDisplayMode)}
         </p>
       );
     case 'list': {
@@ -2826,16 +2949,62 @@ function renderBlock(
       }
 
       const ListTag = block.metadata.ordered ? 'ol' : 'ul';
+      const compactChoiceLayout = resolveCompactChoiceListLayoutWithOptions(block.metadata.items, {
+        allowSequenceFromAnyLabel: (block.metadata.runtimeSlice?.startIndex ?? 0) > 0,
+      });
+      const listStyle = compactChoiceLayout
+        ? ({
+            ...blockStyle,
+            ['--choice-column-count' as string]: String(compactChoiceLayout.columns),
+          } as CSSProperties)
+        : blockStyle;
+
+      if (compactChoiceLayout) {
+        return (
+          <ListTag
+            key={`list-${block.id}-${index}`}
+            {...getSelectableBlockProps('choice-option-list')}
+            start={block.metadata.ordered ? block.metadata.start ?? 1 : undefined}
+            style={listStyle}
+          >
+            {renderCompactChoiceListItems({
+              block,
+              answerDisplayMode,
+              documentStyles,
+              items: compactChoiceLayout.items,
+              selectedNodeId,
+              editingNodeId,
+              editingKind,
+              editingDraftTextRuns,
+              editingText,
+              activeSelection,
+              richEditorRef,
+              editorRef,
+              onSelectNode,
+              onPrepareSelectNode,
+              onStartEditing,
+              onSelectionChange,
+              onEditDraftTextRunsChange,
+              onEditTextChange,
+              onCommitEdit,
+              onCancelEdit,
+              onListItemContextMenu: onListItemContextMenu ?? (() => undefined),
+            })}
+          </ListTag>
+        );
+      }
+
       const listTree = buildLayoutListTree(block.metadata.items);
       return (
         <ListTag
           key={`list-${block.id}-${index}`}
           {...getSelectableBlockProps()}
           start={block.metadata.ordered ? block.metadata.start ?? 1 : undefined}
-          style={blockStyle}
+          style={listStyle}
         >
           {renderListTreeNodes({
             block,
+            answerDisplayMode,
             documentStyles,
             nodes: listTree,
             selectedNodeId,
@@ -2906,6 +3075,7 @@ function renderBlock(
               tableSelection,
               documentStyles,
               semanticRoleConfig,
+              answerDisplayMode,
               onListItemContextMenu,
               pageScale,
             ),
@@ -2945,7 +3115,7 @@ function renderBlock(
                     onCommit: onCommitEdit,
                     onCancel: onCancelEdit,
                   })
-              : renderTextRuns(block.textRuns, '空代码块', inheritedTextStyle)}
+              : renderTextRuns(block.textRuns, '空代码块', inheritedTextStyle, answerDisplayMode)}
           </code>
         </pre>
       );
@@ -3053,6 +3223,7 @@ function renderBlock(
                                     cell.textRuns,
                                     isRuntimeTableFragment ? undefined : '空单元格',
                                     inheritedTextStyle,
+                                    answerDisplayMode,
                                   )}
                             </div>
                             {shouldShowResizeHandles && cellIndex < row.cells.length - 1 && tableResizeState?.onStartTableColumnResize ? (
@@ -3260,12 +3431,7 @@ function renderBlock(
         </div>
       ) : null;
     case 'horizontalRule':
-      return (
-        <hr
-          key={`rule-${block.id}-${index}`}
-          {...getSelectableBlockProps('preview-rule')}
-        />
-      );
+      return null;
     default:
       return null;
   }
@@ -3276,9 +3442,7 @@ function createPageDisplayStyles(
   isCondensed: boolean,
   availableWidth: number | null,
 ): PageDisplayStyles {
-  const maxWidth = isCondensed ? 620 : 760;
-  const measuredWidth = availableWidth && availableWidth > 0 ? availableWidth : maxWidth;
-  const displayWidth = Math.min(page.contract.pageWidthPx, maxWidth, measuredWidth);
+  const displayWidth = resolvePageDisplayWidth(page.contract.pageWidthPx, isCondensed, availableWidth);
   const displayScale = displayWidth / page.contract.pageWidthPx;
   const displayHeight = page.contract.pageHeightPx * displayScale;
   const headerHeight = page.contract.marginsPx.top + page.contract.headerReservedPx;
@@ -3312,6 +3476,19 @@ function createPageDisplayStyles(
   };
 }
 
+// 分页预览要按当前容器宽度自适应，避免 A3 / A4 / B5 都被固定上限压成近似一样大。
+function resolvePageDisplayWidth(
+  pageWidthPx: number,
+  isCondensed: boolean,
+  availableWidth: number | null,
+): number {
+  const fallbackWidth = isCondensed ? 620 : 760;
+  const measuredWidth = availableWidth && availableWidth > 0 ? availableWidth : fallbackWidth;
+  const horizontalGutter = isCondensed ? 20 : 32;
+  const viewportWidth = measuredWidth > horizontalGutter ? measuredWidth - horizontalGutter : measuredWidth;
+  return Math.min(pageWidthPx, viewportWidth);
+}
+
 function CanvasPaneComponent({
   documentTitle,
   documentBlockCount,
@@ -3319,6 +3496,7 @@ function CanvasPaneComponent({
   documentResources,
   documentStyles,
   semanticRoleConfig,
+  answerDisplayMode,
   pageLayouts,
   parseError,
   parseState,
@@ -5151,9 +5329,7 @@ function CanvasPaneComponent({
             {pageLayouts.map((page) => {
               const pageTitle = getPageTitle(page.blocks, documentTitle);
               const { frameStyle, pageStyle } = createPageDisplayStyles(page, isCondensed, pageStackWidth);
-              const maxWidth = isCondensed ? 620 : 760;
-              const measuredWidth = pageStackWidth && pageStackWidth > 0 ? pageStackWidth : maxWidth;
-              const displayWidth = Math.min(page.contract.pageWidthPx, maxWidth, measuredWidth);
+              const displayWidth = resolvePageDisplayWidth(page.contract.pageWidthPx, isCondensed, pageStackWidth);
               const pageScale = displayWidth / page.contract.pageWidthPx;
               const renderedHeaderFooter = renderHeaderFooterContent(headerFooterContent, {
                 documentTitle,
@@ -5236,6 +5412,7 @@ function CanvasPaneComponent({
                               tableSelection,
                               documentStyles,
                               semanticRoleConfig,
+                              answerDisplayMode,
                               (event, itemId) => {
                                 event.preventDefault();
                                 event.stopPropagation();
@@ -5324,6 +5501,7 @@ function CanvasPaneComponent({
                     null,
                     documentStyles,
                     semanticRoleConfig,
+                    answerDisplayMode,
                     () => undefined,
                     1,
                   )}
@@ -5377,6 +5555,7 @@ function CanvasPaneComponent({
                     null,
                     documentStyles,
                     semanticRoleConfig,
+                    answerDisplayMode,
                     () => undefined,
                     1,
                   )}
@@ -5430,6 +5609,7 @@ function CanvasPaneComponent({
                     null,
                     documentStyles,
                     semanticRoleConfig,
+                    answerDisplayMode,
                     () => undefined,
                     1,
                   )}

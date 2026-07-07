@@ -1,5 +1,7 @@
 import { getTextContentFromRuns } from './operations';
+import { getSemanticRoleById } from './semanticRole';
 import type {
+  AnswerDisplayMode,
   LayoutBlock,
   LayoutDocument,
   LayoutListItem,
@@ -10,6 +12,15 @@ import type {
 } from './types';
 import { getLayoutListItemLevel } from './utils';
 import type { PageLayout } from '@/engine/typesetting/types';
+
+const solutionSemanticRoleIds = new Set(['answer', 'explanation']);
+const questionIndexLikePatterns = [
+  /^\d+$/u,
+  /^\d+[\.．、]$/u,
+  /^[（(]\d+[）)]$/u,
+  /^第[\d一二三四五六七八九十百千]+题$/u,
+  /^[一二三四五六七八九十百千]+[\.．、]$/u,
+];
 
 export type SelectedLayoutNodeKind = 'block' | 'listItem' | 'tableCell';
 
@@ -27,6 +38,114 @@ export interface SelectedBlockquoteContext {
   directChildBlock: LayoutBlock | null;
   directChildIndex: number;
   childCount: number;
+}
+
+function isAnswerExplanationRoleId(roleId: string | null | undefined, document: LayoutDocument): boolean {
+  if (!roleId) {
+    return false;
+  }
+
+  if (solutionSemanticRoleIds.has(roleId)) {
+    return true;
+  }
+
+  const role = getSemanticRoleById(roleId, document.meta.semanticRoleConfig);
+  return !!role?.name && /(答案|解析)/u.test(role.name);
+}
+
+export function isAnswerExplanationSemanticBlock(
+  block: LayoutBlock,
+  document: LayoutDocument,
+): boolean {
+  return isAnswerExplanationRoleId(block.semantic?.roleId, document);
+}
+
+function isQuestionIndexLikeUnderlineText(text: string): boolean {
+  const normalizedText = text.replace(/\s+/gu, '').trim();
+  if (!normalizedText) {
+    return false;
+  }
+
+  return questionIndexLikePatterns.some((pattern) => pattern.test(normalizedText));
+}
+
+export function shouldRenderTextRunAsDictationBlank(
+  run: TextRun,
+  answerDisplayMode: AnswerDisplayMode,
+): boolean {
+  if (answerDisplayMode !== 'underline') {
+    return false;
+  }
+
+  if (!run.marks.some((mark) => mark.type === 'underline')) {
+    return false;
+  }
+
+  // 试卷里常见的下划线题号（如 1. / （1））不应进入默写挖空。
+  if (isQuestionIndexLikeUnderlineText(run.text)) {
+    return false;
+  }
+
+  return run.text.trim().length > 0;
+}
+
+export function getRenderableLayoutBlocksForView(document: LayoutDocument | null): LayoutBlock[] {
+  if (!document) {
+    return [];
+  }
+
+  const answerDisplayMode = document.viewState.answerDisplayMode;
+  const answerBlockPlacementMode = document.viewState.answerBlockPlacementMode;
+
+  const partitionBlocksForAnswerDisplay = (
+    blocks: LayoutBlock[],
+  ): {
+    contentBlocks: LayoutBlock[];
+    solutionBlocks: LayoutBlock[];
+  } => {
+    const contentBlocks: LayoutBlock[] = [];
+    const solutionBlocks: LayoutBlock[] = [];
+
+    for (const block of blocks) {
+      if (isAnswerExplanationSemanticBlock(block, document)) {
+        solutionBlocks.push(block);
+        continue;
+      }
+
+      if (block.type === 'blockquote' && block.metadata.kind === 'blockquote') {
+        // 引用容器里的答案解析需要单独抽出来，但剩余正文仍要保留在原引用壳里继续分页和导出。
+        const nestedPartition = partitionBlocksForAnswerDisplay(block.metadata.blocks);
+        if (nestedPartition.contentBlocks.length > 0) {
+          contentBlocks.push({
+            ...block,
+            metadata: {
+              ...block.metadata,
+              blocks: nestedPartition.contentBlocks,
+            },
+          });
+        }
+        solutionBlocks.push(...nestedPartition.solutionBlocks);
+        continue;
+      }
+
+      contentBlocks.push(block);
+    }
+
+    return { contentBlocks, solutionBlocks };
+  };
+
+  if (answerDisplayMode === 'show' && answerBlockPlacementMode === 'inline') {
+    return document.blocks;
+  }
+
+  const partition = partitionBlocksForAnswerDisplay(document.blocks);
+  if (answerDisplayMode !== 'show') {
+    return partition.contentBlocks;
+  }
+
+  return partition.solutionBlocks.length > 0
+    ? [...partition.contentBlocks, ...partition.solutionBlocks]
+    : partition.contentBlocks;
 }
 
 export function findLayoutBlockById(blocks: LayoutBlock[], blockId: string): LayoutBlock | null {

@@ -22,6 +22,7 @@ import type {
   SemanticBlockPresetId,
 } from './types';
 import { normalizeImageWrapMode, resolveImageWrapSide } from './imageLayout';
+import { resolveCompactChoicePatternFromTexts } from './choiceLayout';
 import { applySemanticPresetToBlock, applySemanticToBlock, findSemanticKeywordPrefixMatch } from './semanticRole';
 import {
   createTextFragment,
@@ -1178,6 +1179,128 @@ function updateMergedTextBlockMetadata(block: LayoutBlock, textRuns: TextRun[]):
   return block;
 }
 
+function isSingleChoiceListBlock(block: LayoutBlock): block is LayoutBlock & {
+  metadata: LayoutBlock['metadata'] & { kind: 'list'; items: [LayoutListItem] };
+} {
+  return (
+    block.type === 'list' &&
+    block.metadata.kind === 'list' &&
+    block.metadata.items.length === 1 &&
+    getLayoutListItemLevel(block.metadata.items[0]) === 1 &&
+    block.metadata.items[0].checked === null
+  );
+}
+
+function getCompactChoiceCandidateBlockText(block: LayoutBlock): string {
+  if (block.type === 'paragraph' && block.metadata.kind === 'paragraph') {
+    return block.metadata.text;
+  }
+
+  if (isSingleChoiceListBlock(block)) {
+    return getTextContentFromRuns(block.metadata.items[0].textRuns);
+  }
+
+  return '';
+}
+
+function canMergeBlocksIntoCompactChoiceList(blocksToMerge: LayoutBlock[]): boolean {
+  if (
+    blocksToMerge.length < 2 ||
+    !blocksToMerge.every((block) => block.type === 'paragraph' || isSingleChoiceListBlock(block))
+  ) {
+    return false;
+  }
+
+  return !!resolveCompactChoicePatternFromTexts(
+    blocksToMerge.map((block) => getCompactChoiceCandidateBlockText(block).trim()),
+  );
+}
+
+function createCompactChoiceListItemFromBlock(
+  targetBlockId: string,
+  block: LayoutBlock,
+  itemIndex: number,
+): LayoutListItem {
+  const plainText = getCompactChoiceCandidateBlockText(block);
+  const itemId = `${targetBlockId}-choice-item-${itemIndex + 1}-${createTextFragment(plainText, 'item')}`;
+
+  if (block.type === 'paragraph' && block.metadata.kind === 'paragraph') {
+    return {
+      id: itemId,
+      sourceRange: null,
+      textRuns: block.textRuns.map((run) => ({
+        ...run,
+        id: `${itemId}-${run.id}`,
+        sourceRange: null,
+      })),
+      level: 1,
+      listKind: 'unordered',
+      checked: null,
+    };
+  }
+
+  if (isSingleChoiceListBlock(block)) {
+    const [item] = block.metadata.items;
+    return {
+      ...item,
+      id: itemId,
+      sourceRange: null,
+      textRuns: item.textRuns.map((run) => ({
+        ...run,
+        id: `${itemId}-${run.id}`,
+        sourceRange: null,
+      })),
+      level: 1,
+      listKind: 'unordered',
+      checked: null,
+    };
+  }
+
+  return {
+    id: itemId,
+    sourceRange: null,
+    textRuns: [],
+    level: 1,
+    listKind: 'unordered',
+    checked: null,
+  };
+}
+
+function mergeBlocksIntoCompactChoiceList(
+  blocks: LayoutBlock[],
+  blocksToMerge: LayoutBlock[],
+): BlockMergeResult {
+  const targetBlock = blocksToMerge[0];
+  const mergedBlock: LayoutBlock = {
+    id: targetBlock.id,
+    type: 'list',
+    sourceRange: null,
+    blockStyleRef: 'list',
+    blockStyleOverrides: {},
+    textRuns: [],
+    pagination: { ...targetBlock.pagination },
+    metadata: {
+      kind: 'list',
+      ordered: false,
+      start: null,
+      spread: false,
+      items: blocksToMerge.map((block, index) => createCompactChoiceListItemFromBlock(targetBlock.id, block, index)),
+    },
+  };
+  const removedBlockIds = new Set(blocksToMerge.slice(1).map((block) => block.id));
+  const nextBlocks = blocks
+    .map((block) => (block.id === targetBlock.id ? mergedBlock : block))
+    .filter((block) => !removedBlockIds.has(block.id));
+
+  return {
+    blocks: nextBlocks,
+    selectedNodeId: mergedBlock.metadata.kind === 'list' ? mergedBlock.metadata.items[0]?.id ?? mergedBlock.id : mergedBlock.id,
+    didUpdate: true,
+    reason: 'merged',
+    mergedCount: blocksToMerge.length,
+  };
+}
+
 export function mergeTopLevelTextBlocksByIds(
   blocks: LayoutBlock[],
   blockIds: string[],
@@ -1203,6 +1326,11 @@ export function mergeTopLevelTextBlocksByIds(
   const isContiguous = selectedEntries.every((entry, index) => entry.index === firstIndex + index);
   if (!isContiguous) {
     return { blocks, selectedNodeId: null, didUpdate: false, reason: 'nonContiguous', mergedCount: 0 };
+  }
+
+  const selectedBlocks = selectedEntries.map((entry) => entry.block);
+  if (canMergeBlocksIntoCompactChoiceList(selectedBlocks)) {
+    return mergeBlocksIntoCompactChoiceList(blocks, selectedBlocks);
   }
 
   if (!selectedEntries.every((entry) => isMergeableTextBlock(entry.block))) {

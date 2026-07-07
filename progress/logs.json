@@ -1,6 +1,858 @@
 {
   "entries": [
     {
+      "id": "LOG-432",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-11"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成资源库面板 V1",
+      "action": "资源真实列表/图片资源定位/图片替换/字体只读展示/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-11-resource-library-panel-v1`：1) 左侧「资源」板块已从占位空态升级为当前文档资源面板，会读取 `LayoutDocument.resources` 并显示真实资源数量；2) 图片资源按卡片展示缩略图、名称、路径和关联图片块，支持「定位到画布」并联动选中图片块、打开右侧对象属性；3) 图片资源支持「替换图片」，复用现有本地图片选择与图片属性写回链路，并保留原图片尺寸、裁剪、环绕、标题和偏移等版式字段；4) 字体资源先提供字体名、格式、来源路径等只读信息展示；5) 本步未扩展为完整文件级资源管理器，不做资源入库、拖拽上传、删除、重命名、丢失扫描或 `.layout` 顶层结构变更。",
+      "verification": [
+        "`src/components/layout/LeftPanel.tsx` 已接入图片与字体资源真实列表、资源计数、空态提示和图片资源操作按钮。",
+        "`src/components/layout/AppShell.tsx` 已接通资源图片块查找、画布定位、右侧对象属性选中联动和替换图片写回。",
+        "`src/constants/workspace.ts` 已同步更新资源板块提示文案。",
+        "`src/styles.css` 已补齐资源面板、资源卡片、缩略图、操作按钮和字体只读状态样式。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/LeftPanel.tsx",
+        "src/components/layout/AppShell.tsx",
+        "src/constants/workspace.ts",
+        "src/styles.css",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "资源丢失检查继续归属 `PH4-02` 导出检查面板；完整资源管理器、批量清理、资源入库、字体删除/重命名与授权台账后续另拆资源管理增强任务。"
+    },
+    {
+      "id": "LOG-431",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-24B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成答案隐藏白屏返修 V1",
+      "action": "视图块引用稳定/分页输入稳定/画布测量输入稳定/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-24B-answer-hide-white-screen-fix-v1`：1) `usePagination` 已用 `useMemo` 缓存 `getRenderableLayoutBlocksForView(layoutDocument)` 的结果，文档对象未变化时分页输入不再因为答案隐藏派生数组新引用而反复触发分页 effect；2) `AppShell` 已同步缓存传给 `CanvasPane` 的 `documentBlocks`，避免分页结果写回后画布测量层拿到无意义的新数组并反复刷新；3) 新增隐藏答案进入分页的定向回归，确认隐藏后的视图块可生成分页结果且分页结果不残留答案块；4) 本步未改变答案/解析识别规则、复杂容器抽取范围或导出策略。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，12 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-24B` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-052` 当前处理方式，记录答案隐藏白屏返修 V1 已完成。"
+      ],
+      "affectedFiles": [
+        "src/hooks/usePagination.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/engine/document-model/semanticRole.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需扩展答案抽取到更多复杂容器或治理所有派生选择器引用稳定性，再单独拆小步。"
+    },
+    {
+      "id": "LOG-430",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-11"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认资源库面板 V1 边界",
+      "action": "用户确认开工/资源板块现状定位/边界登记/风险记录",
+      "result": "用户要求完善资源板块功能。经确认，当前左侧「资源」板块仍是占位空态，但 `LayoutDocument.resources` 已保存图片与字体资源记录。本步按 `PH3-11-resource-library-panel-v1` 推进：先把资源板块升级为当前文档资源查看与图片定位面板，支持图片缩略图、资源信息、定位到画布和替换图片；字体资源先只读展示。本步不扩展为完整文件级资源管理器。",
+      "verification": [
+        "用户已回复「确定」，确认当前资源库面板 V1 边界可以执行。",
+        "`progress/tasks/phase-3.json` 已新增 `PH3-11` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-053`，记录资源面板若扩展为文件级资源管理器会牵动本地文件、资源模型和导出链路的范围风险。",
+        "`progress/tasks/phase-3.json` 已将旧小红书主图后续任务描述从 `PH3-11` 改为 AI 图片生成增强任务，避免任务编号歧义。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后实现资源面板真实列表、图片定位、图片替换和字体只读展示。"
+    },
+    {
+      "id": "LOG-429",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-24B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认答案隐藏白屏返修 V1 边界",
+      "action": "用户确认开工/缺陷定位/边界登记/风险记录",
+      "result": "用户反馈“修复语义块在进行答案隐藏的时候直接白屏”，定位到答案隐藏或文末统一模式下的视图块派生结果可能每轮渲染生成新引用，进而触发分页 effect 反复写入分页结果并导致画布白屏。本步按 `PH2-24B-answer-hide-white-screen-fix-v1` 进入最小返修：稳定分页和画布预览消费的视图块引用，不改变答案识别范围、复杂容器抽取或导出策略。",
+      "verification": [
+        "用户已回复“确定”，确认当前最小修复边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-24B` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-052`，记录答案隐藏后视图块引用不稳定可能触发渲染循环的缺陷风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后修复 `usePagination` / `AppShell` 的视图块派生引用稳定性，并补充定向回归。"
+    },
+    {
+      "id": "LOG-428",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-24A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成答案显示与试卷解析位置扩展 V1",
+      "action": "自定义语义并入/blockquote 递归抽取/预览测量层同步/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-24A-answer-display-scope-extension-v1`：1) 名称包含 `答案` 或 `解析` 的自定义语义角色，已经和内置 `answer / explanation` 一样参与显示/隐藏与文末统一；2) `blockquote / 引用容器` 内部的答案解析子块已支持递归抽取到文末或在隐藏模式下剥离，同时保留剩余正文壳继续预览、分页和导出；3) `AppShell` 与 `CanvasPane` 已统一切到消费视图重排后的块列表，避免嵌套抽取后测量层仍按旧结构工作；4) 表格单元格、列表项内部和其他复杂容器仍按边界暂不抽取。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，11 个测试全部 pass。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，4 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-24A` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-051` 当前处理方式，记录答案显示与试卷解析位置扩展 V1 已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/selectors.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/engine/document-model/semanticRole.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需继续扩到表格单元格、列表项内部或更多复杂容器，再单独拆后续任务。"
+    },
+    {
+      "id": "LOG-427",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-24A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认答案显示与试卷解析位置扩展 V1 边界",
+      "action": "用户确认开工/扩展边界登记/风险记录",
+      "result": "用户确认把上一轮未纳入范围并入当前能力。本步按 `PH2-24A-answer-display-scope-extension-v1` 推进：1) 自定义语义里，名称包含 `答案` 或 `解析` 的角色，一并纳入显示/隐藏与文末统一；2) 嵌套容器里先只并入 `blockquote / 引用容器` 内部的答案解析子块；3) 表格单元格、列表项内部和其他复杂容器暂不抽取，继续留后续任务。",
+      "verification": [
+        "用户已回复“确定”，确认当前扩展边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-24A` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-051`，记录自定义语义按名称并入与嵌套抽取扩面后的误伤/结构风险。",
+        "`progress/logs.json` 已追加本步边界确认日志。",
+        "开工前先执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后扩展自定义语义识别与 `blockquote` 内答案解析抽取/隐藏链路。"
+    },
+    {
+      "id": "LOG-426",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-24"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成答案显示与试卷解析位置 V1",
+      "action": "视图状态扩展/题号保护/预览分页接线/导出接线/右侧面板入口/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-24-answer-display-and-solution-placement-v1`：1) `LayoutViewState` 已新增答案解析放置位置字段，旧 `.layout` 文档打开时会默认回填 `inline`；2) 画布预览与分页输入已统一按当前视图状态消费顶层内置 `answer / explanation` 语义块，支持原位显示、文末统一和隐藏；3) 默写挖空已接入画布预览、HTML/PDF 导出与 DOCX 导出，共用同一条“下划线内容进入 underline 模式时隐藏文字但保留下划线”的规则；4) 已补题号保护，`1.`、`1、`、`（1）`、`(1)` 一类纯题号式下划线不会误判成默写内容；5) 右侧“页面设置 - 分页策略”已新增答案显示与答案解析位置的一键切换入口。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，9 个测试全部 pass。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，4 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-24` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-049` 当前处理方式，记录答案显示与试卷解析位置 V1 已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/types.ts",
+        "src/engine/document-model/selectors.ts",
+        "src/engine/document-model/syntaxMappingConfig.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/hooks/usePagination.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "src/services/exportHtml.ts",
+        "src/services/exportDocx.ts",
+        "src/engine/document-model/semanticRole.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需把自定义语义角色也纳入答案解析汇总，或继续做题型一体化容器，再单独拆后续任务。"
+    },
+    {
+      "id": "LOG-425",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-21B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 A3 页面规格兼容修正 V1",
+      "action": "预览缩放修正/DOCX 页面规格修正/XML 回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-21-a3-page-size-compat-fix-v1`：1) `CanvasPane` 分页预览不再用固定 `760px / 620px` 把不同纸张压成近似一样大，而是按当前容器宽度自适应缩放，A3 / A4 / B5 会继续保持真实页面比例显示；2) `exportDocx.ts` 生成 DOCX 页面规格时，横向页面不再把已交换过的运行时宽高再次交给 `docx` 库交换，A3 横向现在会输出兼容的 `w:pgSz w:w=\"23811\" w:h=\"16838\" w:orient=\"landscape\"`；3) `exportDocx.test.ts` 已补 A3 纵向/横向 XML 回归；4) 顺手补齐 `CanvasPane` 缺失的默认文字颜色常量，并清理 `semanticRole.test.ts` 的重复类型导入，恢复当前工作区 `typecheck` 与构建通过。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，4 个测试全部 pass。",
+        "手工烟测通过：`node --import tsx -` 抽查 A3 横向 DOCX 后，`document.xml` 中出现 `<w:pgSz w:w=\"23811\" w:h=\"16838\" w:orient=\"landscape\"/>`。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-21B` 更新为已完成，并补齐 `completedOn` 与验证项。",
+        "`progress/risks.json` 已更新 `RISK-050` 当前处理方式，记录本步已完成。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportDocx.ts",
+        "src/services/exportDocx.test.ts",
+        "src/engine/document-model/semanticRole.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需继续提升 DOCX 多栏、复杂 Word 页面设置映射或预览缩放模式，再按 `PH2-21` / 页面工作台增强任务继续拆步。"
+    },
+    {
+      "id": "LOG-424",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-21B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 A3 页面规格兼容修正 V1 边界",
+      "action": "用户确认开工/边界登记/风险记录",
+      "result": "用户先反馈“A3 前端显示不正确”，随后补充 DOCX 导出 A3 在 Word 中不兼容：导出后默认像纵向，手动切成横向又会继续出现页面尺寸异常。本步按 `PH2-21-a3-page-size-compat-fix-v1` 收口：同时修正分页预览的页面显示缩放，以及 DOCX 导出的页面规格输出，确保 A3 / A4 / B5 在前端预览中继续保持真实比例，且 A3 横向 DOCX 在 Word/WPS 中使用兼容的页面宽高与方向组合打开；不扩张到 PDF、分页算法、多栏 DOCX 或复杂版式增强。",
+      "verification": [
+        "用户已明确回复“确定”，确认当前 `PH2-21-a3-page-size-compat-fix-v1` 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-21B` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-050`，记录 A3 预览缩放与 DOCX 页面规格双端兼容风险。",
+        "`progress/logs.json` 已追加本步边界确认日志。",
+        "开工前需执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实现分页预览缩放修正、DOCX 页面规格输出修正和最小回归验证。"
+    },
+    {
+      "id": "LOG-423",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-24"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认答案显示与试卷解析位置 V1 边界",
+      "action": "用户确认开工/边界登记/风险记录",
+      "result": "用户已确认本步口径：默写内容以下划线为语义，在默写版中一键隐藏下划线内文字但保留下划线；试卷/题集继续使用内置 `答案 / 解析` 语义块，并支持一键隐藏/恢复，以及“题后原位显示 / 文末统一显示”两种放置位置。随后用户补充：部分试卷会用下划线标记题号，这类纯题号式下划线不能误判成默写内容。本步按 `PH2-24-answer-display-and-solution-placement-v1` 推进，先完成视图状态、预览分页、导出和最小操作入口闭环，不扩成完整题型容器。",
+      "verification": [
+        "用户已明确回复“默写内容以下划线为语义（即一键隐藏下划线的文字，但是下划线要保留），试卷/题集以语义”，并补充“部分试卷会用下划线标记题号，这个要避免被识别为默写”，确认当前边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-24` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-049`，记录只改表层显示或直接抽答案块会导致分页/导出口径分叉的风险。",
+        "`progress/logs.json` 已追加本步边界确认日志。",
+        "开工前需执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后实现视图状态、预览分页、导出和最小操作入口。"
+    },
+    {
+      "id": "LOG-422",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-23"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成分割线能力移除 V1",
+      "action": "导入收口/旧文档清洗/预览导出兜底/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-23-remove-horizontal-rule-v1`：1) Markdown 导入不再把 `thematicBreak / ---` 生成 `horizontalRule` 块；2) `normalizeLayoutDocumentSyntaxMappingConfig` 会在旧 `.layout` 文档恢复时自动清掉 legacy `horizontalRule`，让当前文档打开后就不再显示，并在后续保存时不再继续保留；3) Canvas 画布预览、HTML/PDF 导出和 DOCX 导出都已对 `horizontalRule` 做空输出兜底；4) 标题装饰线、主题装饰线、分页符与分栏断点标记保持不变。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，11 个测试全部 pass。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，6 个测试全部 pass。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，2 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-23` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-048` 当前处理方式，记录分割线能力移除已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/syntaxMappingConfig.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/services/exportDocx.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "src/engine/document-model/semanticRole.test.ts",
+        "src/services/exportDocx.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；如后续需要重新引入可配置的章节分隔块，再单独拆新的块类型设计任务。"
+    },
+    {
+      "id": "LOG-421",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-23"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认分割线能力移除 V1 边界",
+      "action": "用户确认开工/边界登记/范围调整风险记录",
+      "result": "用户明确要求“都要删除”。本步按 `PH2-23-remove-horizontal-rule-v1` 推进：不只隐藏画布里的线，而是同步从 Markdown 导入、`.layout` 恢复、画布预览、分页估算与 HTML/PDF/DOCX 导出链路取消 `horizontalRule`。现有文档中的分割线打开后不再显示，后续保存时也不再继续保留；后续新导入文档同样不再生成该类块。",
+      "verification": [
+        "用户已回复“都要删除”，确认当前 `PH2-23-remove-horizontal-rule-v1` 边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-23` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-048`，记录只隐藏样式会导致数据、分页和导出口径分叉的范围调整风险。",
+        "`progress/logs.json` 已追加本步边界确认日志。",
+        "开工前已执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后改造导入、恢复、预览、分页与导出链路，彻底取消 `horizontalRule`。"
+    },
+    {
+      "id": "LOG-420",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成选项组续页样式识别返工 V2",
+      "action": "共享选项识别修复/分页续页回归/截图式探针/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-22-choice-pagination-continuation-rendering-v2`：1) `choiceLayout` 共享识别函数现在允许续页片段在 `runtimeSlice.startIndex > 0` 时保持选项组身份；2) 当续页 C/D 中有较长选项导致无法继续 2 列/4 列紧凑排版时，会降级为 1 列选项组，而不是退回普通圆点列表；3) Canvas 画布预览、HTML/PDF 导出、DOCX 导出和分页估算继续复用同一识别函数；4) 已补充 `max-fill-v1` 与三条测量分页分支的续页回归，覆盖较长 C 选项。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\typesetting\\algorithms\\listContinuationCompatibility.test.ts`，4 个测试全部 pass。",
+        "截图式探针确认：`C. What's your phone number / D. How are you` 续页片段 `compact? true` 且 `columns 1`。",
+        "DOCX 回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，1 个测试 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-22C` 返工边界更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-047` 当前处理方式，记录续页选项组样式识别返工已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/choiceLayout.ts",
+        "src/engine/typesetting/algorithms/listContinuationCompatibility.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需选项组整体禁止跨页，另拆 keep-together 分页策略任务。"
+    },
+    {
+      "id": "LOG-419",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22F"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 DOCX 选项组 run 内制表符兼容返修 V1",
+      "action": "DOCX 制表符 XML 兼容返修/XML 回归加强/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-22-docx-choice-run-tab-compat-fix-v1`：1) DOCX 紧凑选项组继续使用 Word 原生段落制表位，不回退表格；2) 选项间制表符已从段落直接子节点改为 run 内 `<w:r><w:tab/></w:r>`，提升 Word/WPS 识别稳定性；3) 现有 `tabStops`、2 列/4 列选项排列、选项标签加粗和正文 TextRun 样式映射保持不变；4) XML 回归已加强为断言 run 内 tab，并继续确认选项组不生成 `w:tbl`；5) 画布预览、HTML/PDF 导出、导入识别和分页算法未改变。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，1 个测试 pass。",
+        "英文选项 XML 抽查通过：截图同类 `A/B/C/D` 选项已输出 `<w:r><w:tab/></w:r>`。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-22F` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-046` 当前处理方式，记录 run 内 tab 兼容返修已完成。",
+        "`progress/config.json` 已更新 `export-pipeline` 模块摘要，纳入 DOCX 选项组 run 内 tab 返修结果。"
+      ],
+      "affectedFiles": [
+        "src/services/exportDocx.ts",
+        "src/services/exportDocx.test.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；用户重新导出 DOCX 后，选项间制表位应按 Word/WPS 识别的 run 内 tab 拉开。"
+    },
+    {
+      "id": "LOG-418",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22E"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成选项标签间距收紧 V1",
+      "action": "选项组样式收紧/分页估算口径同步/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-22-choice-label-spacing-tighten-v1`：1) 紧凑选项组标签列宽从 36px 收紧为 22px；2) 标签与正文之间的内部间距从 8px 收紧为 4px；3) 画布预览与 HTML/PDF 导出样式已同步，`A.` 与 `you` 之间不再保留明显过宽空白；4) 分页估算继续消费共享常量，收紧后换行宽度口径与预览/导出一致；5) 选项列数、导入识别、DOCX 制表位导出和题型结构未改变。",
+      "verification": [
+        "旧间距残留扫描通过：未发现选项标签样式继续使用旧 `36px / 8px` 口径。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-22E` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-040` 当前处理方式，记录选项标签间距收紧已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/choiceLayout.ts",
+        "src/styles.css",
+        "src/services/exportHtml.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需人工控制选项列距、标签宽度或选项列数，再拆样式设置增强任务。"
+    },
+    {
+      "id": "LOG-417",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认选项组续页样式识别返工 V2 边界",
+      "action": "用户确认开工/返工边界登记/风险记录",
+      "result": "用户反馈选项跨页仍未修复。定位确认：上一轮已经补齐续页片段 `runtimeSlice.startIndex`，但续页 `C/D` 会重新按本片段文本长度判断是否适合紧凑排版，`C. What's your phone number` 较长时导致整个续页片段退回普通圆点列表。本步按 `PH2-22-choice-pagination-continuation-rendering-v2` 推进：续页片段只要仍是连续后续选项标签，就继续保持选项组身份；较长时可降级为 1 列选项组，但不退回圆点列表。",
+      "verification": [
+        "用户已回复“确定”，确认当前返工边界可以执行。",
+        "`progress/tasks/phase-2.json` 已更新 `PH2-22C` 执行边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-047`，记录续页片段按本片段长度重判导致回退普通列表的返工风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后修复续页选项组识别，让跨页后的 C/D 保持选项组样式。"
+    },
+    {
+      "id": "LOG-416",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22F"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 DOCX 选项组 run 内制表符兼容返修 V1 边界",
+      "action": "用户确认开工/边界登记/风险记录",
+      "result": "用户反馈 DOCX 导出的选项没有有效 tab，截图中 B/D 仍贴着前一项。定位确认：当前 XML 虽有 `<w:tab/>`，但它作为段落直接子节点输出，Word/WPS 对这种结构识别不稳定。本步按 `PH2-22-docx-choice-run-tab-compat-fix-v1` 推进：保留段落 `tabStops` 方案，只把选项间 tab 改为 run 内 `<w:r><w:tab/></w:r>`，并加强 XML 回归。",
+      "verification": [
+        "用户已回复“确定”，确认当前实现边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-22F` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-046`，记录段落直接子节点 `w:tab` 在 Word/WPS 中不稳定的兼容风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后把 DOCX 选项间制表符改成 run 内 tab 并补强 XML 回归。"
+    },
+    {
+      "id": "LOG-415",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22E"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认选项标签间距收紧 V1 边界",
+      "action": "用户确认开工/边界登记",
+      "result": "用户确认修复紧凑选项组中 `A.` 与选项正文之间空白过大的问题。本步按 `PH2-22-choice-label-spacing-tighten-v1` 推进：只收紧选项标签列宽和标签正文间距，并同步画布预览、HTML/PDF 导出与分页估算口径；不改选项列数、导入识别、DOCX 制表位导出或题型结构。",
+      "verification": [
+        "用户已回复“确定”，确认当前实现边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-22E` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后收紧紧凑选项组标签列宽、内部间距和导出口径。"
+    },
+    {
+      "id": "LOG-414",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22D"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 DOCX 选项组制表位导出 V1",
+      "action": "DOCX 选项组导出结构替换/XML 回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-22-docx-choice-tab-stop-export-v1`：1) `src/services/exportDocx.ts` 中紧凑选项组不再生成无边框 Word 表格，而是按选项行生成普通段落；2) 段落使用 Word 原生 `tabStops` 与真实 `Tab` 分隔 A/B/C/D，继续复用现有 2 列/4 列选项识别口径；3) 选项标签继续加粗，正文继续复用现有 TextRun 样式映射；4) 画布预览、HTML/PDF 导出、导入识别和分页算法保持不变；5) 已新增 DOCX XML 回归，确认选项组包含 `w:tabs / w:tab` 且不再生成 `w:tbl`。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，1 个测试 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-22D` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-045` 当前处理方式，记录 DOCX 选项组制表位导出已完成。",
+        "`progress/config.json` 已更新 `export-pipeline` 模块摘要，纳入 DOCX 选项组制表位导出结果。"
+      ],
+      "affectedFiles": [
+        "src/services/exportDocx.ts",
+        "src/services/exportDocx.test.ts",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需人工列距、长选项绕排或复杂题型 Word 高保真，再继续拆 DOCX 版式增强任务。"
+    },
+    {
+      "id": "LOG-413",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22D"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 DOCX 选项组制表位导出 V1 边界",
+      "action": "用户确认开工/边界登记/风险记录",
+      "result": "用户确认将 DOCX 选项组导出从无边框表格改为 Word 原生制表位。本步按 `PH2-22-docx-choice-tab-stop-export-v1` 推进：只替换 `src/services/exportDocx.ts` 中紧凑选项组的 DOCX 输出结构，继续复用现有选项组识别、2 列/4 列排列和 TextRun 样式映射；不改画布预览、HTML/PDF 导出、导入规则或分页算法。",
+      "verification": [
+        "用户已回复“确定”，确认当前实现边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-22D` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-045`，记录从无边框表格切换到制表位时需要控制长选项绕排风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后把 DOCX 选项组导出改为段落制表位并补 XML 烟测。"
+    },
+    {
+      "id": "LOG-412",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成表格自适应列宽均衡分配 V1",
+      "action": "表格自动适应算法修复/短英文表头回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-10-table-auto-fit-balanced-width-v1`：1) `resolveTableAutoFitSize` 的列宽适配逻辑已修复，当内容总宽小于正文宽度时，不再只按“超过最小列宽的弹性宽度”倾斜分配剩余空间，而是把余量均衡补给所有列；2) 行高继续基于修正后的列宽估算，避免短词列过窄后把 `am / are / my` 一类内容误拆成多行；3) 现有默认自适应、右侧 `适应最佳行高列宽` 按钮、导入预适应、分页估算和导出链路继续复用同一个计算函数；4) 本步未改拖拽行高列宽、表格结构、分页主线或导出策略。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\tableLayout.test.ts`，1 个测试 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-10-table-auto-fit-balanced-width-v1` 边界卡更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-044` 当前处理方式，记录表格自适应列宽均衡分配修复已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/tableLayout.ts",
+        "src/engine/document-model/tableLayout.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需列宽锁定、自动适应开关或高级表格布局策略，再按 `PH2-10` 后续小步继续拆。"
+    },
+    {
+      "id": "LOG-411",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成选项组分页续页兼容 V1",
+      "action": "列表 runtimeSlice 统一/剩余项入队修正/分页回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-22-choice-pagination-continuation-v1`：1) `domMeasure/listSplit.ts` 已新增统一的列表 `runtimeSlice` 构造，让列表片段和续页剩余块都能写入 `startIndex / endIndex / fragmentIndex / totalItems / isContinuation`；2) `domMeasure / offscreenMeasure / cellMeasure` 三条分页分支的列表续页逻辑已统一复用该构造器，不再丢失原始起始下标；3) 同时修正了这些分支里剩余列表项重新入队时的旧 `slice(nextItemIndex + 1)` 逻辑，避免在没有拆出 `remainingItem` 的情况下直接跳过下一项；4) 分页后的第二页 `C/D` 现在会继续保留选项组身份，画布预览和导出不再退回圆点列表。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\typesetting\\algorithms\\listContinuationCompatibility.test.ts`，3 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-22C` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-043` 当前处理方式，记录分页续页兼容修复已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/typesetting/algorithms/domMeasure/listSplit.ts",
+        "src/engine/typesetting/algorithms/domMeasure/index.ts",
+        "src/engine/typesetting/algorithms/offscreenMeasure/index.ts",
+        "src/engine/typesetting/algorithms/cellMeasure/index.ts",
+        "src/engine/typesetting/algorithms/listContinuationCompatibility.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 顺序同步展示文档；后续如需继续统一所有分页分支的片段结构，可再拆分页治理任务。"
+    },
+    {
+      "id": "LOG-410",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-10"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认表格自适应列宽均衡分配 V1 边界",
+      "action": "用户确认开工/边界登记/风险记录",
+      "result": "用户反馈表格的自适应行高列宽不正确，截图中短英文表头被挤成多行，而 `your` 等少数列异常偏宽。定位确认：`resolveTableAutoFitSize` 当前在内容总宽小于正文宽度时，仍按“超过最小列宽的弹性宽度”分配剩余空间，短词列会停在 48px，少数较宽列吃掉大部分余量；行高随后按这些偏窄列重新估算，导致 `am / are / my` 这类短词误换行。本步按 `PH2-10-table-auto-fit-balanced-width-v1` 推进：只修统一表格自动适应计算口径，让剩余宽度更均衡进入所有列，并补多列短英文表头回归。",
+      "verification": [
+        "用户已回复“确定”，确认当前实现边界可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-10` 下新增 `PH2-10-table-auto-fit-balanced-width-v1` 边界卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-044`，记录自动适应列宽分配过度倾斜导致短词误换行的缺陷风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后修复 `resolveTableAutoFitSize` 的列宽余量分配，并补定向回归验证。"
+    },
+    {
+      "id": "LOG-409",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认选项组分页续页兼容 V1 边界",
+      "action": "用户确认开工/边界登记/风险记录",
+      "result": "用户反馈试卷选项组分页后，第 1 页仍保持 `A/B` 紧凑选项，但第 2 页的 `C/D` 退回成普通圆点列表。定位确认：`estimatedMaxFill` 已写列表片段 `runtimeSlice.startIndex`，但 `domMeasure / offscreenMeasure / cellMeasure` 这几条分页分支仍在沿用旧的列表片段构造方式。本步按 `PH2-22-choice-pagination-continuation-v1` 推进：统一修复分页续页片段的 `runtimeSlice` 与真实起始下标写回，让第二页继续保持选项组身份。",
+      "verification": [
+        "用户已回复“确定”，确认当前实现边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-22C` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-043`，记录分页分支对续页起始下标写回不一致的风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后统一修复列表续页片段的 `runtimeSlice.startIndex` 和 `startItemIndex` 传值，并补分页回归。"
+    },
+    {
+      "id": "LOG-408",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成多行题干与同段内联选项兼容 V1",
+      "action": "顺序选项片段识别/特殊 AST 兼容/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-22-inline-and-multiline-choice-compat-v1`：1) `fromMarkdown.ts` 里的题干选项识别已从“按行”升级为“按顺序选项片段”识别，现已同时支持题干前 1-3 行非选项内容和同一行内联 `A/B/C` 选项；2) 识别逻辑已把“能不能拆成选项”与“能不能做紧凑多列排版”分开，较长选项会先被正确拆成题干块和普通选项块；3) 针对 `34.` 这类被 Markdown 解析成“空题号列表项 + 后续题干段落”的特殊形状，已新增跨相邻块合并识别，题号会保留为单独一行，后续题干/提示保留在下一行；4) 拆出来的选项块继续复用 `PH2-22` 已落地的紧凑选项组渲染、分页估算、HTML/PDF 导出和 DOCX 导出能力。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，10 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-22B` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-042` 当前处理方式，记录多行题干与同段内联选项兼容已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 顺序同步展示文档；后续如需完整题型容器、OCR 或旧 `.layout` 全文批量迁移，再继续拆后续任务。"
+    },
+    {
+      "id": "LOG-407",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认多行题干与同段内联选项兼容 V1 边界",
+      "action": "用户确认开工/边界登记/风险记录",
+      "result": "用户继续补充需要兼容的题面类型：除了上一轮的“多行题干 + 选项”，还要兼容 `6. A. ... B. ... C. ...` 这种同一行内联选项结构。本步按 `PH2-22-inline-and-multiline-choice-compat-v1` 推进：导入阶段把题干前导内容放宽到最多 1-3 行，并兼容同一行内联 `A/B/C` 选项；识别后继续统一拆成题干块和紧凑选项块。",
+      "verification": [
+        "用户已回复“确定”，确认当前实现边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-22B` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-042`，记录导入识别对内联选项仍有漏识别风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后增强导入阶段对 1-3 行题干和同段内联 `A/B/C` 选项的识别，并补定向回归。"
+    },
+    {
+      "id": "LOG-406",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成题干内多行选项拆分 V1",
+      "action": "AST 探针/导入拆分/定向回归/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-22-question-inline-choice-split-v1`：1) 通过探针确认截图这类题面在当前 AST 中会先进入“一个有序列表项，正文里是一整段带换行的文本”；2) `fromMarkdown.ts` 已新增同题块多行选项识别，只在命中“首行题干 + 后续连续 A/B/C/D 选项行”时自动拆成题干段落块和紧凑选项块；3) 该拆分同时覆盖顶层题号列表项和普通多行段落两种入口；4) 拆出来的选项块继续复用 `PH2-22` 已落地的紧凑选项组渲染、分页估算、HTML/PDF 导出和 DOCX 导出能力；5) 普通多行段落保持不变，不会被误判。",
+      "verification": [
+        "解析探针输出已确认当前 Markdown AST 形状：`51. ... A. ...` 会先解析成一个有序列表项，正文文本里含 `\\n`。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，8 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-22A` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-041` 当前处理方式，记录同题块多行选项拆分已完成。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 顺序同步展示文档；后续如需题干/选项/答案/解析一体化题目容器，继续拆后续题型结构化任务。"
+    },
+    {
+      "id": "LOG-405",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认题干内多行选项拆分 V1 边界",
+      "action": "用户确认开工/边界登记/风险记录",
+      "result": "用户继续提供截图，指出一种高频题面来源：题干和 `A/B/C/D` 选项在同一个题块里，而不是独立列表项或独立段落。本步按 `PH2-22-question-inline-choice-split-v1` 推进：导入阶段识别“首行题干 + 后续连续选项行”，自动拆成题干段落块和紧凑选项块；预览、分页和导出继续复用 `PH2-22` 已经落地的紧凑选项组能力。",
+      "verification": [
+        "用户已回复“确定”，确认当前实现边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-22A` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-041`，记录同题块多行选项仍有漏识别风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后确认当前 Markdown 解析对同题块换行的 AST 形状，并实施导入拆分与回归验证。"
+    },
+    {
+      "id": "LOG-404",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成试卷选项紧凑排版 V1",
+      "action": "导入识别/画布预览/分页估算/HTML-PDF-DOCX 导出/旧文档迁移入口/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-22-compact-choice-layout-v1`：1) 新增共享选项组识别模块，能识别连续 `A. / B. / C. / D.` 一类短选项；2) Markdown 导入现在会把连续选项列表项保留为同一个列表块，并把连续选项段落导入为同一组选项块；3) 画布预览、隐藏测量层和 HTML/PDF 导出统一支持紧凑选项组，短选项自动 4 列、较长选项自动 2 列，选项标签与正文列固定对齐；4) 分页估算已按“选项行”而不是“选项项”累计高度，紧凑排版后的页面长度会真实缩短；5) DOCX 导出已把紧凑选项组写成无边框表格，避免回退成一项一行；6) 旧文档现在可通过“合并选中块”把连续选项段落或单项列表块转成同一组选项块。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，6 个测试全部 pass。",
+        "旧文档迁移烟测通过：`node --import tsx -` 调用 `mergeTopLevelTextBlocksByIds` 合并连续 `A/B` 段落后输出 `choice merge smoke ok`。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-22` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-040` 当前处理方式，记录多链路统一修复已完成与剩余范围。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/choiceLayout.ts",
+        "src/engine/document-model/index.ts",
+        "src/engine/document-model/fromMarkdown.ts",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "src/engine/document-model/operations.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "src/services/exportHtml.ts",
+        "src/services/exportDocx.ts",
+        "src/engine/typesetting/algorithms/estimatedMaxFill.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；后续如需通用 tab stop、题目容器化或旧文档全文批量迁移，再继续拆后续任务。"
+    },
+    {
+      "id": "LOG-403",
+      "date": "2026-07-06",
+      "taskIds": [
+        "PH2-22"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认试卷选项紧凑排版 V1 边界",
+      "action": "用户确认开工/边界登记/风险记录",
+      "result": "用户确认修复“试卷选项一项一行导致文档长度倍数级增长”的问题。本步按 `PH2-22-compact-choice-layout-v1` 推进：统一识别连续 `A. / B. / C. / D.` 一类选项，让导入层、画布预览、分页估算、HTML/PDF 导出和 DOCX 导出共同按 2 列或 4 列紧凑排版；同时为旧 `.layout` 文档补一个可落地的连续块合并迁移入口。",
+      "verification": [
+        "用户已回复“确定”，确认当前实现边界可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-22` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-040`，记录为什么不能只改预览 CSS。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示文档；随后开始实现导入识别、紧凑排版、分页估算和导出接线。"
+    },
+    {
       "id": "LOG-402",
       "date": "2026-07-06",
       "taskIds": [

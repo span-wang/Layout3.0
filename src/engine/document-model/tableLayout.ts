@@ -216,6 +216,19 @@ function fitColumnWidthsToContentWidth(desiredWidths: number[], contentWidthPx: 
   const minColumnWidthPx = 48;
   const safeContentWidthPx = Math.max(minColumnWidthPx * columnCount, Math.round(contentWidthPx));
   const minWidths = Array.from({ length: columnCount }, () => minColumnWidthPx);
+  const desiredTotal = desiredWidths.reduce((total, width) => total + width, 0);
+
+  if (desiredTotal <= safeContentWidthPx) {
+    const extraWidthPerColumn = (safeContentWidthPx - desiredTotal) / columnCount;
+
+    // 内容没有撑满正文宽度时，剩余宽度要均衡补给所有列；
+    // 否则短词列会卡在最小列宽，少数较宽列反而吃掉大部分页面宽度。
+    return roundWidthsToTarget(
+      desiredWidths.map((width) => Math.max(minColumnWidthPx, width + extraWidthPerColumn)),
+      safeContentWidthPx,
+    ).map((width) => normalizeTableColumnWidthPx(width) ?? minColumnWidthPx);
+  }
+
   const flexibleWidths = desiredWidths.map((width) => Math.max(0, width - minColumnWidthPx));
   const flexibleTotal = flexibleWidths.reduce((total, width) => total + width, 0);
   const availableFlexibleWidth = Math.max(0, safeContentWidthPx - minColumnWidthPx * columnCount);

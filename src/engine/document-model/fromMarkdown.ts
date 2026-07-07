@@ -19,6 +19,7 @@ import type {
 import type { Position } from 'unist';
 import { createRemarkProcessor } from '@/engine/parser/remark';
 import { PAGE_BREAK_COMMAND } from '@/engine/parser/pageBreak';
+import { parseChoiceOptionPrefix, resolveCompactChoicePatternFromTexts } from './choiceLayout';
 import { mergeAdjacentTextRuns } from './operations';
 import { normalizeSemanticRoleConfig, parseSemanticRolePrefix } from './semanticRole';
 import { normalizeSyntaxMappingConfig } from './syntaxMappingConfig';
@@ -315,6 +316,146 @@ function buildBlockTextRuns(blockId: string, text: string, sourceRange: SourceRa
   return [createTextRun(blockId, 0, text, sourceRange, [])];
 }
 
+function sliceTextRunsByPlainTextRange(
+  blockId: string,
+  textRuns: TextRun[],
+  startOffset: number,
+  endOffset: number,
+): TextRun[] {
+  const nextRuns: TextRun[] = [];
+  let cursor = 0;
+
+  for (const run of textRuns) {
+    const runStart = cursor;
+    const runEnd = cursor + run.text.length;
+    cursor = runEnd;
+
+    if (endOffset <= runStart || startOffset >= runEnd) {
+      continue;
+    }
+
+    const localStart = Math.max(startOffset - runStart, 0);
+    const localEnd = Math.min(endOffset - runStart, run.text.length);
+    const slicedText = run.text.slice(localStart, localEnd);
+    if (!slicedText) {
+      continue;
+    }
+
+    nextRuns.push({
+      ...run,
+      id: createRunId(blockId, nextRuns.length, slicedText),
+      text: slicedText,
+      sourceRange: null,
+    });
+  }
+
+  return mergeAdjacentTextRuns(nextRuns).map((run, index) => ({
+    ...run,
+    id: createRunId(blockId, index, run.text),
+  }));
+}
+
+interface QuestionChoiceLineSegment {
+  lineText: string;
+  startOffset: number;
+  endOffset: number;
+}
+
+interface QuestionChoiceBlockMatch {
+  questionText: string;
+  choiceLines: QuestionChoiceLineSegment[];
+}
+
+function detectQuestionChoiceBlock(plainText: string): QuestionChoiceBlockMatch | null {
+  const normalizedText = plainText.replace(/\r\n/gu, '\n');
+  const markerCandidates: Array<{
+    normalizedLabel: string;
+    startOffset: number;
+  }> = [];
+
+  for (let index = 0; index < normalizedText.length; index += 1) {
+    const char = normalizedText[index];
+    if (!char || !/[A-Fa-f(（]/u.test(char)) {
+      continue;
+    }
+
+    if (index > 0 && !/[\s\n]/u.test(normalizedText[index - 1] ?? '')) {
+      continue;
+    }
+
+    const prefixMatch = parseChoiceOptionPrefix(normalizedText.slice(index));
+    if (!prefixMatch) {
+      continue;
+    }
+
+    markerCandidates.push({
+      normalizedLabel: prefixMatch.normalizedLabel,
+      startOffset: index,
+    });
+  }
+
+  if (markerCandidates.length < 3) {
+    return null;
+  }
+
+  let sequentialMarkers: typeof markerCandidates = [];
+
+  for (const marker of markerCandidates) {
+    if (sequentialMarkers.length === 0) {
+      if (marker.normalizedLabel === 'A') {
+        sequentialMarkers = [marker];
+      }
+      continue;
+    }
+
+    const expectedLabel = String.fromCharCode('A'.charCodeAt(0) + sequentialMarkers.length);
+    if (marker.normalizedLabel === expectedLabel) {
+      sequentialMarkers.push(marker);
+      continue;
+    }
+
+    if (sequentialMarkers.length >= 3) {
+      break;
+    }
+
+    sequentialMarkers = marker.normalizedLabel === 'A' ? [marker] : [];
+  }
+
+  if (sequentialMarkers.length < 3) {
+    return null;
+  }
+
+  const firstChoiceOffset = sequentialMarkers[0]?.startOffset ?? 0;
+  const questionText = normalizedText.slice(0, firstChoiceOffset).trimEnd();
+  const questionLineCount = questionText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean).length;
+
+  if (questionLineCount > 3) {
+    return null;
+  }
+
+  const choiceSegments = sequentialMarkers.map((marker, index) => {
+    const nextMarkerOffset = sequentialMarkers[index + 1]?.startOffset ?? normalizedText.length;
+    let endOffset = nextMarkerOffset;
+    while (endOffset > marker.startOffset && /\s/u.test(normalizedText[endOffset - 1] ?? '')) {
+      endOffset -= 1;
+    }
+
+    return {
+      lineText: normalizedText.slice(marker.startOffset, endOffset).trim(),
+      startOffset: marker.startOffset,
+      endOffset,
+    };
+  });
+
+  return {
+    questionText,
+    choiceLines: choiceSegments,
+  };
+}
+
 function stripPrefixFromTextRuns(blockId: string, textRuns: TextRun[], prefixLength: number): TextRun[] {
   if (prefixLength <= 0) {
     return textRuns;
@@ -392,6 +533,23 @@ function buildListItemTextRuns(itemId: string, node: ListItem): TextRun[] {
     ...run,
     id: createRunId(itemId, index, run.text),
   }));
+}
+
+function extractPlainTextFromListItemSelf(node: ListItem): string {
+  return node.children
+    .map((child) => {
+      if (child.type === 'paragraph') {
+        return extractPlainTextFromPhrasing(child.children);
+      }
+
+      if (child.type === 'code') {
+        return child.value;
+      }
+
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n');
 }
 
 function extractPlainTextFromListItem(node: ListItem): string {
@@ -570,12 +728,283 @@ function buildListBlock(
 }
 
 function buildListBlocks(state: BuilderState, node: List): LayoutBlock[] {
+  const topLevelItemTexts = node.children.map((item) => extractPlainTextFromListItemSelf(item));
+  if (resolveCompactChoicePatternFromTexts(topLevelItemTexts)) {
+    return [buildListBlock(state, node)];
+  }
+
   // 一级列表项是用户可独立选择和合并的块边界；子列表仍保留在当前一级项块里。
   if (node.children.length === 0) {
     return [buildListBlock(state, node)];
   }
 
-  return node.children.map((item, index) => buildListBlock(state, node, [item], index, item.position ?? node.position));
+  return node.children.flatMap((item, index) => {
+    const questionChoiceBlocks = buildQuestionChoiceBlocksFromListItem(state, item, node, index);
+    if (questionChoiceBlocks) {
+      return questionChoiceBlocks;
+    }
+
+    return [buildListBlock(state, node, [item], index, item.position ?? node.position)];
+  });
+}
+
+function buildChoiceParagraphListBlock(state: BuilderState, nodes: Paragraph[]): LayoutBlock {
+  const plainText = nodes.map((node) => extractPlainTextFromPhrasing(node.children)).join('\n');
+  const blockId = createBlockId(state, 'list', plainText);
+
+  return {
+    ...createBaseBlock(blockId, 'list', createSourceRange(nodes[0]?.position), 'list'),
+    textRuns: [],
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'list',
+      ordered: false,
+      start: null,
+      spread: false,
+      items: nodes.map((node, index) => {
+        const itemText = extractPlainTextFromPhrasing(node.children);
+        const itemId = `${blockId}-item-${index + 1}-${createTextFragment(itemText, 'item')}`;
+
+        return {
+          id: itemId,
+          sourceRange: createSourceRange(node.position),
+          textRuns: buildTextRunsFromPhrasing(itemId, node.children),
+          level: 1,
+          listKind: 'unordered' as const,
+          checked: null,
+        };
+      }),
+    },
+  };
+}
+
+function buildChoiceListBlockFromTextRuns(
+  state: BuilderState,
+  choiceLineTexts: string[],
+  buildLineRuns: (itemId: string, index: number) => TextRun[],
+): LayoutBlock {
+  const blockId = createBlockId(state, 'list', choiceLineTexts.join('\n'));
+
+  return {
+    ...createBaseBlock(blockId, 'list', null, 'list'),
+    textRuns: [],
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'list',
+      ordered: false,
+      start: null,
+      spread: false,
+      items: choiceLineTexts.map((lineText, index) => {
+        const itemId = `${blockId}-item-${index + 1}-${createTextFragment(lineText, 'item')}`;
+
+        return {
+          id: itemId,
+          sourceRange: null,
+          textRuns: buildLineRuns(itemId, index),
+          level: 1,
+          listKind: 'unordered' as const,
+          checked: null,
+        };
+      }),
+    },
+  };
+}
+
+function buildQuestionChoiceBlocksFromParagraph(
+  state: BuilderState,
+  node: Paragraph,
+): LayoutBlock[] | null {
+  const plainText = extractPlainTextFromPhrasing(node.children);
+  const questionChoiceMatch = detectQuestionChoiceBlock(plainText);
+  if (!questionChoiceMatch || !questionChoiceMatch.questionText.trim()) {
+    return null;
+  }
+
+  const questionBlockId = createBlockId(state, 'paragraph', questionChoiceMatch.questionText);
+  const sourceTextRuns = buildTextRunsFromPhrasing(questionBlockId, node.children);
+  const firstChoiceLine = questionChoiceMatch.choiceLines[0];
+  const questionRuns = firstChoiceLine
+    ? sliceTextRunsByPlainTextRange(questionBlockId, sourceTextRuns, 0, Math.max(0, firstChoiceLine.startOffset - 1))
+    : [];
+
+  const questionBlock: LayoutBlock = {
+    ...createBaseBlock(questionBlockId, 'paragraph', createSourceRange(node.position), 'paragraph'),
+    textRuns: questionRuns.length > 0
+      ? questionRuns
+      : buildBlockTextRuns(questionBlockId, questionChoiceMatch.questionText, createSourceRange(node.position)),
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'paragraph',
+      text: questionChoiceMatch.questionText,
+    },
+  };
+
+  const choiceListBlock = buildChoiceListBlockFromTextRuns(
+    state,
+    questionChoiceMatch.choiceLines.map((segment) => segment.lineText.trim()),
+    (itemId, index) => {
+      const choiceLine = questionChoiceMatch.choiceLines[index]!;
+      return sliceTextRunsByPlainTextRange(itemId, sourceTextRuns, choiceLine.startOffset, choiceLine.endOffset);
+    },
+  );
+
+  return [questionBlock, choiceListBlock];
+}
+
+function buildQuestionChoiceBlocksFromListItem(
+  state: BuilderState,
+  node: ListItem,
+  listNode: List,
+  itemIndex: number,
+): LayoutBlock[] | null {
+  const plainText = extractPlainTextFromListItemSelf(node);
+  const questionChoiceMatch = detectQuestionChoiceBlock(plainText);
+  if (!questionChoiceMatch) {
+    return null;
+  }
+
+  const questionPrefix = listNode.ordered ? `${(listNode.start ?? 1) + itemIndex}. ` : '';
+  if (!questionPrefix && !questionChoiceMatch.questionText.trim()) {
+    return null;
+  }
+
+  const questionText = `${questionPrefix}${questionChoiceMatch.questionText}`.trimEnd();
+  const questionBlockId = createBlockId(state, 'paragraph', questionText);
+  const sourceTextRuns = buildListItemTextRuns(questionBlockId, node);
+  const firstChoiceLine = questionChoiceMatch.choiceLines[0];
+  const questionContentRuns = firstChoiceLine
+    ? sliceTextRunsByPlainTextRange(questionBlockId, sourceTextRuns, 0, Math.max(0, firstChoiceLine.startOffset - 1))
+    : [];
+  const prefixedQuestionRuns = questionPrefix
+    ? [
+        createTextRun(questionBlockId, 0, questionPrefix, null, []),
+        ...questionContentRuns.map((run, index) => ({
+          ...run,
+          id: createRunId(questionBlockId, index + 1, run.text),
+        })),
+      ]
+    : questionContentRuns;
+  const normalizedQuestionRuns = mergeAdjacentTextRuns(prefixedQuestionRuns).map((run, index) => ({
+    ...run,
+    id: createRunId(questionBlockId, index, run.text),
+  }));
+
+  const questionBlock: LayoutBlock = {
+    ...createBaseBlock(questionBlockId, 'paragraph', createSourceRange(node.position), 'paragraph'),
+    textRuns: normalizedQuestionRuns.length > 0
+      ? normalizedQuestionRuns
+      : buildBlockTextRuns(questionBlockId, questionText, createSourceRange(node.position)),
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'paragraph',
+      text: questionText,
+    },
+  };
+
+  const choiceListBlock = buildChoiceListBlockFromTextRuns(
+    state,
+    questionChoiceMatch.choiceLines.map((segment) => segment.lineText.trim()),
+    (itemId, index) => {
+      const choiceLine = questionChoiceMatch.choiceLines[index]!;
+      return sliceTextRunsByPlainTextRange(itemId, sourceTextRuns, choiceLine.startOffset, choiceLine.endOffset);
+    },
+  );
+
+  return [questionBlock, choiceListBlock];
+}
+
+function isEmptyTopLevelListItem(node: ListItem): boolean {
+  return extractPlainTextFromListItemSelf(node).trim().length === 0;
+}
+
+function buildQuestionChoiceBlocksFromDetachedParagraph(
+  state: BuilderState,
+  listNode: List,
+  paragraphNode: Paragraph,
+): LayoutBlock[] | null {
+  if (!listNode.ordered || listNode.children.length !== 1 || !isEmptyTopLevelListItem(listNode.children[0]!)) {
+    return null;
+  }
+
+  const plainText = extractPlainTextFromPhrasing(paragraphNode.children);
+  const questionChoiceMatch = detectQuestionChoiceBlock(plainText);
+  if (!questionChoiceMatch || !questionChoiceMatch.questionText.trim()) {
+    return null;
+  }
+
+  const questionPrefix = `${listNode.start ?? 1}.`;
+  const questionText = `${questionPrefix}\n${questionChoiceMatch.questionText}`.trimEnd();
+  const questionBlockId = createBlockId(state, 'paragraph', questionText);
+  const sourceTextRuns = buildTextRunsFromPhrasing(questionBlockId, paragraphNode.children);
+  const firstChoiceLine = questionChoiceMatch.choiceLines[0];
+  const questionContentRuns = firstChoiceLine
+    ? sliceTextRunsByPlainTextRange(questionBlockId, sourceTextRuns, 0, Math.max(0, firstChoiceLine.startOffset - 1))
+    : [];
+  const prefixedQuestionRuns = [
+    createTextRun(questionBlockId, 0, `${questionPrefix}\n`, null, []),
+    ...questionContentRuns.map((run, index) => ({
+      ...run,
+      id: createRunId(questionBlockId, index + 1, run.text),
+    })),
+  ];
+  const normalizedQuestionRuns = mergeAdjacentTextRuns(prefixedQuestionRuns).map((run, index) => ({
+    ...run,
+    id: createRunId(questionBlockId, index, run.text),
+  }));
+
+  const questionBlock: LayoutBlock = {
+    ...createBaseBlock(questionBlockId, 'paragraph', createSourceRange(paragraphNode.position), 'paragraph'),
+    textRuns: normalizedQuestionRuns.length > 0
+      ? normalizedQuestionRuns
+      : buildBlockTextRuns(questionBlockId, questionText, createSourceRange(paragraphNode.position)),
+    pagination: createBlockPagination(),
+    metadata: {
+      kind: 'paragraph',
+      text: questionText,
+    },
+  };
+
+  const choiceListBlock = buildChoiceListBlockFromTextRuns(
+    state,
+    questionChoiceMatch.choiceLines.map((segment) => segment.lineText.trim()),
+    (itemId, index) => {
+      const choiceLine = questionChoiceMatch.choiceLines[index]!;
+      return sliceTextRunsByPlainTextRange(itemId, sourceTextRuns, choiceLine.startOffset, choiceLine.endOffset);
+    },
+  );
+
+  return [questionBlock, choiceListBlock];
+}
+
+function collectCompactChoiceParagraphs(
+  nodes: LayoutBlockContentNode[],
+  startIndex: number,
+): Paragraph[] {
+  const paragraphs: Paragraph[] = [];
+  const texts: string[] = [];
+  let bestLength = 0;
+
+  for (let index = startIndex; index < nodes.length; index += 1) {
+    const node = nodes[index];
+    if (node.type !== 'paragraph') {
+      break;
+    }
+
+    const paragraphText = extractPlainTextFromPhrasing(node.children);
+    paragraphs.push(node);
+    texts.push(paragraphText);
+
+    if (resolveCompactChoicePatternFromTexts(texts)) {
+      bestLength = paragraphs.length;
+      continue;
+    }
+
+    if (paragraphs.length > 1) {
+      break;
+    }
+  }
+
+  return bestLength >= 2 ? paragraphs.slice(0, bestLength) : [];
 }
 
 function buildBlockquoteBlock(state: BuilderState, node: Blockquote): LayoutBlock {
@@ -652,19 +1081,6 @@ function buildImageBlock(state: BuilderState, node: Image, sourceRange = createS
   };
 }
 
-function buildHorizontalRuleBlock(state: BuilderState, node: ThematicBreak): LayoutBlock {
-  const blockId = createBlockId(state, 'horizontalRule', 'horizontal-rule');
-
-  return {
-    ...createBaseBlock(blockId, 'horizontalRule', createSourceRange(node.position), 'horizontal-rule'),
-    textRuns: [],
-    pagination: createBlockPagination(),
-    metadata: {
-      kind: 'horizontalRule',
-    },
-  };
-}
-
 function buildEquationBlock(state: BuilderState, node: MathBlockNode): LayoutBlock {
   const blockId = createBlockId(state, 'equation', node.value);
   const sourceRange = createSourceRange(node.position);
@@ -681,28 +1097,63 @@ function buildEquationBlock(state: BuilderState, node: MathBlockNode): LayoutBlo
 }
 
 function buildBlocks(state: BuilderState, nodes: LayoutBlockContentNode[]): LayoutBlock[] {
-  return nodes.flatMap((node) => {
+  const blocks: LayoutBlock[] = [];
+
+  for (let index = 0; index < nodes.length; index += 1) {
+    const node = nodes[index];
+
+    if (node.type === 'list' && nodes[index + 1]?.type === 'paragraph') {
+      const detachedQuestionChoiceBlocks = buildQuestionChoiceBlocksFromDetachedParagraph(state, node, nodes[index + 1] as Paragraph);
+      if (detachedQuestionChoiceBlocks) {
+        blocks.push(...detachedQuestionChoiceBlocks);
+        index += 1;
+        continue;
+      }
+    }
+
+    if (node.type === 'paragraph') {
+      const questionChoiceBlocks = buildQuestionChoiceBlocksFromParagraph(state, node);
+      if (questionChoiceBlocks) {
+        blocks.push(...questionChoiceBlocks);
+        continue;
+      }
+
+      const compactChoiceParagraphs = collectCompactChoiceParagraphs(nodes, index);
+      if (compactChoiceParagraphs.length > 0) {
+        blocks.push(buildChoiceParagraphListBlock(state, compactChoiceParagraphs));
+        index += compactChoiceParagraphs.length - 1;
+        continue;
+      }
+    }
+
     switch (node.type) {
       case 'paragraph':
-        return [buildParagraphBlock(state, node)];
+        blocks.push(buildParagraphBlock(state, node));
+        break;
       case 'heading':
-        return [buildHeadingBlock(state, node)];
+        blocks.push(buildHeadingBlock(state, node));
+        break;
       case 'list':
-        return buildListBlocks(state, node);
+        blocks.push(...buildListBlocks(state, node));
+        break;
       case 'blockquote':
-        return [buildBlockquoteBlock(state, node)];
+        blocks.push(buildBlockquoteBlock(state, node));
+        break;
       case 'code':
-        return [buildCodeBlock(state, node)];
+        blocks.push(buildCodeBlock(state, node));
+        break;
       case 'table':
-        return [buildTableBlock(state, node)];
-      case 'thematicBreak':
-        return [buildHorizontalRuleBlock(state, node)];
+        blocks.push(buildTableBlock(state, node));
+        break;
       case 'math':
-        return [buildEquationBlock(state, node)];
+        blocks.push(buildEquationBlock(state, node));
+        break;
       default:
-        return [];
+        break;
     }
-  });
+  }
+
+  return blocks;
 }
 
 function collectImageResources(state: BuilderState, blocks: LayoutBlock[]): LayoutResource[] {
@@ -784,6 +1235,7 @@ export function createEmptyLayoutDocument(payload: {
     },
     viewState: {
       answerDisplayMode: 'show',
+      answerBlockPlacementMode: 'inline',
       zoom: 1,
       selectedNodeId: null,
       tableSelection: null,
@@ -837,6 +1289,7 @@ export async function createLayoutDocumentFromMarkdown(
     },
     viewState: {
       answerDisplayMode: 'show',
+      answerBlockPlacementMode: 'inline',
       zoom: 1,
       selectedNodeId: null,
       tableSelection: null,

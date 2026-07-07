@@ -33,6 +33,7 @@ import {
 } from './measurementCache';
 import { createDomMeasurePage, cloneRuntimeBlock } from './pageBuilder';
 import {
+  createListContinuationBlock,
   createListFragmentBlock,
   splitListItemTextAtOffset,
 } from './listSplit';
@@ -874,24 +875,24 @@ function paginateSingleColumnDomMeasure(context: PaginationAlgorithmContext): Pa
         ...(remainingItem ? [remainingItem] : []),
         // 当前项如果刚被拆成“当前页片段 + 剩余片段”，后续队列只需要保留剩余片段，
         // 不能再把原始整项从 nextItemIndex 重新切回去，否则分页不会前进。
-        ...block.metadata.items.slice(nextItemIndex + 1),
+        ...block.metadata.items.slice(nextItemIndex + (remainingItem ? 1 : 0)),
       ];
       if (remainingItems.length > 0) {
-        const remainingBlock = cloneRuntimeBlock(block, {
+        const remainingBlockBase = cloneRuntimeBlock(block, {
           id: `${block.id}-dom-list-remaining-${pages.length + 1}`,
           sourceRange: null,
           blockStyleOverrides: {
             ...block.blockStyleOverrides,
             spaceBefore: 0,
           },
-          metadata: {
-            ...block.metadata,
-            start: block.metadata.ordered
-              ? (block.metadata.start ?? 1) + nextItemIndex
-              : block.metadata.start,
-            items: remainingItems,
-          },
         });
+        const remainingBlock =
+          createListContinuationBlock(
+            remainingBlockBase,
+            remainingItems,
+            nextItemIndex,
+            pages.length + 2,
+          ) ?? remainingBlockBase;
         pages.push(currentPage);
         currentPage = createDomMeasurePage(pages.length + 1, contract);
         remainingHeight = contract.contentHeightPx;

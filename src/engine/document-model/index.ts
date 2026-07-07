@@ -10,3 +10,4 @@ export * from './tableLayout';
 export * from './utils';
 export * from './syntaxMappingConfig';
 export * from './semanticRole';
+export * from './choiceLayout';

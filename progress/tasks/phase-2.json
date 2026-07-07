@@ -3566,6 +3566,59 @@
           "completedOn": "2026-06-28"
         },
         {
+          "id": "PH2-10-table-auto-fit-balanced-width-v1",
+          "confirmed": true,
+          "confirmedOn": "2026-07-06",
+          "startedOn": "2026-07-06",
+          "completedOn": "2026-07-06",
+          "statusLabel": "已完成：表格自适应列宽均衡分配 V1",
+          "summary": "本步已完成 `PH2-10-table-auto-fit-balanced-width-v1`：`resolveTableAutoFitSize` 在内容总宽小于正文宽度时，现已先把剩余宽度均衡补给所有列，再按修正后的列宽估算行高；截图同类的 10 列短英文表头不再出现短词列停在 48px、少数列异常吃掉页面余量的问题。修复继续复用既有 `columnWidthsPx` 与 `rows[].heightPx` 字段，不改拖拽交互、表格结构、分页主线或导出策略。",
+          "inScope": [
+            "修复 `resolveTableAutoFitSize` 的列宽分配：当内容总宽小于正文宽度时，把剩余宽度按更均衡的方式分给所有列，不再只倾斜给少数比最小列宽更宽的列。",
+            "行高继续基于修正后的列宽重新估算，避免 `am / are / my` 这类短词因为列宽过窄被误拆成两行。",
+            "保持自动适应结果继续写回既有 `columnWidthsPx` 与 `rows[].heightPx` 字段，画布、隐藏测量层、分页估算和 HTML/PDF 导出继续消费同一套结果。",
+            "补充最小回归验证，覆盖截图同类的多列短英文表头场景，确保短词列不再保持异常窄宽。"
+          ],
+          "interactionRules": [
+            "不新增按钮、开关或配置面板；现有默认自适应和右侧 `适应最佳行高列宽` 入口继续沿用同一计算函数。",
+            "手动拖拽列宽和行高能力继续保留；用户拖拽后的尺寸仍按现有字段保存。",
+            "修复后只改变自动适应生成的最佳尺寸，不改变表格选中、单元格编辑、撤销栈或未保存状态交互。"
+          ],
+          "writebackRules": [
+            "本步不新增 `.layout` 顶层字段，不改变表格元数据结构。",
+            "自动适应仍只写回既有 `LayoutDocument.blocks[].metadata.columnWidthsPx` 与 `rows[].heightPx`。",
+            "不反写 Markdown 源码快照，不改变图片、公式、目录、列表或选项组数据结构。"
+          ],
+          "consistencyRules": [
+            "实现继续保持中文注释，重点说明剩余宽度为什么要均衡分配，避免短列误换行。",
+            "右侧按钮、导入预适应、默认自适应、分页估算和导出链路必须继续复用同一个表格尺寸计算函数。",
+            "实现不能破坏现有表格增删行列、表头行、列对齐、手动拖拽行高列宽、合并单元格、原位富文本编辑和导出。"
+          ],
+          "outOfScope": [
+            "不改表格拖拽行高 / 列宽交互。",
+            "不改表格跨页算法、真实 DOM 测量、合并单元格分页或复杂表格样式系统。",
+            "不改导入规则、题型结构、选项组紧凑排版或 DOCX 导出策略。",
+            "不新增自动适应开关、列宽锁定、高级布局配置或宽表自动横向页面。"
+          ],
+          "deferredTo": [
+            "列宽锁定、自动适应开关和高级表格布局策略：后续继续归属 `PH2-10` 表格增强小步。",
+            "表格跨页、真实测量分页和复杂合并格分页质量：继续归属暂缓的 `PH2-09` 或后续分页治理任务。",
+            "宽表异常提示、整表缩放或横向页面建议：后续归属排版检查或导出体验增强任务。"
+          ],
+          "verification": [
+            "用户已回复“确定”，确认当前 `PH2-10-table-auto-fit-balanced-width-v1` 边界可以执行。",
+            "`progress/tasks/phase-2.json` 已写入本步纳入、本步明确不纳入和后续归属任务。",
+            "`progress/risks.json` 已新增本步风险记录，说明当前自适应列宽分配过度倾斜会导致短词误换行。",
+            "`progress/logs.json` 已追加本步边界确认日志。",
+            "开工前 `npm run progress:build` 与 `npm run progress:check` 已通过，展示层与结构化真相源一致。",
+            "`src/engine/document-model/tableLayout.ts` 已修复内容未撑满正文宽度时的列宽余量分配逻辑。",
+            "`src/engine/document-model/tableLayout.test.ts` 已新增 10 列短英文表头回归，确保短内容列不再卡在最小列宽。",
+            "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\tableLayout.test.ts`，1 个测试 pass。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。"
+          ]
+        },
+        {
           "id": "PH2-10-inline-equation-v1",
           "confirmed": true,
           "statusLabel": "已完成：行内公式渲染 V1",
@@ -5418,7 +5471,7 @@
       "milestoneIds": [
         "M2"
       ],
-      "status": "进行中",
+      "status": "已完成",
       "acceptance": "DOCX 导出不再按预览每页强制创建 `nextPage` section；同页设置一致时按连续正文流导出，由 Word/WPS 自然填满页面；用户显式插入的分页符仍保留为真实分页符；不破坏现有 PDF 导出与 DOCX 基础能力。",
       "owner": "导出链路组",
       "dependsOn": [
@@ -5459,6 +5512,760 @@
           "`npm run build` 成功。",
           "DOCX 连续流烟测成功：`node --import tsx -` 生成双页同设置样例后，`document.xml` 中不再出现 `nextPage` 强制分节，且显式分页符 `w:type=\"page\"` 仍保留。",
           "`progress/logs.json` 已追加 `LOG-402`（实施完成登记）。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-21B",
+      "sequence": "21b",
+      "order": 86.5,
+      "title": "A3 页面规格兼容修正 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "style-module",
+        "ui-components",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "A3 等页面规格在分页预览中按容器自适应保持真实比例显示；DOCX 导出 A3 纵向/横向页面设置在 Word/WPS 中兼容，横向不再出现默认纵向或手动切横向后尺寸异常；不破坏现有 PDF 导出与 DOCX 基础能力。",
+      "owner": "页面与导出组",
+      "dependsOn": [
+        "PH2-08",
+        "PH2-21"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-21-a3-page-size-compat-fix-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：A3 页面规格兼容修正 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-21-a3-page-size-compat-fix-v1`：1) `CanvasPane` 分页预览不再用固定 `760px / 620px` 把不同纸张压成近似一样大，而是按当前容器宽度自适应缩放，A3 / A4 / B5 会继续保持真实页面比例显示；2) `exportDocx.ts` 生成 DOCX 页面规格时，横向页面不再把已交换过的运行时宽高再次交给 `docx` 库交换，A3 横向现在会输出兼容的 `w:pgSz w:w=\"23811\" w:h=\"16838\" w:orient=\"landscape\"`；3) 已补齐 A3 纵向/横向 XML 回归，并恢复当前工作区的 `typecheck` 与构建通过状态。",
+        "included": [
+          "修正 `CanvasPane` 分页预览的页面显示缩放逻辑，不再用固定 `760px / 620px` 上限把不同纸张压成近似相同宽度。",
+          "保持预览页继续按真实页面尺寸渲染后再整体缩放，只调整显示层宽度计算，不改分页算法、正文测量口径或 `.layout` 数据结构。",
+          "修正 `src/services/exportDocx.ts` 的页面规格输出，让 DOCX 导出在横向时不再出现“方向已写 landscape，但宽高仍是纵向值”的冲突组合。",
+          "补充 DOCX XML 定向回归，至少覆盖 A3 纵向与 A3 横向两种 `w:pgSz` 输出。",
+          "执行 `npm run typecheck`、`npm run progress:build` 与 `npm run progress:check`，必要时补充最小定向脚本验证。"
+        ],
+        "excluded": [
+          "不改 PDF 导出页面规格或打印口径。",
+          "不改分页算法、隐藏测量层规则、孤寡行或多栏分页。",
+          "不在本步实现 DOCX 多栏、复杂图片环绕、主题装饰、公式高保真或 Word 专属高级页面设置。",
+          "不新增 `.layout` 顶层字段，不重构页面设置面板交互。"
+        ],
+        "followup": [
+          "若后续需要 DOCX 多栏、复杂主题保真或更完整 Word 页面设置映射，继续归属 `PH2-21` 后续深化小步。",
+          "若后续需要分页预览支持更多缩放模式、用户可选缩放级别或纸张对比视图，再单独归属页面工作台增强任务。"
+        ],
+        "verification": [
+          "用户已明确回复“确定”，确认当前 `PH2-21-a3-page-size-compat-fix-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-21B` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增并更新 `RISK-050`，记录 A3 预览缩放与 DOCX 页面规格双端兼容风险的处理结果。",
+          "`progress/logs.json` 已追加本步边界确认日志与完成日志。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，4 个测试全部 pass，已覆盖 A3 纵向/横向页面规格 XML 输出。",
+          "手工烟测通过：`node --import tsx -` 抽查 A3 横向 DOCX 后，`document.xml` 中出现 `<w:pgSz w:w=\"23811\" w:h=\"16838\" w:orient=\"landscape\"/>`。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-22",
+      "sequence": "22",
+      "order": 87,
+      "title": "试卷选项紧凑排版 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "parser-module",
+        "document-model",
+        "typesetting-engine",
+        "ui-components",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "连续 `A. / B. / C. / D.` 一类试卷选项可在导入、画布预览、分页估算、HTML/PDF 导出和 DOCX 导出中按紧凑多列排版，短选项不再默认一项独占一整行；旧文档中的连续选项块可通过合并动作转成同类选项组；普通列表与非选项段落不受影响。",
+      "owner": "排版体验组",
+      "dependsOn": [
+        "PH2-04",
+        "PH2-20",
+        "PH2-21"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-22-compact-choice-layout-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：试卷选项紧凑排版 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-22-compact-choice-layout-v1`：1) Markdown 导入现在会识别连续 `A. / B. / C. / D.` 一类短选项，覆盖顶层列表项和连续普通段落，两种来源都会在真正适合紧凑排版时收口成同一个列表型选项组；2) 画布预览、隐藏测量层和 HTML/PDF 导出统一新增紧凑选项组渲染，短选项按 4 列、较长选项按 2 列自动排列，并把标签列与正文列固定对齐；3) 分页估算不再把这类选项按“一项一行”累计，而是按选项行高度累计，页面长度会随紧凑排版真实缩短；4) DOCX 导出同步把紧凑选项组写成无边框表格，避免导出后又退回一项一行；5) 旧文档现在可通过“合并选中块”把连续选项段落或单项列表块转成同一组选项块。",
+        "included": [
+          "Markdown 导入识别连续选项内容：覆盖顶层列表项中的 `A. / B. / C. / D.` 选项，以及连续普通段落中的同类选项文本；只有在识别后确实适合紧凑排版时，才转成同一个列表型选项组。",
+          "画布预览与隐藏测量层新增试卷选项紧凑排版：短选项自动按 2 列或 4 列排版，并把选项标签与正文内容做固定宽度对齐，避免每项默认独占整行。",
+          "分页估算同步改为按“选项行”累计高度，而不是按“选项项”逐项竖排累计，确保紧凑排版后的页面长度真实缩短，不只改表面样式。",
+          "HTML/PDF 导出与 DOCX 导出复用同一套选项识别口径，导出结果继续保持紧凑排列，不让导出链路回退成一项一行。",
+          "旧 `.layout` 文档补一个最小迁移入口：扩展连续块合并能力，允许把连续的选项段落或单项列表块合并为同一组选项块。",
+          "补最小回归验证，至少覆盖导入识别、导出 HTML 结构和紧凑排版不会误伤普通列表。"
+        ],
+        "excluded": [
+          "不做通用制表位编辑器，不开放任意自定义 tab stop 面板。",
+          "不做完整的题干 / 选项 / 答案 / 解析结构化题型容器。",
+          "不支持多层嵌套选项、非常规标签序列或复杂混合题型自动编排。",
+          "不重写分页算法主循环，也不在本步处理孤儿寡妇行、题号自动重排等更大范围排版问题。",
+          "不新增用户可视化的“选项列数手动切换”面板，V1 先按自动识别规则收口。"
+        ],
+        "followup": [
+          "若后续需要题干 + 选项 + 答案 + 解析的一体化题目容器，另归属后续题型结构化任务。",
+          "若后续需要通用 tab stop、手动列数切换或更多自定义标签样式，另归属样式系统增强任务。",
+          "若后续需要对旧文档做全文批量迁移，而不是依赖手动合并入口，再拆独立迁移工具任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-22-compact-choice-layout-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-22` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增本步风险记录，说明为什么不能只改预览 CSS。",
+          "`progress/logs.json` 已追加本步边界确认日志。",
+          "开工前先执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。",
+          "`src/engine/document-model/choiceLayout.ts` 已新增共享选项组识别与标签拆分逻辑，并接入 `fromMarkdown.ts`、`CanvasPane.tsx`、`exportHtml.ts`、`exportDocx.ts`、`estimatedMaxFill.ts` 与 `operations.ts`。",
+          "`src/engine/document-model/fromMarkdown.ts` 已支持把连续选项列表项保留为同一个列表块，并把连续选项段落导入为同一组选项块。",
+          "`src/components/layout/CanvasPane.tsx`、`src/styles.css` 与 `src/services/exportHtml.ts` 已新增紧凑选项组渲染样式；续页片段从 `C. / D.` 开始时也能保持同口径显示。",
+          "`src/services/exportDocx.ts` 已把紧凑选项组导出为无边框表格，避免 DOCX 回退成一项一行。",
+          "`src/engine/typesetting/algorithms/estimatedMaxFill.ts` 已把紧凑选项组的高度估算改为按“选项行”累计，并按整行换页。",
+          "定向回归通过：`node .\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs --test src\\\\engine\\\\document-model\\\\fromMarkdown.test.ts`，6 个测试全部 pass。",
+          "旧文档迁移烟测通过：`node --import tsx -` 调用 `mergeTopLevelTextBlocksByIds` 合并连续 `A/B` 段落后，成功生成同一个 `list` 选项块并输出 `choice merge smoke ok`。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-22A",
+      "sequence": "22a",
+      "order": 88,
+      "title": "题干内多行选项拆分 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "parser-module",
+        "document-model",
+        "ui-components",
+        "typesetting-engine",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "当同一个题块里出现“首行题干 + 后续多行 A/B/C/D 选项”时，导入阶段会自动拆成题干块和紧凑选项块；画布预览、分页估算、HTML/PDF 导出和 DOCX 导出继续复用既有紧凑选项组能力；普通多行段落和非试题内容不受影响。",
+      "owner": "排版体验组",
+      "dependsOn": [
+        "PH2-22"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-22-question-inline-choice-split-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：题干内多行选项拆分 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-22-question-inline-choice-split-v1`：1) 解析探针确认了截图这类题面在当前 Markdown AST 里会先进入“一个有序列表项，正文里是一整段带换行的文本”；2) 导入阶段现已新增“首行题干 + 后续连续 A/B/C/D 选项行”识别，只在这类同题块结构命中时自动拆成题干段落块和紧凑选项块；3) 该拆分同时覆盖顶层有序题号列表项和普通多行段落两种入口；4) 拆出来的选项块继续直接复用 `PH2-22` 已落地的紧凑选项组渲染、分页估算、HTML/PDF 导出和 DOCX 导出能力；5) 普通多行段落不会被误判。",
+        "included": [
+          "导入阶段识别同一题块内的“首行非选项 + 后续连续 A/B/C/D 选项行”结构。",
+          "识别后自动拆成两个块：题干段落块 + 紧凑选项列表块。",
+          "继续沿用 `PH2-22` 已落地的紧凑选项组渲染、分页估算、HTML/PDF 导出和 DOCX 导出能力，不另起一套实现。",
+          "补最小回归验证，至少覆盖题干 + 多行选项段落的导入拆分，以及普通多行段落不会被误判。"
+        ],
+        "excluded": [
+          "不做完整题型容器，不把题号、答案、解析、子题结构一起收口。",
+          "不做 OCR、截图识别或图片内容结构化。",
+          "不处理特别规整之外的复杂标签序列、嵌套选项或跨题混排。",
+          "不做旧 `.layout` 文档全文批量迁移；本步只保证新导入内容和后续重导内容。"
+        ],
+        "followup": [
+          "若后续需要题干/选项/答案/解析一体化题目容器，继续归属后续题型结构化任务。",
+          "若后续需要对已有 `.layout` 文档做全文批量修复，再拆独立迁移工具任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-22-question-inline-choice-split-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-22A` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增本步风险记录，说明当前 V1 对同题块多行选项仍有漏识别风险。",
+          "`progress/logs.json` 已追加本步边界确认日志。",
+          "开工前先执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。",
+          "解析探针确认：`51. 题干 + A/B/C/D` 当前会先进入“一个有序列表项，正文里是一整段带 `\\n` 的文本”形状。",
+          "`src/engine/document-model/fromMarkdown.ts` 已新增同题块多行选项识别与拆分逻辑，并接入段落入口和顶层列表项入口。",
+          "`src/engine/document-model/fromMarkdown.test.ts` 已新增 2 个定向回归，覆盖有序题号列表项拆分和普通多行段落不误判。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，8 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-22B",
+      "sequence": "22b",
+      "order": 89,
+      "title": "多行题干与同段内联选项兼容 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "parser-module",
+        "document-model",
+        "ui-components",
+        "typesetting-engine",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "导入阶段兼容两类题面：1) 题干前有 1-3 行非选项内容，后面才出现 A/B/C/D；2) 同一行内联 `A. ... B. ... C. ...` 选项。识别后自动拆成题干块和紧凑选项块，后续画布预览、分页估算、HTML/PDF 导出和 DOCX 导出继续复用既有紧凑选项组能力；普通正文不受影响。",
+      "owner": "排版体验组",
+      "dependsOn": [
+        "PH2-22A"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-22-inline-and-multiline-choice-compat-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：多行题干与同段内联选项兼容 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-22-inline-and-multiline-choice-compat-v1`：1) 导入识别从“首行题干 + 后续逐行选项”进一步扩展为同时支持“题干前最多 1-3 行非选项内容”与“同一行内联 `A. ... B. ... C. ...` 选项”；2) 新增顺序选项片段切分逻辑，把“是否能拆成选项”与“是否适合紧凑多列排版”分开，较长选项即使不紧凑，也会先被正确拆成题干块和普通选项块；3) 针对 `34.` 这种 Markdown 先解析成“空题号列表项 + 后续题干段落”的特殊形状，新增了跨相邻块合并识别，让题号保持单独一行，后续提示/题干保留为下一行；4) 现有紧凑选项组渲染、分页估算、HTML/PDF 导出和 DOCX 导出能力继续直接复用，无需另起一套实现。",
+        "included": [
+          "导入阶段把题干前导内容从“仅 1 行”放宽到“最多 1-3 行非选项内容”，内部换行保留。",
+          "导入阶段兼容同一行内联 `A. ... B. ... C. ...` 选项，能从同一行里切出顺序选项片段。",
+          "继续统一输出为“题干块 + 紧凑选项块”，不新增新的题型块结构。",
+          "补最小回归验证，至少覆盖 2 行题干 + 选项、多题号同段内联选项，以及普通正文不误判。"
+        ],
+        "excluded": [
+          "不做完整题型容器，不把答案、解析、子题和知识点结构一起收口。",
+          "不做 OCR、图片识别或截图解析。",
+          "不做旧 `.layout` 历史文档全文批量迁移。",
+          "不支持非常规标签序列、嵌套选项或复杂混排的全面自动识别。"
+        ],
+        "followup": [
+          "若后续需要旧 `.layout` 全文批量修复，再拆独立迁移工具任务。",
+          "若后续需要题干/选项/答案/解析一体化容器，继续归属后续题型结构化任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-22-inline-and-multiline-choice-compat-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-22B` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增本步风险记录，说明当前导入识别对内联选项仍有漏识别风险。",
+          "`progress/logs.json` 已追加本步边界确认日志。",
+          "开工前先执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。",
+          "`src/engine/document-model/fromMarkdown.ts` 已增强顺序选项片段识别，支持 1-3 行题干前导内容与同一行内联 `A/B/C` 选项。",
+          "`src/engine/document-model/fromMarkdown.ts` 已新增“空题号列表项 + 后续题干段落”这一特殊 AST 形状的合并识别，题号现在会保留为单独一行。",
+          "`src/engine/document-model/fromMarkdown.test.ts` 已新增 2 个定向回归，覆盖两行题干后接选项，以及同段内联 `A/B/C` 选项。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，10 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-22C",
+      "sequence": "22c",
+      "order": 90,
+      "title": "选项组分页续页兼容 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "typesetting-engine",
+        "ui-components",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "当试卷选项组分页后，续页片段仍能保留原始选项起始下标，不会在第二页退回成普通圆点列表；画布预览、HTML/PDF 导出和 DOCX 导出对续页片段保持与第一页一致的选项组识别。",
+      "owner": "排版体验组",
+      "dependsOn": [
+        "PH2-22"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-22-choice-pagination-continuation-rendering-v2",
+        "confirmed": true,
+        "statusLabel": "已完成：选项组续页样式识别返工 V2",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-22-choice-pagination-continuation-rendering-v2`：1) 共享选项组识别已允许续页片段在 `runtimeSlice.startIndex > 0` 时保持选项组身份；2) 当续页片段因为 `C. What's your phone number` 这类较长选项无法继续 2 列/4 列紧凑排版时，会降级为 1 列选项组，而不是退回普通圆点列表；3) Canvas、HTML/PDF、DOCX 与分页估算继续复用同一识别函数；4) 已用分页回归和截图式探针确认跨页 C/D 仍为选项组。",
+        "included": [
+          "修复续页列表片段的选项组识别：只要 `runtimeSlice.startIndex > 0` 且片段项仍是连续 A/B/C/D 后续标签，就继续按选项组渲染。",
+          "允许续页片段在较长选项导致无法 2 列/4 列紧凑排版时，降级为 1 列选项组，而不是退回普通圆点列表。",
+          "同步覆盖画布预览、HTML/PDF 导出、DOCX 导出和分页估算复用的共享选项组识别函数。",
+          "补定向回归，覆盖第一页 A/B、续页 C/D 且 C 选项较长的场景，确认续页 C/D 仍能被识别为选项组。"
+        ],
+        "excluded": [
+          "不改导入规则，不改题干/选项拆分逻辑。",
+          "不实现“选项组整体不允许跨页”的分页策略。",
+          "不重写分页主循环，不替换当前默认分页算法。",
+          "不处理旧 `.layout` 全文迁移、题型容器化或 OCR。",
+          "不顺手扩展更多列表视觉样式或人工列数控制。"
+        ],
+        "followup": [
+          "若后续需要 A/B/C/D 整组选项不能拆到不同页面，另拆“选项组 keep-together 分页策略”任务。",
+          "若后续需要对导出页码或续页题号做更细的样式控制，继续归属排版增强任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-22-choice-pagination-continuation-rendering-v2` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已更新 `PH2-22C` 执行边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增本步返工风险记录，说明续页片段按本片段长度重判导致回退普通列表。",
+          "`progress/logs.json` 已追加本步边界确认日志。",
+          "开工前已执行 `npm run progress:build` 与 `npm run progress:check`，展示层与结构化真相源一致。",
+          "`src/engine/document-model/choiceLayout.ts` 已修复续页片段识别，允许后续选项降级为 1 列选项组。",
+          "`src/engine/typesetting/algorithms/listContinuationCompatibility.test.ts` 已加强回归，覆盖较长 C 选项续页仍保持选项组身份，并新增 `max-fill-v1` 路径。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\typesetting\\algorithms\\listContinuationCompatibility.test.ts`，4 个测试全部 pass。",
+          "截图式探针确认：`C. What's your phone number / D. How are you` 续页片段 `compact? true` 且 `columns 1`。",
+          "DOCX 回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，1 个测试 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-22D",
+      "sequence": "22d",
+      "order": 91,
+      "title": "DOCX 选项组制表位导出 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "DOCX 导出紧凑选项组时不再使用无边框表格承载 A/B/C/D 排列，而是使用 Word 原生段落制表位；导出的选项组在 `document.xml` 中应出现 `w:tabs / w:tab`，且选项组本身不生成 `w:tbl`；画布预览、HTML/PDF 导出、导入识别和分页算法不受影响。",
+      "owner": "导出链路组",
+      "dependsOn": [
+        "PH2-22",
+        "PH2-22C"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-22-docx-choice-tab-stop-export-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：DOCX 选项组制表位导出 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-22-docx-choice-tab-stop-export-v1`：1) DOCX 紧凑选项组不再导出为无边框表格，而是按选项行生成普通段落；2) 段落使用 Word 原生 `tabStops` 和真实 `Tab` 分隔 A/B/C/D，保持 2 列/4 列紧凑排列；3) 选项标签继续加粗，选项正文继续复用现有 TextRun 样式映射；4) 画布预览、HTML/PDF 导出、导入识别和分页算法未改变；5) 已新增 XML 回归，确认选项组包含 `w:tabs / w:tab` 且不再生成 `w:tbl`。",
+        "included": [
+          "把 `src/services/exportDocx.ts` 中紧凑选项组的 DOCX 输出从无边框 `Table` 改为段落 `tabStops` + `Tab`。",
+          "继续复用现有 `resolveCompactChoiceListLayoutWithOptions` 和 `chunkCompactChoiceItems`，保持 2 列/4 列紧凑选项排列口径一致。",
+          "保留选项标签加粗和选项正文 `TextRun` 样式映射。",
+          "补 DOCX XML 烟测，确认选项组导出包含 `w:tabs / w:tab`，且选项组本身不再生成 `w:tbl`。"
+        ],
+        "excluded": [
+          "不改画布预览、HTML/PDF 导出和 CSS 紧凑选项样式。",
+          "不改 Markdown 导入识别、题干/选项拆分、分页估算或选项组续页逻辑。",
+          "不做通用制表位编辑器，不开放人工 tab stop 面板。",
+          "不承诺长选项在 DOCX 中多行绕排与画布/PDF 逐像素一致。"
+        ],
+        "followup": [
+          "若后续需要人工控制选项列距、制表位位置或长选项绕排策略，再拆 DOCX 版式增强任务。",
+          "若后续需要 Word 与 PDF 对复杂题型容器做到更高保真，继续归属 `PH2-21` DOCX 导出深化或试卷题型结构化任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-22-docx-choice-tab-stop-export-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-22D` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增本步风险记录，说明从无边框表格切换到制表位时需要控制长选项绕排风险。",
+          "`progress/logs.json` 已追加本步边界确认日志。",
+          "开工前已执行 `npm run progress:build` 与 `npm run progress:check`，展示层与结构化真相源一致。",
+          "`src/services/exportDocx.ts` 已将紧凑选项组导出从无边框表格替换为段落制表位。",
+          "`src/services/exportDocx.test.ts` 已新增 DOCX XML 回归，覆盖 `w:tabs / w:tab` 和无 `w:tbl`。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，1 个测试 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-22E",
+      "sequence": "22e",
+      "order": 92,
+      "title": "选项标签间距收紧 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "ui-components",
+        "typesetting-engine",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "紧凑选项组中 `A.` 与选项正文之间不再保留明显过宽的固定空白；画布预览、HTML/PDF 导出和分页估算共同使用收紧后的标签宽度与间距口径；选项列数、导入识别、DOCX 制表位导出和题型结构不受影响。",
+      "owner": "排版体验组",
+      "dependsOn": [
+        "PH2-22",
+        "PH2-22D"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-22-choice-label-spacing-tighten-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：选项标签间距收紧 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-22-choice-label-spacing-tighten-v1`：1) 紧凑选项组共享标签列宽从 36px 收紧为 22px；2) 标签与正文之间的内部间距从 8px 收紧为 4px；3) 画布预览与 HTML/PDF 导出样式已同步；4) 分页估算继续消费同一组共享常量，收紧后换行宽度口径与预览/导出一致；5) 本步未改变选项列数、导入识别、DOCX 制表位导出或题型结构。",
+        "included": [
+          "收紧 `src/engine/document-model/choiceLayout.ts` 中紧凑选项组标签列宽与标签正文间距常量。",
+          "同步调整 `src/styles.css` 的画布预览选项标签列宽和内部列间距。",
+          "同步调整 `src/services/exportHtml.ts` 中 HTML/PDF 导出的紧凑选项组样式。",
+          "保持分页估算继续消费共享常量，确保收紧间距后换行宽度与预览/导出口径一致。"
+        ],
+        "excluded": [
+          "不改变短选项自动 4 列、较长选项自动 2 列的列数规则。",
+          "不改 Markdown 导入识别、题干/选项拆分、选项续页逻辑或题型结构。",
+          "不改 DOCX 制表位导出结构，不新增 Word 人工列距控制。",
+          "不新增右侧面板的选项间距手动调节入口。"
+        ],
+        "followup": [
+          "若后续需要人工控制选项列距、标签宽度或选项列数，另拆样式设置增强任务。",
+          "若后续需要对长选项换行、续行缩进和 DOCX 绕排做更高保真一致性，再继续归属试卷选项排版增强。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-22-choice-label-spacing-tighten-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-22E` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/logs.json` 已追加本步边界确认日志。",
+          "开工前已执行 `npm run progress:build` 与 `npm run progress:check`，展示层与结构化真相源一致。",
+          "`src/engine/document-model/choiceLayout.ts` 已将紧凑选项组标签列宽常量从 36px 收紧到 22px，标签正文间距常量从 8px 收紧到 4px。",
+          "`src/styles.css` 已同步收紧画布预览中的 `.choice-option-item` 标签列宽和内部列间距。",
+          "`src/services/exportHtml.ts` 已同步收紧 HTML/PDF 导出的紧凑选项组样式。",
+          "旧间距残留扫描通过：未发现选项标签样式继续使用旧 `36px / 8px` 口径。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-22F",
+      "sequence": "22f",
+      "order": 93,
+      "title": "DOCX 选项组 run 内制表符兼容返修 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "DOCX 紧凑选项组继续使用 Word 原生制表位段落，不回退表格；选项间制表符必须写成 Word/WPS 更稳定识别的 run 内结构 `<w:r><w:tab/></w:r>`，导出后 B/D 等后续选项能按制表位列位置拉开；画布预览、HTML/PDF 导出、导入识别和分页算法不受影响。",
+      "owner": "导出链路组",
+      "dependsOn": [
+        "PH2-22D"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-22-docx-choice-run-tab-compat-fix-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：DOCX 选项组 run 内制表符兼容返修 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-22-docx-choice-run-tab-compat-fix-v1`：1) DOCX 紧凑选项组继续使用 Word 原生段落制表位，不回退表格；2) 选项间制表符已从段落直接子节点改为 Word/WPS 更稳定识别的 run 内 `<w:r><w:tab/></w:r>`；3) 现有 `tabStops`、2 列/4 列选项排列、选项标签加粗和正文 TextRun 样式映射保持不变；4) 已加强 XML 回归，确认存在 run 内 tab 且不生成 `w:tbl`；5) 画布预览、HTML/PDF 导出、导入识别和分页算法未改变。",
+        "included": [
+          "把 `src/services/exportDocx.ts` 中紧凑选项组的选项间 `Tab` 改成 run 内 tab。",
+          "保留现有段落 `tabStops`、2 列/4 列选项排列、选项标签加粗和正文 TextRun 样式映射。",
+          "加强 DOCX XML 回归，确认制表符节点位于 `w:r` 内，而不是仅检查存在 `w:tab`。",
+          "继续确认选项组不生成 `w:tbl`。"
+        ],
+        "excluded": [
+          "不改画布预览、HTML/PDF 导出和 CSS 紧凑选项样式。",
+          "不改 Markdown 导入识别、题干/选项拆分、分页估算或选项续页逻辑。",
+          "不回退成 Word 表格，不新增人工制表位或列距控制面板。",
+          "不处理长选项多行绕排的更高保真策略。"
+        ],
+        "followup": [
+          "若用户继续反馈 Word/WPS 里列距不合适，再拆人工列距或 DOCX 列宽策略增强任务。",
+          "若后续需要复杂题型容器在 Word 中高保真排版，继续归属 `PH2-21` 或试卷题型结构化任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-22-docx-choice-run-tab-compat-fix-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-22F` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增 `RISK-046`，记录段落直接子节点 `w:tab` 在 Word/WPS 中不稳定的兼容风险。",
+          "`progress/logs.json` 已追加本步边界确认日志。",
+          "开工前已执行 `npm run progress:build` 与 `npm run progress:check`，展示层与结构化真相源一致。",
+          "`src/services/exportDocx.ts` 已把选项间制表符改成 `new DocxTextRun({ children: [new Tab()] })`，输出 run 内 tab。",
+          "`src/services/exportDocx.test.ts` 已加强 XML 回归，断言 `<w:r><w:tab/></w:r>`。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，1 个测试 pass。",
+          "英文选项 XML 抽查通过：截图同类 `A/B/C/D` 选项已输出 `<w:r><w:tab/></w:r>`。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-23",
+      "sequence": "23",
+      "order": 94,
+      "title": "分割线能力移除 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "parser-module",
+        "document-model",
+        "ui-components",
+        "typesetting-engine",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "Markdown 导入与 `.layout` 恢复后的文档不再保留 `horizontalRule` 分割线块；现有文档中的分割线打开后不再显示，保存后不再继续持久化；画布预览、分页估算、HTML/PDF 导出和 DOCX 导出都不再输出分割线。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-04",
+        "PH2-05B"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-23-remove-horizontal-rule-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：分割线能力移除 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-23-remove-horizontal-rule-v1`：1) Markdown 导入不再把 `thematicBreak / ---` 生成 `horizontalRule` 块；2) `normalizeLayoutDocumentSyntaxMappingConfig` 会在旧 `.layout` 文档恢复时自动清掉 legacy `horizontalRule`，让当前文档打开后就不再显示，并在后续保存时不再继续保留；3) Canvas 画布预览、HTML/PDF 导出和 DOCX 导出都已对 `horizontalRule` 做空输出兜底；4) 标题装饰线、主题装饰线、分页符与分栏断点标记保持不变。",
+        "included": [
+          "调整 Markdown 导入链路，不再把 `thematicBreak / ---` 生成 `horizontalRule` 块。",
+          "调整 `.layout` 文档恢复或规范化链路，打开现有文档时自动剔除已有 `horizontalRule` 块，避免旧数据继续显示或占高。",
+          "同步收口画布预览、分页估算、HTML/PDF 导出和 DOCX 导出，不再渲染或输出分割线。",
+          "补充最小回归，验证 Markdown 导入、旧文档恢复与导出链路都不再保留 `horizontalRule`。",
+          "完成后执行 `npm run typecheck`、定向测试、`npm run build`、`npm run progress:build` 和 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不删除标题装饰线、主题自带装饰线、页眉页脚装饰线、分页符虚线或分栏断点标记。",
+          "不调整图片、表格、引用、代码块或题型样式。",
+          "不重构块排版预设系统，只处理 `horizontalRule` 这一个块类型的退场。",
+          "不顺手扩展通用块迁移器、历史文档批量清洗工具或 Markdown 反写。"
+        ],
+        "followup": [
+          "若后续需要把“分割线”改回可配置的空白分隔块或章节标题样式，另拆新的块类型设计任务。",
+          "若后续需要提供批量清洗已有工作区文档的离线脚本，再单独归属数据迁移治理任务。"
+        ],
+        "verification": [
+          "用户已回复“都要删除”，确认当前 `PH2-23-remove-horizontal-rule-v1` 边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-23` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增 `RISK-048`，记录只隐藏样式会导致数据、分页和导出口径分叉的范围调整风险。",
+          "`progress/logs.json` 已追加本步边界确认日志。",
+          "开工前已执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。",
+          "`src/engine/document-model/fromMarkdown.ts` 已停止生成 `horizontalRule` 块。",
+          "`src/engine/document-model/syntaxMappingConfig.ts` 已在旧文档规范化时自动移除 legacy `horizontalRule`。",
+          "`src/components/layout/CanvasPane.tsx`、`src/services/exportHtml.ts` 和 `src/services/exportDocx.ts` 已对 `horizontalRule` 做空输出兜底。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，11 个测试全部 pass。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，6 个测试全部 pass。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，2 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-24",
+      "sequence": "24",
+      "order": 95,
+      "title": "答案显示与试卷解析位置 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "document-model",
+        "ui-components",
+        "typesetting-engine",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "下划线文本在默写版可一键隐藏文字但保留下划线，恢复后显示原文；内置 `答案 / 解析` 语义块可一键隐藏/恢复，并可在“题后原位显示”与“文末统一显示”之间切换；画布预览、分页、HTML/PDF、DOCX 和 `.layout` 保存恢复口径一致。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-02",
+        "PH2-07",
+        "PH2-21"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-24-answer-display-and-solution-placement-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：答案显示与试卷解析位置 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-24-answer-display-and-solution-placement-v1`：1) `LayoutViewState` 已新增答案解析放置位置字段，旧 `.layout` 文档打开时会默认回填 `inline`；2) 画布预览与分页输入已统一按当前视图状态消费顶层内置 `answer / explanation` 语义块，支持原位显示、文末统一和隐藏；3) 默写挖空已接入画布预览、HTML/PDF 导出与 DOCX 导出，共用同一条“下划线内容进入 underline 模式时隐藏文字但保留下划线”的规则；4) 已补题号保护，`1.`、`1、`、`（1）`、`(1)` 一类纯题号式下划线不会误判成默写内容；5) 右侧“页面设置 - 分页策略”已新增答案显示与答案解析位置的一键切换入口。",
+        "included": [
+          "扩展 `LayoutViewState` 与旧 `.layout` 规范化恢复，持久化答案显示模式与试卷答案解析放置位置。",
+          "在默写版中把带下划线的文本视为挖空目标：隐藏文字但保留可见下划线，恢复后显示原文。",
+          "为默写挖空补充题号保护规则，至少排除 `1.`、`1、`、`（1）`、`(1)` 一类纯编号下划线，避免试卷题号被误判成默写内容。",
+          "让内置 `answer / explanation` 语义块响应显示模式：显示时可按原位或文末汇总渲染，隐藏时不参与预览与导出正文。",
+          "统一接通画布预览、分页输入、HTML/PDF 导出、DOCX 导出与 `.layout` 保存恢复，避免只改表层 UI。",
+          "提供最小可用前端入口，允许用户一键切换显示模式与答案解析放置位置。",
+          "补充最小回归，并执行 `npm run typecheck`、定向测试、`npm run build`、`npm run progress:build` 和 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不做完整题型容器，不自动补 `第 X 题答案/解析` 标题，不重构题干/选项/答案/解析一体化结构。",
+          "不把表格、引用容器、嵌套容器里的语义块抽取到文末统一区；文末汇总先只处理顶层 `答案 / 解析` 块。",
+          "不把自定义语义角色（例如 `答案解析`）自动纳入本步规则，当前先只收口内置 `answer / explanation`。",
+          "不顺手扩展红字识别答案、批量自动标注、学生版/教师版预设库或批量双份导出。"
+        ],
+        "followup": [
+          "若后续需要自定义语义角色也参与答案解析汇总，再单独归属语义分组增强任务。",
+          "若后续需要题号级标题补全、嵌套答案抽取或题型一体化容器，继续归属后续题型结构化任务。",
+          "若后续需要学生版/教师版/默写版一键多份导出，再单独归属导出工作流增强任务。"
+        ],
+        "verification": [
+          "用户已明确回复“默写内容以下划线为语义（即一键隐藏下划线的文字，但是下划线要保留），试卷/题集以语义”，并补充“部分试卷会用下划线标记题号，这个要避免被识别为默写”，确认当前边界可以执行。",
+          "`src/engine/document-model/types.ts`、`syntaxMappingConfig.ts` 与 `fromMarkdown.ts` 已补齐 `answerBlockPlacementMode` 类型、旧文档默认值规范化和新文档默认值。",
+          "`src/engine/document-model/selectors.ts` 已新增视图块重排与题号下划线保护 helper，并由 `usePagination` 与导出链路共用。",
+          "`src/components/layout/CanvasPane.tsx`、`src/services/exportHtml.ts` 与 `src/services/exportDocx.ts` 已统一消费默写挖空与题号保护规则。",
+          "`src/components/layout/RightPanel.tsx` 已提供答案显示与答案解析位置的一键切换入口。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，9 个测试全部 pass。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，4 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "完成后已执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-24A",
+      "sequence": "24A",
+      "order": 96,
+      "title": "答案显示与试卷解析位置扩展 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "document-model",
+        "ui-components",
+        "typesetting-engine",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "进行中",
+      "acceptance": "自定义语义名称包含 `答案` 或 `解析` 的块，可与内置 `答案 / 解析` 一样参与显示/隐藏与文末统一；`blockquote / 引用容器` 内部的答案解析子块也可参与文末统一与隐藏；画布预览、分页、HTML/PDF、DOCX 和 `.layout` 保存恢复口径一致。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-24"
+      ],
+      "startedOn": "2026-07-06",
+      "completedOn": "2026-07-06",
+      "executionBoundary": {
+        "id": "PH2-24A-answer-display-scope-extension-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：答案显示与试卷解析位置扩展 V1",
+        "confirmedOn": "2026-07-06",
+        "startedOn": "2026-07-06",
+        "completedOn": "2026-07-06",
+        "summary": "本步已完成 `PH2-24A-answer-display-scope-extension-v1`：1) 自定义语义里，名称包含 `答案` 或 `解析` 的角色，已经和内置 `answer / explanation` 一样参与显示/隐藏与文末统一；2) `blockquote / 引用容器` 内部的答案解析子块已支持递归抽取到文末或在隐藏模式下剥离，同时保留剩余正文壳继续预览、分页和导出；3) `AppShell` 与 `CanvasPane` 已统一切到消费视图重排后的块列表，避免嵌套抽取后测量层仍按旧结构工作。",
+        "included": [
+          "扩展答案解析语义识别范围：内置 `answer / explanation` 之外，名称包含 `答案` 或 `解析` 的自定义语义角色也一并纳入显示/隐藏与文末统一。",
+          "扩展文末统一与隐藏的结构处理：递归处理 `blockquote / 引用容器`，把其中的答案解析子块从原位剥离或隐藏，并保持剩余正文结构可继续预览、分页和导出。",
+          "统一接通画布预览、分页输入、HTML/PDF 导出、DOCX 导出和旧 `.layout` 打开恢复，避免扩面后再次出现口径分叉。",
+          "补充最小回归，覆盖自定义语义并入和引用容器内答案解析抽取/隐藏。",
+          "完成后执行 `npm run typecheck`、定向测试、`npm run build`、`npm run progress:build` 和 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不把表格单元格、列表项内部、代码块内部或其他复杂容器里的答案解析抽取到文末。",
+          "不新增“显式勾选某个自定义语义是否参与答案解析”的独立配置，当前先按名称包含 `答案` / `解析` 的最小规则收口。",
+          "不重做题型一体化容器，不自动补 `第 X 题答案/解析` 标题，也不引入多级分组汇总。"
+        ],
+        "followup": [
+          "若后续需要让用户显式配置哪些自定义语义参与答案解析，再单独归属语义参与规则配置任务。",
+          "若后续需要把表格、列表项或更多容器内的答案解析也抽取到文末，继续归属题型结构化或导出重排增强任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前扩展边界可以执行。",
+          "`src/engine/document-model/selectors.ts` 已把答案解析识别范围扩展到名称包含 `答案 / 解析` 的自定义语义，并补 `blockquote` 递归抽取/隐藏逻辑。",
+          "`src/components/layout/AppShell.tsx` 与 `src/components/layout/RightPanel.tsx` 已同步更新到扩展后的视图范围与文案说明。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，11 个测试全部 pass。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\exportDocx.test.ts`，4 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "完成后已执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+        ]
+      }
+    },
+    {
+      "id": "PH2-24B",
+      "sequence": "24B",
+      "order": 97,
+      "title": "答案隐藏白屏返修 V1",
+      "priority": "P0",
+      "moduleIds": [
+        "document-model",
+        "ui-components",
+        "typesetting-engine"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "切换到答案隐藏或文末统一模式时，画布预览与分页计算不应因为语义块视图重排反复触发渲染循环或白屏；隐藏答案后仍可稳定分页、预览与继续切回显示模式。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-24",
+        "PH2-24A"
+      ],
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH2-24B-answer-hide-white-screen-fix-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：答案隐藏白屏返修 V1",
+        "confirmedOn": "2026-07-07",
+        "startedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH2-24B-answer-hide-white-screen-fix-v1`：1) `usePagination` 已用 `useMemo` 稳定答案隐藏/文末统一模式下的分页输入块列表，避免分页写回后因新数组引用再次触发分页 effect；2) `AppShell` 已同步稳定传给 `CanvasPane` 的 `documentBlocks`，避免画布测量层在分页结果写回时反复刷新；3) 新增 `PH2-24B` 定向回归，验证隐藏答案后的视图块可进入分页且分页结果不残留答案块；4) 本步未改变答案/解析识别规则、复杂容器抽取范围或导出策略。",
+        "included": [
+          "稳定答案隐藏、默写挖空和文末统一模式下用于分页与画布预览的视图块引用。",
+          "优先修复 `usePagination` 的视图块依赖稳定性，必要时同步稳定 `AppShell` 传给 `CanvasPane` 的 `documentBlocks`。",
+          "补充最小回归，覆盖隐藏答案时视图块重排结果稳定，避免分页输入因引用变化反复触发。",
+          "执行 `src/engine/document-model/semanticRole.test.ts` 定向测试、`npm run typecheck` 和 `npm run build`。",
+          "完成后同步更新结构化进度源，并执行 `npm run progress:build` 与 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不改答案/解析语义识别规则，不扩大自定义语义纳入范围。",
+          "不扩展表格单元格、列表项、代码块或其他复杂容器内部的答案抽取。",
+          "不重做分页算法、导出策略、题型容器或学生版/教师版批量导出工作流。"
+        ],
+        "followup": [
+          "若后续仍需把答案抽取扩展到表格、列表项或更多容器，继续归属题型结构化或语义参与规则配置任务。",
+          "若后续需要统一治理所有视图派生选择器的引用稳定性，可另拆 UI 性能与状态派生治理任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前最小修复边界可以执行。",
+          "`progress/tasks/phase-2.json` 已新增 `PH2-24B` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增 `RISK-052`，记录答案隐藏后视图块引用不稳定可能触发渲染循环的缺陷风险。",
+          "`progress/logs.json` 已追加本步边界确认日志。",
+          "`src/hooks/usePagination.ts` 已缓存视图块派生结果，文档对象未变化时分页输入引用保持稳定。",
+          "`src/components/layout/AppShell.tsx` 已缓存传给画布的视图块派生结果，减少答案隐藏后测量层无意义刷新。",
+          "`src/engine/document-model/semanticRole.test.ts` 已新增隐藏答案后进入分页的定向回归。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，12 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
         ]
       }
     }

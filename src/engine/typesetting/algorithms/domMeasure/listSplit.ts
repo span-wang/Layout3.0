@@ -1,5 +1,38 @@
 import type { LayoutBlock, LayoutListItem, TextRun } from '@/engine/document-model';
 
+function buildListRuntimeSlice(
+  block: LayoutBlock,
+  items: LayoutListItem[],
+  startItemIndex: number,
+  fragmentIndex: number,
+):
+  | {
+      startIndex: number;
+      endIndex: number;
+      fragmentIndex: number;
+      totalItems: number;
+      isContinuation: boolean;
+    }
+  | null {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return null;
+  }
+
+  const existingRuntimeSlice = block.metadata.runtimeSlice;
+  const baseStartIndex = existingRuntimeSlice?.startIndex ?? 0;
+  const totalItems = existingRuntimeSlice?.totalItems ?? block.metadata.items.length;
+  const sliceStartIndex = baseStartIndex + startItemIndex;
+  const sliceEndIndex = items.length > 0 ? sliceStartIndex + items.length - 1 : sliceStartIndex;
+
+  return {
+    startIndex: sliceStartIndex,
+    endIndex: sliceEndIndex,
+    fragmentIndex,
+    totalItems,
+    isContinuation: existingRuntimeSlice?.isContinuation === true || sliceStartIndex > 0,
+  };
+}
+
 function splitTextRunsByPlainTextLength(textRuns: TextRun[], firstPartLength: number): {
   currentPageRuns: TextRun[];
   remainingRuns: TextRun[];
@@ -111,6 +144,8 @@ export function createListFragmentBlock(
     return null;
   }
 
+  const runtimeSlice = buildListRuntimeSlice(block, items, startItemIndex, fragmentIndex);
+
   return {
     ...block,
     id: `${block.id}-dom-list-fragment-${fragmentIndex}`,
@@ -121,6 +156,33 @@ export function createListFragmentBlock(
         ? (block.metadata.start ?? 1) + startItemIndex
         : block.metadata.start,
       items,
+      ...(runtimeSlice ? { runtimeSlice } : {}),
+    },
+  };
+}
+
+export function createListContinuationBlock(
+  block: LayoutBlock,
+  items: LayoutListItem[],
+  startItemIndex: number,
+  fragmentIndex: number,
+): LayoutBlock | null {
+  if (block.type !== 'list' || block.metadata.kind !== 'list') {
+    return null;
+  }
+
+  const runtimeSlice = buildListRuntimeSlice(block, items, startItemIndex, fragmentIndex);
+
+  return {
+    ...block,
+    sourceRange: null,
+    metadata: {
+      ...block.metadata,
+      start: block.metadata.ordered
+        ? (block.metadata.start ?? 1) + startItemIndex
+        : block.metadata.start,
+      items,
+      ...(runtimeSlice ? { runtimeSlice } : {}),
     },
   };
 }

@@ -21,6 +21,8 @@ import {
   getSemanticRoleById,
   normalizeSemanticRoleConfig,
   supportsSemanticBlockPreset,
+  type AnswerBlockPlacementMode,
+  type AnswerDisplayMode,
   type BlockquoteStructureAction,
   type ListStructureAction,
   type LayoutBlock,
@@ -237,6 +239,25 @@ const paginationBehaviorOptions: Array<{
   { id: 'avoidBreakInsideCodeBlocks', label: '代码块整块保护', description: '优先保持代码块不被拆开' },
   { id: 'avoidBreakInsideTables', label: '表格整块保护', description: '表格跨页能力完成前尽量整体显示' },
   { id: 'avoidBreakInsideImages', label: '图片整块保护', description: '图片与说明尽量保持在同一页' },
+];
+
+const answerDisplayOptions: Array<{
+  id: AnswerDisplayMode;
+  label: string;
+  description: string;
+}> = [
+  { id: 'show', label: '显示答案', description: '显示下划线内容与答案解析' },
+  { id: 'hide', label: '隐藏答案解析', description: '隐藏语义答案与解析，保留正文' },
+  { id: 'underline', label: '默写挖空', description: '隐藏下划线文字但保留下划线，同时隐藏答案解析' },
+];
+
+const answerBlockPlacementOptions: Array<{
+  id: AnswerBlockPlacementMode;
+  label: string;
+  description: string;
+}> = [
+  { id: 'inline', label: '题后显示', description: '保持答案解析在原位，跟着题目后面显示' },
+  { id: 'document-end', label: '文末统一', description: '把顶层答案解析统一汇总到文档最后' },
 ];
 
 const blockSpacingParameterGroups: Array<{
@@ -3910,68 +3931,119 @@ function renderTemplatePanel({
 
 function renderPaginationPanel({
   styleSettings,
+  answerDisplayMode,
+  answerBlockPlacementMode,
+  setAnswerDisplayMode,
+  setAnswerBlockPlacementMode,
   setPaginationAlgorithmId,
   setPaginationBehaviorOption,
 }: {
   styleSettings: StyleSettings;
+  answerDisplayMode: AnswerDisplayMode;
+  answerBlockPlacementMode: AnswerBlockPlacementMode;
+  setAnswerDisplayMode: (mode: AnswerDisplayMode) => void;
+  setAnswerBlockPlacementMode: (mode: AnswerBlockPlacementMode) => void;
   setPaginationAlgorithmId: (algorithmId: PaginationAlgorithmId) => void;
   setPaginationBehaviorOption: (option: PaginationBehaviorOption, value: boolean) => void;
 }): JSX.Element {
   const paginationAlgorithmOptions = listPaginationAlgorithms();
 
   return (
-    <section className="detail-panel">
-      <div className="detail-panel-head">
-        <h3>分页策略</h3>
-        <span>基础保护规则</span>
-      </div>
-      <div className="property-stack">
-        <label>
-          分页算法
-          <select
-            className="style-select"
-            value={styleSettings.paginationAlgorithmId}
-            onChange={(event) => setPaginationAlgorithmId(event.target.value)}
-          >
-            {paginationAlgorithmOptions.map((algorithm) => (
-              <option key={algorithm.id} value={algorithm.id}>
-                {algorithm.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="panel-note-list">
-        <p>
-          当前算法：
-          <strong>
-            {paginationAlgorithmOptions.find((algorithm) => algorithm.id === styleSettings.paginationAlgorithmId)
-              ?.label ?? '默认算法'}
-          </strong>
-        </p>
-        <p>
-          {
-            paginationAlgorithmOptions.find((algorithm) => algorithm.id === styleSettings.paginationAlgorithmId)
-              ?.description ?? '未找到算法说明，已自动回退到默认算法。'
-          }
-        </p>
-      </div>
-      <div className="toggle-list">
-        {paginationBehaviorOptions.map((option) => (
-          <label key={option.id} className="toggle-card">
-            <input
-              type="checkbox"
-              checked={styleSettings.paginationBehavior[option.id]}
-              onChange={(event) => setPaginationBehaviorOption(option.id, event.target.checked)}
-            />
-            <div>
+    <>
+      <section className="detail-panel">
+        <div className="detail-panel-head">
+          <h3>答案显示</h3>
+          <span>切换教师版、学生版和默写版</span>
+        </div>
+        <div className="option-card-grid option-card-grid-3">
+          {answerDisplayOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={answerDisplayMode === option.id ? 'option-card active' : 'option-card'}
+              onClick={() => setAnswerDisplayMode(option.id)}
+            >
               <strong>{option.label}</strong>
               <span>{option.description}</span>
-            </div>
+            </button>
+          ))}
+        </div>
+        <div className="detail-panel-head">
+          <h3>答案解析位置</h3>
+          <span>作用于内置答案/解析与名称含“答案/解析”的自定义语义</span>
+        </div>
+        <div className="option-card-grid">
+          {answerBlockPlacementOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={answerBlockPlacementMode === option.id ? 'option-card active' : 'option-card'}
+              onClick={() => setAnswerBlockPlacementMode(option.id)}
+            >
+              <strong>{option.label}</strong>
+              <span>{option.description}</span>
+            </button>
+          ))}
+        </div>
+        <div className="panel-note-list">
+          <p>默写挖空当前只对真正的下划线内容生效，会跳过 `1.`、`（1）` 一类纯题号下划线。</p>
+          <p>文末统一当前会并入名称含“答案/解析”的自定义语义，并递归处理 `blockquote / 引用容器` 内部子块。</p>
+        </div>
+      </section>
+
+      <section className="detail-panel">
+        <div className="detail-panel-head">
+          <h3>分页策略</h3>
+          <span>基础保护规则</span>
+        </div>
+        <div className="property-stack">
+          <label>
+            分页算法
+            <select
+              className="style-select"
+              value={styleSettings.paginationAlgorithmId}
+              onChange={(event) => setPaginationAlgorithmId(event.target.value)}
+            >
+              {paginationAlgorithmOptions.map((algorithm) => (
+                <option key={algorithm.id} value={algorithm.id}>
+                  {algorithm.label}
+                </option>
+              ))}
+            </select>
           </label>
-        ))}
-      </div>
-    </section>
+        </div>
+        <div className="panel-note-list">
+          <p>
+            当前算法：
+            <strong>
+              {paginationAlgorithmOptions.find((algorithm) => algorithm.id === styleSettings.paginationAlgorithmId)
+                ?.label ?? '默认算法'}
+            </strong>
+          </p>
+          <p>
+            {
+              paginationAlgorithmOptions.find((algorithm) => algorithm.id === styleSettings.paginationAlgorithmId)
+                ?.description ?? '未找到算法说明，已自动回退到默认算法。'
+            }
+          </p>
+        </div>
+        <div className="toggle-list">
+          {paginationBehaviorOptions.map((option) => (
+            <label key={option.id} className="toggle-card">
+              <input
+                type="checkbox"
+                checked={styleSettings.paginationBehavior[option.id]}
+                onChange={(event) => setPaginationBehaviorOption(option.id, event.target.checked)}
+              />
+              <div>
+                <strong>{option.label}</strong>
+                <span>{option.description}</span>
+              </div>
+            </label>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -4019,6 +4091,8 @@ export function RightPanel({
   const updateBlockSpacingPreset = useAppStore((state) => state.updateBlockSpacingPreset);
   const updateSyntaxMappingConfig = useAppStore((state) => state.updateSyntaxMappingConfig);
   const updateSemanticRoleConfig = useAppStore((state) => state.updateSemanticRoleConfig);
+  const setAnswerDisplayMode = useAppStore((state) => state.setAnswerDisplayMode);
+  const setAnswerBlockPlacementMode = useAppStore((state) => state.setAnswerBlockPlacementMode);
   const scanSemanticKeywordRules = useAppStore((state) => state.scanSemanticKeywordRules);
   const applySemanticKeywordRules = useAppStore((state) => state.applySemanticKeywordRules);
   const replaceLayoutNodeRichText = useAppStore((state) => state.replaceLayoutNodeRichText);
@@ -4077,6 +4151,8 @@ export function RightPanel({
   const [semanticOverwriteExisting, setSemanticOverwriteExisting] = useState(false);
   const [semanticScanResult, setSemanticScanResult] = useState<SemanticKeywordScanResult | null>(null);
   const selectedNodeId = layoutDocument?.viewState.selectedNodeId ?? null;
+  const answerDisplayMode = layoutDocument?.viewState.answerDisplayMode ?? 'show';
+  const answerBlockPlacementMode = layoutDocument?.viewState.answerBlockPlacementMode ?? 'inline';
   const semanticRoleConfig = normalizeSemanticRoleConfig(layoutDocument?.meta.semanticRoleConfig);
   const semanticRoleConfigKey = JSON.stringify(semanticRoleConfig);
   const selectedNodeInfo = getSelectedLayoutNodeInfo(layoutDocument);
@@ -4378,6 +4454,10 @@ export function RightPanel({
       case '分页策略':
         return renderPaginationPanel({
           styleSettings,
+          answerDisplayMode,
+          answerBlockPlacementMode,
+          setAnswerDisplayMode,
+          setAnswerBlockPlacementMode,
           setPaginationAlgorithmId,
           setPaginationBehaviorOption,
         });

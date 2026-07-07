@@ -44,8 +44,8 @@ export const searchHints = [
 ];
 
 export const resourceHints = [
-  '拖入图片或插入资源后，这里会展示资源列表',
-  '后续将支持图片、公式和组件素材管理',
+  '资源库读取当前文档保存的图片与字体资源',
+  '完整资源入库、丢失检查和批量清理后续单独扩展',
 ];
 
 export const pageSizeOptions: SelectOption[] = [

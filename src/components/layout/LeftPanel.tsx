@@ -10,15 +10,24 @@ import {
   FolderOpen,
   FolderPlus,
   History,
+  Image as ImageIcon,
   Images,
   ListTree,
+  LocateFixed,
+  RefreshCw,
   Search,
+  Type,
 } from 'lucide-react';
 import { AiGenerationRecordsPanel } from '@/components/ai/AiGenerationRecordsPanel';
 import { ContextMenu, type ContextMenuEntry } from '@/components/common/ContextMenu';
 import { SearchPanel } from './SearchPanel';
 import { emptyFolderHints, outlineTips, resourceHints } from '@/constants/workspace';
-import type { TocItem } from '@/engine/document-model';
+import type {
+  LayoutFontResource,
+  LayoutImageResource,
+  LayoutResource,
+  TocItem,
+} from '@/engine/document-model';
 import type { DocumentSearchResult } from '@/services/DocumentSearchService';
 import type { AiGenerationRecord } from '@/types/ai';
 import type {
@@ -26,6 +35,7 @@ import type {
   RecentFileEntry,
   WorkspaceDirectoryEntry,
 } from '@/types/workspace';
+import { getBaseNameFromPath, resolveAssetSrc } from '@/utils/filePath';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -55,6 +65,10 @@ interface LeftPanelProps {
   onCreateLayoutFile: (parentPath?: string | null) => void;
   onOpenEntry: (entry: WorkspaceDirectoryEntry) => void;
   onSelectOutlineItem: (nodeId: string) => void;
+  documentResources: LayoutResource[];
+  selectedResourceNodeId: string | null;
+  onSelectResourceBlock: (blockId: string) => void;
+  onReplaceImageResource: (resource: LayoutImageResource) => Promise<void>;
   onOpenRecentFile: (entry: RecentFileEntry) => void;
   onRemoveRecentFile: (filePath: string) => void;
   onClearRecentFiles: () => void;
@@ -140,6 +154,21 @@ function sortDirectoryEntries(
       const result = left.name.localeCompare(right.name, 'zh-CN');
       return direction === 'asc' ? result : -result;
     });
+}
+
+function getImageResourceName(resource: LayoutImageResource): string {
+  return resource.title?.trim() || resource.alt?.trim() || getBaseNameFromPath(resource.src);
+}
+
+function getFontFormatLabel(resource: LayoutFontResource): string {
+  const labels: Record<LayoutFontResource['format'], string> = {
+    truetype: 'TTF',
+    opentype: 'OTF',
+    woff: 'WOFF',
+    woff2: 'WOFF2',
+  };
+
+  return labels[resource.format] ?? resource.format.toUpperCase();
 }
 
 function DirectoryTreeRow({
@@ -518,10 +547,135 @@ function renderFileExplorer({
   );
 }
 
+function renderResourcePanel({
+  resources,
+  selectedResourceNodeId,
+  onSelectResourceBlock,
+  onReplaceImageResource,
+}: {
+  resources: LayoutResource[];
+  selectedResourceNodeId: string | null;
+  onSelectResourceBlock: (blockId: string) => void;
+  onReplaceImageResource: (resource: LayoutImageResource) => Promise<void>;
+}): JSX.Element {
+  const imageResources = resources.filter((resource): resource is LayoutImageResource => resource.type === 'image');
+  const fontResources = resources.filter((resource): resource is LayoutFontResource => resource.type === 'font');
+
+  return (
+    <div className="panel-section-list resource-panel">
+      <section className="panel-section">
+        <div className="panel-section-header">
+          <h2>资源库</h2>
+          <span>{resources.length} 项资源</span>
+        </div>
+
+        {resources.length > 0 ? (
+          <div className="resource-summary-row" aria-label="资源分类统计">
+            <span>图片 {imageResources.length}</span>
+            <span>字体 {fontResources.length}</span>
+          </div>
+        ) : null}
+
+        {resources.length === 0 ? (
+          <div className="empty-panel-state">
+            <p>拖入图片或从文档插入资源后，这里会集中管理素材。</p>
+          </div>
+        ) : (
+          <div className="resource-list" aria-label="当前文档资源列表">
+            {imageResources.length > 0 ? (
+              <div className="resource-group">
+                <div className="resource-group-title">
+                  <ImageIcon size={15} />
+                  <span>图片资源</span>
+                </div>
+                {imageResources.map((resource) => {
+                  const resourceName = getImageResourceName(resource);
+                  const isActive = selectedResourceNodeId === resource.blockId;
+
+                  return (
+                    <article
+                      key={resource.id}
+                      className={isActive ? 'resource-card active' : 'resource-card'}
+                    >
+                      <div className="resource-thumb" aria-hidden="true">
+                        {resource.src ? (
+                          <img src={resolveAssetSrc(resource.src)} alt="" />
+                        ) : (
+                          <ImageIcon size={18} />
+                        )}
+                      </div>
+                      <div className="resource-card-main">
+                        <strong title={resourceName}>{resourceName}</strong>
+                        <span title={resource.src}>{resource.src || '未设置图片路径'}</span>
+                        <small>关联块：{resource.blockId}</small>
+                      </div>
+                      <div className="resource-card-actions">
+                        <button
+                          type="button"
+                          className="resource-icon-button"
+                          title="定位到画布"
+                          aria-label={`定位图片资源 ${resourceName}`}
+                          onClick={() => onSelectResourceBlock(resource.blockId)}
+                        >
+                          <LocateFixed size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className="resource-icon-button"
+                          title="替换图片"
+                          aria-label={`替换图片资源 ${resourceName}`}
+                          onClick={() => void onReplaceImageResource(resource)}
+                        >
+                          <RefreshCw size={15} />
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {fontResources.length > 0 ? (
+              <div className="resource-group">
+                <div className="resource-group-title">
+                  <Type size={15} />
+                  <span>字体资源</span>
+                </div>
+                {fontResources.map((resource) => (
+                  <article key={resource.id} className="resource-card resource-card-readonly">
+                    <div className="resource-thumb resource-font-thumb" aria-hidden="true">
+                      <Type size={18} />
+                    </div>
+                    <div className="resource-card-main">
+                      <strong title={resource.displayName}>{resource.displayName}</strong>
+                      <span title={resource.src}>{resource.src || '未设置字体路径'}</span>
+                      <small>
+                        {getFontFormatLabel(resource)} · {resource.fontFamily}
+                      </small>
+                    </div>
+                    <span className="resource-readonly-badge">只读</span>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </section>
+      <section className="panel-section panel-note-list">
+        {resourceHints.map((hint) => (
+          <p key={hint}>{hint}</p>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 function renderPanelContent(
   activeTab: LeftPanelTab,
   tocItems: TocItem[],
   selectedOutlineNodeId: string | null,
+  documentResources: LayoutResource[],
+  selectedResourceNodeId: string | null,
   recentFiles: RecentFileEntry[],
   currentFilePath: string | null,
   currentDirectoryName: string,
@@ -533,6 +687,8 @@ function renderPanelContent(
   onOpenFolder: () => void,
   onOpenEntry: (entry: WorkspaceDirectoryEntry) => void,
   onSelectOutlineItem: (nodeId: string) => void,
+  onSelectResourceBlock: (blockId: string) => void,
+  onReplaceImageResource: (resource: LayoutImageResource) => Promise<void>,
   onOpenRecentFile: (entry: RecentFileEntry) => void,
   onRemoveRecentFile: (filePath: string) => void,
   onClearRecentFiles: () => void,
@@ -650,24 +806,12 @@ function renderPanelContent(
       );
 
     case '资源':
-      return (
-        <div className="panel-section-list">
-          <section className="panel-section">
-            <div className="panel-section-header">
-              <h2>资源库</h2>
-              <span>0 项资源</span>
-            </div>
-            <div className="empty-panel-state">
-              <p>拖入图片或从文档插入资源后，这里会集中管理素材。</p>
-            </div>
-          </section>
-          <section className="panel-section panel-note-list">
-            {resourceHints.map((hint) => (
-              <p key={hint}>{hint}</p>
-            ))}
-          </section>
-        </div>
-      );
+      return renderResourcePanel({
+        resources: documentResources,
+        selectedResourceNodeId,
+        onSelectResourceBlock,
+        onReplaceImageResource,
+      });
 
     case 'AI生成记录':
       return (
@@ -702,6 +846,10 @@ export function LeftPanel({
   onCreateLayoutFile,
   onOpenEntry,
   onSelectOutlineItem,
+  documentResources,
+  selectedResourceNodeId,
+  onSelectResourceBlock,
+  onReplaceImageResource,
   onOpenRecentFile,
   onRemoveRecentFile,
   onClearRecentFiles,
@@ -808,6 +956,8 @@ export function LeftPanel({
             activeTab,
             tocItems,
             selectedOutlineNodeId,
+            documentResources,
+            selectedResourceNodeId,
             recentFiles,
             currentFilePath,
             currentDirectoryName,
@@ -819,6 +969,8 @@ export function LeftPanel({
             onOpenFolder,
             onOpenEntry,
             onSelectOutlineItem,
+            onSelectResourceBlock,
+            onReplaceImageResource,
             onOpenRecentFile,
             onRemoveRecentFile,
             onClearRecentFiles,

@@ -244,7 +244,10 @@ function normalizeLayoutBlockSemantics(
   blocks: LayoutDocument['blocks'],
   semanticRoleConfig: LayoutDocument['meta']['semanticRoleConfig'],
 ): LayoutDocument['blocks'] {
-  return blocks.map((block) => {
+  return blocks
+    // 已取消分割线能力；旧文档恢复时顺手丢弃该类块，避免预览、分页和导出口径分叉。
+    .filter((block) => block.type !== 'horizontalRule')
+    .map((block) => {
     const semantic = normalizeLayoutBlockSemantic(block.semantic, semanticRoleConfig);
     const semanticPreset = normalizeLayoutBlockSemanticPresetState(block.semanticPreset);
     const { semantic: _rawSemantic, semanticPreset: _rawSemanticPreset, ...blockWithoutSemantic } = block;
@@ -265,7 +268,7 @@ function normalizeLayoutBlockSemantics(
         blocks: normalizeLayoutBlockSemantics(normalizedBlock.metadata.blocks, semanticRoleConfig),
       },
     };
-  });
+    });
 }
 
 function cloneTextMarkMapping(mapping: TextMarkMapping): TextMarkMapping {
@@ -443,6 +446,28 @@ export function normalizeSyntaxMappingConfig(config?: unknown): SyntaxMappingCon
 /**
  * 规范化文档中的语法映射配置，并兼容曾经误写到 metadata 的旧字段。
  */
+function normalizeAnswerDisplayMode(value: unknown): LayoutDocument['viewState']['answerDisplayMode'] {
+  return value === 'hide' || value === 'underline' ? value : 'show';
+}
+
+function normalizeAnswerBlockPlacementMode(
+  value: unknown,
+): LayoutDocument['viewState']['answerBlockPlacementMode'] {
+  return value === 'document-end' ? value : 'inline';
+}
+
+function normalizeLayoutViewState(viewState: LayoutDocument['viewState']): LayoutDocument['viewState'] {
+  return {
+    ...viewState,
+    answerDisplayMode: normalizeAnswerDisplayMode(viewState.answerDisplayMode),
+    answerBlockPlacementMode: normalizeAnswerBlockPlacementMode(viewState.answerBlockPlacementMode),
+    zoom: typeof viewState.zoom === 'number' && Number.isFinite(viewState.zoom) ? viewState.zoom : 1,
+    selectedNodeId: typeof viewState.selectedNodeId === 'string' ? viewState.selectedNodeId : null,
+    tableSelection: viewState.tableSelection ?? null,
+    blockSelection: viewState.blockSelection ?? null,
+  };
+}
+
 export function normalizeLayoutDocumentSyntaxMappingConfig(document: LayoutDocument): LayoutDocument {
   const legacyDocument = document as LayoutDocument & { metadata?: unknown };
   const legacyConfig = isRecord(legacyDocument.metadata)
@@ -454,6 +479,7 @@ export function normalizeLayoutDocumentSyntaxMappingConfig(document: LayoutDocum
   return {
     ...documentWithoutLegacy,
     blocks: normalizeLayoutBlockSemantics(document.blocks, semanticRoleConfig),
+    viewState: normalizeLayoutViewState(document.viewState),
     meta: {
       ...document.meta,
       syntaxMappingConfig: normalizeSyntaxMappingConfig(document.meta.syntaxMappingConfig ?? legacyConfig),

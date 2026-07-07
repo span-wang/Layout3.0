@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { getRenderableLayoutBlocksForView } from '@/engine/document-model';
 import {
   DOM_MEASURE_PAGINATION_ALGORITHM_ID,
   MAX_FILL_PAGINATION_ALGORITHM_ID,
@@ -24,14 +25,16 @@ export function usePagination(
   onTableRowMeasurementJobsChange?: (jobs: TableRowMeasurementJob[]) => void,
 ): void {
   const parseState = useAppStore((state) => state.parseState);
-  const layoutBlocks = useAppStore((state) => state.layoutDocument?.blocks ?? null);
+  const layoutDocument = useAppStore((state) => state.layoutDocument);
   const layoutStyles = useAppStore((state) => state.layoutDocument?.styles ?? null);
   const paginationAlgorithmId = useAppStore((state) => state.styleSettings.paginationAlgorithmId);
   const paginationOptimizationSettings = useAppStore((state) => state.paginationOptimizationSettings);
   const setPageLayouts = useAppStore((state) => state.setPageLayouts);
+  // 答案隐藏/文末统一会派生新的视图块数组；缓存到文档变化时再更新，避免分页写回后立刻再次触发分页。
+  const layoutBlocks = useMemo(() => getRenderableLayoutBlocksForView(layoutDocument), [layoutDocument]);
 
   useEffect(() => {
-    if (parseState !== 'ready' || !layoutBlocks) {
+    if (parseState !== 'ready' || !layoutDocument) {
       if (parseState === 'error') {
         setPageLayouts([]);
       }
@@ -80,5 +83,5 @@ export function usePagination(
         : [],
     );
     setPageLayouts(nextPages);
-  }, [layoutBlocks, layoutStyles, measuredBlockHeights, measuredTableRowHeights, measuredTextFragmentHeights, measuredTextLineBreaks, onTableRowMeasurementJobsChange, onTextFragmentMeasurementJobsChange, paginationAlgorithmId, paginationOptimizationSettings, parseState, resolvedStyleContract, setPageLayouts]);
+  }, [layoutBlocks, layoutDocument, layoutStyles, measuredBlockHeights, measuredTableRowHeights, measuredTextFragmentHeights, measuredTextLineBreaks, onTableRowMeasurementJobsChange, onTextFragmentMeasurementJobsChange, paginationAlgorithmId, paginationOptimizationSettings, parseState, resolvedStyleContract, setPageLayouts]);
 }

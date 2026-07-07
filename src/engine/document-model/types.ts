@@ -443,9 +443,11 @@ export interface LayoutTemplateState {
 }
 
 export type AnswerDisplayMode = 'show' | 'hide' | 'underline';
+export type AnswerBlockPlacementMode = 'inline' | 'document-end';
 
 export interface LayoutViewState {
   answerDisplayMode: AnswerDisplayMode;
+  answerBlockPlacementMode: AnswerBlockPlacementMode;
   zoom: number;
   selectedNodeId: string | null;
   tableSelection?: TableCellRangeSelection | null;
