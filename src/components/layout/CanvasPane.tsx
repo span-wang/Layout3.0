@@ -84,12 +84,13 @@ import {
   resolveBlockEffectiveTextMetrics,
 } from '@/engine/style/blockStyleResolution';
 import { resolveColumnSectionContract, shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
+import { resolvePdfWatermarkRenderModel } from '@/engine/style/pdfWatermark';
 import {
   resolveQuickTextStyleForBlock,
   resolveQuickTextStyleForRun,
 } from '@/engine/style/quickTextStyle';
 import { buildHeaderFooterPageTitles, renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
-import type { HeaderFooterContent, ResolvedStyleContract } from '@/engine/style/types';
+import type { HeaderFooterContent, PdfWatermarkSettings, ResolvedStyleContract } from '@/engine/style/types';
 import type {
   MeasuredTableRowHeights,
   MeasuredTextFragmentHeights,
@@ -118,6 +119,7 @@ interface CanvasPaneProps {
   parseState: ParseState;
   resolvedStyleContract: ResolvedStyleContract;
   headerFooterContent: HeaderFooterContent;
+  pdfWatermarkSettings: PdfWatermarkSettings;
   selectedNodeId: string | null;
   selectedBlockIds: string[];
   workspaceRootPath?: string | null;
@@ -2654,7 +2656,7 @@ function EquationEditorOverlay({
     focusCanvasEditorWithoutScroll(editor, scrollContainerRef.current, scrollSnapshot);
     editor.setSelectionRange(initialText.length, initialText.length);
     restoreCanvasScrollSnapshot(scrollContainerRef.current, scrollSnapshot);
-  }, [initialText, scrollContainerRef]);
+  }, [isVisible, initialText, scrollContainerRef]);
 
   const syncSelection = (editor: HTMLTextAreaElement) => {
     setDraftSelection({
@@ -2768,7 +2770,6 @@ function EquationEditorOverlay({
               className="canvas-block-editor canvas-block-editor-equation equation-editor-source-input"
               value={draftText}
               rows={10}
-              autoFocus
               aria-label="公式源码编辑"
               onChange={(event) => {
                 setDraftText(event.target.value);
@@ -3734,6 +3735,63 @@ function resolvePageDisplayWidth(
   return Math.min(pageWidthPx, viewportWidth);
 }
 
+function renderPdfWatermarkLayer(
+  page: PageLayout,
+  pdfWatermarkSettings: PdfWatermarkSettings,
+): JSX.Element | null {
+  const watermark = resolvePdfWatermarkRenderModel({
+    settings: pdfWatermarkSettings,
+    pageWidthPx: page.contract.pageWidthPx,
+    pageHeightPx: page.contract.pageHeightPx,
+  });
+  if (!watermark) {
+    return null;
+  }
+
+  return (
+    <div className="pdf-watermark-layer" aria-hidden="true">
+      {watermark.tiles.map((tile) => {
+        const tileStyle = {
+          left: `${tile.centerXPx}px`,
+          top: `${tile.centerYPx}px`,
+          width: `${tile.widthPx}px`,
+          height: `${tile.heightPx}px`,
+          transform: 'translate(-50%, -50%)',
+        } as CSSProperties;
+        const contentStyle = {
+          opacity: watermark.opacity,
+          transform: `rotate(${watermark.angleDeg}deg)`,
+        } as CSSProperties;
+
+        return (
+          <div key={tile.id} className="pdf-watermark-tile" style={tileStyle}>
+            {watermark.kind === 'text' ? (
+              <span
+                className="pdf-watermark-text"
+                style={{
+                  ...contentStyle,
+                  color: watermark.textColor,
+                  fontSize: `${watermark.textFontSizePx}px`,
+                }}
+              >
+                {watermark.textContent}
+              </span>
+            ) : (
+              <img
+                className="pdf-watermark-image"
+                src={watermark.imageSrc}
+                alt=""
+                draggable={false}
+                style={contentStyle}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CanvasPaneComponent({
   documentTitle,
   documentBlockCount,
@@ -3747,6 +3805,7 @@ function CanvasPaneComponent({
   parseState,
   resolvedStyleContract,
   headerFooterContent,
+  pdfWatermarkSettings,
   selectedNodeId,
   selectedBlockIds,
   onSelectNode,
@@ -5765,6 +5824,7 @@ function CanvasPaneComponent({
                         : onClearSelection
                     }
                   >
+                    {renderPdfWatermarkLayer(page, pdfWatermarkSettings)}
                     <div className="page-header">
                       <span>{renderedHeaderFooter.header.left}</span>
                       <span>{renderedHeaderFooter.header.center}</span>

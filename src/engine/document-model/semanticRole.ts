@@ -13,40 +13,24 @@ import type {
 } from './types';
 
 export const BUILT_IN_SEMANTIC_ROLES: SemanticRole[] = [
-  { id: 'title', name: '标题', category: 'general', builtIn: true, enabled: true },
-  { id: 'section', name: '章节', category: 'general', builtIn: true, enabled: true },
-  { id: 'question', name: '题干', category: 'exam', builtIn: true, enabled: true, defaultBlockPresetId: 'defaultSemanticFrame' },
   { id: 'answer', name: '答案', category: 'exam', builtIn: true, enabled: true, defaultBlockPresetId: 'defaultSemanticFrame' },
   { id: 'explanation', name: '解析', category: 'exam', builtIn: true, enabled: true, defaultBlockPresetId: 'defaultSemanticFrame' },
-  { id: 'key-point', name: '重点', category: 'note', builtIn: true, enabled: true, defaultBlockPresetId: 'sideAccent' },
   { id: 'pitfall', name: '易错', category: 'note', builtIn: true, enabled: true, defaultBlockPresetId: 'warningFrame' },
   { id: 'caption', name: '说明', category: 'reading', builtIn: true, enabled: true, defaultBlockPresetId: 'defaultSemanticFrame' },
-  { id: 'example', name: '例题', category: 'exam', builtIn: true, enabled: true, defaultBlockPresetId: 'defaultSemanticFrame' },
-  { id: 'step', name: '步骤', category: 'general', builtIn: true, enabled: true, defaultBlockPresetId: 'defaultSemanticFrame' },
   { id: 'summary', name: '总结', category: 'general', builtIn: true, enabled: true, defaultBlockPresetId: 'sideAccent' },
   { id: 'warning', name: '注意', category: 'note', builtIn: true, enabled: true, defaultBlockPresetId: 'warningFrame' },
 ];
 
 export const BUILT_IN_SEMANTIC_ROLE_ALIASES: Record<string, BuiltInSemanticRoleId> = {
-  标题: 'title',
-  章节: 'section',
-  节: 'section',
-  题干: 'question',
-  问题: 'question',
   答案: 'answer',
   标准答案: 'answer',
   参考答案: 'answer',
   解析: 'explanation',
   解答: 'explanation',
-  重点: 'key-point',
-  考点: 'key-point',
   易错: 'pitfall',
   易错点: 'pitfall',
   说明: 'caption',
   注释: 'caption',
-  例题: 'example',
-  示例: 'example',
-  步骤: 'step',
   总结: 'summary',
   小结: 'summary',
   注意: 'warning',
@@ -329,7 +313,8 @@ export function normalizeLayoutBlockSemantic(
 
   const record = value as Record<string, unknown>;
   const rawRoleId = sanitizeString(record.roleId);
-  const roleId = resolveSemanticRoleAlias(rawRoleId, config) ?? normalizeSemanticRoleId(rawRoleId);
+  // 这里按“硬删除内置语义块”的口径执行：只保留当前仍受支持的内置语义和文档里真实存在的自定义语义。
+  const roleId = resolveSemanticRoleAlias(rawRoleId, config);
   if (!roleId) {
     return undefined;
   }
@@ -559,16 +544,10 @@ export function buildSemanticPresetClassName(
 }
 
 const builtInSemanticRoleColors: Record<BuiltInSemanticRoleId, string> = {
-  title: '#2563eb',
-  section: '#0891b2',
-  question: '#7c3aed',
   answer: '#16a34a',
   explanation: '#ea580c',
-  'key-point': '#dc2626',
   pitfall: '#be123c',
   caption: '#475569',
-  example: '#0d9488',
-  step: '#4f46e5',
   summary: '#9333ea',
   warning: '#d97706',
 };

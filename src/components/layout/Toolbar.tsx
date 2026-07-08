@@ -72,6 +72,7 @@ import {
   resolveQuickTextStyleForBlock,
   type QuickTextStyleScope,
 } from '@/engine/style/quickTextStyle';
+import { resolveEffectiveBlockStyleOverrides } from '@/engine/style/quickBlockStyle';
 import { resolveStyleContract } from '@/engine/style/resolveContract';
 import type { ResolvedStyleContract } from '@/engine/style/types';
 import { useAppStore } from '@/store';
@@ -381,7 +382,9 @@ export function Toolbar({
     layoutDocument?.styles,
     styleContract,
   );
-  const currentTextAlign = selectedNodeInfo?.ownerBlock.blockStyleOverrides.textAlign ?? 'left';
+  const currentTextAlign = selectedNodeInfo
+    ? resolveEffectiveBlockStyleOverrides(selectedNodeInfo.ownerBlock, layoutDocument?.styles).textAlign ?? 'left'
+    : 'left';
   const canApplyBatchFontFamily = !!layoutDocument && batchQuickFontFamily !== fontFamilyPlaceholderValue;
   const canApplyBatchFontSize = !!layoutDocument && normalizeQuickFontSizeValue(batchQuickFontSize) !== null;
   const visibleChemistryApparatusItems = chemistryApparatusItems.filter(

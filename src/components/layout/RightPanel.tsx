@@ -23,11 +23,13 @@ import {
   supportsSemanticBlockPreset,
   type AnswerBlockPlacementMode,
   type AnswerDisplayMode,
+  type BlockStyleOverrides,
   type BlockquoteStructureAction,
   type ColumnSectionColumnCount,
   type ListStructureAction,
   type LayoutBlock,
   type LayoutResource,
+  type LayoutStyleSheet,
   type LayoutSemanticRoleConfig,
   type SourceRange,
   type SelectedBlockquoteContext,
@@ -68,7 +70,16 @@ import {
   type ExportCheckResult,
 } from '@/services/ExportCheckService';
 import { headerFooterVariableLabels } from '@/engine/style/headerFooterContent';
-import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '@/engine/style/blockStyleResolution';
+import {
+  getBlockStyleSourceSummary,
+  resolveBlockDefaultTextMetrics,
+  resolveBlockEffectiveTextMetrics,
+} from '@/engine/style/blockStyleResolution';
+import {
+  getQuickBlockStyleScopeForBlock,
+  resolveQuickBlockStyleForBlock,
+  type QuickBlockStyleScope,
+} from '@/engine/style/quickBlockStyle';
 import { listPaginationAlgorithms } from '@/engine/typesetting';
 import type { LayoutWarning } from '@/engine/typesetting/types';
 import type {
@@ -86,6 +97,7 @@ import type {
   PageColumnCount,
   PageOrientation,
   PageSizeId,
+  PdfWatermarkSettings,
   PaginationAlgorithmId,
   PaginationBehaviorOption,
   StyleSettings,
@@ -160,6 +172,7 @@ const pageSettingsTabs: Array<{
   { id: '分栏', label: '分栏', description: '正文栏数与栏间距', icon: Columns2 },
   { id: '块排版', label: '块排版', description: '块间距与预设', icon: SlidersHorizontal },
   { id: '页面背景', label: '页面背景', description: '纯色与图片背景', icon: ImageIcon },
+  { id: 'PDF 水印', label: 'PDF 水印', description: '仅对 PDF 导出加水印', icon: SlidersHorizontal },
   { id: '模板起点', label: '模板起点', description: '结构模板与风格主题', icon: Layers3 },
   { id: '分页策略', label: '分页策略', description: '标题、代码块与图片保护', icon: SlidersHorizontal },
 ];
@@ -207,6 +220,58 @@ const blockStyleLabels: Record<string, string> = {
   backgroundColor: '背景色',
 };
 
+type BlockStyleApplyMode = 'current' | 'sameType';
+
+const quickBlockStyleScopeLabels: Record<QuickBlockStyleScope, string> = {
+  heading1: 'H1',
+  heading2: 'H2',
+  heading3: 'H3',
+  heading4: 'H4',
+  paragraph: '段落',
+  list: '列表',
+  table: '表格',
+  code: '代码块',
+};
+
+const lineSpacingPresetOptions = [
+  { id: 'single', label: '单倍', multiple: 1 },
+  { id: 'onePointTwoFive', label: '1.25 倍', multiple: 1.25 },
+  { id: 'onePointFive', label: '1.5 倍', multiple: 1.5 },
+  { id: 'double', label: '2 倍', multiple: 2 },
+] as const;
+
+function resolveLineSpacingMultiple(lineHeight: number, fontSize: number): number {
+  const safeFontSize = Number.isFinite(fontSize) ? Math.max(1, fontSize) : 1;
+  const safeLineHeight = Number.isFinite(lineHeight) ? Math.max(1, lineHeight) : safeFontSize;
+  return Number((safeLineHeight / safeFontSize).toFixed(2));
+}
+
+function resolveLineHeightFromMultiple(multiple: number, fontSize: number): number {
+  const safeMultiple = Number.isFinite(multiple) ? Math.max(0.5, Math.min(4, multiple)) : 1;
+  const safeFontSize = Number.isFinite(fontSize) ? Math.max(1, fontSize) : 16;
+  return Math.max(16, Math.min(200, Math.round(safeFontSize * safeMultiple)));
+}
+
+function resolveActiveLineSpacingPresetId(
+  multiple: number,
+): (typeof lineSpacingPresetOptions)[number]['id'] | null {
+  const activePreset = lineSpacingPresetOptions.find((option) => Math.abs(option.multiple - multiple) < 0.03);
+  return activePreset?.id ?? null;
+}
+
+function formatLineSpacingMultiple(multiple: number): string {
+  return Number.isInteger(multiple) ? String(multiple) : multiple.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function normalizeLineSpacingMultipleInput(value: string): number | null {
+  const nextValue = Number(value);
+  if (!Number.isFinite(nextValue)) {
+    return null;
+  }
+
+  return Math.max(0.5, Math.min(4, Number(nextValue.toFixed(2))));
+}
+
 const semanticSourceLabels: Record<LayoutBlockSemantic['source'], string> = {
   manual: '手动设置',
   'markdown-prefix': 'Markdown 前缀',
@@ -242,6 +307,15 @@ const pageBackgroundFitOptions: Array<{ id: PageBackgroundImageFit; label: strin
   { id: 'cover', label: '铺满页面', description: '图片裁切铺满整页' },
   { id: 'contain', label: '居中包含', description: '完整显示图片并居中' },
   { id: 'repeat', label: '平铺', description: '按原图尺寸重复铺开' },
+];
+
+const pdfWatermarkModeOptions: Array<{
+  id: PdfWatermarkSettings['kind'];
+  label: string;
+  description: string;
+}> = [
+  { id: 'text', label: '文字水印', description: '使用自定义文字重复铺设整页水印' },
+  { id: 'image', label: '图片水印', description: '使用本地图片重复铺设整页水印' },
 ];
 
 const paginationBehaviorOptions: Array<{
@@ -438,8 +512,12 @@ function getBlockStyleSummary(block: LayoutBlock): string {
     .join('；');
 }
 
-function getBlockStyleSourceText(block: LayoutBlock, resolvedStyleContract: ReturnType<typeof useResolvedStyleContract>): string {
-  return getBlockStyleSourceSummary(block, resolvedStyleContract);
+function getBlockStyleSourceText(
+  block: LayoutBlock,
+  resolvedStyleContract: ReturnType<typeof useResolvedStyleContract>,
+  layoutStyles: LayoutStyleSheet | null | undefined,
+): string {
+  return getBlockStyleSourceSummary(block, resolvedStyleContract, layoutStyles);
 }
 
 function renderObjectPropertyRow(label: string, value: string): JSX.Element {
@@ -1131,6 +1209,7 @@ function renderObjectPropertiesPanel(
   selectedTopLevelBlock: LayoutBlock | null,
   selectedNodeId: string | null,
   canvasTextSelection: CanvasTextSelectionState,
+  layoutStyles: LayoutStyleSheet | null | undefined,
   layoutResources: LayoutResource[],
   semanticRoleConfig: LayoutSemanticRoleConfig,
   resolvedStyleContract: ReturnType<typeof useResolvedStyleContract>,
@@ -1262,16 +1341,11 @@ function renderObjectPropertiesPanel(
   }) => { didDelete: boolean; selectedNodeId: string | null; deletedBlockType: LayoutBlock['type'] | null },
   applyLayoutNodeBlockStyle: (payload: {
     nodeId: string;
-    blockStyleOverrides: {
-      textAlign?: 'left' | 'center' | 'right' | 'justify';
-      lineHeight?: number;
-      indentLeft?: number;
-      indentRight?: number;
-      firstLineIndent?: number;
-      hangingIndent?: number;
-      spaceBefore?: number;
-      spaceAfter?: number;
-    };
+    blockStyleOverrides: BlockStyleOverrides;
+  }) => void,
+  applyLayoutQuickBlockStyle: (payload: {
+    scope: QuickBlockStyleScope;
+    styleOverrides: BlockStyleOverrides;
   }) => void,
   updateLayoutBlockSemantic: (payload: {
     nodeId: string;
@@ -1294,6 +1368,8 @@ function renderObjectPropertiesPanel(
   onColumnSectionFeedback: (message: string | null) => void,
   topLevelBlockFeedback: string | null,
   onTopLevelBlockFeedback: (message: string) => void,
+  blockStyleApplyMode: BlockStyleApplyMode,
+  onBlockStyleApplyModeChange: (mode: BlockStyleApplyMode) => void,
   syncEditingTextBeforeStyleAction: (nodeId: string) => void,
 ): JSX.Element {
   if (!selectedNodeInfo) {
@@ -1311,6 +1387,11 @@ function renderObjectPropertiesPanel(
   const activeSelection =
     canvasTextSelection.nodeId === selectedNodeInfo.nodeId ? canvasTextSelection.selection : null;
   const defaultMetrics = getDefaultTextMetrics(selectedNodeInfo, resolvedStyleContract);
+  const effectiveTextMetrics = resolveBlockEffectiveTextMetrics(
+    selectedNodeInfo.ownerBlock,
+    resolvedStyleContract,
+    layoutStyles ?? undefined,
+  );
   const currentFontSize =
     getSharedTextStyleValue(selectedNodeInfo.textRuns, activeSelection, 'fontSize') ?? defaultMetrics.fontSize;
   const currentFontFamily =
@@ -1326,14 +1407,43 @@ function renderObjectPropertiesPanel(
   const currentHighlightColor =
     (getSharedTextStyleValue(selectedNodeInfo.textRuns, activeSelection, 'highlightColor') as string | undefined) ??
     defaultHighlightColor;
-  const currentTextAlign = selectedNodeInfo.ownerBlock.blockStyleOverrides.textAlign ?? 'left';
-  const currentLineHeight = selectedNodeInfo.ownerBlock.blockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight;
-  const currentIndentLeft = selectedNodeInfo.ownerBlock.blockStyleOverrides.indentLeft ?? 0;
-  const currentIndentRight = selectedNodeInfo.ownerBlock.blockStyleOverrides.indentRight ?? 0;
-  const currentFirstLineIndent = selectedNodeInfo.ownerBlock.blockStyleOverrides.firstLineIndent ?? 0;
-  const currentHangingIndent = selectedNodeInfo.ownerBlock.blockStyleOverrides.hangingIndent ?? 0;
-  const currentSpaceBefore = selectedNodeInfo.ownerBlock.blockStyleOverrides.spaceBefore ?? defaultMetrics.spaceBefore;
-  const currentSpaceAfter = selectedNodeInfo.ownerBlock.blockStyleOverrides.spaceAfter ?? defaultMetrics.spaceAfter;
+  const blockStyleRuleScope = getQuickBlockStyleScopeForBlock(selectedNodeInfo.ownerBlock);
+  const sameTypeRuleStyle = blockStyleRuleScope
+    ? resolveQuickBlockStyleForBlock(selectedNodeInfo.ownerBlock, layoutStyles)
+    : {};
+  const effectiveBlockStyleOverrides: BlockStyleOverrides = {
+    ...sameTypeRuleStyle,
+    ...selectedNodeInfo.ownerBlock.blockStyleOverrides,
+  };
+  const isSameTypeRuleMode = blockStyleApplyMode === 'sameType' && !!blockStyleRuleScope;
+  const currentTextAlign = isSameTypeRuleMode
+    ? sameTypeRuleStyle.textAlign ?? 'left'
+    : effectiveBlockStyleOverrides.textAlign ?? 'left';
+  const currentLineHeight = isSameTypeRuleMode
+    ? sameTypeRuleStyle.lineHeight ?? defaultMetrics.lineHeight
+    : effectiveBlockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight;
+  const currentIndentLeft = isSameTypeRuleMode
+    ? sameTypeRuleStyle.indentLeft ?? 0
+    : effectiveBlockStyleOverrides.indentLeft ?? 0;
+  const currentIndentRight = isSameTypeRuleMode
+    ? sameTypeRuleStyle.indentRight ?? 0
+    : effectiveBlockStyleOverrides.indentRight ?? 0;
+  const currentFirstLineIndent = isSameTypeRuleMode
+    ? sameTypeRuleStyle.firstLineIndent ?? 0
+    : effectiveBlockStyleOverrides.firstLineIndent ?? 0;
+  const currentHangingIndent = isSameTypeRuleMode
+    ? sameTypeRuleStyle.hangingIndent ?? 0
+    : effectiveBlockStyleOverrides.hangingIndent ?? 0;
+  const currentSpaceBefore = isSameTypeRuleMode
+    ? sameTypeRuleStyle.spaceBefore ?? defaultMetrics.spaceBefore
+    : effectiveBlockStyleOverrides.spaceBefore ?? defaultMetrics.spaceBefore;
+  const currentSpaceAfter = isSameTypeRuleMode
+    ? sameTypeRuleStyle.spaceAfter ?? defaultMetrics.spaceAfter
+    : effectiveBlockStyleOverrides.spaceAfter ?? defaultMetrics.spaceAfter;
+  const lineSpacingReferenceFontSize = Math.max(1, effectiveTextMetrics.fontSize);
+  const currentLineSpacingMultiple = resolveLineSpacingMultiple(currentLineHeight, lineSpacingReferenceFontSize);
+  const activeLineSpacingPresetId = resolveActiveLineSpacingPresetId(currentLineSpacingMultiple);
+  const currentBlockStyleScopeLabel = blockStyleRuleScope ? quickBlockStyleScopeLabels[blockStyleRuleScope] : null;
   const selectedImageMetadata =
     selectedNodeInfo.kind === 'block' &&
     selectedNodeInfo.ownerBlock.type === 'image' &&
@@ -1394,6 +1504,23 @@ function renderObjectPropertiesPanel(
   const canDeleteTopLevelBlock =
     !!selectedTopLevelBlock &&
     Object.prototype.hasOwnProperty.call(topLevelBlockDeleteLabels, selectedTopLevelBlock.type);
+  const applyBlockStyleByMode = (styleOverrides: BlockStyleOverrides): void => {
+    // 切换块级样式前先收口编辑态草稿，避免“同类块规则”误吃到旧文本草稿对应的字号上下文。
+    syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId);
+
+    if (isSameTypeRuleMode && blockStyleRuleScope) {
+      applyLayoutQuickBlockStyle({
+        scope: blockStyleRuleScope,
+        styleOverrides,
+      });
+      return;
+    }
+
+    applyLayoutNodeBlockStyle({
+      nodeId: selectedNodeInfo.nodeId,
+      blockStyleOverrides: styleOverrides,
+    });
+  };
   const commitImageMetadata = (patch: Partial<NonNullable<typeof selectedImageMetadata>>) => {
     if (!selectedImageMetadata) {
       return;
@@ -1893,7 +2020,10 @@ function renderObjectPropertiesPanel(
           {renderObjectPropertyRow('所属块', blockTypeLabels[selectedNodeInfo.ownerBlock.type])}
           {renderObjectPropertyRow('文本摘要', getSelectedNodeTextSummary(selectedNodeInfo))}
           {renderObjectPropertyRow('源码范围', getSourceRangeLabel(selectedNodeInfo.sourceRange))}
-          {renderObjectPropertyRow('样式来源', getBlockStyleSourceText(selectedNodeInfo.ownerBlock, resolvedStyleContract))}
+          {renderObjectPropertyRow(
+            '样式来源',
+            getBlockStyleSourceText(selectedNodeInfo.ownerBlock, resolvedStyleContract, layoutStyles),
+          )}
           {renderObjectPropertyRow('块级覆盖', getBlockStyleSummary(selectedNodeInfo.ownerBlock))}
         </div>
       </section>
@@ -2908,8 +3038,33 @@ function renderObjectPropertiesPanel(
         <section className="detail-panel object-detail-panel">
           <div className="detail-panel-head">
             <h3>{blockStyleControlSupport.sectionTitle}</h3>
-            <span>{blockStyleControlSupport.sectionHint}</span>
+            <span>
+              {isSameTypeRuleMode && currentBlockStyleScopeLabel
+                ? `当前正在编辑 ${currentBlockStyleScopeLabel} 同类块规则`
+                : blockStyleControlSupport.sectionHint}
+            </span>
           </div>
+          {currentBlockStyleScopeLabel ? (
+            <div className="block-style-scope-panel">
+              <span className="block-style-scope-caption">应用范围</span>
+              <div className="segmented-group">
+                <button
+                  type="button"
+                  className={blockStyleApplyMode === 'current' ? 'segment-chip active' : 'segment-chip'}
+                  onClick={() => onBlockStyleApplyModeChange('current')}
+                >
+                  当前块
+                </button>
+                <button
+                  type="button"
+                  className={blockStyleApplyMode === 'sameType' ? 'segment-chip active' : 'segment-chip'}
+                  onClick={() => onBlockStyleApplyModeChange('sameType')}
+                >
+                  {currentBlockStyleScopeLabel}
+                </button>
+              </div>
+            </div>
+          ) : null}
           {blockStyleControlSupport.supportsTextAlign ? (
             <div className="segmented-group">
               {([
@@ -2923,12 +3078,7 @@ function renderObjectPropertiesPanel(
                   type="button"
                   className={currentTextAlign === option.id ? 'segment-chip active' : 'segment-chip'}
                   onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
-                  onClick={() =>
-                    applyLayoutNodeBlockStyle({
-                      nodeId: selectedNodeInfo.nodeId,
-                      blockStyleOverrides: { textAlign: option.id },
-                    })
-                  }
+                  onClick={() => applyBlockStyleByMode({ textAlign: option.id })}
                 >
                   {option.label}
                 </button>
@@ -2941,10 +3091,10 @@ function renderObjectPropertiesPanel(
                 行高
                 <div className="number-input-shell">
                   <input
-                    key={`line-height-${selectedNodeInfo.nodeId}-${currentLineHeight}`}
+                    key={`line-height-${selectedNodeInfo.nodeId}-${blockStyleApplyMode}-${currentLineHeight}`}
                     type="number"
-                    min={16}
-                    max={72}
+                    min={1}
+                    max={200}
                     step={1}
                     defaultValue={currentLineHeight}
                     onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
@@ -2955,13 +3105,58 @@ function renderObjectPropertiesPanel(
                         return;
                       }
 
-                      applyLayoutNodeBlockStyle({
-                        nodeId: selectedNodeInfo.nodeId,
-                        blockStyleOverrides: { lineHeight: Math.max(16, Math.min(72, Math.round(nextValue))) },
+                      applyBlockStyleByMode({
+                        lineHeight: Math.max(1, Math.min(200, Math.round(nextValue))),
                       });
                     }}
                   />
                   <span>px</span>
+                </div>
+                <div className="line-spacing-editor">
+                  <span className="line-spacing-caption">Word 风格行距</span>
+                  <div className="segmented-group line-spacing-chip-group">
+                    {lineSpacingPresetOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={activeLineSpacingPresetId === option.id ? 'segment-chip active' : 'segment-chip'}
+                        onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
+                        onClick={() =>
+                          applyBlockStyleByMode({
+                            lineHeight: resolveLineHeightFromMultiple(option.multiple, lineSpacingReferenceFontSize),
+                          })
+                        }
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="line-spacing-custom-row">
+                    <span>多倍</span>
+                    <div className="number-input-shell">
+                      <input
+                        key={`line-spacing-multiple-${selectedNodeInfo.nodeId}-${blockStyleApplyMode}-${formatLineSpacingMultiple(currentLineSpacingMultiple)}`}
+                        type="number"
+                        min={0.5}
+                        max={4}
+                        step={0.05}
+                        defaultValue={formatLineSpacingMultiple(currentLineSpacingMultiple)}
+                        onMouseDown={() => syncEditingTextBeforeStyleAction(selectedNodeInfo.nodeId)}
+                        onBlur={(event) => {
+                          const nextMultiple = normalizeLineSpacingMultipleInput(event.currentTarget.value);
+                          if (!nextMultiple) {
+                            event.currentTarget.value = formatLineSpacingMultiple(currentLineSpacingMultiple);
+                            return;
+                          }
+
+                          applyBlockStyleByMode({
+                            lineHeight: resolveLineHeightFromMultiple(nextMultiple, lineSpacingReferenceFontSize),
+                          });
+                        }}
+                      />
+                      <span>倍</span>
+                    </div>
+                  </div>
                 </div>
               </label>
             ) : null}
@@ -2970,7 +3165,7 @@ function renderObjectPropertiesPanel(
                 左缩进
                 <div className="number-input-shell">
                   <input
-                    key={`indent-left-${selectedNodeInfo.nodeId}-${currentIndentLeft}`}
+                    key={`indent-left-${selectedNodeInfo.nodeId}-${blockStyleApplyMode}-${currentIndentLeft}`}
                     type="number"
                     min={0}
                     max={200}
@@ -2984,9 +3179,8 @@ function renderObjectPropertiesPanel(
                         return;
                       }
 
-                      applyLayoutNodeBlockStyle({
-                        nodeId: selectedNodeInfo.nodeId,
-                        blockStyleOverrides: { indentLeft: Math.max(0, Math.min(200, Math.round(nextValue))) },
+                      applyBlockStyleByMode({
+                        indentLeft: Math.max(0, Math.min(200, Math.round(nextValue))),
                       });
                     }}
                   />
@@ -2999,7 +3193,7 @@ function renderObjectPropertiesPanel(
                 右缩进
                 <div className="number-input-shell">
                   <input
-                    key={`indent-right-${selectedNodeInfo.nodeId}-${currentIndentRight}`}
+                    key={`indent-right-${selectedNodeInfo.nodeId}-${blockStyleApplyMode}-${currentIndentRight}`}
                     type="number"
                     min={0}
                     max={200}
@@ -3013,9 +3207,8 @@ function renderObjectPropertiesPanel(
                         return;
                       }
 
-                      applyLayoutNodeBlockStyle({
-                        nodeId: selectedNodeInfo.nodeId,
-                        blockStyleOverrides: { indentRight: Math.max(0, Math.min(200, Math.round(nextValue))) },
+                      applyBlockStyleByMode({
+                        indentRight: Math.max(0, Math.min(200, Math.round(nextValue))),
                       });
                     }}
                   />
@@ -3028,7 +3221,7 @@ function renderObjectPropertiesPanel(
                 首行缩进
                 <div className="number-input-shell">
                   <input
-                    key={`first-line-indent-${selectedNodeInfo.nodeId}-${currentFirstLineIndent}`}
+                    key={`first-line-indent-${selectedNodeInfo.nodeId}-${blockStyleApplyMode}-${currentFirstLineIndent}`}
                     type="number"
                     min={0}
                     max={120}
@@ -3042,9 +3235,8 @@ function renderObjectPropertiesPanel(
                         return;
                       }
 
-                      applyLayoutNodeBlockStyle({
-                        nodeId: selectedNodeInfo.nodeId,
-                        blockStyleOverrides: { firstLineIndent: Math.max(0, Math.min(120, Math.round(nextValue))) },
+                      applyBlockStyleByMode({
+                        firstLineIndent: Math.max(0, Math.min(120, Math.round(nextValue))),
                       });
                     }}
                   />
@@ -3057,7 +3249,7 @@ function renderObjectPropertiesPanel(
                 悬挂缩进
                 <div className="number-input-shell">
                   <input
-                    key={`hanging-indent-${selectedNodeInfo.nodeId}-${currentHangingIndent}`}
+                    key={`hanging-indent-${selectedNodeInfo.nodeId}-${blockStyleApplyMode}-${currentHangingIndent}`}
                     type="number"
                     min={0}
                     max={120}
@@ -3071,9 +3263,8 @@ function renderObjectPropertiesPanel(
                         return;
                       }
 
-                      applyLayoutNodeBlockStyle({
-                        nodeId: selectedNodeInfo.nodeId,
-                        blockStyleOverrides: { hangingIndent: Math.max(0, Math.min(120, Math.round(nextValue))) },
+                      applyBlockStyleByMode({
+                        hangingIndent: Math.max(0, Math.min(120, Math.round(nextValue))),
                       });
                     }}
                   />
@@ -3086,7 +3277,7 @@ function renderObjectPropertiesPanel(
                 段前距
                 <div className="number-input-shell">
                   <input
-                    key={`space-before-${selectedNodeInfo.nodeId}-${currentSpaceBefore}`}
+                    key={`space-before-${selectedNodeInfo.nodeId}-${blockStyleApplyMode}-${currentSpaceBefore}`}
                     type="number"
                     min={0}
                     max={120}
@@ -3100,9 +3291,8 @@ function renderObjectPropertiesPanel(
                         return;
                       }
 
-                      applyLayoutNodeBlockStyle({
-                        nodeId: selectedNodeInfo.nodeId,
-                        blockStyleOverrides: { spaceBefore: Math.max(0, Math.min(120, Math.round(nextValue))) },
+                      applyBlockStyleByMode({
+                        spaceBefore: Math.max(0, Math.min(120, Math.round(nextValue))),
                       });
                     }}
                   />
@@ -3115,7 +3305,7 @@ function renderObjectPropertiesPanel(
                 段后距
                 <div className="number-input-shell">
                   <input
-                    key={`space-after-${selectedNodeInfo.nodeId}-${currentSpaceAfter}`}
+                    key={`space-after-${selectedNodeInfo.nodeId}-${blockStyleApplyMode}-${currentSpaceAfter}`}
                     type="number"
                     min={0}
                     max={120}
@@ -3129,9 +3319,8 @@ function renderObjectPropertiesPanel(
                         return;
                       }
 
-                      applyLayoutNodeBlockStyle({
-                        nodeId: selectedNodeInfo.nodeId,
-                        blockStyleOverrides: { spaceAfter: Math.max(0, Math.min(120, Math.round(nextValue))) },
+                      applyBlockStyleByMode({
+                        spaceAfter: Math.max(0, Math.min(120, Math.round(nextValue))),
                       });
                     }}
                   />
@@ -3140,9 +3329,12 @@ function renderObjectPropertiesPanel(
               </label>
             ) : null}
           </div>
-          {blockStyleControlSupport.note ? (
+          {blockStyleControlSupport.note || currentBlockStyleScopeLabel ? (
             <div className="panel-note-list">
-              <p>{blockStyleControlSupport.note}</p>
+              {currentBlockStyleScopeLabel ? (
+                <p>同类块规则会先作用到当前类型所有块；如果某一个块单独再改，当前块局部样式仍会优先覆盖它。</p>
+              ) : null}
+              <p>{blockStyleControlSupport.note ?? '当前块局部样式会继续覆盖模板默认值。'}</p>
             </div>
           ) : null}
         </section>
@@ -4074,6 +4266,227 @@ function renderPageBackgroundPanel({
   );
 }
 
+function renderPdfWatermarkPanel({
+  styleSettings,
+  setPdfWatermark,
+  watermarkFeedback,
+  setWatermarkFeedback,
+}: {
+  styleSettings: StyleSettings;
+  setPdfWatermark: (watermark: PdfWatermarkSettings) => void;
+  watermarkFeedback: string | null;
+  setWatermarkFeedback: (message: string | null) => void;
+}): JSX.Element {
+  const currentWatermark = styleSettings.pdfWatermark;
+  const updateWatermark = (
+    patch: Omit<Partial<PdfWatermarkSettings>, 'text' | 'image'> & {
+      text?: Partial<PdfWatermarkSettings['text']>;
+      image?: Partial<PdfWatermarkSettings['image']>;
+    },
+  ): void => {
+    setWatermarkFeedback(null);
+    setPdfWatermark({
+      ...currentWatermark,
+      ...patch,
+      text: {
+        ...currentWatermark.text,
+        ...patch.text,
+      },
+      image: {
+        ...currentWatermark.image,
+        ...patch.image,
+      },
+    });
+  };
+
+  const handleSelectWatermarkImage = async (): Promise<void> => {
+    try {
+      const imagePath = await selectLocalImageFile();
+      setPdfWatermark({
+        ...currentWatermark,
+        enabled: true,
+        kind: 'image',
+        image: {
+          ...currentWatermark.image,
+          imageSrc: imagePath,
+        },
+      });
+      setWatermarkFeedback('已选择水印图片');
+    } catch (error) {
+      if (error instanceof Error && error.message === '已取消选择图片') {
+        setWatermarkFeedback('已取消选择图片');
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : '选择水印图片失败';
+      setWatermarkFeedback(message);
+    }
+  };
+
+  return (
+    <section className="detail-panel">
+      <div className="detail-panel-head">
+        <h3>PDF 水印</h3>
+        <span>预览可见，但只在导出 PDF 时生效</span>
+      </div>
+
+      <div className="segmented-group">
+        <button
+          type="button"
+          className={currentWatermark.enabled ? 'segment-chip active' : 'segment-chip'}
+          onClick={() => updateWatermark({ enabled: true })}
+        >
+          开启水印
+        </button>
+        <button
+          type="button"
+          className={currentWatermark.enabled ? 'segment-chip' : 'segment-chip active'}
+          onClick={() => updateWatermark({ enabled: false })}
+        >
+          关闭水印
+        </button>
+      </div>
+
+      <div className="template-list">
+        {pdfWatermarkModeOptions.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={currentWatermark.kind === option.id ? 'template-swatch active' : 'template-swatch'}
+            onClick={() => updateWatermark({ kind: option.id })}
+            disabled={!currentWatermark.enabled}
+          >
+            <strong>{option.label}</strong>
+            <span>{option.description}</span>
+          </button>
+        ))}
+      </div>
+
+      {currentWatermark.kind === 'text' ? (
+        <div className="property-stack">
+          <label>
+            水印文字
+            <input
+              className="style-text-input"
+              type="text"
+              value={currentWatermark.text.content}
+              onChange={(event) => updateWatermark({ text: { content: event.target.value } })}
+              placeholder="请输入水印文字"
+              disabled={!currentWatermark.enabled}
+            />
+          </label>
+        </div>
+      ) : (
+        <>
+          <div className="property-stack">
+            <label>
+              水印图片
+              <input
+                className="style-text-input"
+                type="text"
+                value={currentWatermark.image.imageSrc}
+                onChange={(event) => updateWatermark({ image: { imageSrc: event.target.value } })}
+                placeholder="请选择本地图片"
+                disabled={!currentWatermark.enabled}
+              />
+            </label>
+          </div>
+          <div className="segmented-group">
+            <button
+              type="button"
+              className="segment-chip table-structure-button"
+              onClick={handleSelectWatermarkImage}
+              disabled={!currentWatermark.enabled}
+            >
+              选择图片
+            </button>
+            <button
+              type="button"
+              className="segment-chip"
+              onClick={() => updateWatermark({ image: { imageSrc: '' } })}
+              disabled={!currentWatermark.enabled || !currentWatermark.image.imageSrc}
+            >
+              清除图片
+            </button>
+          </div>
+        </>
+      )}
+
+      <div className="watermark-slider-group">
+        <label className="watermark-slider-row">
+          <span>角度</span>
+          <input
+            className="watermark-range"
+            type="range"
+            min={-180}
+            max={180}
+            step={1}
+            value={currentWatermark.angleDeg}
+            onChange={(event) => updateWatermark({ angleDeg: Number(event.target.value) })}
+            disabled={!currentWatermark.enabled}
+          />
+          <strong>{currentWatermark.angleDeg}°</strong>
+        </label>
+
+        <label className="watermark-slider-row">
+          <span>透明度</span>
+          <input
+            className="watermark-range"
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={currentWatermark.opacityPercent}
+            onChange={(event) => updateWatermark({ opacityPercent: Number(event.target.value) })}
+            disabled={!currentWatermark.enabled}
+          />
+          <strong>{currentWatermark.opacityPercent}%</strong>
+        </label>
+
+        {currentWatermark.kind === 'text' ? (
+          <label className="watermark-slider-row">
+            <span>文字大小</span>
+            <input
+              className="watermark-range"
+              type="range"
+              min={16}
+              max={160}
+              step={1}
+              value={currentWatermark.text.fontSizePx}
+              onChange={(event) => updateWatermark({ text: { fontSizePx: Number(event.target.value) } })}
+              disabled={!currentWatermark.enabled}
+            />
+            <strong>{currentWatermark.text.fontSizePx}px</strong>
+          </label>
+        ) : (
+          <label className="watermark-slider-row">
+            <span>图片宽度</span>
+            <input
+              className="watermark-range"
+              type="range"
+              min={10}
+              max={70}
+              step={1}
+              value={currentWatermark.image.widthPercent}
+              onChange={(event) => updateWatermark({ image: { widthPercent: Number(event.target.value) } })}
+              disabled={!currentWatermark.enabled}
+            />
+            <strong>{currentWatermark.image.widthPercent}%</strong>
+          </label>
+        )}
+      </div>
+
+      <div className="panel-note-list">
+        <p>当前预览会直接显示水印效果，但 DOCX 导出不会带出这层水印。</p>
+        <p>本步默认按整页重复铺设水印，不支持自由拖拽定位。</p>
+        {currentWatermark.kind === 'image' && currentWatermark.image.imageSrc ? <p>{currentWatermark.image.imageSrc}</p> : null}
+      </div>
+
+      {watermarkFeedback ? <p className="table-structure-feedback">{watermarkFeedback}</p> : null}
+    </section>
+  );
+}
+
 function renderTemplatePanel({
   styleSettings,
   setTemplateId,
@@ -4283,6 +4696,7 @@ export function RightPanel({
   const setTemplateId = useAppStore((state) => state.setTemplateId);
   const setThemeId = useAppStore((state) => state.setThemeId);
   const setPageBackground = useAppStore((state) => state.setPageBackground);
+  const setPdfWatermark = useAppStore((state) => state.setPdfWatermark);
   const setHeaderPreset = useAppStore((state) => state.setHeaderPreset);
   const setFooterPreset = useAppStore((state) => state.setFooterPreset);
   const setCustomHeaderReservedMm = useAppStore((state) => state.setCustomHeaderReservedMm);
@@ -4329,6 +4743,7 @@ export function RightPanel({
   const updateLayoutColumnSectionAttributes = useAppStore((state) => state.updateLayoutColumnSectionAttributes);
   const unwrapLayoutColumnSection = useAppStore((state) => state.unwrapLayoutColumnSection);
   const applyLayoutNodeBlockStyle = useAppStore((state) => state.applyLayoutNodeBlockStyle);
+  const applyLayoutQuickBlockStyle = useAppStore((state) => state.applyLayoutQuickBlockStyle);
   const updateLayoutBlockSemantic = useAppStore((state) => state.updateLayoutBlockSemantic);
   const updateLayoutBlockSemanticPreset = useAppStore((state) => state.updateLayoutBlockSemanticPreset);
   const updateLayoutTocMaxDepth = useAppStore((state) => state.updateLayoutTocMaxDepth);
@@ -4340,7 +4755,9 @@ export function RightPanel({
   const [blockquoteStructureFeedback, setBlockquoteStructureFeedback] = useState<string | null>(null);
   const [columnSectionFeedback, setColumnSectionFeedback] = useState<string | null>(null);
   const [topLevelBlockFeedback, setTopLevelBlockFeedback] = useState<string | null>(null);
+  const [blockStyleApplyMode, setBlockStyleApplyMode] = useState<BlockStyleApplyMode>('current');
   const [backgroundFeedback, setBackgroundFeedback] = useState<string | null>(null);
+  const [watermarkFeedback, setWatermarkFeedback] = useState<string | null>(null);
   const [marginDrafts, setMarginDrafts] = useState<Record<MarginSide, string>>({
     top: String(styleSettings.customMarginsMm.top),
     right: String(styleSettings.customMarginsMm.right),
@@ -4382,6 +4799,7 @@ export function RightPanel({
     setBlockquoteStructureFeedback(null);
     setColumnSectionFeedback(null);
     setTopLevelBlockFeedback(null);
+    setBlockStyleApplyMode('current');
   }, [selectedNodeId]);
 
   useEffect(() => {
@@ -4659,6 +5077,13 @@ export function RightPanel({
           backgroundColorDraft,
           setBackgroundColorDraft,
         });
+      case 'PDF 水印':
+        return renderPdfWatermarkPanel({
+          styleSettings,
+          setPdfWatermark,
+          watermarkFeedback,
+          setWatermarkFeedback,
+        });
       case '模板起点':
         return renderTemplatePanel({
           styleSettings,
@@ -4695,6 +5120,7 @@ export function RightPanel({
             selectedTopLevelBlock,
             selectedNodeId,
             canvasTextSelection,
+            layoutDocument?.styles,
             layoutDocument?.resources ?? [],
             semanticRoleConfig,
             resolvedStyleContract,
@@ -4724,6 +5150,7 @@ export function RightPanel({
             unwrapLayoutColumnSection,
             deleteLayoutTopLevelBlock,
             applyLayoutNodeBlockStyle,
+            applyLayoutQuickBlockStyle,
             updateLayoutBlockSemantic,
             updateLayoutBlockSemanticPreset,
             tableSelection,
@@ -4739,6 +5166,8 @@ export function RightPanel({
             setColumnSectionFeedback,
             topLevelBlockFeedback,
             setTopLevelBlockFeedback,
+            blockStyleApplyMode,
+            setBlockStyleApplyMode,
             syncEditingTextBeforeStyleAction,
           )}
         </div>

@@ -15,7 +15,7 @@ import type { LayoutWarning, LayoutWarningType, PageLayout } from '@/engine/type
 
 export type ExportCheckSeverity = 'error' | 'warning' | 'notice';
 export type ExportCheckTarget = 'all' | 'pdf' | 'docx';
-export type ExportCheckCategory = '分页' | '图片' | '目录' | '答案视图' | 'DOCX 兼容' | '页面背景';
+export type ExportCheckCategory = '分页' | '图片' | '目录' | '答案视图' | 'DOCX 兼容' | '页面背景' | '水印';
 
 export interface ExportCheckItem {
   id: string;
@@ -433,6 +433,25 @@ function collectPageBackgroundChecks(styleSettings: StyleSettings, targetItems: 
   }
 }
 
+function collectPdfWatermarkChecks(styleSettings: StyleSettings, targetItems: ExportCheckItem[]): void {
+  const watermark = styleSettings.pdfWatermark;
+  if (!watermark.enabled) {
+    return;
+  }
+
+  if (watermark.kind === 'image' && !watermark.image.imageSrc.trim()) {
+    pushItem(targetItems, {
+      id: 'pdf-watermark-image-empty',
+      severity: 'error',
+      target: 'pdf',
+      category: '水印',
+      title: '图片水印已启用，但缺少图片路径',
+      message: '当前 PDF 图片水印已经开启，但还没有实际图片路径，导出时不会带出图片水印。',
+      suggestion: '请先选择一张本地图片，或改回文字水印后再导出 PDF。',
+    });
+  }
+}
+
 function collectDocxEquationChecks(blocks: LayoutBlock[], targetItems: ExportCheckItem[]): void {
   walkBlocks(blocks, (block) => {
     const equationSamples: Array<{
@@ -512,6 +531,7 @@ export function runExportChecks(payload: RunExportChecksPayload): ExportCheckRes
   );
   collectDocxStructureChecks(payload.styleSettings, payload.renderableBlocks, items);
   collectPageBackgroundChecks(payload.styleSettings, items);
+  collectPdfWatermarkChecks(payload.styleSettings, items);
   collectDocxEquationChecks(payload.renderableBlocks, items);
 
   const sortedItems = sortExportCheckItems(items);

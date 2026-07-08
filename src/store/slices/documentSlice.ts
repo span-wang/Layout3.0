@@ -58,11 +58,14 @@ import {
 } from '@/engine/document-model';
 import { mergeFontResource } from '@/engine/document-model/fontResources';
 import { resolveStyleContract } from '@/engine/style/resolveContract';
+import { normalizeStyleSettings } from '@/engine/style/styleSettings';
+import { applyQuickBlockStyleToStyleSheet } from '@/engine/style/quickBlockStyle';
 import {
   applyQuickTextStyleToStyleSheet,
   getEffectiveTableCellMaxFontSize,
   resolveEffectiveTextLineHeight,
 } from '@/engine/style/quickTextStyle';
+import { saveBlockSpacingPresetLibrary } from '@/services/BlockSpacingPresetLibraryService';
 import type { StyleSettings } from '@/engine/style/types';
 import type {
   AnswerBlockPlacementMode,
@@ -93,7 +96,11 @@ import type {
 } from '@/engine/document-model';
 import { buildTableCellRangeSelection } from '@/engine/document-model/tableLayout';
 import { loadRecentFiles } from '@/services/RecentFilesService';
-import type { DocumentSlice, StoreSlice } from '@/store/types';
+import {
+  createDocumentHistorySnapshot,
+  pushDocumentHistorySnapshot as pushDocumentHistory,
+} from '@/store/documentHistory';
+import type { DocumentHistorySnapshot, DocumentSlice, StoreSlice } from '@/store/types';
 import { getDocumentFormatFromPath } from '@/utils/filePath';
 
 type DocumentSliceWithStyleSettings = DocumentSlice & { styleSettings: StyleSettings };
@@ -1278,34 +1285,34 @@ function removeImageResourcesByBlockId(
   return resources.filter((resource) => resource.type !== 'image' || resource.blockId !== blockId);
 }
 
-const documentHistoryLimit = 50;
+function restoreDocumentHistorySnapshot(
+  state: DocumentSliceWithStyleSettings,
+  snapshot: DocumentHistorySnapshot,
+): void {
+  const nextSnapshot = createDocumentHistorySnapshot(snapshot.layoutDocument, snapshot.styleSettings);
+  const nextStyleSettings = normalizeStyleSettings(nextSnapshot.styleSettings);
+  nextStyleSettings.customBlockSpacingPresets = saveBlockSpacingPresetLibrary(
+    nextStyleSettings.customBlockSpacingPresets,
+  );
 
-function cloneLayoutDocumentSnapshot(document: LayoutDocument): LayoutDocument {
-  // LayoutDocument 目前是纯 JSON 结构，用 JSON 克隆可以避免历史快照被后续 immer 修改串联污染。
-  return JSON.parse(JSON.stringify(document)) as LayoutDocument;
-}
-
-function pushDocumentHistory(state: DocumentSlice): void {
-  if (!state.layoutDocument) {
-    return;
-  }
-
-  state.documentHistoryPast.push(cloneLayoutDocumentSnapshot(state.layoutDocument));
-  if (state.documentHistoryPast.length > documentHistoryLimit) {
-    state.documentHistoryPast.shift();
-  }
-  // 新操作发生后，旧的重做链路不再成立。
-  state.documentHistoryFuture = [];
-}
-
-function restoreLayoutDocumentSnapshot(state: DocumentSlice, document: LayoutDocument): void {
-  state.layoutDocument = normalizeLayoutDocumentSyntaxMappingConfig(cloneLayoutDocumentSnapshot(document));
+  state.layoutDocument = normalizeLayoutDocumentSyntaxMappingConfig(nextSnapshot.layoutDocument);
+  state.styleSettings = nextStyleSettings;
   state.title = state.layoutDocument.title;
   state.source = state.layoutDocument.source;
   state.parseState = 'ready';
   state.parseError = null;
   state.pageLayouts = [];
   state.isDirty = true;
+}
+
+function pushSnapshotToHistoryStack(
+  history: DocumentHistorySnapshot[],
+  snapshot: DocumentHistorySnapshot,
+): void {
+  history.push(snapshot);
+  if (history.length > 50) {
+    history.shift();
+  }
 }
 
 function syncLayoutSelectionForRenderableBlocks(state: DocumentSlice): void {
@@ -1852,12 +1859,15 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       }
 
       const previousDocument = state.documentHistoryPast.pop();
-      if (!previousDocument) {
+      if (!previousDocument || !state.layoutDocument) {
         return;
       }
 
-      state.documentHistoryFuture.push(cloneLayoutDocumentSnapshot(state.layoutDocument));
-      restoreLayoutDocumentSnapshot(state, previousDocument);
+      pushSnapshotToHistoryStack(
+        state.documentHistoryFuture,
+        createDocumentHistorySnapshot(state.layoutDocument, state.styleSettings),
+      );
+      restoreDocumentHistorySnapshot(state, previousDocument);
       didUndo = true;
     });
 
@@ -1872,12 +1882,15 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       }
 
       const nextDocument = state.documentHistoryFuture.pop();
-      if (!nextDocument) {
+      if (!nextDocument || !state.layoutDocument) {
         return;
       }
 
-      state.documentHistoryPast.push(cloneLayoutDocumentSnapshot(state.layoutDocument));
-      restoreLayoutDocumentSnapshot(state, nextDocument);
+      pushSnapshotToHistoryStack(
+        state.documentHistoryPast,
+        createDocumentHistorySnapshot(state.layoutDocument, state.styleSettings),
+      );
+      restoreDocumentHistorySnapshot(state, nextDocument);
       didRedo = true;
     });
 
@@ -3172,6 +3185,28 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
         applySemanticPresetToLayoutBlock(block, normalizedPresetId),
       );
       applyDocumentMutation(state, nodeId, result);
+    }),
+  applyLayoutQuickBlockStyle: ({ scope, styleOverrides }) =>
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const nextStyles = applyQuickBlockStyleToStyleSheet(
+        state.layoutDocument.styles,
+        scope,
+        styleOverrides,
+      );
+      if (nextStyles === state.layoutDocument.styles) {
+        return;
+      }
+
+      pushDocumentHistory(state);
+      state.layoutDocument.styles = nextStyles;
+      state.layoutDocument.meta.updatedAt = new Date().toISOString();
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
     }),
   applyLayoutQuickTextStyle: ({ scope, styleOverrides }) =>
     set((state) => {

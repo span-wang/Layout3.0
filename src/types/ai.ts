@@ -1,3 +1,5 @@
+import type { KnowledgeSourceReference } from '@/types/knowledge';
+
 /**
  * AI 功能类型定义
  * 支持 OpenAI / Anthropic / 自定义 Provider
@@ -60,6 +62,77 @@ export type GenerateType =
   | 'xiaohongshuCover';
 
 /**
+ * AI 生成时允许勾选的内置语义角色
+ * 当前只覆盖仍受支持的内置语义，不把自定义语义混进来。
+ */
+export type AiGenerateSemanticRoleId =
+  | 'answer'
+  | 'explanation'
+  | 'pitfall'
+  | 'caption'
+  | 'summary'
+  | 'warning';
+
+export interface AiGenerateSemanticRoleOption {
+  id: AiGenerateSemanticRoleId;
+  label: string;
+  description: string;
+}
+
+/**
+ * AI 生成语义块勾选项
+ * 顺序同时作为提示词输出和界面展示顺序。
+ */
+export const AI_GENERATE_SEMANTIC_ROLE_OPTIONS: AiGenerateSemanticRoleOption[] = [
+  {
+    id: 'answer',
+    label: '答案',
+    description: '适合参考答案、结论答案。',
+  },
+  {
+    id: 'explanation',
+    label: '解析',
+    description: '适合解题思路、原因说明。',
+  },
+  {
+    id: 'pitfall',
+    label: '易错',
+    description: '适合常见误区和错误提醒。',
+  },
+  {
+    id: 'caption',
+    label: '说明',
+    description: '适合补充说明和注释。',
+  },
+  {
+    id: 'summary',
+    label: '总结',
+    description: '适合章节小结和归纳。',
+  },
+  {
+    id: 'warning',
+    label: '注意',
+    description: '适合重点提醒和警示。',
+  },
+];
+
+export const DEFAULT_AI_GENERATE_SEMANTIC_ROLE_IDS: AiGenerateSemanticRoleId[] =
+  AI_GENERATE_SEMANTIC_ROLE_OPTIONS.map((option) => option.id);
+
+export function normalizeAiGenerateSemanticRoleIds(
+  roleIds?: readonly string[] | null,
+): AiGenerateSemanticRoleId[] {
+  const allowedIds = new Set<AiGenerateSemanticRoleId>(
+    AI_GENERATE_SEMANTIC_ROLE_OPTIONS.map((option) => option.id),
+  );
+  const requestedIds = new Set(roleIds ?? []);
+
+  return AI_GENERATE_SEMANTIC_ROLE_OPTIONS
+    .map((option) => option.id)
+    .filter((roleId) => allowedIds.has(roleId) && requestedIds.has(roleId));
+}
+
+/**
  * 生成选项
  */
 export interface GenerateOptions {
@@ -85,6 +158,8 @@ export interface GenerateOptions {
   selectedCopy?: string;
   /** 个人知识库提供的检索上下文 */
   knowledgeContext?: string;
+  /** 教育内容生成时允许输出的语义角色；空数组表示不要输出任何 `role:` 前缀 */
+  semanticRoleIds?: AiGenerateSemanticRoleId[];
 }
 
 /**
@@ -114,6 +189,8 @@ export interface AiGenerationRecord {
   provider?: AiProvider;
   /** 本次使用的模型名称 */
   model?: string;
+  /** 本次生成参考的知识库来源 */
+  knowledgeSources?: KnowledgeSourceReference[];
   /** 完整生成内容 */
   content: string;
   /** 创建时间 ISO 字符串 */

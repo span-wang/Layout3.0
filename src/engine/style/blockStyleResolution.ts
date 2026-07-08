@@ -9,6 +9,10 @@ import {
   getEffectiveTextRunsMaxFontSize,
   resolveEffectiveTextLineHeight,
 } from './quickTextStyle';
+import {
+  resolveEffectiveBlockStyleOverrides,
+  resolveQuickBlockStyleForBlock,
+} from './quickBlockStyle';
 import type { ResolvedStyleContract } from './types';
 import { resolveAssetSrc } from '@/utils/filePath';
 
@@ -271,6 +275,7 @@ export function resolveBlockEffectiveTextMetrics(
   styles?: LayoutStyleSheet | null,
 ): BlockDefaultTextMetrics {
   const defaultMetrics = resolveBlockDefaultTextMetrics(block, contract);
+  const effectiveBlockStyleOverrides = resolveEffectiveBlockStyleOverrides(block, styles);
   let effectiveFontSize = defaultMetrics.fontSize;
 
   if (
@@ -333,7 +338,7 @@ export function resolveBlockEffectiveTextMetrics(
     lineHeight: resolveEffectiveTextLineHeight({
       fontSize: effectiveFontSize,
       baseFontSize: defaultMetrics.fontSize,
-      baseLineHeight: block.blockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight,
+      baseLineHeight: effectiveBlockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight,
     }),
   };
 }
@@ -341,13 +346,21 @@ export function resolveBlockEffectiveTextMetrics(
 export function getBlockStyleSourceSummary(
   block: LayoutBlock,
   contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet | null,
 ): string {
   const baseLabel =
     contract.templateId === 'default' && contract.themeId === 'default'
       ? '默认基线'
       : `模板基线（${contract.templateThemeLabel}）`;
+  const hasQuickRule = Object.values(resolveQuickBlockStyleForBlock(block, styles)).some((value) => value !== undefined);
 
-  return hasBlockStyleOverrides(block)
-    ? `${baseLabel} + 当前块局部覆盖`
+  if (hasBlockStyleOverrides(block)) {
+    return hasQuickRule
+      ? `${baseLabel} + 同类块规则 + 当前块局部覆盖`
+      : `${baseLabel} + 当前块局部覆盖`;
+  }
+
+  return hasQuickRule
+    ? `${baseLabel} + 同类块规则`
     : `${baseLabel}（当前无局部覆盖）`;
 }

@@ -141,6 +141,128 @@
       ],
       "status": "未开始",
       "acceptance": "发布条件全部满足。"
+    },
+    {
+      "id": "PH4-07",
+      "sequence": "7",
+      "order": 70,
+      "title": "PDF 水印功能 V1",
+      "priority": "P2",
+      "moduleIds": [
+        "style-module",
+        "export-pipeline",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M3",
+        "GA"
+      ],
+      "status": "已完成",
+      "acceptance": "右侧页面设置可配置 PDF 文字/图片水印，预览工作台可见，PDF 导出保留水印；DOCX 不受影响。",
+      "startedOn": "2026-07-08",
+      "completedOn": "2026-07-08",
+      "executionBoundary": {
+        "id": "PH4-07-pdf-watermark-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：PDF 水印功能 V1",
+        "confirmedOn": "2026-07-08",
+        "startedOn": "2026-07-08",
+        "completedOn": "2026-07-08",
+        "summary": "本步已完成 `PH4-07-pdf-watermark-v1`：1) 右侧“页面设置”已新增 `PDF 水印` 面板，支持文字水印与图片水印两种模式，并可设置启用状态、自由角度、透明度、文字大小或图片宽度；2) 文字水印支持自定义内容，图片水印支持本地图片选择、路径编辑和清除；3) 预览工作台已直接显示水印效果，并在面板中明确提示该能力只作用于 PDF 导出；4) PDF HTML 导出链路已接入同一套水印铺设口径，确保预览与 PDF 导出一致；5) DOCX 导出继续保持无水印；6) 水印配置已写入 `StyleSettings`，进入 `.layout` 保存恢复和现有撤销历史；7) 导出检查已补图片水印空路径提醒与定向测试。",
+        "included": [
+          "在 `StyleSettings` 中新增 PDF 水印配置，并补齐默认值、克隆、归一化与 `.layout` 保存恢复。",
+          "右侧“页面设置”新增 PDF 水印面板，界面文案、按钮、提示和代码注释继续使用中文。",
+          "支持开关水印、切换文字水印 / 图片水印、编辑文字内容、设置自由角度、大小和透明度。",
+          "图片水印支持选择本地图片、清除图片和直接查看当前图片路径。",
+          "预览工作台直接渲染水印效果，并明确提示“仅 PDF 导出生效”。",
+          "HTML / PDF 导出链路接入同一套水印渲染口径，保证预览与 PDF 导出一致。",
+          "DOCX 导出继续保持无水印，不新增 DOCX 水印兼容实现。",
+          "导出检查补一条最小规则：当图片水印已启用但图片路径为空时，给出中文提醒。",
+          "完成后执行 `npm run typecheck`、`npm run build`、`npm run progress:build` 和 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不做自由拖拽定位、单次只放一个指定位置水印或手动坐标输入。",
+          "不做多组水印叠加、每页不同水印、奇偶页不同水印或首页单独配置。",
+          "不做图片裁剪、蒙版编辑、描边、阴影、混合模式或更复杂的视觉特效。",
+          "不做 DOCX 水印，不改 DOCX 导出算法。",
+          "不扩展为资源入库、网络图片、水印模板库或批量预设。"
+        ],
+        "followup": [
+          "自由定位、局部水印、不同页面差异化水印和模板化预设，后续继续归属 `PH4-07` 增强子步。",
+          "DOCX 水印兼容、资源入库和更复杂图片处理，后续归属导出治理或资源管理增强任务。"
+        ],
+        "verification": [
+          "`src/engine/style/types.ts`、`presets.ts`、`styleSettings.ts` 与 `src/store/slices/styleSlice.ts` 已新增 PDF 水印配置、默认值、归一化、克隆与 store 写回。",
+          "`src/components/layout/RightPanel.tsx` 已新增 `PDF 水印` 页面设置面板，支持文字/图片切换、角度、透明度、大小与本地图片选择。",
+          "`src/components/layout/CanvasPane.tsx`、`src/services/exportHtml.ts` 与 `src/engine/style/pdfWatermark.ts` 已接通同一套预览 / PDF 水印渲染口径。",
+          "`src/services/ExportCheckService.ts` 与 `src/services/ExportCheckService.test.ts` 已补图片水印空路径检查和定向回归。",
+          "`npm run typecheck` 成功。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\ExportCheckService.test.ts`，4 个测试全部 pass。",
+          "`npm run build` 成功。"
+        ]
+      }
+    },
+    {
+      "id": "PH4-08",
+      "sequence": "8",
+      "order": 80,
+      "title": "页眉页脚渐变背景去除 V1",
+      "priority": "P2",
+      "moduleIds": [
+        "style-module",
+        "export-pipeline",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M3",
+        "GA"
+      ],
+      "status": "已完成",
+      "acceptance": "默认主题的页眉页脚不再显示渐变背景，改为纯色背景；画布预览与 HTML/PDF 导出口径一致；`雪山静境`、`手绘札记` 等主题专属装饰保持不变。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-18",
+        "PH2-16"
+      ],
+      "startedOn": "2026-07-08",
+      "completedOn": "2026-07-08",
+      "executionBoundary": {
+        "id": "PH4-08-header-footer-gradient-remove-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：页眉页脚渐变背景去除 V1",
+        "confirmedOn": "2026-07-08",
+        "startedOn": "2026-07-08",
+        "completedOn": "2026-07-08",
+        "summary": "本步已完成 `PH4-08-header-footer-gradient-remove-v1`：1) 默认主题 token 中的页眉页脚背景已从渐变改为纯白色；2) `src/styles.css` 中画布预览页眉页脚的渐变兜底已同步改为纯色兜底；3) `src/services/exportHtml.ts` 中 HTML/PDF 导出页眉页脚样式也已同步改为纯色兜底，预览与导出口径重新一致；4) `雪山静境`、`手绘札记` 等主题专属页眉页脚装饰保持不变；5) `npm run typecheck` 与 `npm run build` 已通过，本步未扩展页眉页脚内容、高度或主题编辑能力。",
+        "included": [
+          "定位并去除默认页眉页脚背景中的渐变样式来源，包括默认主题 token 与预览 / HTML 导出的渐变兜底。",
+          "把默认页眉页脚背景统一改为纯色背景，保留现有分隔线与文本布局，不改页眉页脚内容变量和预留高度。",
+          "同步覆盖画布预览与 HTML/PDF 导出，避免“预览已去渐变、导出仍有渐变”的口径分叉。",
+          "保持 `雪山静境`、`手绘札记` 等主题的专属页眉页脚纹样和装饰不变，不在本步顺手改主题设计。",
+          "完成后执行 `npm run typecheck`、`npm run build`、`npm run progress:build` 和 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不改页眉页脚内容编辑、默认变量、预留高度、页码规则、首页不同或奇偶页不同逻辑。",
+          "不去掉 `雪山静境`、`手绘札记` 等主题已有的页眉页脚装饰纹样，也不改主题色板。",
+          "不扩展页眉页脚边框线样式、富文本、Logo、图片或模板化编辑器能力。",
+          "不重写分页算法，不改 `.layout` 结构，不新增页面设置入口。"
+        ],
+        "followup": [
+          "如果后续需要给主题页眉页脚装饰增加独立开关，继续归属 `PH2-16` / 模板主题增强任务。",
+          "如果后续需要让页眉页脚纯色、边框和装饰进入可配置页面设置，继续归属样式系统增强任务。",
+          "更完整的页眉页脚模板化、品牌化和富文本能力，继续归属 `PH2-18` 后续增强任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前最小返修边界可以执行。",
+          "`src/engine/style/presets.ts` 已把默认主题 `headerBackground / footerBackground` 从渐变改成 `#ffffff`。",
+          "`src/styles.css` 已把画布预览 `.page-header / .page-footer` 的渐变兜底改为纯色兜底。",
+          "`src/services/exportHtml.ts` 已把 HTML/PDF 导出 `.page-header / .page-footer` 的渐变兜底改为纯色兜底。",
+          "`雪山静境`、`手绘札记` 等主题的专属页眉页脚装饰样式未改动。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "完成后执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+        ]
+      }
     }
   ]
 }

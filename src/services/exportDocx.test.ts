@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 import type { LayoutBlock, TextRun } from '@/engine/document-model';
 import { defaultStyleSettings } from '@/engine/style/presets';
 import { resolveStyleContract } from '@/engine/style/resolveContract';
+import { applyQuickBlockStyleToStyleSheet } from '@/engine/style/quickBlockStyle';
 import { buildDocxArrayBuffer } from './exportDocx';
 
 function createTextRun(id: string, text: string): TextRun {
@@ -307,6 +308,42 @@ test('PH2-23 DOCX 分割线移除：horizontalRule 块不再导出 thematic brea
   assert.match(documentXml, /上文/u, 'DOCX 中应继续保留分割线前的段落。');
   assert.match(documentXml, /下文/u, 'DOCX 中应继续保留分割线后的段落。');
   assert.doesNotMatch(documentXml, /<w:pBdr>/u, 'DOCX 中不应再为 horizontalRule 输出 thematic break 边框。');
+});
+
+test('PH2-14 DOCX 导出直接消费段落同类块规则', async () => {
+  const block = createParagraphBlock('quick-style-paragraph', '同类块规则正文');
+  const contract = resolveStyleContract(defaultStyleSettings);
+  const styles = applyQuickBlockStyleToStyleSheet(
+    { blockStyles: {}, textStyles: {} },
+    'paragraph',
+    {
+      textAlign: 'center',
+      lineHeight: 32,
+      spaceBefore: 12,
+      spaceAfter: 8,
+    },
+  );
+
+  const docxBuffer = await buildDocxArrayBuffer({
+    title: 'DOCX 同类块规则验证',
+    blocks: [block],
+    pages: [
+      {
+        pageNumber: 1,
+        blocks: [block],
+        contract,
+        warnings: [],
+      },
+    ],
+    styles,
+    styleSettings: defaultStyleSettings,
+  });
+  const documentXml = await readDocumentXmlFromDocx(docxBuffer);
+
+  assert.match(documentXml, /<w:jc w:val="center"\/>/u, 'DOCX 段落应输出同类块对齐。');
+  assert.match(documentXml, /w:before="180"/u, 'DOCX 段落应输出同类块段前距。');
+  assert.match(documentXml, /w:after="120"/u, 'DOCX 段落应输出同类块段后距。');
+  assert.match(documentXml, /w:line="480"/u, 'DOCX 段落应输出同类块行距。');
 });
 
 test('PH2-21B DOCX A3 纵向页面规格：输出标准纵向宽高', async () => {

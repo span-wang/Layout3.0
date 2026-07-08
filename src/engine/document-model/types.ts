@@ -27,16 +27,10 @@ export type LayoutBlockType =
 export type LayoutListKind = 'ordered' | 'unordered';
 
 export type BuiltInSemanticRoleId =
-  | 'title'
-  | 'section'
-  | 'question'
   | 'answer'
   | 'explanation'
-  | 'key-point'
   | 'pitfall'
   | 'caption'
-  | 'example'
-  | 'step'
   | 'summary'
   | 'warning';
 

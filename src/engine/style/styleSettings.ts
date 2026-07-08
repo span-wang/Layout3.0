@@ -20,6 +20,10 @@ import type {
   PageBackgroundSettings,
   PageOrientation,
   PageSizeId,
+  PdfImageWatermarkSettings,
+  PdfTextWatermarkSettings,
+  PdfWatermarkKind,
+  PdfWatermarkSettings,
   PaginationBehavior,
   StyleSettings,
   TemplateId,
@@ -93,6 +97,31 @@ export function clonePageBackgroundSettings(background: PageBackgroundSettings):
     color: background.color,
     imageSrc: background.imageSrc,
     imageFit: background.imageFit,
+  };
+}
+
+function clonePdfTextWatermarkSettings(settings: PdfTextWatermarkSettings): PdfTextWatermarkSettings {
+  return {
+    content: settings.content,
+    fontSizePx: settings.fontSizePx,
+  };
+}
+
+function clonePdfImageWatermarkSettings(settings: PdfImageWatermarkSettings): PdfImageWatermarkSettings {
+  return {
+    imageSrc: settings.imageSrc,
+    widthPercent: settings.widthPercent,
+  };
+}
+
+export function clonePdfWatermarkSettings(settings: PdfWatermarkSettings): PdfWatermarkSettings {
+  return {
+    enabled: settings.enabled,
+    kind: settings.kind,
+    angleDeg: settings.angleDeg,
+    opacityPercent: settings.opacityPercent,
+    text: clonePdfTextWatermarkSettings(settings.text),
+    image: clonePdfImageWatermarkSettings(settings.image),
   };
 }
 
@@ -194,6 +223,10 @@ function isPageBackgroundImageFit(value: unknown): value is PageBackgroundImageF
   return value === 'cover' || value === 'contain' || value === 'repeat';
 }
 
+function isPdfWatermarkKind(value: unknown): value is PdfWatermarkKind {
+  return value === 'text' || value === 'image';
+}
+
 function normalizeNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
@@ -278,6 +311,84 @@ function normalizePageBackgroundSettings(
     color: normalizeColorString(value.color, fallback.color),
     imageSrc: normalizeOptionalString(value.imageSrc, fallback.imageSrc),
     imageFit: isPageBackgroundImageFit(value.imageFit) ? value.imageFit : fallback.imageFit,
+  };
+}
+
+function normalizePdfWatermarkAngle(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(-180, Math.min(180, Math.round(value)));
+}
+
+function normalizePdfWatermarkOpacity(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function normalizePdfWatermarkTextSize(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(16, Math.min(160, Math.round(value)));
+}
+
+function normalizePdfWatermarkImageWidth(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+
+  return Math.max(10, Math.min(70, Math.round(value)));
+}
+
+function normalizePdfTextWatermarkSettings(
+  value: unknown,
+  fallback: PdfTextWatermarkSettings = defaultStyleSettings.pdfWatermark.text,
+): PdfTextWatermarkSettings {
+  if (!isRecord(value)) {
+    return clonePdfTextWatermarkSettings(fallback);
+  }
+
+  return {
+    content: normalizeContentString(value.content, fallback.content),
+    fontSizePx: normalizePdfWatermarkTextSize(value.fontSizePx, fallback.fontSizePx),
+  };
+}
+
+function normalizePdfImageWatermarkSettings(
+  value: unknown,
+  fallback: PdfImageWatermarkSettings = defaultStyleSettings.pdfWatermark.image,
+): PdfImageWatermarkSettings {
+  if (!isRecord(value)) {
+    return clonePdfImageWatermarkSettings(fallback);
+  }
+
+  return {
+    imageSrc: normalizeOptionalString(value.imageSrc, fallback.imageSrc),
+    widthPercent: normalizePdfWatermarkImageWidth(value.widthPercent, fallback.widthPercent),
+  };
+}
+
+function normalizePdfWatermarkSettings(
+  value: unknown,
+  fallback: PdfWatermarkSettings = defaultStyleSettings.pdfWatermark,
+): PdfWatermarkSettings {
+  if (!isRecord(value)) {
+    return clonePdfWatermarkSettings(fallback);
+  }
+
+  return {
+    enabled: normalizeBoolean(value.enabled, fallback.enabled),
+    kind: isPdfWatermarkKind(value.kind) ? value.kind : fallback.kind,
+    angleDeg: normalizePdfWatermarkAngle(value.angleDeg, fallback.angleDeg),
+    opacityPercent: normalizePdfWatermarkOpacity(value.opacityPercent, fallback.opacityPercent),
+    text: normalizePdfTextWatermarkSettings(value.text, fallback.text),
+    image: normalizePdfImageWatermarkSettings(value.image, fallback.image),
   };
 }
 
@@ -381,6 +492,7 @@ export function cloneStyleSettings(styleSettings: StyleSettings): StyleSettings 
     ...styleSettings,
     customMarginsMm: cloneBoxInsets(styleSettings.customMarginsMm),
     pageBackground: clonePageBackgroundSettings(styleSettings.pageBackground),
+    pdfWatermark: clonePdfWatermarkSettings(styleSettings.pdfWatermark),
     headerFooterContent: cloneHeaderFooterContent(styleSettings.headerFooterContent),
     columns: cloneColumnSettings(styleSettings.columns),
     paginationAlgorithmId: styleSettings.paginationAlgorithmId,
@@ -428,6 +540,7 @@ export function normalizeStyleSettings(value: unknown): StyleSettings {
     ),
     // 页面背景是主题之上的用户覆盖层；旧 .layout 没有该字段时继续跟随主题。
     pageBackground: normalizePageBackgroundSettings(value.pageBackground),
+    pdfWatermark: normalizePdfWatermarkSettings(value.pdfWatermark),
     // 旧 .layout 没有页眉页脚内容字段时，使用当前默认内容来保持原有视觉效果。
     headerFooterContent: normalizeHeaderFooterContent(value.headerFooterContent),
     isHeaderFooterLinked: normalizeBoolean(

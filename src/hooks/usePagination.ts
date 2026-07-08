@@ -6,6 +6,7 @@ import {
   paginateBlocks,
 } from '@/engine/typesetting';
 import type { ResolvedStyleContract } from '@/engine/style/types';
+import { applyQuickBlockStyleRulesToBlocks } from '@/engine/style/quickBlockStyle';
 import type {
   MeasuredTableRowHeights,
   MeasuredTextFragmentHeights,
@@ -31,7 +32,10 @@ export function usePagination(
   const paginationOptimizationSettings = useAppStore((state) => state.paginationOptimizationSettings);
   const setPageLayouts = useAppStore((state) => state.setPageLayouts);
   // 答案隐藏/文末统一会派生新的视图块数组；缓存到文档变化时再更新，避免分页写回后立刻再次触发分页。
-  const layoutBlocks = useMemo(() => getRenderableLayoutBlocksForView(layoutDocument), [layoutDocument]);
+  const layoutBlocks = useMemo(
+    () => applyQuickBlockStyleRulesToBlocks(getRenderableLayoutBlocksForView(layoutDocument), layoutStyles),
+    [layoutDocument, layoutStyles],
+  );
 
   useEffect(() => {
     if (parseState !== 'ready' || !layoutDocument) {

@@ -64,8 +64,8 @@ const defaultThemeTokens: ThemeVisualTokens = {
   pagePatternSize: '24px 24px',
   headingFontFamily: 'inherit',
   bodyFontFamily: 'inherit',
-  headerBackground: 'linear-gradient(180deg, rgb(243 248 252 / 90%) 0%, rgb(255 255 255 / 65%) 100%)',
-  footerBackground: 'linear-gradient(0deg, rgb(243 248 252 / 90%) 0%, rgb(255 255 255 / 65%) 100%)',
+  headerBackground: '#ffffff',
+  footerBackground: '#ffffff',
   headerFooterText: '#6b7280',
   headerBorderColor: '#edf1f5',
   footerBorderColor: '#edf1f5',
@@ -502,6 +502,20 @@ export const defaultStyleSettings: StyleSettings = {
     color: '#ffffff',
     imageSrc: '',
     imageFit: 'cover',
+  },
+  pdfWatermark: {
+    enabled: false,
+    kind: 'text',
+    angleDeg: -28,
+    opacityPercent: 18,
+    text: {
+      content: 'LAYOUT3.0',
+      fontSizePx: 42,
+    },
+    image: {
+      imageSrc: '',
+      widthPercent: 24,
+    },
   },
   headerFooterContent: {
     header: {

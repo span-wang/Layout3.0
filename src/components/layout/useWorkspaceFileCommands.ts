@@ -38,6 +38,7 @@ import {
 } from '@/services/RecentFilesService';
 import { useAppStore } from '@/store';
 import { getRenderableLayoutBlocksForView, type LayoutDocument, type TocItem } from '@/engine/document-model';
+import { applyQuickBlockStyleRulesToBlocks } from '@/engine/style/quickBlockStyle';
 import type { PageLayout } from '@/engine/typesetting/types';
 import type { RecentFileEntry, WorkspaceDirectoryEntry } from '@/types/workspace';
 import { getBaseNameFromPath, isOpenableDocumentPath, isPathWithin, replacePathPrefix } from '@/utils/filePath';
@@ -669,7 +670,10 @@ export function useWorkspaceFileCommands({
     try {
       const exportedPath = await exportCurrentDocumentAsDocx({
         pages: displayedPageLayouts,
-        blocks: getRenderableLayoutBlocksForView(layoutDocument),
+        blocks: applyQuickBlockStyleRulesToBlocks(
+          getRenderableLayoutBlocksForView(layoutDocument),
+          layoutDocument.styles,
+        ),
         title: documentTitle,
         resources: layoutDocument.resources,
         styles: layoutDocument.styles,

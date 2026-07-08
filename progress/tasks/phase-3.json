@@ -75,6 +75,87 @@
       },
       "knownIssues": [
         {
+          "id": "PH3-01-ai-semantic-role-compact-ui-v1",
+          "date": "2026-07-08",
+          "status": "已修复",
+          "summary": "用户要求刚新增的 AI 语义块勾选项不要再显示描述文字，并把控件做得更小，避免生成设置区被这组卡片占太多空间。",
+          "confirmedOn": "2026-07-08",
+          "completedOn": "2026-07-08",
+          "resolution": "已完成 `PH3-01-ai-semantic-role-compact-ui-v1`：1) `AiGenerateTab` 已把语义块区域收口为更紧凑的三列小勾选；2) 每个语义项只保留勾选框和短标签名，不再显示描述文字；3) 语义块区域下方新增的解释性提示文案已移除；4) 勾选逻辑、提示词逻辑和小红书链路保持不变。",
+          "inScope": [
+            "把 `src/components/ai/AiGenerateTab.tsx` 中语义块勾选项从带描述的卡片收口为紧凑小勾选项。",
+            "移除每个语义项下方的描述文字，只保留勾选框和短标签名。",
+            "移除语义块区域下方新增的两条解释性提示文案。",
+            "同步收口 `src/styles.css` 中这组语义块选项的尺寸、间距和字体，让视觉占用更小。",
+            "保持原有勾选逻辑、提示词逻辑和小红书链路不变，只改界面表现。",
+            "完成后执行必要的类型检查、构建和进度同步。"
+          ],
+          "outOfScope": [
+            "不改语义块的勾选逻辑、默认值、提示词规则或生成结果结构。",
+            "不改 `src/types/ai.ts` 中现有语义选项数据结构，当前只收口前台展示。",
+            "不扩展成自定义排序、折叠分组、图标语义标签或更复杂的生成设置面板。",
+            "不顺手改个人知识库、长度、要求描述等其他 AI 生成表单区域。"
+          ],
+          "deferredTo": [
+            "若后续还要继续压缩为更极致的工具栏式开关、按生成类型切换默认布局或隐藏到折叠面板，再继续归属 `PH3-01` AI 生成增强子步。",
+            "若后续要删除 `description` 数据字段或抽离成通用小标签组件，再单独拆前端清理任务。"
+          ]
+        },
+        {
+          "id": "PH3-01-ai-semantic-role-selective-checkbox-v1",
+          "date": "2026-07-08",
+          "status": "已修复",
+          "summary": "用户要求把 AI 教育内容生成里的语义块从“默认整包生成”改成按类型勾选的生成项，避免当前提示词继续固定要求全部内置语义一起输出。",
+          "confirmedOn": "2026-07-08",
+          "completedOn": "2026-07-08",
+          "resolution": "已完成 `PH3-01-ai-semantic-role-selective-checkbox-v1`：1) `AiGenerateTab` 已为教育内容生成新增 6 个内置语义勾选项 `答案 / 解析 / 易错 / 说明 / 总结 / 注意`，默认全部勾选；2) 勾选状态已进入 `AiSlice`，切换 AI 面板 Tab 时不会丢；3) `GenerateOptions` 与 `AiService` 已接通动态提示词，只有被勾选的语义才允许输出对应 `role:` 前缀，未勾选内容回退为普通 Markdown；4) 全部取消勾选时，AI 会明确按纯 Markdown 生成，不输出任何语义前缀；5) 小红书链路保持不变。",
+          "inScope": [
+            "在 `src/components/ai/AiGenerateTab.tsx` 的教育内容生成设置区新增语义块勾选项，按当前内置语义提供 `答案 / 解析 / 易错 / 说明 / 总结 / 注意` 6 个可选项。",
+            "默认保持全部勾选，确保旧行为不变；用户可取消部分或全部勾选。",
+            "把勾选结果接入 `GenerateOptions` 与 `src/services/AiService.ts`，让教育内容默认系统提示词只要求生成被勾选的语义角色。",
+            "未勾选的内容仍允许 AI 正常生成，但必须回退为普通 Markdown 段落、标题或列表，不再输出对应 `role:` 前缀。",
+            "小红书标题 / 文案 / 主图方案链路保持原样，不显示这组勾选项，也不混入教育语义规则。",
+            "补最小提示词回归和必要构建验证，并在完成后同步进度文档。"
+          ],
+          "outOfScope": [
+            "不支持把自定义语义角色动态加入这组勾选项，当前先只覆盖现有 6 个内置语义。",
+            "不恢复已删除的 `题干 / 重点 / 例题 / 步骤` 等旧内置语义，也不新增新的 AI 专用语义类型。",
+            "不改 Markdown 解析器、语义块导出、分页算法、答案隐藏规则或 `.layout` 文件结构。",
+            "不顺手扩展到生成记录筛选、提示词模板中心、语义块预设方案或一键学生版 / 教师版工作流。"
+          ],
+          "deferredTo": [
+            "若后续需要让自定义语义角色也可加入 AI 勾选项，继续归属 `PH2-07` 语义配置增强或 `PH3-01` AI 生成增强子步。",
+            "若后续需要按生成类型保存不同的默认勾选方案、支持模板化预设或同步到生成记录详情，继续归属 AI 体验增强任务。",
+            "若后续需要把语义勾选扩展到优化 / 检查 / 批量导出等其他 AI 工作流，再单独拆步。"
+          ]
+        },
+        {
+          "id": "PH3-01-ai-request-network-error-normalize-v1",
+          "date": "2026-07-08",
+          "status": "已修复",
+          "summary": "用户在 AI 生成点击“开始生成”时看到 `Error invoking remote method 'ai:request': TypeError: fetch failed` 原始 IPC 报错，说明主进程 `ai:request` 对网络异常和取消请求缺少统一归一化，底层 `fetch` 异常直接透传到了前端界面。",
+          "confirmedOn": "2026-07-08",
+          "completedOn": "2026-07-08",
+          "resolution": "已完成 `PH3-01-ai-request-network-error-normalize-v1`：1) `electron/main/ai-handlers.ts` 现在会把主进程 `fetch failed`、连接拒绝、地址解析失败、证书错误、超时和取消请求统一归一化为结构化传输错误；2) `AiService` 与 `KnowledgeBaseService` 会统一消费这套结果，并把旧式 `Error invoking remote method 'ai:request'` 报错文本兼容收口成中文提示；3) 用户取消请求不再继续把 `AbortError` 作为主进程 handler 错误刷到 dev 日志；4) 本步未扩展完整健康检查面板、自动重试或环境向导。",
+          "inScope": [
+            "收口 `electron/main/ai-handlers.ts` 的 `ai:request` 错误处理，把主进程 `fetch failed`、连接拒绝、地址解析失败、证书错误和取消请求统一转换为可诊断的结果。",
+            "让 `src/services/AiService.ts` 与 `src/services/KnowledgeBaseService.ts` 统一消费这套错误结果，对 AI 生成和知识库请求都给出中文提示。",
+            "避免取消请求继续在 dev 日志中刷 `Error occurred in handler for 'ai:request': AbortError` 噪音。",
+            "保持现有 AI 请求通道、Provider 配置和知识库调用链路不变，不新增独立健康检查面板。",
+            "完成后执行 `npm run progress:build`、`npm run progress:check`、必要构建验证与定向测试。"
+          ],
+          "outOfScope": [
+            "不新增 AI 服务连通性诊断页、自动重试策略或完整网络状态面板。",
+            "不改 AI 提示词、生成结果结构、知识库检索参数、来源标注或生成记录格式。",
+            "不扩展为完整的错误码体系、全局遥测上报或系统代理配置引导。",
+            "不调整分页、导出、文档模型或非 AI 主进程请求链路。"
+          ],
+          "deferredTo": [
+            "更完整的 AI / 知识库连接诊断面板、环境检查和一键修复提示：后续归属 `PH3-01` 增强或发布前诊断任务。",
+            "自动重试、退避策略和 Provider 级网络治理：后续归属 AI 体验增强任务。"
+          ]
+        },
+        {
           "id": "PH3-01-ai-record-file-sharding",
           "date": "2026-06-28",
           "status": "已修复",
@@ -117,8 +198,48 @@
       "milestoneIds": [
         "M4"
       ],
-      "status": "未开始",
-      "acceptance": "常用命令可检索、可触发。"
+      "status": "已完成",
+      "acceptance": "常用命令可检索、可触发。",
+      "startedOn": "2026-07-08",
+      "completedOn": "2026-07-08",
+      "executionBoundary": {
+        "id": "PH3-02-command-palette-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：命令面板 V1",
+        "confirmedOn": "2026-07-08",
+        "startedOn": "2026-07-08",
+        "completedOn": "2026-07-08",
+        "summary": "本步已完成 `PH3-02-command-palette-v1`：1) 新增独立 `CommandPalette` 组件，支持 `Ctrl/Cmd + /` 打开居中浮层、默认聚焦搜索框、模糊检索、上下方向键切换、Enter 执行和 Esc 关闭；2) `AppShell` 已复用现有文件流、导出、搜索、AI、视图切换和插入命令，接通新建、打开、保存、另存为、导出 PDF / DOCX、导出检查、搜索、AI 助手、预览 / 分屏切换、插入图片 / 表格 / 公式 / 无序列表 / 分页符 / 目录等常用动作；3) 最近使用频率已写入本机 localStorage，让常用命令在后续打开时优先显示；4) 本步未扩到 `#标题跳转`、`@资源插入`、Tab 补全或插件化命令系统。",
+        "included": [
+          "新增全局命令面板浮层，使用 `Ctrl/Cmd + /` 打开，支持点击遮罩或 `Esc` 关闭，默认聚焦搜索框。",
+          "支持命令关键字模糊搜索、上下方向键切换当前高亮命令、Enter 执行当前命令。",
+          "先接通常用命令最小集合，优先复用现有真实动作：新建、打开、保存、另存为、导出 PDF、导出 DOCX、打开导出检查、打开搜索、打开 AI 助手、切换预览视图、切换分屏视图、插入图片、插入表格、插入公式、插入无序列表、插入分页符、插入目录。",
+          "最近使用频率先做本机排序记忆，让常用命令在后续打开时优先显示。",
+          "命令面板界面文案、提示和必要代码注释继续全部使用中文。",
+          "完成后执行 `npm run typecheck`、`npm run build`、`npm run progress:build` 和 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不实现 `#标题跳转`、`@资源插入`、`>` 前缀命令分类语法或 Tab 补全。",
+          "不在本步扩展成插件化命令注册中心、跨会话完整历史面板或多级命令命名空间。",
+          "不顺手重构现有文件流 hook、插入命令 hook、AI 面板或右侧面板结构，只做复用接线所需的最小改动。",
+          "不在本步补首次使用引导、M4 全链路验收或个人知识库联调。"
+        ],
+        "followup": [
+          "`#标题跳转`、`@资源插入`、Tab 补全和更完整的前缀语法继续归属 `PH3-02` 后续增强小步。",
+          "首次使用引导继续归属 `PH3-05`。",
+          "AI 三类能力与命令面板联动后的整体演示验收继续归属 `PH3-07`。",
+          "个人知识库真实联调与知识型命令接入继续归属 `PH3-12`。"
+        ],
+        "verification": [
+          "用户已回复 `A`，确认当前下一步先做 `PH3-02` 命令面板 V1。",
+          "`src/components/layout/CommandPalette.tsx` 已新增命令面板浮层组件，负责搜索、排序与键盘交互。",
+          "`src/components/layout/AppShell.tsx` 已接通全局快捷键、命令列表、最近使用频率记忆和命令执行入口。",
+          "`src/styles.css` 已补齐命令面板桌面端与移动端样式。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "完成后已执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+        ]
+      }
     },
     {
       "id": "PH3-03",
@@ -254,8 +375,11 @@
       "milestoneIds": [
         "M4"
       ],
-      "status": "未开始",
-      "acceptance": "首次进入时有可关闭引导流程。"
+      "status": "暂缓",
+      "acceptance": "首次进入时有可关闭引导流程。",
+      "deferredOn": "2026-07-08",
+      "deferReason": "用户已明确要求当前不做首次使用引导，避免把第三阶段继续推进到低优先级的新手引导体验。",
+      "next": "除非用户后续重新确认恢复首次使用引导，否则 `PH3-05` 不作为当前下一步开发推荐；第三阶段继续优先处理 `PH3-12` 个人知识库真实联调收尾或 `PH3-07` M4 链路验证。"
     },
     {
       "id": "PH3-06",
@@ -270,8 +394,51 @@
       "milestoneIds": [
         "M4"
       ],
-      "status": "未开始",
-      "acceptance": "关键操作进入统一历史栈。"
+      "status": "已完成",
+      "acceptance": "关键操作进入统一历史栈。",
+      "startedOn": "2026-07-08",
+      "completedOn": "2026-07-08",
+      "executionBoundary": {
+        "id": "PH3-06-page-settings-history-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：页面设置进入统一历史栈 V1",
+        "confirmedOn": "2026-07-08",
+        "startedOn": "2026-07-08",
+        "completedOn": "2026-07-08",
+        "summary": "本步已完成 `PH3-06-page-settings-history-v1`：1) 现有统一历史快照已从只覆盖 `LayoutDocument` 扩展为同时覆盖 `layoutDocument + styleSettings`；2) 右侧“页面设置”中的页面尺寸、方向、页边距、页眉页脚、分栏、模板主题、分页策略和块排版预设改动，现已可通过顶部“撤销 / 重做”按钮和 `Ctrl/Cmd + Z`、`Ctrl/Cmd + Shift + Z`、`Ctrl/Cmd + Y` 回退或恢复；3) 新页面设置操作发生后，旧重做链路会按既有规则清空；4) 文件流、AI 面板状态、知识库配置和化学组合编辑器独立历史继续不纳入本步。",
+        "included": [
+          "让 `styleSettings` 相关变更进入现有 `LayoutDocument` 撤销/重做主链路，而不是继续停留在“只改值 + isDirty”状态。",
+          "优先覆盖右侧“页面设置”里的页面尺寸、方向、页边距、页眉页脚、分栏、模板主题、分页策略和块排版预设等核心入口。",
+          "继续复用现有顶部“撤销 / 重做”按钮和 `Ctrl/Cmd + Z`、`Ctrl/Cmd + Shift + Z`、`Ctrl/Cmd + Y` 快捷键，不另起新的历史系统。",
+          "保证撤销或重做页面设置后，画布预览、分页输入、导出预览依赖的页面样式状态同步回退或恢复。",
+          "补最小验证，确认页面设置改动能进历史栈，并且新操作后旧重做链路会按既有规则清空。",
+          "界面文案、按钮、提示和必要代码注释继续使用中文。",
+          "完成后执行 `npm run typecheck`、`npm run build`、`npm run progress:build` 和 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不在本步扩展文件打开、保存、另存为、最近文件或工作区切换的撤销重做。",
+          "不在本步接入 AI 面板表单状态、知识库配置、左侧面板开关或视图切换历史。",
+          "不在本步改造化学组合编辑器内部自己的撤销重做实现。",
+          "不在本步新增跨会话历史保存、历史面板、命令名称展示或完整命令系统。"
+        ],
+        "followup": [
+          "文件流、AI 面板状态和更多 UI 临时状态是否纳入统一历史栈：后续继续归属 `PH3-06` 增强子步。",
+          "历史面板、操作名称、输入合并策略和跨会话历史保存：后续归属体验增强或命令系统相关任务。",
+          "化学组合编辑器是否并入全局历史栈：后续按独立编辑器治理任务单拆。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH3-06-page-settings-history-v1` 最小边界可以执行。",
+          "`src/store/documentHistory.ts` 已新增统一历史快照 helper，并把历史快照扩展为同时保存 `layoutDocument + styleSettings`。",
+          "`src/store/slices/documentSlice.ts` 已让撤销 / 重做同步恢复 `styleSettings`，并保持既有 past/future 栈推进规则。",
+          "`src/store/slices/styleSlice.ts` 已把页面设置相关改动接入统一历史栈，同时避免无实际改动时写入空历史。",
+          "`src/store/slices/styleHistory.test.ts` 已新增 `PH3-06` 定向回归，验证页面设置撤销/重做和新操作清空 redo。测试通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\store\\slices\\styleHistory.test.ts`。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "`npm run progress:build` 成功。",
+          "`npm run progress:check` 成功。"
+        ],
+        "resolution": "已完成页面设置进入统一历史栈 V1：现有文档模型历史链路已覆盖右侧页面设置中的关键改动，用户可直接用顶部撤销/重做按钮与快捷键回退页面样式层改动；文件流、AI 面板状态和独立编辑器历史仍继续后续单拆。"
+      }
     },
     {
       "id": "PH3-07",
@@ -537,42 +704,41 @@
       ],
       "startedOn": "2026-07-07",
       "executionBoundary": {
-        "id": "PH3-12-generate-requirement-description-v1",
+        "id": "PH3-12-ragflow-open-notebook-real-integration-closeout-v1",
         "confirmed": true,
-        "statusLabel": "已完成：AI 内容生成要求描述 V1",
+        "statusLabel": "进行中：个人知识库真实联调收尾 V1",
         "confirmedOn": "2026-07-08",
         "startedOn": "2026-07-08",
-        "completedOn": "2026-07-08",
-        "summary": "本步已完成 `PH3-12-generate-requirement-description-v1`：1) AI 生成面板的教育内容生成模式已新增“要求描述（可选）”多行输入框；2) `GenerateOptions` 与 AI 生成记录类型已新增 `requirementDescription` 字段；3) 生成讲义、知识点总结、练习题和试卷初稿时，要求描述会作为“要求描述”写入用户提示词，系统提示词也要求优先满足其中的范围、格式、语气和内容约束；4) AI 生成记录落盘、主进程归一化、preload 类型和记录面板详情展示已同步保留该字段；5) 小红书模式保持现有“选题 / 补充要求”入口不变，本步未扩展为完整提示词模板系统。",
+        "summary": "本步已开始执行 `PH3-12-ragflow-open-notebook-real-integration-closeout-v1`：1) 当前本机 `Open Notebook` API 已返回 `{\"message\":\"Open Notebook API is running\"}`，说明探活主链路可用；2) 当前本机 `RAGFlow` 服务地址与知识源模式已从 Electron 本地存储中确认仍指向真实服务，其中 `knowledgeSourceForGenerate` 为 `ragflow`，`baseUrl` 为 `http://127.0.0.1:9380`；3) 但用当前本机保存的 `RAGFlow API Key` 访问 `datasets` 与 `retrieval` 时，真实接口分别返回 `401 Unauthorized` 与 `code: 109 / Authentication error: API key is invalid!`，说明当前阻塞点已从“服务没启动”转为“认证凭证失效”；4) 本轮已补齐 `KnowledgeBaseService` 的 RAGFlow 认证失败中文诊断与定向测试，让知识库面板和 AI 生成在遇到无效密钥时给出明确提示；5) `PH3-12` 先继续保持 `进行中`，待用户更新有效 RAGFlow 密钥后，再继续完成数据集读取、检索测试和 AI 生成端到端闭环验收。",
         "inScope": [
-          "在 AI 生成面板的教育内容生成模式中新增“要求描述（可选）”多行输入框，界面文案保持中文。",
-          "扩展 `GenerateOptions` 与 AI 生成记录类型，新增可选 `requirementDescription` 字段。",
-          "生成讲义、知识点总结、练习题和试卷初稿时，将要求描述作为“补充要求”写入 `AiService` 用户提示词。",
-          "AI 生成成功后，记录文件继续保存主题、年级、科目、长度等字段，并额外保存本次要求描述。",
-          "AI 生成记录面板展示本次要求描述，便于回看当时生成约束。",
-          "补充最小回归测试，确认要求描述会进入教育内容生成提示词。",
-          "完成后执行 `npm run typecheck`、相关定向测试、`npm run build`、`npm run progress:build` 与 `npm run progress:check`。"
+          "用当前本机真实服务联调 `RAGFlow`：验证服务地址、API Key、数据集读取、数据集勾选、检索测试和结果展示是否真正可用。",
+          "验证 AI 生成页在 `关闭 / RAGFlow` 两种来源模式下的实际行为，重点确认已选数据集、检索上下文拼接、来源标注和生成请求链路是否能跑通。",
+          "用当前本机真实服务联调 `Open Notebook`：验证 `Web 地址 / API 地址` 探活与入口提示是否符合当前产品口径。",
+          "如果联调中暴露 RAGFlow / Open Notebook 的真实接口差异、返回字段兼容、错误提示文案、状态持久化或最小交互缺陷，只修本步直接挡住验收的最小问题。",
+          "为本步补充必要的定向验证，并在满足验收后把 `PH3-12` 从 `进行中` 收口为 `已完成`。",
+          "完成后执行 `npm run progress:build`、`npm run progress:check`、相关定向测试、`npm run typecheck` 与 `npm run build`。"
         ],
         "outOfScope": [
-          "不新增完整提示词模板编辑器、字段模板库、变量系统或多套生成模板。",
-          "不修改小红书标题 / 文案 / 主图方案模式的现有输入结构。",
-          "不改 AI Provider、模型配置、主进程请求链路、个人知识库检索链路或知识库参数。",
-          "不新增题型比例、难度梯度、答案解析格式等专业出题参数面板。",
-          "不调整生成结果插入当前文档、撤销栈、分页、导出或 `.layout` 文件结构。"
+          "不扩展新的知识源，不恢复 `ima`，也不引入新的 Provider 适配。",
+          "不把 `Open Notebook` 扩成正式检索源，不新增其知识片段读取、混合召回或生成上下文拼接。",
+          "不做知识库上传、自动切片、知识图谱、双源混排、完整引用系统或文末参考文献。",
+          "不重做 AI 提示词体系、记录系统或知识库面板整体布局，只处理本步真实联调必需缺口。"
         ],
         "deferredTo": [
-          "完整提示词模板、字段变量和不同生成任务的高级参数：后续归属教辅生成增强任务。",
-          "题型比例、难度梯度、答案解析格式、知识点覆盖范围等细粒度出题控制：后续归属 AI 教辅生成增强任务。",
-          "RAGFlow 与 `ima` 的双源混合召回、统一排序和来源解释：后续继续归属 `PH3-12` 增强子步。",
-          "更完整的 AI 历史记录搜索、标签、收藏和按要求描述筛选：后续归属 `PH3-07` 或 AI 体验增强任务。"
+          "如果后续需要让 `Open Notebook` 参与正式检索或生成上下文，另拆新的个人知识库增强任务。",
+          "如果后续需要继续扩展知识库上传、切片治理、双源混排或正文引用，再单独归属 `PH3-12` 后续增强子步。",
+          "如果本轮只是暴露更深层外部环境问题，环境排障结论继续归属风险跟踪，不在本步顺手扩面。"
         ],
         "verification": [
-          "用户已回复“确定”，确认当前 `PH3-12-generate-requirement-description-v1` 最小边界可以执行。",
-          "`src/components/ai/AiGenerateTab.tsx` 已新增教育内容生成模式的“要求描述（可选）”输入，并把字段传入知识库检索词、生成选项和生成记录。",
-          "`src/types/ai.ts`、`electron/main/ai-record-handlers.ts` 与 `electron/preload/index.ts` 已同步扩展 AI 生成记录字段。",
-          "`src/services/AiService.ts` 已将要求描述写入教育内容生成用户提示词，并通过系统提示词要求优先满足该约束。",
-          "`src/components/ai/AiGenerationRecordsPanel.tsx` 与 `src/styles.css` 已让生成记录详情展示要求描述。",
-          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\AiService.test.ts`，3 个测试全部 pass。",
+          "用户已回复“确定”，确认当前按 `PH3-12-ragflow-open-notebook-real-integration-closeout-v1` 推进。",
+          "本机 `docker-ragflow-gpu-1` 与 `open_notebook-open_notebook-1` 当前均在运行，已具备从“代码骨架”转入“真实联调收尾”的环境条件。",
+          "`http://127.0.0.1:9380`、`http://127.0.0.1:8502` 与 `http://127.0.0.1:5055` 已返回真实 HTTP 响应，说明关键端口当前可达。",
+          "Electron 本地存储已确认当前知识源模式为 `ragflow`，且 `RAGFlow` 的 `baseUrl` 仍为 `http://127.0.0.1:9380`。",
+          "`http://127.0.0.1:5055` 真实返回 `{\"message\":\"Open Notebook API is running\"}`，说明 `Open Notebook` API 探活链路可用。",
+          "使用当前本机保存的 `RAGFlow API Key` 访问 `datasets` 时，真实接口返回 `401 Unauthorized`；访问 `retrieval` 时，真实接口返回 `code: 109 / Authentication error: API key is invalid!`。",
+          "`src/services/KnowledgeBaseService.ts` 已新增 RAGFlow 认证失败中文归一化逻辑，遇到无效密钥时会明确提示检查或重新生成 API Key。",
+          "`src/services/KnowledgeBaseService.test.ts` 已新增 3 条定向回归，覆盖 `401`、`invalid key` 和非认证类错误。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\KnowledgeBaseService.test.ts`。",
           "`npm run typecheck` 成功。",
           "`npm run build` 成功。"
         ]

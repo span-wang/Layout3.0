@@ -5,6 +5,7 @@
 import type {
   AiConfig,
   AiConfigProfile,
+  AiGenerateSemanticRoleId,
   AiPanelTab,
   AiCheckResult,
   AiGenerationRecord,
@@ -22,7 +23,13 @@ import type {
   AiTaskType,
   AiProvider,
 } from '@/types/ai';
-import { DEFAULT_AI_TASK_ASSIGNMENTS, PAGINATION_BATCH_READY_DOCUMENT_COUNT } from '@/types/ai';
+import {
+  DEFAULT_AI_GENERATE_SEMANTIC_ROLE_IDS,
+  DEFAULT_AI_TASK_ASSIGNMENTS,
+  PAGINATION_BATCH_READY_DOCUMENT_COUNT,
+  normalizeAiGenerateSemanticRoleIds,
+} from '@/types/ai';
+import type { KnowledgeSourceReference } from '@/types/knowledge';
 
 export interface AiSlice {
   // 兼容旧调用的当前配置状态，默认指向“内容生成”分配的配置
@@ -38,6 +45,8 @@ export interface AiSlice {
   // 生成状态
   isGenerating: boolean;
   generatedContent: string;
+  generatedKnowledgeSources: KnowledgeSourceReference[];
+  generateSemanticRoleIds: AiGenerateSemanticRoleId[];
   generateError: string | null;
   aiGenerationRecords: AiGenerationRecord[];
   aiGenerationRecordDirectoryPath: string | null;
@@ -77,6 +86,8 @@ export interface AiSlice {
   // 生成 actions
   startGenerating: () => void;
   updateGeneratedContent: (content: string) => void;
+  setGeneratedKnowledgeSources: (sources: KnowledgeSourceReference[]) => void;
+  setGenerateSemanticRoleIds: (roleIds: AiGenerateSemanticRoleId[]) => void;
   setGenerateError: (error: string | null) => void;
   finishGenerating: () => void;
   clearGeneratedContent: () => void;
@@ -444,6 +455,8 @@ export const createAiSlice = (
     // 生成状态
     isGenerating: false,
     generatedContent: '',
+    generatedKnowledgeSources: [],
+    generateSemanticRoleIds: [...DEFAULT_AI_GENERATE_SEMANTIC_ROLE_IDS],
     generateError: null,
     aiGenerationRecords: [],
     aiGenerationRecordDirectoryPath: null,
@@ -548,17 +561,27 @@ export const createAiSlice = (
       set({
         isGenerating: true,
         generatedContent: '',
+        generatedKnowledgeSources: [],
         generateError: null,
       }),
 
     updateGeneratedContent: (content: string) => set({ generatedContent: content }),
+
+    setGeneratedKnowledgeSources: (sources: KnowledgeSourceReference[]) =>
+      set({ generatedKnowledgeSources: sources }),
+
+    setGenerateSemanticRoleIds: (roleIds: AiGenerateSemanticRoleId[]) =>
+      set({
+        generateSemanticRoleIds: normalizeAiGenerateSemanticRoleIds(roleIds),
+      }),
 
     setGenerateError: (error: string | null) =>
       set({ generateError: error, isGenerating: false }),
 
     finishGenerating: () => set({ isGenerating: false }),
 
-    clearGeneratedContent: () => set({ generatedContent: '', generateError: null }),
+    clearGeneratedContent: () =>
+      set({ generatedContent: '', generatedKnowledgeSources: [], generateError: null }),
 
     setAiGenerationRecordDirectory: (payload) =>
       set({

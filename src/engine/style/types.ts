@@ -25,6 +25,27 @@ export interface PageBackgroundSettings {
   imageFit: PageBackgroundImageFit;
 }
 
+export type PdfWatermarkKind = 'text' | 'image';
+
+export interface PdfTextWatermarkSettings {
+  content: string;
+  fontSizePx: number;
+}
+
+export interface PdfImageWatermarkSettings {
+  imageSrc: string;
+  widthPercent: number;
+}
+
+export interface PdfWatermarkSettings {
+  enabled: boolean;
+  kind: PdfWatermarkKind;
+  angleDeg: number;
+  opacityPercent: number;
+  text: PdfTextWatermarkSettings;
+  image: PdfImageWatermarkSettings;
+}
+
 export type HeaderFooterArea = 'header' | 'footer';
 
 export type HeaderFooterSlot = 'left' | 'center' | 'right';
@@ -192,6 +213,7 @@ export interface StyleSettings {
   templateId: TemplateId;
   themeId: ThemeId;
   pageBackground: PageBackgroundSettings;
+  pdfWatermark: PdfWatermarkSettings;
   headerPreset: HeaderFooterPresetId;
   footerPreset: HeaderFooterPresetId;
   customHeaderReservedMm: number;

@@ -1,40 +1,32 @@
 import type {
-  ImaConfig,
-  ImaKnowledgeBaseSummary,
   KnowledgeGenerateSource,
   OpenNotebookConfig,
   RagflowConfig,
   RagflowDatasetSummary,
 } from '@/types/knowledge';
-import { DEFAULT_IMA_CONFIG, DEFAULT_OPEN_NOTEBOOK_CONFIG, DEFAULT_RAGFLOW_CONFIG } from '@/types/knowledge';
+import { DEFAULT_OPEN_NOTEBOOK_CONFIG, DEFAULT_RAGFLOW_CONFIG } from '@/types/knowledge';
 
 export interface KnowledgeBaseSlice {
   ragflowConfig: RagflowConfig;
-  imaConfig: ImaConfig;
   openNotebookConfig: OpenNotebookConfig;
   ragflowDatasets: RagflowDatasetSummary[];
-  imaKnowledgeBases: ImaKnowledgeBaseSummary[];
   selectedRagflowDatasetIds: string[];
-  selectedImaKnowledgeBaseId: string | null;
   knowledgeSourceForGenerate: KnowledgeGenerateSource;
   setRagflowConfigPatch: (patch: Partial<RagflowConfig>) => void;
-  setImaConfigPatch: (patch: Partial<ImaConfig>) => void;
   setOpenNotebookConfigPatch: (patch: Partial<OpenNotebookConfig>) => void;
   setRagflowDatasets: (datasets: RagflowDatasetSummary[]) => void;
-  setImaKnowledgeBases: (knowledgeBases: ImaKnowledgeBaseSummary[]) => void;
   setSelectedRagflowDatasetIds: (datasetIds: string[]) => void;
-  setSelectedImaKnowledgeBaseId: (knowledgeBaseId: string | null) => void;
   toggleSelectedRagflowDataset: (datasetId: string) => void;
   setKnowledgeSourceForGenerate: (source: KnowledgeGenerateSource) => void;
 }
 
 const RAGFLOW_CONFIG_KEY = 'layout3-ragflow-config-v1';
-const IMA_CONFIG_KEY = 'layout3-ima-config-v1';
 const OPEN_NOTEBOOK_CONFIG_KEY = 'layout3-open-notebook-config-v1';
 const SELECTED_RAGFLOW_DATASET_IDS_KEY = 'layout3-ragflow-selected-datasets-v1';
-const SELECTED_IMA_KNOWLEDGE_BASE_ID_KEY = 'layout3-ima-selected-knowledge-base-v1';
 const RAGFLOW_GENERATE_ENABLED_KEY = 'layout3-ragflow-generate-enabled-v1';
 const KNOWLEDGE_SOURCE_FOR_GENERATE_KEY = 'layout3-knowledge-source-for-generate-v1';
+const LEGACY_IMA_CONFIG_KEY = 'layout3-ima-config-v1';
+const LEGACY_SELECTED_IMA_KNOWLEDGE_BASE_ID_KEY = 'layout3-ima-selected-knowledge-base-v1';
 
 function normalizePositiveInteger(value: unknown, fallbackValue: number): number {
   if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -120,28 +112,6 @@ function loadRagflowConfig(): RagflowConfig {
   }
 }
 
-function loadImaConfig(): ImaConfig {
-  try {
-    const stored = localStorage.getItem(IMA_CONFIG_KEY);
-    if (!stored) {
-      return { ...DEFAULT_IMA_CONFIG };
-    }
-
-    const parsed = JSON.parse(stored) as Partial<ImaConfig>;
-    return {
-      baseUrl:
-        typeof parsed.baseUrl === 'string' && parsed.baseUrl.trim()
-          ? parsed.baseUrl
-          : DEFAULT_IMA_CONFIG.baseUrl,
-      clientId: typeof parsed.clientId === 'string' ? parsed.clientId : '',
-      apiKey: typeof parsed.apiKey === 'string' ? parsed.apiKey : '',
-      topK: normalizePositiveInteger(parsed.topK, DEFAULT_IMA_CONFIG.topK),
-    };
-  } catch {
-    return { ...DEFAULT_IMA_CONFIG };
-  }
-}
-
 function loadOpenNotebookConfig(): OpenNotebookConfig {
   try {
     const stored = localStorage.getItem(OPEN_NOTEBOOK_CONFIG_KEY);
@@ -181,20 +151,16 @@ function loadSelectedRagflowDatasetIds(): string[] {
   }
 }
 
-function loadSelectedImaKnowledgeBaseId(): string | null {
-  try {
-    const stored = localStorage.getItem(SELECTED_IMA_KNOWLEDGE_BASE_ID_KEY);
-    return typeof stored === 'string' && stored.trim() ? stored : null;
-  } catch {
-    return null;
-  }
-}
-
 function loadKnowledgeSourceForGenerate(): KnowledgeGenerateSource {
   try {
     const stored = localStorage.getItem(KNOWLEDGE_SOURCE_FOR_GENERATE_KEY);
-    if (stored === 'ragflow' || stored === 'ima' || stored === 'none') {
+    if (stored === 'ragflow' || stored === 'none') {
       return stored;
+    }
+
+    if (stored === 'ima') {
+      localStorage.setItem(KNOWLEDGE_SOURCE_FOR_GENERATE_KEY, 'none');
+      return 'none';
     }
 
     // 兼容旧版本的 RAGFlow 布尔开关，避免升级后用户配置失效。
@@ -208,14 +174,6 @@ function loadKnowledgeSourceForGenerate(): KnowledgeGenerateSource {
 function saveRagflowConfig(config: RagflowConfig): void {
   try {
     localStorage.setItem(RAGFLOW_CONFIG_KEY, JSON.stringify(config));
-  } catch {
-    // 忽略本机持久化异常，避免打断用户当前操作。
-  }
-}
-
-function saveImaConfig(config: ImaConfig): void {
-  try {
-    localStorage.setItem(IMA_CONFIG_KEY, JSON.stringify(config));
   } catch {
     // 忽略本机持久化异常，避免打断用户当前操作。
   }
@@ -237,19 +195,6 @@ function saveSelectedRagflowDatasetIds(datasetIds: string[]): void {
   }
 }
 
-function saveSelectedImaKnowledgeBaseId(knowledgeBaseId: string | null): void {
-  try {
-    if (knowledgeBaseId?.trim()) {
-      localStorage.setItem(SELECTED_IMA_KNOWLEDGE_BASE_ID_KEY, knowledgeBaseId);
-      return;
-    }
-
-    localStorage.removeItem(SELECTED_IMA_KNOWLEDGE_BASE_ID_KEY);
-  } catch {
-    // 忽略本机持久化异常，避免打断用户当前操作。
-  }
-}
-
 function saveKnowledgeSourceForGenerate(source: KnowledgeGenerateSource): void {
   try {
     localStorage.setItem(KNOWLEDGE_SOURCE_FOR_GENERATE_KEY, source);
@@ -258,101 +203,80 @@ function saveKnowledgeSourceForGenerate(source: KnowledgeGenerateSource): void {
   }
 }
 
+function clearLegacyImaStorage(): void {
+  try {
+    // ima 已按用户要求硬删除，这里只清理旧本地残留键，避免下次启动继续带出失效状态。
+    localStorage.removeItem(LEGACY_IMA_CONFIG_KEY);
+    localStorage.removeItem(LEGACY_SELECTED_IMA_KNOWLEDGE_BASE_ID_KEY);
+  } catch {
+    // 忽略本机持久化异常，避免打断用户当前操作。
+  }
+}
+
 export const createKnowledgeBaseSlice = (
   set: (partial: Partial<KnowledgeBaseSlice> | ((state: KnowledgeBaseSlice) => Partial<KnowledgeBaseSlice>)) => void,
-): KnowledgeBaseSlice => ({
-  ragflowConfig: loadRagflowConfig(),
-  imaConfig: loadImaConfig(),
-  openNotebookConfig: loadOpenNotebookConfig(),
-  ragflowDatasets: [],
-  imaKnowledgeBases: [],
-  selectedRagflowDatasetIds: loadSelectedRagflowDatasetIds(),
-  selectedImaKnowledgeBaseId: loadSelectedImaKnowledgeBaseId(),
-  knowledgeSourceForGenerate: loadKnowledgeSourceForGenerate(),
+): KnowledgeBaseSlice => {
+  clearLegacyImaStorage();
 
-  setRagflowConfigPatch: (patch) =>
-    set((state) => {
-      const nextConfig = normalizeRagflowConfig({
-        ...state.ragflowConfig,
-        ...patch,
-      });
-      saveRagflowConfig(nextConfig);
-      return { ragflowConfig: nextConfig };
-    }),
+  return {
+    ragflowConfig: loadRagflowConfig(),
+    openNotebookConfig: loadOpenNotebookConfig(),
+    ragflowDatasets: [],
+    selectedRagflowDatasetIds: loadSelectedRagflowDatasetIds(),
+    knowledgeSourceForGenerate: loadKnowledgeSourceForGenerate(),
 
-  setImaConfigPatch: (patch) =>
-    set((state) => {
-      const nextConfig: ImaConfig = {
-        ...state.imaConfig,
-        ...patch,
-        topK: normalizePositiveInteger(patch.topK ?? state.imaConfig.topK, state.imaConfig.topK),
-      };
-      saveImaConfig(nextConfig);
-      return { imaConfig: nextConfig };
-    }),
+    setRagflowConfigPatch: (patch) =>
+      set((state) => {
+        const nextConfig = normalizeRagflowConfig({
+          ...state.ragflowConfig,
+          ...patch,
+        });
+        saveRagflowConfig(nextConfig);
+        return { ragflowConfig: nextConfig };
+      }),
 
-  setOpenNotebookConfigPatch: (patch) =>
-    set((state) => {
-      const nextConfig: OpenNotebookConfig = {
-        ...state.openNotebookConfig,
-        ...patch,
-      };
-      saveOpenNotebookConfig(nextConfig);
-      return { openNotebookConfig: nextConfig };
-    }),
+    setOpenNotebookConfigPatch: (patch) =>
+      set((state) => {
+        const nextConfig: OpenNotebookConfig = {
+          ...state.openNotebookConfig,
+          ...patch,
+        };
+        saveOpenNotebookConfig(nextConfig);
+        return { openNotebookConfig: nextConfig };
+      }),
 
-  setRagflowDatasets: (datasets) =>
-    set((state) => {
-      const allowedIds = new Set(datasets.map((dataset) => dataset.id));
-      const nextSelectedIds = state.selectedRagflowDatasetIds.filter((datasetId) => allowedIds.has(datasetId));
-      saveSelectedRagflowDatasetIds(nextSelectedIds);
-      return {
-        ragflowDatasets: datasets,
-        selectedRagflowDatasetIds: nextSelectedIds,
-      };
-    }),
+    setRagflowDatasets: (datasets) =>
+      set((state) => {
+        const allowedIds = new Set(datasets.map((dataset) => dataset.id));
+        const nextSelectedIds = state.selectedRagflowDatasetIds.filter((datasetId) => allowedIds.has(datasetId));
+        saveSelectedRagflowDatasetIds(nextSelectedIds);
+        return {
+          ragflowDatasets: datasets,
+          selectedRagflowDatasetIds: nextSelectedIds,
+        };
+      }),
 
-  setImaKnowledgeBases: (knowledgeBases) =>
-    set((state) => {
-      const allowedIds = new Set(knowledgeBases.map((knowledgeBase) => knowledgeBase.id));
-      const nextSelectedId =
-        state.selectedImaKnowledgeBaseId && allowedIds.has(state.selectedImaKnowledgeBaseId)
-          ? state.selectedImaKnowledgeBaseId
-          : knowledgeBases[0]?.id ?? null;
-      saveSelectedImaKnowledgeBaseId(nextSelectedId);
-      return {
-        imaKnowledgeBases: knowledgeBases,
-        selectedImaKnowledgeBaseId: nextSelectedId,
-      };
-    }),
+    setSelectedRagflowDatasetIds: (datasetIds) =>
+      set(() => {
+        const dedupedDatasetIds = Array.from(new Set(datasetIds.filter((datasetId) => datasetId.trim())));
+        saveSelectedRagflowDatasetIds(dedupedDatasetIds);
+        return { selectedRagflowDatasetIds: dedupedDatasetIds };
+      }),
 
-  setSelectedRagflowDatasetIds: (datasetIds) =>
-    set(() => {
-      const dedupedDatasetIds = Array.from(new Set(datasetIds.filter((datasetId) => datasetId.trim())));
-      saveSelectedRagflowDatasetIds(dedupedDatasetIds);
-      return { selectedRagflowDatasetIds: dedupedDatasetIds };
-    }),
+    toggleSelectedRagflowDataset: (datasetId) =>
+      set((state) => {
+        const exists = state.selectedRagflowDatasetIds.includes(datasetId);
+        const nextSelectedIds = exists
+          ? state.selectedRagflowDatasetIds.filter((item) => item !== datasetId)
+          : [...state.selectedRagflowDatasetIds, datasetId];
+        saveSelectedRagflowDatasetIds(nextSelectedIds);
+        return { selectedRagflowDatasetIds: nextSelectedIds };
+      }),
 
-  setSelectedImaKnowledgeBaseId: (knowledgeBaseId) =>
-    set(() => {
-      const nextKnowledgeBaseId = knowledgeBaseId?.trim() ? knowledgeBaseId : null;
-      saveSelectedImaKnowledgeBaseId(nextKnowledgeBaseId);
-      return { selectedImaKnowledgeBaseId: nextKnowledgeBaseId };
-    }),
-
-  toggleSelectedRagflowDataset: (datasetId) =>
-    set((state) => {
-      const exists = state.selectedRagflowDatasetIds.includes(datasetId);
-      const nextSelectedIds = exists
-        ? state.selectedRagflowDatasetIds.filter((item) => item !== datasetId)
-        : [...state.selectedRagflowDatasetIds, datasetId];
-      saveSelectedRagflowDatasetIds(nextSelectedIds);
-      return { selectedRagflowDatasetIds: nextSelectedIds };
-    }),
-
-  setKnowledgeSourceForGenerate: (source) =>
-    set(() => {
-      saveKnowledgeSourceForGenerate(source);
-      return { knowledgeSourceForGenerate: source };
-    }),
-});
+    setKnowledgeSourceForGenerate: (source) =>
+      set(() => {
+        saveKnowledgeSourceForGenerate(source);
+        return { knowledgeSourceForGenerate: source };
+      }),
+  };
+};

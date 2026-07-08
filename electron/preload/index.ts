@@ -21,6 +21,19 @@ interface AiRequestResult {
   statusText: string;
   headers: Record<string, string>;
   body: string;
+  transportError?: {
+    code: string;
+    message: string;
+  };
+}
+
+interface KnowledgeSourceReference {
+  id: string;
+  sourceType: 'ragflow';
+  title: string;
+  location?: string;
+  detail?: string;
+  preview?: string;
 }
 
 interface AiGenerationRecord {
@@ -42,6 +55,7 @@ interface AiGenerationRecord {
   lengthLabel?: string;
   provider?: 'openai' | 'anthropic' | 'custom';
   model?: string;
+  knowledgeSources?: KnowledgeSourceReference[];
   content: string;
   createdAt: string;
 }

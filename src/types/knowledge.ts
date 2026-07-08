@@ -5,7 +5,25 @@
 /**
  * AI 生成时使用的知识来源
  */
-export type KnowledgeGenerateSource = 'none' | 'ragflow' | 'ima';
+export type KnowledgeGenerateSource = 'none' | 'ragflow';
+
+/**
+ * AI 结果区 / 生成记录里展示的知识来源条目
+ */
+export interface KnowledgeSourceReference {
+  /** 稳定来源 ID，用于结果区和记录面板渲染 */
+  id: string;
+  /** 来源类型 */
+  sourceType: Exclude<KnowledgeGenerateSource, 'none'>;
+  /** 来源主标题，例如文档名或知识条目标题 */
+  title: string;
+  /** 来源位置，例如数据集名或知识库名 */
+  location?: string;
+  /** 命中说明或补充说明 */
+  detail?: string;
+  /** 结果区展示的预览片段 */
+  preview?: string;
+}
 
 /**
  * RAGFlow 连接配置
@@ -37,20 +55,6 @@ export interface OpenNotebookConfig {
   uiUrl: string;
   /** Open Notebook API 地址，例如 http://127.0.0.1:5055 */
   apiUrl: string;
-}
-
-/**
- * ima OpenAPI 连接配置
- */
-export interface ImaConfig {
-  /** ima 官方 API 地址 */
-  baseUrl: string;
-  /** ima Client ID */
-  clientId: string;
-  /** ima API Key */
-  apiKey: string;
-  /** 默认读取多少条结果拼接成上下文 */
-  topK: number;
 }
 
 /**
@@ -123,65 +127,6 @@ export interface RagflowRetrievalResult {
   total: number;
 }
 
-/**
- * ima 知识库摘要
- */
-export interface ImaKnowledgeBaseSummary {
-  /** 知识库 ID */
-  id: string;
-  /** 知识库名称 */
-  name: string;
-  /** 知识库描述 */
-  description?: string;
-  /** 推荐问题 */
-  recommendedQuestions?: string[];
-}
-
-/**
- * ima 检索到的可用知识片段
- */
-export interface ImaKnowledgeChunk {
-  /** 媒体 ID */
-  mediaId: string;
-  /** 条目标题 */
-  title: string;
-  /** 所属知识库 ID */
-  knowledgeBaseId: string;
-  /** 所属知识库名称 */
-  knowledgeBaseName?: string;
-  /** 所属文件夹 ID */
-  parentFolderId?: string;
-  /** 搜索高亮摘要 */
-  highlightContent?: string;
-  /** 面板里展示的预览文字 */
-  preview: string;
-  /** 供 AI 使用的正文 */
-  content: string;
-}
-
-/**
- * ima 搜索面板命中项
- * 面板优先展示“原始命中”，避免正文读取失败时整条结果被过滤掉。
- */
-export interface ImaKnowledgeSearchHit {
-  /** 面板列表主键 */
-  key: string;
-  /** 命中类型 */
-  kind: 'knowledge' | 'folder';
-  /** 条目或文件夹标题 */
-  title: string;
-  /** 预览文字 */
-  preview: string;
-  /** 媒体 ID，仅知识条目有 */
-  mediaId?: string;
-  /** 文件夹 ID，仅文件夹命中有 */
-  folderId?: string;
-  /** 父文件夹 ID */
-  parentFolderId?: string;
-  /** 正文读取失败时的错误说明 */
-  contentReadError?: string;
-}
-
 export const DEFAULT_RAGFLOW_CONFIG: RagflowConfig = {
   baseUrl: 'http://127.0.0.1:9380',
   apiKey: '',
@@ -196,11 +141,4 @@ export const DEFAULT_RAGFLOW_CONFIG: RagflowConfig = {
 export const DEFAULT_OPEN_NOTEBOOK_CONFIG: OpenNotebookConfig = {
   uiUrl: 'http://127.0.0.1:8502',
   apiUrl: 'http://127.0.0.1:5055',
-};
-
-export const DEFAULT_IMA_CONFIG: ImaConfig = {
-  baseUrl: 'https://ima.qq.com',
-  clientId: '',
-  apiKey: '',
-  topK: 4,
 };

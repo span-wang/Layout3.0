@@ -5,6 +5,7 @@
 
 import type {
   AiConfig,
+  AiGenerateSemanticRoleId,
   AiProvider,
   GenerateOptions,
   GenerateType,
@@ -12,8 +13,17 @@ import type {
   AiCheckResult,
   StreamCallback,
 } from '@/types/ai';
+import {
+  AI_GENERATE_SEMANTIC_ROLE_OPTIONS,
+  DEFAULT_AI_GENERATE_SEMANTIC_ROLE_IDS,
+  normalizeAiGenerateSemanticRoleIds,
+} from '@/types/ai';
 import type { TextMarkMapping, TextMarkType } from '@/engine/document-model';
 import { hasRegexCaptureGroup } from '@/engine/document-model';
+import {
+  throwIfMainProcessTransportError,
+  throwNormalizedMainProcessInvokeError,
+} from './mainProcessRequestError';
 
 /**
  * 模型信息
@@ -45,6 +55,10 @@ interface AiMainProcessRequestResult {
   statusText: string;
   headers: Record<string, string>;
   body: string;
+  transportError?: {
+    code: string;
+    message: string;
+  };
 }
 
 /**
@@ -318,7 +332,68 @@ function getTextMarkTypeLabel(markType: TextMarkType): string {
   return labels[markType];
 }
 
-export function createGenerateSystemPrompt(type: GenerateType): string {
+function resolveEducationSemanticRoleIds(
+  roleIds?: readonly AiGenerateSemanticRoleId[],
+): AiGenerateSemanticRoleId[] {
+  return roleIds === undefined
+    ? [...DEFAULT_AI_GENERATE_SEMANTIC_ROLE_IDS]
+    : normalizeAiGenerateSemanticRoleIds(roleIds);
+}
+
+function buildNumberedPromptRules(rules: string[]): string {
+  return rules.map((rule, index) => `${index + 1}. ${rule}`).join('\n');
+}
+
+function buildEducationSemanticExampleLines(roleIds: readonly AiGenerateSemanticRoleId[]): string[] {
+  const exampleLineMap: Record<AiGenerateSemanticRoleId, string> = {
+    answer: 'role:答案 y = 7。',
+    explanation: 'role:解析 将 x = 3 代入 y = 2x + 1，得到 y = 7。',
+    pitfall: 'role:易错 不要把斜率变化误判成截距变化。',
+    caption: 'role:说明 一次函数图像经过平移后，斜率保持不变。',
+    summary: 'role:总结 本节先掌握斜率与截距，再做图像题。',
+    warning: 'role:注意 代入数据前先确认自变量与函数值对应关系。',
+  };
+
+  return roleIds.map((roleId) => exampleLineMap[roleId]).filter(Boolean);
+}
+
+function buildEducationSemanticRules(roleIds?: readonly AiGenerateSemanticRoleId[]): string[] {
+  const enabledRoleIds = resolveEducationSemanticRoleIds(roleIds);
+  const enabledRoles = AI_GENERATE_SEMANTIC_ROLE_OPTIONS.filter((option) =>
+    enabledRoleIds.includes(option.id),
+  );
+
+  if (enabledRoles.length === 0) {
+    return [
+      '当前未启用语义块生成，不要输出任何 role: 前缀。',
+      '需要区分答案、解析、说明等内容时，请改用普通 Markdown 标题、列表或段落表达，不要使用 role:。',
+      '练习题和试卷初稿中的题目、答案和解析都保持普通 Markdown 结构，不要自行补语义前缀。',
+      '讲义和知识点总结中的说明、易错、总结和注意内容也保持普通 Markdown 结构，不要自行补语义前缀。',
+      '不要为每一行都机械添加额外标记。',
+    ];
+  }
+
+  const enabledRoleLabels = enabledRoles.map((role) => `role:${role.label}`).join('、');
+  const disabledRoleCount = AI_GENERATE_SEMANTIC_ROLE_OPTIONS.length - enabledRoles.length;
+
+  return [
+    '对需要被排版系统识别的正文块，在该段开头添加语义角色前缀，格式必须是 role:角色名 正文。',
+    `当前启用的语义角色只使用：${enabledRoleLabels}。`,
+    disabledRoleCount > 0
+      ? '未勾选的语义不要输出对应 role: 前缀；相关内容请改用普通 Markdown 表达。'
+      : '当前内置语义都已启用，但仍只在承担明确语义的正文块前添加 role: 前缀。',
+    '练习题和试卷初稿中，题目正文保持普通 Markdown 段落或列表，不再添加题干语义；答案和解析只有在对应语义被启用时才添加前缀。',
+    '讲义和知识点总结中，说明、易错、总结和注意内容只有在对应语义被启用时才添加前缀，其余保持普通 Markdown 结构。',
+    '不要为每一行都机械添加 role:；只有承担明确语义的正文块才添加。',
+  ];
+}
+
+export function createGenerateSystemPrompt(
+  type: GenerateType,
+  options?: {
+    semanticRoleIds?: AiGenerateSemanticRoleId[];
+  },
+): string {
   if (isXiaohongshuGenerateType(type)) {
     return `你是一个专业的小红书内容策划助手，擅长把文章内容转成适合小红书传播的标题、正文和封面主图方案。
 
@@ -330,27 +405,27 @@ export function createGenerateSystemPrompt(type: GenerateType): string {
 5. 主图能力只输出设计方案和图片生成提示词，不要声称已经生成真实图片文件。`;
   }
 
+  const promptRules = [
+    '使用标准 Markdown 语法。',
+    '标题层级清晰（H1-H3），标题仍优先使用 #、##、###，不要在标题行前添加 role:。',
+    '内容结构化，便于排版。',
+    '适当使用列表、表格等元素。',
+    '数学公式使用 $...$（行内）和 $$...$$（独立公式）。',
+    '当不同信息来源存在冲突时，必须按以下优先级执行：用户要求描述 > 生成类型要求 > 主题/年级/科目等基础上下文 > 个人知识库参考资料。',
+    ...buildEducationSemanticRules(options?.semanticRoleIds),
+    '如果用户提供了要求描述，请优先满足其中的范围、格式、语气和内容约束。',
+    '如果用户提供了个人知识库资料，只能把它当作参考资料使用；若与用户要求描述冲突，必须以用户要求描述为准，同时不要编造资料里没有的具体事实。',
+  ];
+  const exampleLines = buildEducationSemanticExampleLines(
+    resolveEducationSemanticRoleIds(options?.semanticRoleIds),
+  );
+
   return `你是一个专业的教育内容生成助手，擅长生成 Markdown 格式的教育文档。
 
 生成规则：
-1. 使用标准 Markdown 语法。
-2. 标题层级清晰（H1-H3），标题仍优先使用 #、##、###，不要在标题行前添加 role:。
-3. 内容结构化，便于排版。
-4. 适当使用列表、表格等元素。
-5. 数学公式使用 $...$（行内）和 $$...$$（独立公式）。
-6. 对需要被排版系统识别的正文块，在该段开头添加语义角色前缀，格式必须是 role:角色名 正文。
-7. 可用语义角色只使用：role:题干、role:答案、role:解析、role:重点、role:易错、role:说明、role:例题、role:步骤、role:总结、role:注意。
-8. 练习题和试卷初稿中，题目正文优先使用 role:题干，参考答案使用 role:答案，解题说明使用 role:解析。
-9. 讲义和知识点总结中，核心概念优先使用 role:重点，示例使用 role:例题，过程说明使用 role:步骤，常见错误使用 role:易错，章节收束使用 role:总结。
-10. 不要为每一行都机械添加 role:；只有承担明确语义的正文块才添加。
-11. 如果用户提供了个人知识库资料，优先依据资料生成，不要编造资料里没有的具体事实。
-12. 如果用户提供了要求描述，请优先满足其中的范围、格式、语气和内容约束。
-
-示例：
-role:重点 一次函数的图像是一条直线。
-role:例题 已知 y = 2x + 1，求 x = 3 时的函数值。
-role:答案 y = 7。
-role:解析 将 x = 3 代入 y = 2x + 1，得到 y = 2 × 3 + 1 = 7。
+${buildNumberedPromptRules(promptRules)}${
+    exampleLines.length > 0 ? `\n\n示例：\n${exampleLines.join('\n')}` : ''
+  }
 
 请直接生成内容，不要有额外的解释说明。`;
 }
@@ -369,24 +444,43 @@ export function createEducationGenerateUserMessage(options: GenerateOptions): st
     long: '详细完整',
   };
 
-  let message = `请生成一份${typeLabels[options.type] || options.type}。\n\n主题：${options.topic}`;
+  const sections = [`请生成一份${typeLabels[options.type] || options.type}。`];
+  const trimmedRequirementDescription = options.requirementDescription?.trim();
+  const basicContextLines = [`主题：${options.topic}`];
 
   if (options.grade) {
-    message += `\n年级：${options.grade}`;
+    basicContextLines.push(`年级：${options.grade}`);
   }
   if (options.subject) {
-    message += `\n科目：${options.subject}`;
+    basicContextLines.push(`科目：${options.subject}`);
   }
-  if (options.requirementDescription?.trim()) {
-    message += `\n要求描述：${options.requirementDescription.trim()}`;
+
+  if (trimmedRequirementDescription) {
+    sections.push([
+      '第一优先级：用户要求描述',
+      `要求描述：${trimmedRequirementDescription}`,
+      '后续如果与其他信息冲突，必须优先满足这里的要求。',
+    ].join('\n'));
   }
-  message += `\n长度要求：${lengthLabels[options.length || 'medium'] || '中等长度'}`;
+
+  sections.push([
+    '第二优先级：生成类型要求',
+    `生成类型：${typeLabels[options.type] || options.type}`,
+    `长度要求：${lengthLabels[options.length || 'medium'] || '中等长度'}`,
+  ].join('\n'));
+
+  sections.push(['第三优先级：主题/年级/科目', ...basicContextLines].join('\n'));
 
   if (options.knowledgeContext?.trim()) {
-    message += `\n\n请优先依据以下个人知识库资料生成，资料不足时才做合理补全，但不要编造具体事实：\n\n${options.knowledgeContext.trim()}`;
+    sections.push([
+      '第四优先级：个人知识库参考资料',
+      '以下资料仅作参考，不能覆盖前面的用户要求、生成类型要求和基础上下文；若资料与用户要求描述冲突，必须以用户要求描述为准。',
+      '资料不足时可以做合理补全，但不要编造资料里没有的具体事实。',
+      options.knowledgeContext.trim(),
+    ].join('\n\n'));
   }
 
-  return message;
+  return sections.join('\n\n');
 }
 
 /**
@@ -631,18 +725,23 @@ export class AiService {
 
     options.signal?.addEventListener('abort', cancelMainRequest, { once: true });
     try {
-      return await window.layoutAPI.requestAi({
+      const result = await window.layoutAPI.requestAi({
         requestId,
         url: endpoint,
         method: options.method,
         headers: options.headers,
         body: options.body,
       });
+      throwIfMainProcessTransportError({
+        url: endpoint,
+        transportError: result.transportError,
+      });
+      return result;
     } catch (error) {
       if (options.signal?.aborted) {
         throw new DOMException('请求已取消', 'AbortError');
       }
-      throw error;
+      return throwNormalizedMainProcessInvokeError(endpoint, error);
     } finally {
       options.signal?.removeEventListener('abort', cancelMainRequest);
     }
@@ -685,7 +784,7 @@ export class AiService {
     onChunk: StreamCallback,
     signal?: AbortSignal
   ): Promise<string> {
-    const systemPrompt = this.getGenerateSystemPrompt(options.type);
+    const systemPrompt = this.getGenerateSystemPrompt(options);
     const userMessage = this.getGenerateUserMessage(options);
 
     return this.streamGenerate(systemPrompt, userMessage, onChunk, signal);
@@ -898,8 +997,10 @@ ${content}`;
   /**
    * 获取生成系统提示词
    */
-  private getGenerateSystemPrompt(type: GenerateType): string {
-    return createGenerateSystemPrompt(type);
+  private getGenerateSystemPrompt(options: GenerateOptions): string {
+    return createGenerateSystemPrompt(options.type, {
+      semanticRoleIds: options.semanticRoleIds,
+    });
   }
 
   /**

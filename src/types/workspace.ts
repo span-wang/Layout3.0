@@ -11,6 +11,7 @@ export type PageSettingsTab =
   | '分栏'
   | '块排版'
   | '页面背景'
+  | 'PDF 水印'
   | '模板起点'
   | '分页策略';
 

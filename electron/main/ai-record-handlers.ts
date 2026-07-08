@@ -13,6 +13,15 @@ type GenerateType =
   | 'xiaohongshuCover';
 type GenerateLength = 'short' | 'medium' | 'long';
 
+interface KnowledgeSourceReference {
+  id: string;
+  sourceType: 'ragflow';
+  title: string;
+  location?: string;
+  detail?: string;
+  preview?: string;
+}
+
 interface AiGenerationRecord {
   id: string;
   type: GenerateType;
@@ -25,6 +34,7 @@ interface AiGenerationRecord {
   lengthLabel?: string;
   provider?: AiProvider;
   model?: string;
+  knowledgeSources?: KnowledgeSourceReference[];
   content: string;
   createdAt: string;
 }
@@ -106,6 +116,40 @@ function isKnownProvider(value: unknown): value is AiProvider {
   return value === 'openai' || value === 'anthropic' || value === 'custom';
 }
 
+function isKnowledgeSourceType(value: unknown): value is KnowledgeSourceReference['sourceType'] {
+  return value === 'ragflow';
+}
+
+function normalizeKnowledgeSources(value: unknown): KnowledgeSourceReference[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  const sources = value
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+    .map((item): KnowledgeSourceReference | null => {
+      const id = typeof item.id === 'string' ? item.id : '';
+      const sourceType = isKnowledgeSourceType(item.sourceType) ? item.sourceType : null;
+      const title = typeof item.title === 'string' ? item.title : '';
+
+      if (!id.trim() || !title.trim() || !sourceType) {
+        return null;
+      }
+
+      return {
+        id,
+        sourceType,
+        title,
+        location: typeof item.location === 'string' ? item.location : undefined,
+        detail: typeof item.detail === 'string' ? item.detail : undefined,
+        preview: typeof item.preview === 'string' ? item.preview : undefined,
+      };
+    })
+    .filter((item): item is KnowledgeSourceReference => item !== null);
+
+  return sources.length > 0 ? sources : undefined;
+}
+
 function normalizeRecord(value: unknown): AiGenerationRecord | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -128,6 +172,7 @@ function normalizeRecord(value: unknown): AiGenerationRecord | null {
     lengthLabel: typeof raw.lengthLabel === 'string' ? raw.lengthLabel : undefined,
     provider: isKnownProvider(raw.provider) ? raw.provider : undefined,
     model: typeof raw.model === 'string' ? raw.model : undefined,
+    knowledgeSources: normalizeKnowledgeSources(raw.knowledgeSources),
     content: raw.content,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
   };

@@ -478,7 +478,7 @@
       "type": "范围调整",
       "description": "个人知识库接入依赖本机外部服务状态。当前 `RAGFlow` 预期端口 `9380`、`Open Notebook` 预期端口 `8502 / 5055` 均未监听，Docker 也未处于可用状态；如果本步直接把功能边界扩成“必须完成真实双服务联调和完整生成闭环”，会把 UI、连接器开发和本地环境排障耦合在一起，导致最小可验收版本失焦。",
       "impactScope": "PH3-12 个人知识库接入 V1、左侧知识库面板、Electron 主进程知识库请求、RAGFlow 检索接入、Open Notebook 连接管理、AI 生成知识库上下文链路",
-      "currentHandling": "已完成第一轮实现：左侧“个人知识库”面板、RAGFlow / Open Notebook 连接配置与探活、RAGFlow 数据集读取和检索测试入口、以及 AI 生成结合 RAGFlow 上下文的代码链路都已落地，并已通过 `npm run typecheck` 与 `npm run build`。当前继续保留本风险，原因是本机 `9380 / 8502 / 5055` 端口仍未监听、Docker 也未恢复，尚未完成真实双服务联调；待本机服务启动后，再补齐实机验证与更深层的 Open Notebook 检索能力。"
+      "currentHandling": "已完成第一轮实现：左侧“个人知识库”面板、RAGFlow / Open Notebook 连接配置与探活、RAGFlow 数据集读取和检索测试入口、以及 AI 生成结合 RAGFlow 上下文的代码链路都已落地，并已通过 `npm run typecheck` 与 `npm run build`。截至 2026-07-08，本机 `docker-ragflow-gpu-1` 与 `open_notebook-open_notebook-1` 已恢复运行，`9380 / 8502 / 5055` 端口也已可达，因此当前已从“等待服务启动”切换到 `PH3-12` 真实联调收尾；后续若仍有问题，将优先记录真实接口差异和最小修复结论，而不再按“端口未起”处理。"
     },
     {
       "id": "RISK-061",
@@ -575,6 +575,134 @@
       "description": "AI 内容生成新增“要求描述”若同步扩成完整提示词模板系统、变量字段库、题型比例、难度梯度和专业出题参数面板，会把当前单字段补强扩大到提示词编排、记录筛选、知识库检索和多任务模板治理，难以形成一个可快速验收的小步。",
       "impactScope": "PH3-12-generate-requirement-description-v1、AiGenerateTab、AiService、AI 生成记录、后续教辅生成增强任务",
       "currentHandling": "已完成 `PH3-12-generate-requirement-description-v1` 最小闭环：教育内容生成模式已新增可选“要求描述”，并同步进入 `GenerateOptions`、提示词、AI 生成记录落盘与记录详情展示；小红书模式、完整模板系统、模型 Provider、个人知识库检索和出题高级参数均未在本步扩展。"
+    },
+    {
+      "id": "RISK-073",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "AI 生成优先级如果一步扩成“可配置权重 + 多知识源冲突合并 + 完整提示词编排器”，会同时牵动知识库检索、提示词模板、历史记录筛选和不同生成任务的规则治理，超出当前最需要的提示词口径修正小步。",
+      "impactScope": "PH3-12-ai-generate-priority-v1、AiService、KnowledgeBaseService、AiGenerateTab、后续教辅生成增强任务",
+      "currentHandling": "当前先只修正教育内容生成提示词的固定优先级口径，明确“用户要求描述 > 生成类型 > 主题/年级/科目 > 知识库参考资料”，并在冲突说明中要求知识库只作参考；知识库检索权重、双源混排和完整提示词编排继续后续单拆。"
+    },
+    {
+      "id": "RISK-074",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "知识库来源标注如果一步扩成“正文脚注 + 文末参考文献 + 逐段精确引用 + 导出同构呈现”，会同时牵动 AI 结果区、文档插入链路、预览分页、HTML/PDF/DOCX 导出和 `.layout` 模型，超出当前最需要的“先让用户看见本次来源、但不污染预览文档”的最小小步。",
+      "impactScope": "PH3-12-generate-knowledge-source-annotation-v1、AiGenerateTab、AiGenerationRecordsPanel、KnowledgeBaseService、AI 生成记录落盘、后续知识库引用增强任务",
+      "currentHandling": "该方向已按用户要求回退：当前不再展示或落盘知识库来源标注，恢复到只保留知识库检索与 AI 正文生成主链路的状态。若后续再次尝试来源展示或引用能力，需要先与检索链路解耦后再单独拆步。"
+    },
+    {
+      "id": "RISK-075",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "AI 请求报错如果一步扩成“完整网络健康检查 + 自动重试 + 环境向导 + Provider 专属诊断”，会同时牵动主进程请求通道、设置页、知识库请求、日志体系和交互文案，超出当前最需要的“把原始 IPC 错误收口为中文可诊断提示”的最小返修。",
+      "impactScope": "PH3-01-ai-request-network-error-normalize-v1、electron/main/ai-handlers.ts、AiService、KnowledgeBaseService、AI 设置与知识库连接体验",
+      "currentHandling": "已完成 `PH3-01-ai-request-network-error-normalize-v1`：当前已先收口主进程 `ai:request` 的错误归一化与前端提示，把 `fetch failed`、连接拒绝、地址解析失败、证书错误、超时和取消请求转换为统一可读结果，并避免取消请求继续刷主进程错误日志；健康检查面板、自动重试和环境引导继续后续单拆。"
+    },
+    {
+      "id": "RISK-076",
+      "date": "2026-07-08",
+      "type": "返工",
+      "description": "知识库来源标注虽然没有直接修改检索参数，但它把知识库上下文返回结构、AI 结果区状态、生成记录落盘和恢复链路一起联动了；一旦用户感知到“检索都检索不出来”，继续保留该功能会放大对知识库主链路稳定性的怀疑，因此当前优先回退来源标注，恢复更朴素的稳定口径。",
+      "impactScope": "PH3-12-generate-knowledge-source-annotation-rollback-v1、KnowledgeBaseService、AiGenerateTab、AiGenerationRecordsPanel、AI 生成记录落盘、知识库检索与 AI 生成前上下文链路",
+      "currentHandling": "已完成 `PH3-12-generate-knowledge-source-annotation-rollback-v1`：知识库来源标注相关代码已回退，当前恢复到不展示、不落盘来源列表的状态，并保留既有知识库检索和 AI 正文生成主链路。后续如需再次尝试来源展示，需先把它与检索链路解耦，再单独拆步验证。"
+    },
+    {
+      "id": "RISK-078",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "用户在删除 `标题 / 章节 / 重点 / 题干 / 例题 / 步骤` 6 个内置语义块时明确选择了 `B` 硬删除口径。这样不仅会移除前台入口和 AI 默认生成要求，也会让旧 `.layout` 文档里已经保存的这 6 种语义在恢复时直接失效；如果不提前登记，后续很容易把这种有意为之的不兼容变化误判成回归 bug。",
+      "impactScope": "PH2-07-built-in-semantic-role-pruning-v1、Document Model 语义归一化、Markdown `role:` 前缀导入、RightPanel 语义面板、AI 教育内容默认提示词、旧 `.layout` 文档恢复链路",
+      "currentHandling": "已完成 `PH2-07-built-in-semantic-role-pruning-v1`：当前已从内置语义角色字典、别名解析、UI 入口、Markdown `role:` 识别、AI 教育内容提示词和相关测试中同步删除这 6 种角色；语义归一化也已收口为“只保留当前仍受支持的内置语义和真实存在的自定义语义”，因此旧 `.layout` 文档里的 `标题 / 章节 / 重点 / 题干 / 例题 / 步骤` 恢复后会直接按无语义处理。若后续需要恢复旧文档兼容或补迁移工具，再单独拆语义兼容任务。"
+    },
+    {
+      "id": "RISK-079",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "AI 生成语义块如果一步扩成“自定义语义动态勾选 + 按生成类型保存预设 + 生成记录完整还原 + 提示词模板中心”，会同时牵动语义配置、AI 提示词、记录模型、设置持久化和多工作流联动，超出当前最需要的“先把内置语义改成可勾选生成”的最小小步。",
+      "impactScope": "PH3-01-ai-semantic-role-selective-checkbox-v1、AiGenerateTab、AiService、AI 教育内容提示词、生成结果插入链路、后续 AI 体验增强任务",
+      "currentHandling": "已完成 `PH3-01-ai-semantic-role-selective-checkbox-v1`：当前已在 AI 教育内容生成界面为现有 6 个内置语义提供勾选项，并让默认提示词按勾选结果决定哪些语义允许输出 `role:` 前缀；本步继续保持边界，不扩展到自定义语义、生成记录回放、分页导出或完整提示词模板系统。"
+    },
+    {
+      "id": "RISK-077",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "用户已在回退后再次要求加回来源标注。若第二轮实现继续直接改知识库检索返回结构或检索链路，容易再次和“检索是否稳定”纠缠在一起，造成同类返工。",
+      "impactScope": "PH3-12-generate-knowledge-source-annotation-v2、AiGenerateTab、AiGenerationRecordsPanel、AI 生成记录、知识库上下文组装链路",
+      "currentHandling": "已完成 `PH3-12-generate-knowledge-source-annotation-v2`：当前已按更收敛的方案重新加回来源标注，优先从现有知识库上下文文本中解析来源展示与记录字段，尽量少碰知识库检索主链路；同时继续保持来源不写入插入正文、画布预览或导出文档。若仍需更细粒度来源解释，再后续单拆。"
+    },
+    {
+      "id": "RISK-080",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "如果 `PH3-06` 一步扩成“页面设置 + 文件流 + AI 面板 + 知识库配置 + 化学组合编辑器 + 跨会话历史”的全量统一历史栈，会同时牵动 Zustand 切片边界、文件恢复、局部临时状态和独立编辑器内部历史，难以在当前小步中稳定验收。",
+      "impactScope": "PH3-06-page-settings-history-v1、styleSlice、documentSlice、AppShell 撤销/重做入口、RightPanel 页面设置、后续统一历史栈治理",
+      "currentHandling": "已完成 `PH3-06-page-settings-history-v1`：当前统一历史快照已同步覆盖 `layoutDocument + styleSettings`，页面尺寸、方向、页边距、页眉页脚、分栏、模板主题、分页策略和块排版预设都可通过现有撤销/重做主链路回退；文件打开/保存、AI 面板状态、知识库配置、化学组合编辑器和跨会话历史继续保持不纳入本步，后续如需扩面再单独拆分。"
+    },
+    {
+      "id": "RISK-081",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "用户已明确要求按 `B` 口径硬删除 `ima`。这样不仅会移除个人知识库面板中的 `ima` 配置、检索与 AI 生成入口，也会让旧 localStorage 中保存的 `ima` 配置/选择状态和旧 AI 生成记录里 `sourceType: 'ima'` 的来源信息直接失效；如果不提前登记，后续很容易把这种有意为之的不兼容变化误判成回归 bug。",
+      "impactScope": "PH3-12-remove-ima-hard-delete-v1、KnowledgeBasePanel、knowledgeBaseSlice、KnowledgeBaseService、AiGenerateTab、KnowledgeSourceList、AI 生成记录落盘与恢复链路、旧本地知识库状态",
+      "currentHandling": "已完成 `PH3-12-remove-ima-hard-delete-v1`：`ima` 已从个人知识库面板、状态层、服务链路、AI 生成知识源切换、来源类型与相关测试中同步移除；旧 localStorage 中的 `ima` 配置与选择状态已改为安全清理或回退；旧 AI 生成记录中的 `ima` 来源信息不再兼容展示，继续按用户确认的硬删除口径处理。"
+    },
+    {
+      "id": "RISK-082",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "命令面板如果一步扩成“前缀语法解析 + 标题跳转 + 资源插入 + 插件化命令系统 + 完整历史面板 + Tab 补全”，会同时牵动大纲、资源库、快捷键、状态持久化和命令注册机制，超出当前最需要的“先把常用动作可检索、可触发”最小闭环。",
+      "impactScope": "PH3-02-command-palette-v1、AppShell 全局快捷键、Toolbar 常用动作、文件流命令、插入命令、AI 助手入口、后续体验增强任务",
+      "currentHandling": "已完成 `PH3-02-command-palette-v1`：当前命令面板已按最小闭环落地，只覆盖居中浮层、模糊检索、上下键切换、Enter 执行、Esc 关闭、常用命令接线和本机最近使用排序；`#标题跳转`、`@资源插入`、Tab 补全、插件化命令系统和完整历史面板继续后续单拆。"
+    },
+    {
+      "id": "RISK-083",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "PDF 水印如果一步扩成自由定位、多组水印、每页差异化、资源入库、图片高级编辑和 DOCX 兼容，会同时牵动页面设置模型、预览渲染、HTML/PDF 导出、导出检查、资源管理和跨格式导出链路，难以在当前小步内稳定验收。",
+      "impactScope": "PH4-07-pdf-watermark-v1、StyleSettings、RightPanel 页面设置、CanvasPane / 预览工作台、HTML/PDF 导出、导出检查、DOCX 导出后续能力",
+      "currentHandling": "已完成 `PH4-07-pdf-watermark-v1` 最小闭环：支持文字/图片两类水印、自定义文字、自由角度、大小、透明度，预览工作台可见，且只作用于 PDF 导出；默认整页重复铺设，不扩到自由定位、多组模板、图片高级编辑或 DOCX 水印。后续若继续扩面，仍需单独拆步。"
+    },
+    {
+      "id": "RISK-084",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "个人知识库现在进入真实联调阶段后，最大的风险已经从“服务没启动”切换成“真实接口行为与之前按代码假设做的本地实现不完全一致”。如果这一步把真实联调暴露出的所有问题都顺手扩成大改，例如同时重做知识库面板、AI 提示词、来源标注、Open Notebook 正式检索、上传切片或完整环境诊断，会把 `PH3-12` 的最小收尾再次拖散。",
+      "impactScope": "PH3-12-ragflow-open-notebook-real-integration-closeout-v1、KnowledgeBaseService、KnowledgeBasePanel、AiGenerateTab、AI 生成知识上下文链路、真实本机知识库服务联调",
+      "currentHandling": "本步先把范围收口为真实联调收尾：优先验证 `RAGFlow` 的数据集读取、检索测试、选中数据集持久化和 AI 生成带知识库上下文主链路；`Open Notebook` 继续只做服务探活与入口可达校验。若出现真实接口字段差异、错误提示不清或状态回写问题，只做挡住当前验收的最小修复，不顺手扩展新能力。"
+    },
+    {
+      "id": "RISK-085",
+      "date": "2026-07-08",
+      "type": "返工",
+      "description": "页眉页脚去渐变如果只改画布预览 CSS，而不同时同步默认主题 token 与 HTML/PDF 导出兜底样式，用户会看到“预览无渐变、导出仍有渐变”的口径分叉；反过来如果顺手把 `雪山静境`、`手绘札记` 等主题页眉页脚装饰也一并去掉，又会把单点返修扩大成主题系统改版。",
+      "impactScope": "PH4-08 页眉页脚渐变背景去除 V1、src/styles.css、src/engine/style/presets.ts、src/services/exportHtml.ts、默认主题页眉页脚预览与 PDF 导出、既有主题装饰边界",
+      "currentHandling": "已完成 `PH4-08-header-footer-gradient-remove-v1`：默认主题页眉页脚渐变已改为纯色背景，并已同步覆盖画布预览与 HTML/PDF 导出；`雪山静境`、`手绘札记` 等主题专属页眉页脚装饰保持不变，没有扩大成整套主题视觉返工。"
+    },
+    {
+      "id": "RISK-086",
+      "date": "2026-07-08",
+      "type": "阻塞",
+      "description": "当前本机 `RAGFlow` 服务虽然已启动，但应用里保存的 `API Key` 在真实接口上返回 `401 Unauthorized` 和 `Authentication error: API key is invalid!`。这会直接阻塞 `PH3-12` 的数据集读取、检索测试和 AI 生成带知识库上下文的端到端验收；如果不把这个阻塞点单独登记，后续容易把“凭证已失效”误判为前台代码没接通。",
+      "impactScope": "PH3-12-ragflow-open-notebook-real-integration-closeout-v1、KnowledgeBaseService、KnowledgeBasePanel、AiGenerateTab、RAGFlow 数据集读取与检索、AI 生成知识库上下文链路",
+      "currentHandling": "已完成真实联调定位：`Open Notebook` API 探活正常，`RAGFlow` 服务端口可达，但当前本机保存的 `RAGFlow API Key` 已失效。本轮已先补 `KnowledgeBaseService` 的中文认证失败诊断与定向测试，前台后续会明确提示用户检查或重新生成 API Key；待用户更新有效密钥后，再继续完成 `PH3-12` 的真实端到端收尾。"
+    },
+    {
+      "id": "RISK-087",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "段落样式如果直接照搬“把当前块样式复制到所有同类块”的做法，或一步引入真正的 Word 倍数行距数据模型，会同时牵动 `blockStyleOverrides` 污染、样式优先级、分页测量签名、HTML/PDF 导出和 DOCX 行距解释，极易把当前最需要的“先能按同类块分别应用、并提供常用行距选项”最小闭环拖成大改。",
+      "impactScope": "PH2-14-paragraph-style-scope-and-word-line-spacing-v1、RightPanel 段落样式区、LayoutDocument.styles、CanvasPane、Typesetting Engine、HTML/PDF 导出、DOCX 导出",
+      "currentHandling": "已按最小闭环完成本步：同类块段落样式规则已收口为写入现有 `LayoutDocument.styles.blockStyles`，当前块 `blockStyleOverrides` 继续保留更高优先级；Word 风格行距选项 V1 已换算到现有 `lineHeight` 数值写回，没有在本步引入新的倍数行距字段。当前已用 `quickBlockStyle.test.ts` 覆盖规则写入、递归合并、局部覆盖优先与 HTML/PDF 直接消费，并用 `exportDocx.test.ts` 覆盖 DOCX 对同类块对齐、行距、段前距和段后距的消费。后续只有在这个基础口径被验证稳定后，才继续考虑独立升级为更完整的行距模型。"
+    },
+    {
+      "id": "RISK-088",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "用户已明确要求当前不做 `PH3-05` 首次使用引导。如果继续把它保留为待确认下一步，后续看板会持续推荐一个已经被用户排除的方向，容易干扰 `PH3-12` 个人知识库真实联调和 `PH3-07` M4 链路验证的推进顺序。",
+      "impactScope": "PH3-05 首次使用引导、第三阶段当前执行看板、M4 下一步推荐顺序、后续帮助与引导体验规划",
+      "currentHandling": "已将 `PH3-05` 状态调整为 `暂缓`，当前不再设计或实现首次使用引导。后续除非用户重新确认恢复该任务，否则第三阶段优先继续处理 `PH3-12` 个人知识库真实联调收尾或 `PH3-07` M4 链路验证；更完整帮助中心与快捷键说明仍可在 `PH4-05` 文档与帮助任务中单独推进。"
     }
   ]
 }

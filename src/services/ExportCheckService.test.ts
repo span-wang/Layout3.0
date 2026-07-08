@@ -209,3 +209,35 @@ test('PH4-02 导出检查：答案模式与复杂公式会给出导出提醒', (
   const docxItems = getExportCheckItemsForTarget(result, 'docx');
   assert(docxItems.some((item) => item.title.includes('行内公式包含 矩阵或行列式')), '复杂公式应提示 DOCX 兼容风险。');
 });
+
+test('PH4-07 导出检查：图片水印缺少路径时会提示 PDF 风险', () => {
+  const document = createDocument([createParagraphBlock('paragraph-1', '水印测试')]);
+  const styleSettings = {
+    ...defaultStyleSettings,
+    pdfWatermark: {
+      ...defaultStyleSettings.pdfWatermark,
+      enabled: true,
+      kind: 'image' as const,
+      image: {
+        ...defaultStyleSettings.pdfWatermark.image,
+        imageSrc: '',
+      },
+    },
+  };
+
+  const result = runExportChecks({
+    layoutDocument: document,
+    renderableBlocks: document.blocks,
+    pages: createPageLayouts(document.blocks),
+    styleSettings,
+    tocItems: [],
+    documentFilePath: 'C:\\workspace\\demo.layout',
+    workspaceRootPath: 'C:\\workspace',
+  });
+
+  const pdfItems = getExportCheckItemsForTarget(result, 'pdf');
+  assert(
+    pdfItems.some((item) => item.category === '水印' && item.severity === 'error' && item.title.includes('缺少图片路径')),
+    '图片水印缺少路径时应提示 PDF 导出风险。',
+  );
+});

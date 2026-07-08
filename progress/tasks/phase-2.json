@@ -14,8 +14,43 @@
       "milestoneIds": [
         "M2"
       ],
-      "status": "进行中",
-      "acceptance": "第二阶段计划已调整为结构化文档模型优先，风险区记录当前纯 Markdown 解析链路对富文本编辑的影响，并沉淀到 `结构化文档模型V1方案.md`。"
+      "status": "已完成",
+      "acceptance": "第二阶段计划已调整为结构化文档模型优先，风险区记录当前纯 Markdown 解析链路对富文本编辑的影响，并沉淀到 `结构化文档模型V1方案.md`。",
+      "startedOn": "2026-06-22",
+      "completedOn": "2026-07-08",
+      "executionBoundary": {
+        "id": "PH2-01-mainline-correction-closeout-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：第二阶段主链路纠偏正式收尾",
+        "confirmedOn": "2026-07-08",
+        "startedOn": "2026-07-08",
+        "completedOn": "2026-07-08",
+        "summary": "本步已完成 `PH2-01-mainline-correction-closeout-v1`：1) 已按 `结构化文档模型V1方案.md`、`LOG-034/035` 和 `RISK-003` 正式确认第二阶段主链路已从“纯 Markdown 解析驱动”纠偏为“Markdown 只导入一次，后续由 `.layout + LayoutDocument` 驱动”；2) `PH2-21F` 与 `PH2-24A` 虽已写有完成边界和 `completedOn`，但顶层状态仍遗留为 `进行中`，本轮已同步更正为 `已完成`；3) `progress/config.json` 中 `phase-2` 与 `M2` 已同步收口为 `已完成`，让阶段、里程碑、任务卡和日志重新一致；4) 本步不新增产品功能，只做第二阶段真相源收尾与状态校正。",
+        "included": [
+          "正式收尾 `PH2-01`，把第二阶段主链路纠偏结果从“长期进行中”同步为可验收完成。",
+          "核对 `结构化文档模型V1方案.md`、`LOG-034`、`LOG-035`、`RISK-003` 与 `PH2-02/PH2-03` 等后续任务的完成结果，确认主链路纠偏验收条件已满足。",
+          "把 `PH2-21F` 与 `PH2-24A` 的顶层任务状态从 `进行中` 更正为 `已完成`，保持与各自 `executionBoundary`、`completedOn` 和验证项一致。",
+          "同步更新 `progress/config.json` 中 `phase-2` 与 `M2` 的状态，确保阶段 / 里程碑与任务实际状态一致。",
+          "追加边界确认与完成日志，并在完成后执行 `npm run progress:build` 与 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不新增或修改任何产品代码、分页算法、导出逻辑或 AI 功能。",
+          "不重写 `PH2-21F`、`PH2-24A` 已有完成摘要、验证项和验收口径，本步只修正顶层状态失真。",
+          "不在本步直接启动第三阶段新功能开发，也不扩展新的治理规则或批量数据迁移。"
+        ],
+        "followup": [
+          "第三阶段命令面板最小闭环继续归属 `PH3-02`。",
+          "个人知识库真实联调与端到端验证继续归属 `PH3-12`。",
+          "如需继续补统一历史栈、首次使用引导或 M4 验收，再按 `PH3-06`、`PH3-05`、`PH3-07` 逐步拆分。"
+        ],
+        "verification": [
+          "用户已回复 `A`，确认本轮先做第二阶段 M2 收口与状态校正。",
+          "`结构化文档模型V1方案.md`、`progress/logs.json` 中的 `LOG-034` / `LOG-035`，以及 `progress/risks.json` 中的 `RISK-003` 已共同说明主链路纠偏已实际落地。",
+          "`progress/tasks/phase-2.json` 中 `PH2-21F` 与 `PH2-24A` 均已存在完成边界、`completedOn` 与验证项，本轮只补齐顶层状态。",
+          "`progress/config.json` 已同步把 `phase-2` 与 `M2` 更新为 `已完成`。",
+          "完成后执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+        ]
+      }
     },
     {
       "id": "PH2-02",
@@ -1925,6 +1960,71 @@
           "resolution": "已完成语义标签块内胶囊返修 V1：语义标签现在作为块内真实 DOM 胶囊渲染，列表不再依赖伪元素补丁；标题和段落的真实换行测量已避开标签文本，避免 DOM 测量把语义标签内容误当成正文参与分页切分。"
         }
       ]
+    },
+    {
+      "id": "PH2-07-built-in-semantic-role-pruning",
+      "sequence": "7f",
+      "order": 76,
+      "title": "内置语义块收口 V1：硬删除 6 个内置语义角色",
+      "priority": "P1",
+      "moduleIds": [
+        "style-module",
+        "document-model",
+        "parser-module",
+        "ui-components",
+        "export-pipeline",
+        "ai-service"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "按用户确认的 `B` 方案，彻底删除 `标题 / 章节 / 重点 / 题干 / 例题 / 步骤` 6 个内置语义角色的系统支持：前台不可再选、Markdown `role:` 不再识别、AI 默认提示词不再生成，旧 `.layout` 文档中的这 6 种语义也不再保留兼容；其余内置语义与自定义语义保持可用。",
+      "owner": "语义块与 AI 协作组",
+      "dependsOn": [
+        "PH2-07-semantic-block-template",
+        "PH2-07-ai-semantic-prompt"
+      ],
+      "startedOn": "2026-07-08",
+      "completedOn": "2026-07-08",
+      "executionBoundary": {
+        "id": "PH2-07-built-in-semantic-role-pruning-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：内置语义块硬删除 V1",
+        "confirmedOn": "2026-07-08",
+        "startedOn": "2026-07-08",
+        "completedOn": "2026-07-08",
+        "summary": "本步已完成 `PH2-07-built-in-semantic-role-pruning-v1`：1) `BuiltInSemanticRoleId`、内置语义字典、别名表和默认颜色映射已删除 `标题 / 章节 / 重点 / 题干 / 例题 / 步骤`；2) 语义归一化已改成只保留当前仍受支持的内置语义和真实存在的自定义语义，旧 `.layout` 里这 6 种角色恢复后会按无语义处理；3) Markdown `role:` 前缀不再识别 `role:题干` 等已删语义，未识别旧前缀会保留原文；4) AI 教育内容默认提示词已同步收口，只保留 `答案 / 解析 / 易错 / 说明 / 总结 / 注意` 语义；5) 定向回归、`npm run typecheck` 与 `npm run build` 已通过。",
+        "included": [
+          "从内置语义角色字典、类型定义、别名表、默认颜色和默认块模板映射中删除 `标题 / 章节 / 重点 / 题干 / 例题 / 步骤`。",
+          "右侧“语义块”面板、语义规则目标语义列表和相关前端展示不再提供这 6 种内置语义。",
+          "Markdown `role:` 前缀和 `.layout` 语义归一化不再识别这 6 种角色；旧文档中已有这 6 种 `semantic.roleId` 或别名时，恢复后按无语义处理。",
+          "AI 教育内容默认提示词不再要求输出 `role:题干`、`role:重点`、`role:例题`、`role:步骤`，并同步调整示例与测试。",
+          "补充或调整最小回归，覆盖角色列表、前缀解析、旧文档归一化和 AI 提示词口径变化。"
+        ],
+        "excluded": [
+          "不删除 `答案 / 解析 / 易错 / 说明 / 总结 / 注意` 内置语义。",
+          "不改自定义语义块、自定义关键词规则和现有块模板库。",
+          "不把被删除语义自动迁移成其他语义，也不新增兼容映射兜底。",
+          "不改分页算法、导出结构或非语义模块。"
+        ],
+        "followup": [
+          "如果后续还需要“软删除但保留旧文档兼容”，需另拆语义兼容层回补小步。",
+          "如果后续要继续精简其他内置语义或重做语义字典分层，继续归属 `PH2-07`。",
+          "如果后续要让 AI 生成口径进一步围绕剩余语义重写示例与教学模板，继续归属 `PH2-07` 或 `PH3-12`。"
+        ],
+        "verification": [
+          "用户已在兼容方案中明确回复 `b`，确认本步按硬删除口径执行。",
+          "`src/engine/document-model/types.ts` 与 `src/engine/document-model/semanticRole.ts` 已删除 6 个内置语义角色，并把旧语义恢复口径收口为“未知角色直接清掉”。",
+          "`src/services/AiService.ts` 与 `src/services/AiService.test.ts` 已同步删除题干 / 重点 / 例题 / 步骤等已下线语义的提示词要求。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\semanticRole.test.ts`，13 个测试全部 pass。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts`，12 个测试全部 pass。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\AiService.test.ts`，4 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ],
+        "resolution": "已完成内置语义块硬删除 V1：当前系统只保留 `答案 / 解析 / 易错 / 说明 / 总结 / 注意` 这批内置语义；被删除的 `标题 / 章节 / 重点 / 题干 / 例题 / 步骤` 不再出现在前台、不再被 Markdown `role:` 识别、也不再在旧 `.layout` 文档恢复时保留兼容。"
+      }
     },
     {
       "id": "PH2-08",
@@ -4697,6 +4797,47 @@
             "导出 HTML 的完整模板变量化与分页视觉验收：后续归属 `PH2-11` / `PH2-12`。",
             "表格跨页、孤寡行和图片环绕分页深化：后续按用户确认另拆分页质量小步。"
           ]
+        },
+        {
+          "id": "PH2-14-paragraph-style-scope-and-word-line-spacing-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：段落样式同类块应用与 Word 式行距 V1",
+          "confirmedOn": "2026-07-08",
+          "startedOn": "2026-07-08",
+          "completedOn": "2026-07-08",
+          "summary": "本步已完成 `PH2-14-paragraph-style-scope-and-word-line-spacing-v1`：1) 在现有字体字号批量规则基础上，为段落级样式补齐了“同类块规则”应用能力；2) 右侧对象属性中的“段落样式 / 块级样式”现在支持在“当前块 / 同类块”两种作用范围间切换；3) 同类块规则写入现有 `LayoutDocument.styles.blockStyles`，覆盖 H1 / H2 / H3 / H4 / 段落 / 列表 / 表格 / 代码块，不再把样式批量复制成每个块的局部覆盖；4) 行高区域已新增 Word 风格行距入口，支持 `单倍 / 1.25 倍 / 1.5 倍 / 2 倍 / 多倍`，V1 继续换算为现有 `lineHeight` 数值写回；5) 画布预览、隐藏测量层、分页估算、HTML/PDF 导出和 DOCX 导出已经统一消费这套规则；6) 已补最小单测锁住“同类块规则先合并、当前块局部覆盖仍优先”的口径。",
+          "included": [
+            "在右侧“段落样式 / 块级样式”区域补齐“应用到同类块”入口，范围参考现有字体字号批量规则：H1、H2、H3、H4、段落、列表、表格、代码块。",
+            "把同类块段落样式规则写入现有 `LayoutDocument.styles.blockStyles`，不批量复制到每个块的 `blockStyleOverrides`。",
+            "保持当前样式优先级为：模板默认 < 同类块段落样式规则 < 当前块局部覆盖。",
+            "让同类块规则至少覆盖当前右侧已稳定开放的段落级字段：对齐、行高、段前距、段后距，以及标题/段落当前已开放的缩进项。",
+            "在行高区域补充 Word 风格行距选项：`单倍 / 1.25 倍 / 1.5 倍 / 2 倍 / 多倍`，其中“多倍”允许用户输入自定义倍数。",
+            "V1 行距选项继续换算为当前已有 `lineHeight` 数值写回，确保画布预览、分页估算、HTML/PDF 导出和 DOCX 导出共同消费同一套结果。",
+            "补齐最小验证，覆盖规则写回、局部覆盖优先级、分页刷新、HTML/PDF 导出和 DOCX 行距口径。"
+          ],
+          "excluded": [
+            "不重做为完整 Word 样式窗格，不新增格式刷、样式库、样式复制粘贴或某一级规则清除器。",
+            "不把当前块样式直接批量展开成所有同类块的局部覆盖，不制造大批量 `blockStyleOverrides` 污染。",
+            "不在本步引入新的 `.layout` 顶层字段，也不把 `lineHeight` 升级成新的倍数行距模型字段。",
+            "不扩展颜色、高亮、背景色等更多段落或文字批量规则，不顺手改模板编辑器。",
+            "不重写分页算法、真实 DOM 测量主线或复杂 DOCX 版式系统。"
+          ],
+          "followup": [
+            "如果后续需要真正的“固定值 / 最小值 / 多倍值”独立行距模型，再单独归属样式系统增强任务。",
+            "如果后续需要样式窗格、规则清除、样式库或格式刷，继续归属 `PH2-14` 或新的样式增强任务。",
+            "若后续需要让更多对象类型接入同类块段落规则，继续在现有样式优先级基础上扩展，不在本步顺手扩大。"
+          ],
+          "verification": [
+            "用户已回复“确定”，确认当前按 `PH2-14-paragraph-style-scope-and-word-line-spacing-v1` 推进。",
+            "开工前已写回 `progress/tasks/phase-2.json`、`progress/risks.json` 和 `progress/logs.json`，并执行 `npm run progress:build` 与 `npm run progress:check`。",
+            "`src/engine/style/quickBlockStyle.ts` 已新增同类块段落样式规则 helper，支持规则写入、规则解析与运行时合并。",
+            "`src/components/layout/RightPanel.tsx` 已新增“当前块 / 同类块”切换与 Word 风格行距入口，预设行距与自定义多倍行距继续换算为现有 `lineHeight` 数值。",
+            "`src/hooks/usePagination.ts`、`src/engine/style/blockStyleResolution.ts`、`src/services/exportHtml.ts`、`src/services/exportDocx.ts` 与 `src/components/layout/useWorkspaceFileCommands.ts` 已让分页、画布/测量口径、HTML/PDF 导出和 DOCX 导出共同消费同类块规则。",
+            "`src/engine/style/quickBlockStyle.test.ts` 定向回归通过：`node .\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs --test src\\\\engine\\\\style\\\\quickBlockStyle.test.ts`，4 个测试全部 pass。",
+            "`src/services/exportDocx.test.ts` 定向回归通过：`node .\\\\node_modules\\\\tsx\\\\dist\\\\cli.mjs --test src\\\\services\\\\exportDocx.test.ts`，9 个测试全部 pass，并覆盖 DOCX 对同类块对齐、行距、段前距和段后距的直接消费。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。"
+          ]
         }
       ]
     },
@@ -6241,7 +6382,7 @@
       "milestoneIds": [
         "M2"
       ],
-      "status": "进行中",
+      "status": "已完成",
       "acceptance": "DOCX 公式导出支持二元一次方程组和分段函数这类“左大括号 + 多行”结构；至少覆盖 `\\begin{cases}...\\end{cases}`、`\\left\\{\\begin{aligned}...\\end{aligned}\\right.` 与 `\\left\\{\\begin{array}...\\end{array}\\right.`；Word/WPS 中应优先输出可伸缩的大括号和多行 Office Math 结构，而不是整条退回 LaTeX 源码。",
       "owner": "导出链路组",
       "dependsOn": [
@@ -6882,7 +7023,7 @@
       "milestoneIds": [
         "M2"
       ],
-      "status": "进行中",
+      "status": "已完成",
       "acceptance": "自定义语义名称包含 `答案` 或 `解析` 的块，可与内置 `答案 / 解析` 一样参与显示/隐藏与文末统一；`blockquote / 引用容器` 内部的答案解析子块也可参与文末统一与隐藏；画布预览、分页、HTML/PDF、DOCX 和 `.layout` 保存恢复口径一致。",
       "owner": "文档链路组",
       "dependsOn": [

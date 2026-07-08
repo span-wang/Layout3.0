@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AiGenerationRecord } from '@/types/ai';
+import { KnowledgeSourceList } from './KnowledgeSourceList';
 
 interface AiGenerationRecordsPanelProps {
   records: AiGenerationRecord[];
@@ -168,6 +169,7 @@ export function AiGenerationRecordsPanel({
               <p>{selectedRecord.requirementDescription}</p>
             </div>
           ) : null}
+          <KnowledgeSourceList sources={selectedRecord.knowledgeSources ?? []} />
           <pre className="ai-record-content">{selectedRecord.content}</pre>
           <div className="ai-record-actions">
             <button type="button" className="ai-button ai-button-primary" onClick={() => onRestore(selectedRecord)}>

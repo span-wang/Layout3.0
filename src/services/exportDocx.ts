@@ -6,6 +6,7 @@ import {
   Header,
   HeadingLevel,
   ImageRun,
+  LineRuleType,
   Packer,
   PageBreak,
   PageNumber,
@@ -60,6 +61,11 @@ import {
   resolveQuickTextStyleForRun,
   type QuickTextStyleScope,
 } from '@/engine/style/quickTextStyle';
+import { resolveEffectiveBlockStyleOverrides } from '@/engine/style/quickBlockStyle';
+import {
+  resolveBlockDefaultTextMetrics,
+  resolveBlockEffectiveTextMetrics,
+} from '@/engine/style/blockStyleResolution';
 import type { HeaderFooterLineContent, ResolvedStyleContract, StyleSettings } from '@/engine/style/types';
 import type { PageLayout } from '@/engine/typesetting/types';
 import { splitInlineEquations } from '@/engine/document-model/equation';
@@ -207,59 +213,110 @@ function resolveTextScope(block: LayoutBlock): QuickTextStyleScope {
   return 'paragraph';
 }
 
-function resolveBlockSpacing(block: LayoutBlock, contract: ResolvedStyleContract): { before?: number; after?: number } {
+function resolveDocxBlockLineHeight(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+): number | undefined {
+  const defaultMetrics = resolveBlockDefaultTextMetrics(block, contract);
+  const effectiveMetrics = resolveBlockEffectiveTextMetrics(block, contract, styles);
+  const effectiveBlockStyleOverrides = resolveEffectiveBlockStyleOverrides(block, styles);
+  const renderedBaseLineHeight = effectiveBlockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight;
+
+  // DOCX 没有直接复用浏览器 CSS 行高的能力，这里沿用预览 / PDF 的安全行高口径，避免导出后大字号被挤住。
+  if (effectiveMetrics.lineHeight > renderedBaseLineHeight) {
+    return effectiveMetrics.lineHeight;
+  }
+
+  return effectiveBlockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight;
+}
+
+function resolveDocxSpacingValue(
+  overrideValue: number | undefined,
+  defaultValue: number,
+): number | undefined {
+  return pxToTwip(overrideValue ?? defaultValue);
+}
+
+function resolveBlockSpacing(
+  block: LayoutBlock,
+  contract: ResolvedStyleContract,
+  styles?: LayoutStyleSheet,
+): {
+  before?: number;
+  after?: number;
+  line?: number;
+  lineRule?: (typeof LineRuleType)[keyof typeof LineRuleType];
+} {
+  const effectiveBlockStyleOverrides = resolveEffectiveBlockStyleOverrides(block, styles);
+  const lineHeightPx = resolveDocxBlockLineHeight(block, contract, styles);
+  const lineSpacing = lineHeightPx
+    ? {
+        line: pxToTwip(lineHeightPx),
+        lineRule: LineRuleType.AT_LEAST,
+      }
+    : {};
+
   switch (block.type) {
     case 'heading':
       if (block.metadata.kind === 'heading') {
         if (block.metadata.depth === 1) {
           return {
-            before: pxToTwip(contract.blockStyles.heading1.marginTop),
-            after: pxToTwip(contract.blockStyles.heading1.marginBottom),
+            before: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceBefore, contract.blockStyles.heading1.marginTop),
+            after: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceAfter, contract.blockStyles.heading1.marginBottom),
+            ...lineSpacing,
           };
         }
 
         if (block.metadata.depth === 2) {
           return {
-            before: pxToTwip(contract.blockStyles.heading2.marginTop),
-            after: pxToTwip(contract.blockStyles.heading2.marginBottom),
+            before: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceBefore, contract.blockStyles.heading2.marginTop),
+            after: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceAfter, contract.blockStyles.heading2.marginBottom),
+            ...lineSpacing,
           };
         }
 
         return {
-          before: pxToTwip(contract.blockStyles.heading3.marginTop),
-          after: pxToTwip(contract.blockStyles.heading3.marginBottom),
+          before: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceBefore, contract.blockStyles.heading3.marginTop),
+          after: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceAfter, contract.blockStyles.heading3.marginBottom),
+          ...lineSpacing,
         };
       }
       break;
     case 'paragraph':
       return {
-        before: pxToTwip(contract.blockStyles.paragraph.marginTop),
-        after: pxToTwip(contract.blockStyles.paragraph.marginBottom),
+        before: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceBefore, contract.blockStyles.paragraph.marginTop),
+        after: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceAfter, contract.blockStyles.paragraph.marginBottom),
+        ...lineSpacing,
       };
     case 'list':
       return {
-        before: pxToTwip(contract.blockStyles.list.marginTop),
-        after: pxToTwip(contract.blockStyles.list.marginBottom),
+        before: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceBefore, contract.blockStyles.list.marginTop),
+        after: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceAfter, contract.blockStyles.list.marginBottom),
+        ...lineSpacing,
       };
     case 'blockquote':
       return {
-        before: pxToTwip(contract.blockStyles.blockquote.marginTop),
-        after: pxToTwip(contract.blockStyles.blockquote.marginBottom),
+        before: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceBefore, contract.blockStyles.blockquote.marginTop),
+        after: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceAfter, contract.blockStyles.blockquote.marginBottom),
+        ...lineSpacing,
       };
     case 'code':
       return {
-        before: pxToTwip(contract.blockStyles.code.marginTop),
-        after: pxToTwip(contract.blockStyles.code.marginBottom),
+        before: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceBefore, contract.blockStyles.code.marginTop),
+        after: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceAfter, contract.blockStyles.code.marginBottom),
+        ...lineSpacing,
       };
     case 'table':
       return {
-        before: pxToTwip(contract.blockStyles.table.marginTop),
-        after: pxToTwip(contract.blockStyles.table.marginBottom),
+        before: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceBefore, contract.blockStyles.table.marginTop),
+        after: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceAfter, contract.blockStyles.table.marginBottom),
+        ...lineSpacing,
       };
     case 'image':
       return {
-        before: pxToTwip(contract.blockStyles.image.marginTop),
-        after: pxToTwip(contract.blockStyles.image.marginBottom),
+        before: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceBefore, contract.blockStyles.image.marginTop),
+        after: resolveDocxSpacingValue(effectiveBlockStyleOverrides.spaceAfter, contract.blockStyles.image.marginBottom),
       };
     case 'horizontalRule':
       return {
@@ -409,9 +466,10 @@ function buildParagraphFromTextRuns(payload: {
   extraIndentTwip?: number;
 }): Paragraph {
   const inheritedStyle = resolveQuickTextStyleForBlock(payload.block, payload.styles);
-  const spacing = resolveBlockSpacing(payload.block, payload.contract);
+  const spacing = resolveBlockSpacing(payload.block, payload.contract, payload.styles);
   const quoteDepth = payload.blockquoteDepth ?? 0;
   const leftIndent = quoteDepth > 0 ? quoteDepth * 420 + (payload.extraIndentTwip ?? 0) : payload.extraIndentTwip;
+  const effectiveBlockStyleOverrides = resolveEffectiveBlockStyleOverrides(payload.block, payload.styles);
   const children = payload.prefixText
     ? [new DocxTextRun(payload.prefixText), ...buildDocxTextRuns(payload.textRuns, inheritedStyle, payload.answerDisplayMode)]
     : buildDocxTextRuns(payload.textRuns, inheritedStyle, payload.answerDisplayMode);
@@ -422,7 +480,7 @@ function buildParagraphFromTextRuns(payload: {
       payload.block.type === 'heading' && payload.block.metadata.kind === 'heading'
         ? mapHeadingLevel(payload.block.metadata.depth)
         : undefined,
-    alignment: payload.overrideAlignment ?? mapTextAlignment(payload.block.blockStyleOverrides.textAlign),
+    alignment: payload.overrideAlignment ?? mapTextAlignment(effectiveBlockStyleOverrides.textAlign),
     spacing,
     indent: leftIndent
       ? {
@@ -634,7 +692,7 @@ function buildCompactChoiceListParagraphs(
     position: columnWidthTwip * (index + 1),
   }));
   const inheritedStyle = resolveQuickTextStyleForBlock(block, context.styles);
-  const spacing = resolveBlockSpacing(block, context.contract);
+  const spacing = resolveBlockSpacing(block, context.contract, context.styles);
   const rows = chunkCompactChoiceItems(compactChoiceLayout.items, compactChoiceLayout.columns);
 
   return rows.map((itemsInRow, rowIndex) => {
@@ -651,6 +709,8 @@ function buildCompactChoiceListParagraphs(
       spacing: {
         before: rowIndex === 0 ? spacing.before : 0,
         after: rowIndex === rows.length - 1 ? spacing.after : 0,
+        line: spacing.line,
+        lineRule: spacing.lineRule,
       },
     });
   });
@@ -661,6 +721,7 @@ function buildTableCellParagraphs(
   block: LayoutBlock,
   context: BlockRenderContext,
 ): Paragraph[] {
+  const cellSpacing = resolveBlockSpacing(block, context.contract, context.styles);
   const children = buildDocxTextRuns(
     cell.textRuns,
     resolveQuickTextStyleForBlock(block, context.styles),
@@ -671,6 +732,8 @@ function buildTableCellParagraphs(
     new Paragraph({
       children,
       spacing: {
+        line: cellSpacing.line,
+        lineRule: cellSpacing.lineRule,
         before: 0,
         after: 0,
       },
@@ -1006,7 +1069,7 @@ async function buildDocxChildrenForBlock(
                 font: 'Consolas',
               }),
             ],
-            spacing: resolveBlockSpacing(block, context.contract),
+            spacing: resolveBlockSpacing(block, context.contract, context.styles),
             shading: {
               fill: 'F4F4F5',
               color: 'F4F4F5',
@@ -1026,7 +1089,7 @@ async function buildDocxChildrenForBlock(
         new Paragraph({
           children: buildDocxEquationChildren(block.metadata.kind === 'equation' ? block.metadata.value : ''),
           alignment: AlignmentType.CENTER,
-          spacing: resolveBlockSpacing(block, context.contract),
+          spacing: resolveBlockSpacing(block, context.contract, context.styles),
         }),
       ];
     case 'table':
@@ -1062,7 +1125,7 @@ async function buildDocxChildrenForBlock(
         return [
           new Paragraph({
             children: [new DocxTextRun('图片资源不可用')],
-            spacing: resolveBlockSpacing(block, context.contract),
+            spacing: resolveBlockSpacing(block, context.contract, context.styles),
           }),
         ];
       }
@@ -1079,15 +1142,16 @@ async function buildDocxChildrenForBlock(
               },
             }),
           ],
+          // 图片块也沿用有效块对齐；没有规则时再回到环绕方向推断。
           alignment: mapTextAlignment(
-            block.blockStyleOverrides.textAlign ??
+            resolveEffectiveBlockStyleOverrides(block, context.styles).textAlign ??
               (block.metadata.kind === 'image' && block.metadata.wrapSide === 'left'
                 ? 'left'
                 : block.metadata.kind === 'image' && block.metadata.wrapSide === 'right'
                   ? 'right'
                   : 'center'),
           ),
-          spacing: resolveBlockSpacing(block, context.contract),
+          spacing: resolveBlockSpacing(block, context.contract, context.styles),
         }),
       ];
 
@@ -1118,7 +1182,7 @@ async function buildDocxChildrenForBlock(
       return [
         new Paragraph({
           children: [new DocxTextRun({ text: getTocBlockDisplayTitle(block), bold: true })],
-          spacing: resolveBlockSpacing(block, context.contract),
+          spacing: resolveBlockSpacing(block, context.contract, context.styles),
         }),
         ...getVisibleTocItemsForBlock(block, context.tocItems).map(
           (item) =>

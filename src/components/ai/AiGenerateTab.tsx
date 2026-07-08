@@ -8,9 +8,16 @@ import { useAppStore } from '@/store';
 import { aiService } from '@/services/AiService';
 import { addAiGenerationRecord } from '@/services/AiGenerationRecordService';
 import { knowledgeBaseService } from '@/services/KnowledgeBaseService';
+import { parseKnowledgeSourcesFromContext } from '@/services/knowledgeSourceAnnotation';
 import { layoutDocumentToMarkdown } from '@/services/layoutDocumentMarkdown';
-import type { GenerateOptions, GenerateType } from '@/types/ai';
-import { GENERATE_TYPE_LABELS, LENGTH_LABELS } from '@/types/ai';
+import type { AiGenerateSemanticRoleId, GenerateOptions, GenerateType } from '@/types/ai';
+import {
+  AI_GENERATE_SEMANTIC_ROLE_OPTIONS,
+  GENERATE_TYPE_LABELS,
+  LENGTH_LABELS,
+} from '@/types/ai';
+import type { KnowledgeSourceReference } from '@/types/knowledge';
+import { KnowledgeSourceList } from './KnowledgeSourceList';
 
 function isXiaohongshuGenerateType(type: GenerateType): boolean {
   return type === 'xiaohongshuTitle' || type === 'xiaohongshuCopy' || type === 'xiaohongshuCover';
@@ -67,9 +74,13 @@ function buildKnowledgeRetrievalQuery(options: {
 export function AiGenerateTab(): JSX.Element {
   const isGenerating = useAppStore((state) => state.isGenerating);
   const generatedContent = useAppStore((state) => state.generatedContent);
+  const generatedKnowledgeSources = useAppStore((state) => state.generatedKnowledgeSources);
+  const generateSemanticRoleIds = useAppStore((state) => state.generateSemanticRoleIds);
   const generateError = useAppStore((state) => state.generateError);
   const startGenerating = useAppStore((state) => state.startGenerating);
   const updateGeneratedContent = useAppStore((state) => state.updateGeneratedContent);
+  const setGeneratedKnowledgeSources = useAppStore((state) => state.setGeneratedKnowledgeSources);
+  const setGenerateSemanticRoleIds = useAppStore((state) => state.setGenerateSemanticRoleIds);
   const setGenerateError = useAppStore((state) => state.setGenerateError);
   const finishGenerating = useAppStore((state) => state.finishGenerating);
   const clearGeneratedContent = useAppStore((state) => state.clearGeneratedContent);
@@ -80,11 +91,8 @@ export function AiGenerateTab(): JSX.Element {
   const setAiGenerationRecordsError = useAppStore((state) => state.setAiGenerationRecordsError);
   const layoutDocument = useAppStore((state) => state.layoutDocument);
   const ragflowConfig = useAppStore((state) => state.ragflowConfig);
-  const imaConfig = useAppStore((state) => state.imaConfig);
   const ragflowDatasets = useAppStore((state) => state.ragflowDatasets);
-  const imaKnowledgeBases = useAppStore((state) => state.imaKnowledgeBases);
   const selectedRagflowDatasetIds = useAppStore((state) => state.selectedRagflowDatasetIds);
-  const selectedImaKnowledgeBaseId = useAppStore((state) => state.selectedImaKnowledgeBaseId);
   const knowledgeSourceForGenerate = useAppStore((state) => state.knowledgeSourceForGenerate);
 
   const [generateType, setGenerateType] = useState<GenerateType>('lecture');
@@ -96,6 +104,14 @@ export function AiGenerateTab(): JSX.Element {
   const [selectedXiaohongshuTitle, setSelectedXiaohongshuTitle] = useState('');
   const [selectedXiaohongshuCopy, setSelectedXiaohongshuCopy] = useState('');
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleToggleSemanticRole = (roleId: AiGenerateSemanticRoleId, checked: boolean) => {
+    // 勾选顺序统一按预设顺序归一化，避免提示词和界面顺序来回跳动。
+    const nextRoleIds = checked
+      ? [...generateSemanticRoleIds, roleId]
+      : generateSemanticRoleIds.filter((currentRoleId) => currentRoleId !== roleId);
+    setGenerateSemanticRoleIds(nextRoleIds);
+  };
 
   const handleGenerate = async () => {
     const config = useAppStore.getState().getAiConfigForTask('generate');
@@ -135,6 +151,7 @@ export function AiGenerateTab(): JSX.Element {
       abortControllerRef.current = abortController;
 
       let knowledgeContext: string | undefined;
+      let knowledgeSources: KnowledgeSourceReference[] = [];
       if (shouldUseKnowledgeContext) {
         const knowledgeQuery = buildKnowledgeRetrievalQuery({
           generateType,
@@ -144,41 +161,21 @@ export function AiGenerateTab(): JSX.Element {
           requirementDescription,
         });
 
-        let retrievalResult: { context: string };
-        if (knowledgeSourceForGenerate === 'ragflow') {
-          if (selectedRagflowDatasetIds.length === 0) {
-            setGenerateError('请先在「个人知识库」里至少选择一个 RAGFlow 数据集');
-            finishGenerating();
-            return;
-          }
-
-          const datasetNameMap = new Map(ragflowDatasets.map((dataset) => [dataset.id, dataset.name]));
-          // 先从知识库拿到与主题最相关的资料片段，再交给 AI 生成完整教辅内容。
-          retrievalResult = await knowledgeBaseService.buildRagflowKnowledgeContext({
-            config: ragflowConfig,
-            datasetIds: selectedRagflowDatasetIds,
-            query: knowledgeQuery,
-            datasetNameMap,
-            signal: abortController.signal,
-          });
-        } else {
-          const selectedImaKnowledgeBase = imaKnowledgeBases.find(
-            (knowledgeBase) => knowledgeBase.id === selectedImaKnowledgeBaseId,
-          );
-          if (!selectedImaKnowledgeBase) {
-            setGenerateError('请先在「个人知识库」里选择一个 ima 知识库');
-            finishGenerating();
-            return;
-          }
-
-          retrievalResult = await knowledgeBaseService.buildImaKnowledgeContext({
-            config: imaConfig,
-            knowledgeBaseId: selectedImaKnowledgeBase.id,
-            knowledgeBaseName: selectedImaKnowledgeBase.name,
-            query: knowledgeQuery,
-            signal: abortController.signal,
-          });
+        if (selectedRagflowDatasetIds.length === 0) {
+          setGenerateError('请先在「个人知识库」里至少选择一个 RAGFlow 数据集');
+          finishGenerating();
+          return;
         }
+
+        const datasetNameMap = new Map(ragflowDatasets.map((dataset) => [dataset.id, dataset.name]));
+        // 先从知识库拿到与主题最相关的资料片段，再交给 AI 生成完整教辅内容。
+        const retrievalResult = await knowledgeBaseService.buildRagflowKnowledgeContext({
+          config: ragflowConfig,
+          datasetIds: selectedRagflowDatasetIds,
+          query: knowledgeQuery,
+          datasetNameMap,
+          signal: abortController.signal,
+        });
 
         if (!retrievalResult.context.trim()) {
           setGenerateError('当前主题没有检索到可用知识片段，请先在「个人知识库」里调整知识源或检索词');
@@ -187,6 +184,11 @@ export function AiGenerateTab(): JSX.Element {
         }
 
         knowledgeContext = retrievalResult.context;
+        knowledgeSources = parseKnowledgeSourcesFromContext({
+          sourceType: 'ragflow',
+          context: retrievalResult.context,
+        });
+        setGeneratedKnowledgeSources(knowledgeSources);
       }
 
       const options: GenerateOptions = {
@@ -196,6 +198,7 @@ export function AiGenerateTab(): JSX.Element {
         subject: isXiaohongshuMode ? undefined : subject.trim() || undefined,
         requirementDescription: isXiaohongshuMode ? undefined : requirementDescription.trim() || undefined,
         length: isXiaohongshuMode ? undefined : length,
+        semanticRoleIds: isXiaohongshuMode ? undefined : generateSemanticRoleIds,
         articleTitle: isXiaohongshuMode ? articleTitle || normalizedTopic : undefined,
         articleContent: isXiaohongshuMode ? articleContent : undefined,
         selectedTitle: isXiaohongshuMode ? selectedXiaohongshuTitle.trim() || undefined : undefined,
@@ -223,6 +226,7 @@ export function AiGenerateTab(): JSX.Element {
               lengthLabel: options.length ? LENGTH_LABELS[options.length] : undefined,
               provider: config?.provider,
               model: config?.model,
+              knowledgeSources: knowledgeSources.length > 0 ? knowledgeSources : undefined,
               content: finalContent,
             },
           });
@@ -293,19 +297,14 @@ export function AiGenerateTab(): JSX.Element {
     ? `已读取当前文档内容，约 ${currentArticleContent.trim().length} 字。`
     : '当前文档内容为空，将主要根据你填写的选题生成。';
   const selectedKnowledgeDatasetCount = selectedRagflowDatasetIds.length;
-  const selectedImaKnowledgeBase = imaKnowledgeBases.find((knowledgeBase) => knowledgeBase.id === selectedImaKnowledgeBaseId) ?? null;
   const knowledgeSourceLabel =
     knowledgeSourceForGenerate === 'ragflow'
       ? 'RAGFlow'
-      : knowledgeSourceForGenerate === 'ima'
-        ? 'ima'
-        : '未启用';
+      : '未启用';
   const knowledgeSourceSummary =
     knowledgeSourceForGenerate === 'ragflow'
       ? `已选 ${selectedKnowledgeDatasetCount} 个数据集`
-      : knowledgeSourceForGenerate === 'ima'
-        ? selectedImaKnowledgeBase?.name || '请先在左侧个人知识库选择一个 ima 知识库'
-        : '可在左侧个人知识库开启';
+      : '可在左侧个人知识库开启';
 
   return (
     <div className="ai-generate-tab">
@@ -466,6 +465,29 @@ export function AiGenerateTab(): JSX.Element {
               </div>
 
               <div className="ai-form-group">
+                <label>语义块生成</label>
+                <div className="ai-semantic-role-grid">
+                  {AI_GENERATE_SEMANTIC_ROLE_OPTIONS.map((option) => {
+                    const checked = generateSemanticRoleIds.includes(option.id);
+                    return (
+                      <label
+                        key={option.id}
+                        className={checked ? 'ai-semantic-role-option checked' : 'ai-semantic-role-option'}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(event) => handleToggleSemanticRole(option.id, event.target.checked)}
+                          disabled={isGenerating}
+                        />
+                        <span className="ai-semantic-role-label">{option.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="ai-form-group">
                 <label>个人知识库</label>
                 <div className="ai-context-box">
                   <strong>{knowledgeSourceLabel}</strong>
@@ -501,6 +523,7 @@ export function AiGenerateTab(): JSX.Element {
           <div className="ai-result">
             <pre className="ai-result-content">{generatedContent}</pre>
           </div>
+          <KnowledgeSourceList sources={generatedKnowledgeSources} />
           <div className="ai-result-actions">
             <button type="button" className="ai-button ai-button-primary" onClick={handleInsertToDocument}>
               插入当前文档

@@ -40,6 +40,9 @@ import {
   resolveQuickTextStyleForRun,
 } from '@/engine/style/quickTextStyle';
 import {
+  resolveEffectiveBlockStyleOverrides,
+} from '@/engine/style/quickBlockStyle';
+import {
   buildPageStyleVariables,
   resolvePageBackgroundOverride,
   resolveBlockDefaultTextMetrics,
@@ -47,8 +50,9 @@ import {
 } from '@/engine/style/blockStyleResolution';
 import { resolveColumnSectionContract, shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
 import { buildHeaderFooterPageTitles, renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
+import { resolvePdfWatermarkRenderModel } from '@/engine/style/pdfWatermark';
 import { defaultStyleSettings } from '@/engine/style/presets';
-import type { HeaderFooterContent, ResolvedStyleContract, StyleSettings } from '@/engine/style/types';
+import type { HeaderFooterContent, PdfWatermarkSettings, ResolvedStyleContract, StyleSettings } from '@/engine/style/types';
 import { resolveAssetSrc } from '@/utils/filePath';
 
 export interface PdfExportPayload {
@@ -101,20 +105,22 @@ function resolveBlockLineHeightStyle(
   contract: ResolvedStyleContract | undefined,
   styles?: LayoutStyleSheet,
 ): number | undefined {
+  const effectiveBlockStyleOverrides = resolveEffectiveBlockStyleOverrides(block, styles);
+
   if (!contract) {
-    return block.blockStyleOverrides.lineHeight;
+    return effectiveBlockStyleOverrides.lineHeight;
   }
 
   const defaultMetrics = resolveBlockDefaultTextMetrics(block, contract);
   const effectiveMetrics = resolveBlockEffectiveTextMetrics(block, contract, styles);
-  const renderedBaseLineHeight = block.blockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight;
+  const renderedBaseLineHeight = effectiveBlockStyleOverrides.lineHeight ?? defaultMetrics.lineHeight;
 
   // 导出和画布共用同一条安全线高规则，避免大字号在 PDF 页底被裁掉。
   if (effectiveMetrics.lineHeight > renderedBaseLineHeight) {
     return effectiveMetrics.lineHeight;
   }
 
-  return block.blockStyleOverrides.lineHeight;
+  return effectiveBlockStyleOverrides.lineHeight;
 }
 
 function buildSemanticRoleStyleDeclarations(
@@ -148,24 +154,27 @@ function buildBlockStyle(
   semanticRoleConfig?: LayoutSemanticRoleConfig,
 ): string {
   const supportsBlockIndent = block.type === 'heading' || block.type === 'paragraph';
-  const indentStyle = supportsBlockIndent ? resolveHangingIndentStyle(block.blockStyleOverrides) : null;
-  const textIndent = indentStyle ? indentStyle.textIndent : block.blockStyleOverrides.firstLineIndent;
+  const effectiveBlockStyleOverrides = resolveEffectiveBlockStyleOverrides(block, styles);
+  const indentStyle = supportsBlockIndent ? resolveHangingIndentStyle(effectiveBlockStyleOverrides) : null;
+  const textIndent = indentStyle ? indentStyle.textIndent : effectiveBlockStyleOverrides.firstLineIndent;
   const lineHeight = resolveBlockLineHeightStyle(block, contract, styles);
   const hasLeftIndentOverride =
-    block.blockStyleOverrides.indentLeft !== undefined || block.blockStyleOverrides.hangingIndent !== undefined;
-  const hasRightIndentOverride = block.blockStyleOverrides.indentRight !== undefined;
+    effectiveBlockStyleOverrides.indentLeft !== undefined || effectiveBlockStyleOverrides.hangingIndent !== undefined;
+  const hasRightIndentOverride = effectiveBlockStyleOverrides.indentRight !== undefined;
   const hasTextIndentOverride =
-    block.blockStyleOverrides.firstLineIndent !== undefined || block.blockStyleOverrides.hangingIndent !== undefined;
+    effectiveBlockStyleOverrides.firstLineIndent !== undefined || effectiveBlockStyleOverrides.hangingIndent !== undefined;
   const declarations = [
     ...buildSemanticRoleStyleDeclarations(block, semanticRoleConfig),
-    block.blockStyleOverrides.textAlign ? `text-align:${block.blockStyleOverrides.textAlign}` : '',
+    effectiveBlockStyleOverrides.textAlign ? `text-align:${effectiveBlockStyleOverrides.textAlign}` : '',
     lineHeight ? `line-height:${lineHeight}px` : '',
-    block.blockStyleOverrides.spaceBefore !== undefined ? `margin-top:${block.blockStyleOverrides.spaceBefore}px` : '',
-    block.blockStyleOverrides.spaceAfter !== undefined ? `margin-bottom:${block.blockStyleOverrides.spaceAfter}px` : '',
+    effectiveBlockStyleOverrides.spaceBefore !== undefined ? `margin-top:${effectiveBlockStyleOverrides.spaceBefore}px` : '',
+    effectiveBlockStyleOverrides.spaceAfter !== undefined ? `margin-bottom:${effectiveBlockStyleOverrides.spaceAfter}px` : '',
     indentStyle && hasLeftIndentOverride ? `padding-left:${indentStyle.paddingLeft}px` : '',
     indentStyle && hasRightIndentOverride ? `padding-right:${indentStyle.paddingRight}px` : '',
     hasTextIndentOverride && textIndent !== undefined ? `text-indent:${textIndent}px` : '',
-    block.blockStyleOverrides.backgroundColor ? `background-color:${block.blockStyleOverrides.backgroundColor}` : '',
+    effectiveBlockStyleOverrides.backgroundColor
+      ? `background-color:${effectiveBlockStyleOverrides.backgroundColor}`
+      : '',
   ].filter(Boolean);
 
   return declarations.length > 0 ? ` style="${escapeHtml(declarations.join(';'))}"` : '';
@@ -625,6 +634,42 @@ function getPageMetrics(page: PageLayout) {
   };
 }
 
+function buildPdfWatermarkLayerHtml(
+  page: PageLayout,
+  pdfWatermarkSettings: PdfWatermarkSettings,
+): string {
+  const watermark = resolvePdfWatermarkRenderModel({
+    settings: pdfWatermarkSettings,
+    pageWidthPx: page.contract.pageWidthPx,
+    pageHeightPx: page.contract.pageHeightPx,
+  });
+  if (!watermark) {
+    return '';
+  }
+
+  const tilesHtml = watermark.tiles
+    .map((tile) => {
+      const tileStyle = [
+        `left:${tile.centerXPx}px`,
+        `top:${tile.centerYPx}px`,
+        `width:${tile.widthPx}px`,
+        `height:${tile.heightPx}px`,
+        'transform:translate(-50%, -50%)',
+      ].join(';');
+      const contentStyle = [
+        `opacity:${watermark.opacity}`,
+        `transform:rotate(${watermark.angleDeg}deg)`,
+      ].join(';');
+
+      return watermark.kind === 'text'
+        ? `<div class="pdf-watermark-tile" style="${escapeHtml(tileStyle)}"><span class="pdf-watermark-text" style="${escapeHtml(`${contentStyle};color:${watermark.textColor};font-size:${watermark.textFontSizePx}px`)}">${escapeHtml(watermark.textContent)}</span></div>`
+        : `<div class="pdf-watermark-tile" style="${escapeHtml(tileStyle)}"><img class="pdf-watermark-image" src="${escapeHtml(watermark.imageSrc)}" alt="" style="${escapeHtml(contentStyle)}" /></div>`;
+    })
+    .join('');
+
+  return `<div class="pdf-watermark-layer" aria-hidden="true">${tilesHtml}</div>`;
+}
+
 function renderPages(
   pages: PageLayout[],
   styles?: LayoutStyleSheet,
@@ -632,6 +677,7 @@ function renderPages(
   documentTitle = '未命名文档',
   semanticRoleConfig?: LayoutSemanticRoleConfig,
   answerDisplayMode: AnswerDisplayMode = 'show',
+  pdfWatermarkSettings: PdfWatermarkSettings = defaultStyleSettings.pdfWatermark,
 ): string {
   const allBlocks = pages.flatMap((page) => page.blocks);
   const tocItems = applyPageNumbersToTocItems(
@@ -719,6 +765,7 @@ function renderPages(
         : bodyParts.join('');
 
       return `<section class="page" data-theme-id="${escapeHtml(page.contract.themeId)}" style="${escapeHtml(pageStyleDeclarations.join(';'))}">
+        ${buildPdfWatermarkLayerHtml(page, pdfWatermarkSettings)}
         <header class="page-header"><span>${escapeHtml(renderedHeaderFooter.header.left)}</span><span>${escapeHtml(renderedHeaderFooter.header.center)}</span><span>${escapeHtml(renderedHeaderFooter.header.right)}</span></header>
         <article class="${pageBodyClassName}">${bodyHtml}</article>
         <footer class="page-footer"><span>${escapeHtml(renderedHeaderFooter.footer.left)}</span><span>${escapeHtml(renderedHeaderFooter.footer.center)}</span><span>${escapeHtml(renderedHeaderFooter.footer.right)}</span></footer>
@@ -826,6 +873,38 @@ export function buildExportHtml({
         z-index: 1;
       }
 
+      .pdf-watermark-layer {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .pdf-watermark-tile {
+        position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+      }
+
+      .pdf-watermark-text {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        line-height: 1;
+        white-space: nowrap;
+      }
+
+      .pdf-watermark-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
       .toc-block-export {
         display: grid;
         gap: 10px;
@@ -905,13 +984,13 @@ export function buildExportHtml({
       .page-header {
         padding: 0 24px;
         border-bottom: 1px solid var(--page-header-border, #edf1f5);
-        background: var(--page-header-bg, linear-gradient(180deg, rgb(243 248 252 / 90%) 0%, rgb(255 255 255 / 65%) 100%));
+        background: var(--page-header-bg, #ffffff);
       }
 
       .page-footer {
         padding: 0 24px;
         border-top: 1px solid var(--page-footer-border, #edf1f5);
-        background: var(--page-footer-bg, linear-gradient(0deg, rgb(243 248 252 / 90%) 0%, rgb(255 255 255 / 65%) 100%));
+        background: var(--page-footer-bg, #ffffff);
       }
 
       .page-body {
@@ -1789,7 +1868,15 @@ export function buildExportHtml({
     </style>
   </head>
   <body>
-    <div class="export-shell">${renderPages(pages, styles, styleSettings?.headerFooterContent, title, semanticRoleConfig, answerDisplayMode)}</div>
+    <div class="export-shell">${renderPages(
+      pages,
+      styles,
+      styleSettings?.headerFooterContent,
+      title,
+      semanticRoleConfig,
+      answerDisplayMode,
+      styleSettings?.pdfWatermark,
+    )}</div>
   </body>
 </html>`;
 }

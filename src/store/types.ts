@@ -43,12 +43,14 @@ import type {
   PageColumnCount,
   PageOrientation,
   PageSizeId,
+  PdfWatermarkSettings,
   PaginationAlgorithmId,
   PaginationBehaviorOption,
   StyleSettings,
   TemplateId,
   ThemeId,
 } from '@/engine/style/types';
+import type { QuickBlockStyleScope } from '@/engine/style/quickBlockStyle';
 import type { QuickTextStylePatch, QuickTextStyleScope } from '@/engine/style/quickTextStyle';
 import type { PageLayout } from '@/engine/typesetting/types';
 import type { StateCreator } from 'zustand';
@@ -64,6 +66,11 @@ import type { KnowledgeBaseSlice } from '@/store/slices/knowledgeBaseSlice';
 
 export type AppStore = DocumentSlice & UISlice & StyleSlice & KnowledgeBaseSlice & AiSlice;
 
+export interface DocumentHistorySnapshot {
+  layoutDocument: LayoutDocument;
+  styleSettings: StyleSettings;
+}
+
 export interface DocumentSlice {
   documentEpoch: number;
   title: string;
@@ -77,8 +84,8 @@ export interface DocumentSlice {
   recentlyOpenedFiles: RecentFileEntry[];
   parseState: ParseState;
   layoutDocument: LayoutDocument | null;
-  documentHistoryPast: LayoutDocument[];
-  documentHistoryFuture: LayoutDocument[];
+  documentHistoryPast: DocumentHistorySnapshot[];
+  documentHistoryFuture: DocumentHistorySnapshot[];
   parseError: string | null;
   pageLayouts: PageLayout[];
   resetDocument: () => void;
@@ -345,6 +352,10 @@ export interface DocumentSlice {
     nodeId: string;
     presetId: SemanticBlockPresetId | null;
   }) => void;
+  applyLayoutQuickBlockStyle: (payload: {
+    scope: QuickBlockStyleScope;
+    styleOverrides: BlockStyleOverrides;
+  }) => void;
   applyLayoutQuickTextStyle: (payload: {
     scope: QuickTextStyleScope;
     styleOverrides: QuickTextStylePatch;
@@ -380,6 +391,7 @@ export interface StyleSlice {
   setTemplateId: (templateId: TemplateId) => void;
   setThemeId: (themeId: ThemeId) => void;
   setPageBackground: (background: PageBackgroundSettings) => void;
+  setPdfWatermark: (watermark: PdfWatermarkSettings) => void;
   setHeaderPreset: (headerPreset: HeaderFooterPresetId) => void;
   setFooterPreset: (footerPreset: HeaderFooterPresetId) => void;
   setCustomHeaderReservedMm: (value: number) => void;

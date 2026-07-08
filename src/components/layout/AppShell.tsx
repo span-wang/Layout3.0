@@ -19,6 +19,7 @@ import {
   type LayoutImageResource,
   type TextRun,
 } from '@/engine/document-model';
+import { applyQuickBlockStyleRulesToBlocks } from '@/engine/style/quickBlockStyle';
 import { getDirectoryDisplayName, selectLocalImageFile } from '@/services/FileService';
 import { usePagination } from '@/hooks/usePagination';
 import { useResolvedStyleContract } from '@/hooks/useResolvedStyleContract';
@@ -34,6 +35,7 @@ import type {
   TextFragmentMeasurementJob,
 } from '@/engine/typesetting';
 import { CanvasPane } from './CanvasPane';
+import { CommandPalette, type CommandPaletteCommand } from './CommandPalette';
 import { EditorPane } from './EditorPane';
 import { LeftPanel } from './LeftPanel';
 import { RightPanel } from './RightPanel';
@@ -133,6 +135,43 @@ function getTopLevelBlockDeleteMessage(blockType: LayoutBlock['type'] | null): s
   return `已删除${topLevelBlockDeleteLabels[blockType] ?? '当前块'}`;
 }
 
+type CommandPaletteUsageCounts = Record<string, number>;
+
+const COMMAND_PALETTE_USAGE_STORAGE_KEY = 'layout3.commandPaletteUsage';
+
+function loadCommandPaletteUsageCounts(): CommandPaletteUsageCounts {
+  try {
+    const rawValue = window.localStorage.getItem(COMMAND_PALETTE_USAGE_STORAGE_KEY);
+    if (!rawValue) {
+      return {};
+    }
+
+    const parsedValue = JSON.parse(rawValue) as unknown;
+    if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
+      return {};
+    }
+
+    const normalizedCounts: CommandPaletteUsageCounts = {};
+    for (const [commandId, count] of Object.entries(parsedValue)) {
+      if (typeof count === 'number' && Number.isFinite(count) && count > 0) {
+        normalizedCounts[commandId] = Math.round(count);
+      }
+    }
+
+    return normalizedCounts;
+  } catch {
+    return {};
+  }
+}
+
+function saveCommandPaletteUsageCounts(usageCounts: CommandPaletteUsageCounts): void {
+  try {
+    window.localStorage.setItem(COMMAND_PALETTE_USAGE_STORAGE_KEY, JSON.stringify(usageCounts));
+  } catch {
+    // 本机排序记忆只是体验增强，写失败时保持命令面板主链路可用即可。
+  }
+}
+
 export function AppShell(): JSX.Element {
   const resolvedStyleContract = useResolvedStyleContract();
   const [measuredBlockHeights, setMeasuredBlockHeights] = useState<Record<string, number>>({});
@@ -159,6 +198,8 @@ export function AppShell(): JSX.Element {
   const [searchReplacementText, setSearchReplacementText] = useState('');
   const [selectedSearchResultId, setSelectedSearchResultId] = useState<string | null>(null);
   const [searchFocusRequestKey, setSearchFocusRequestKey] = useState(0);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [commandPaletteUsageCounts, setCommandPaletteUsageCounts] = useState<CommandPaletteUsageCounts>({});
   const [dragSource, setDragSource] = useState<string | null>(null);
   const [requestedEditNodeId, setRequestedEditNodeId] = useState<string | null>(null);
   const [requestedScrollToNodeId, setRequestedScrollToNodeId] = useState<string | null>(null);
@@ -191,6 +232,7 @@ export function AppShell(): JSX.Element {
   const setActiveAiTab = useAppStore((state) => state.setActiveAiTab);
   const openAiPanel = useAppStore((state) => state.openAiPanel);
   const updateGeneratedContent = useAppStore((state) => state.updateGeneratedContent);
+  const setGeneratedKnowledgeSources = useAppStore((state) => state.setGeneratedKnowledgeSources);
   const setGenerateError = useAppStore((state) => state.setGenerateError);
   const aiGenerationRecords = useAppStore((state) => state.aiGenerationRecords);
   const aiGenerationRecordDirectoryPath = useAppStore((state) => state.aiGenerationRecordDirectoryPath);
@@ -245,7 +287,10 @@ export function AppShell(): JSX.Element {
   const selectedBlockIds = layoutDocument?.viewState.blockSelection?.blockIds ?? [];
   const answerDisplayMode = layoutDocument?.viewState.answerDisplayMode ?? 'show';
   // 答案隐藏会重排语义块，画布只需要在文档真实变化时重新拿派生块，避免分页写回造成测量层反复刷新。
-  const renderableDocumentBlocks = useMemo(() => getRenderableLayoutBlocksForView(layoutDocument), [layoutDocument]);
+  const renderableDocumentBlocks = useMemo(
+    () => applyQuickBlockStyleRulesToBlocks(getRenderableLayoutBlocksForView(layoutDocument), layoutDocument?.styles),
+    [layoutDocument],
+  );
   const characterCount = layoutDocument?.meta.characterCount ?? 0;
   const exportCheckResult = useMemo(
     () =>
@@ -260,6 +305,10 @@ export function AppShell(): JSX.Element {
       }),
     [displayedPageLayouts, filePath, layoutDocument, renderableDocumentBlocks, styleSettings, tocItems, workspaceRootPath],
   );
+
+  useEffect(() => {
+    setCommandPaletteUsageCounts(loadCommandPaletteUsageCounts());
+  }, []);
 
   useEffect(() => {
     // 文档切换后，旧画布的临时编辑/滚动请求不应继续影响新文档界面。
@@ -544,6 +593,195 @@ export function AppShell(): JSX.Element {
     setActiveRightPanelTab('导出检查');
   }, [isRightPanelOpen, setActiveRightPanelTab, toggleRightPanel]);
 
+  const handleOpenAiPanel = useCallback(() => {
+    if (!isRightPanelOpen) {
+      toggleRightPanel();
+    }
+    setActiveRightPanelTab('AI助手');
+    openAiPanel();
+  }, [isRightPanelOpen, openAiPanel, setActiveRightPanelTab, toggleRightPanel]);
+
+  const commandPaletteCommands = useMemo<CommandPaletteCommand[]>(
+    () => [
+      {
+        id: 'file-create-document',
+        title: '新建空白文档',
+        description: '创建一个新的空白 `.layout` 文档',
+        group: '文件',
+        keywords: ['新建', '空白', 'layout', 'document', 'create'],
+        run: handleCreateDocument,
+      },
+      {
+        id: 'file-open-document',
+        title: '打开文档',
+        description: '打开本地 Markdown 或 `.layout` 文档',
+        group: '文件',
+        keywords: ['打开', '文档', 'markdown', 'layout', 'open'],
+        run: handleOpenDocument,
+      },
+      {
+        id: 'file-save-document',
+        title: '保存文档',
+        description: '保存当前文档到现有路径',
+        group: '文件',
+        keywords: ['保存', 'save', '写入'],
+        shortcutHint: 'Ctrl/Cmd + S',
+        run: handleSaveDocument,
+      },
+      {
+        id: 'file-save-document-as',
+        title: '文档另存为',
+        description: '把当前文档保存到新的位置',
+        group: '文件',
+        keywords: ['另存为', '保存到', 'save as'],
+        run: handleSaveDocumentAs,
+      },
+      {
+        id: 'export-pdf',
+        title: '导出 PDF',
+        description: '按当前分页结果导出 PDF',
+        group: '导出',
+        keywords: ['导出', 'pdf', 'print'],
+        run: handleExportPdf,
+      },
+      {
+        id: 'export-docx',
+        title: '导出 DOCX',
+        description: '按当前文档结果导出 DOCX',
+        group: '导出',
+        keywords: ['导出', 'docx', 'word'],
+        run: handleExportDocx,
+      },
+      {
+        id: 'open-export-check',
+        title: '打开导出检查',
+        description: '查看分页、资源和 DOCX 兼容性提示',
+        group: '检查',
+        keywords: ['导出检查', '检查', 'warning', 'risk'],
+        run: handleOpenExportCheckPanel,
+      },
+      {
+        id: 'open-search-panel',
+        title: '打开搜索与替换',
+        description: '切到左侧搜索面板并聚焦搜索框',
+        group: '面板',
+        keywords: ['搜索', '替换', 'find', 'replace'],
+        shortcutHint: 'Ctrl/Cmd + F',
+        run: handleOpenSearchPanel,
+      },
+      {
+        id: 'open-ai-panel',
+        title: '打开 AI 助手',
+        description: '切到右侧 AI 面板',
+        group: '面板',
+        keywords: ['ai', '生成', '优化', '检查', 'assistant'],
+        run: handleOpenAiPanel,
+      },
+      {
+        id: 'view-preview',
+        title: '切换到预览视图',
+        description: '只显示分页预览画布',
+        group: '视图',
+        keywords: ['预览', 'view', 'preview'],
+        run: () => setWorkspaceViewMode('preview'),
+      },
+      {
+        id: 'view-split',
+        title: '切换到分屏视图',
+        description: '同时查看源码快照和分页预览',
+        group: '视图',
+        keywords: ['分屏', 'split', '源码'],
+        run: () => setWorkspaceViewMode('split'),
+      },
+      {
+        id: 'insert-image',
+        title: '插入图片',
+        description: '选择本地图片并插入当前文档',
+        group: '插入',
+        keywords: ['图片', 'image', '插入'],
+        run: handleInsertImage,
+      },
+      {
+        id: 'insert-table',
+        title: '插入表格',
+        description: '插入默认 3 x 3 表格',
+        group: '插入',
+        keywords: ['表格', 'table', '插入'],
+        run: handleInsertTable,
+      },
+      {
+        id: 'insert-equation',
+        title: '插入公式',
+        description: '插入一个新的公式块',
+        group: '插入',
+        keywords: ['公式', 'equation', 'latex'],
+        run: handleInsertEquation,
+      },
+      {
+        id: 'insert-unordered-list',
+        title: '插入无序列表',
+        description: '插入一个新的无序列表',
+        group: '插入',
+        keywords: ['列表', 'list', '无序'],
+        run: () => handleInsertList('unordered'),
+      },
+      {
+        id: 'insert-page-break',
+        title: '插入分页符',
+        description: '在当前位置插入一个分页符',
+        group: '插入',
+        keywords: ['分页符', 'page break', '分页'],
+        run: handleInsertPageBreak,
+      },
+      {
+        id: 'insert-toc',
+        title: '插入目录',
+        description: '插入一个目录块',
+        group: '插入',
+        keywords: ['目录', 'toc', 'table of contents'],
+        run: handleInsertToc,
+      },
+    ],
+    [
+      handleCreateDocument,
+      handleExportDocx,
+      handleExportPdf,
+      handleInsertEquation,
+      handleInsertImage,
+      handleInsertList,
+      handleInsertPageBreak,
+      handleInsertTable,
+      handleInsertToc,
+      handleOpenAiPanel,
+      handleOpenDocument,
+      handleOpenExportCheckPanel,
+      handleOpenSearchPanel,
+      handleSaveDocument,
+      handleSaveDocumentAs,
+      setWorkspaceViewMode,
+    ],
+  );
+
+  const handleExecuteCommandPaletteCommand = useCallback(
+    (command: CommandPaletteCommand) => {
+      setIsCommandPaletteOpen(false);
+      setCommandPaletteUsageCounts((currentCounts) => {
+        const nextCounts = {
+          ...currentCounts,
+          [command.id]: (currentCounts[command.id] ?? 0) + 1,
+        };
+        saveCommandPaletteUsageCounts(nextCounts);
+        return nextCounts;
+      });
+
+      void Promise.resolve(command.run()).catch((error) => {
+        const message = error instanceof Error ? error.message : '命令执行失败';
+        showMessage(`命令执行失败：${message}`);
+      });
+    },
+    [showMessage],
+  );
+
   const handleSelectSearchResult = useCallback(
     (result: DocumentSearchResult) => {
       setSelectedSearchResultId(result.id);
@@ -634,6 +872,7 @@ export function AppShell(): JSX.Element {
   const handleRestoreAiGenerationRecord = useCallback(
     (record: AiGenerationRecord) => {
       updateGeneratedContent(record.content);
+      setGeneratedKnowledgeSources(record.knowledgeSources ?? []);
       setGenerateError(null);
       if (!isRightPanelOpen) {
         toggleRightPanel();
@@ -649,6 +888,7 @@ export function AppShell(): JSX.Element {
       setActiveAiTab,
       setActiveRightPanelTab,
       setGenerateError,
+      setGeneratedKnowledgeSources,
       showMessage,
       toggleRightPanel,
       updateGeneratedContent,
@@ -837,7 +1077,28 @@ export function AppShell(): JSX.Element {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.isComposing) {
+        return;
+      }
+
       const key = event.key.toLowerCase();
+      const isCommandPaletteShortcut = (event.ctrlKey || event.metaKey) && event.code === 'Slash';
+      if (isCommandPaletteShortcut) {
+        event.preventDefault();
+        setIsCommandPaletteOpen(true);
+        return;
+      }
+
+      if (isCommandPaletteOpen && key === 'escape') {
+        event.preventDefault();
+        setIsCommandPaletteOpen(false);
+        return;
+      }
+
+      if (isCommandPaletteOpen) {
+        return;
+      }
+
       if ((event.ctrlKey || event.metaKey) && key === 'f') {
         event.preventDefault();
         handleOpenSearchPanel();
@@ -896,6 +1157,7 @@ export function AppShell(): JSX.Element {
     handleOpenSearchPanel,
     handleRedoLayoutDocument,
     handleUndoLayoutDocument,
+    isCommandPaletteOpen,
     selectedBlockIds.length,
     selectedNodeId,
   ]);
@@ -967,14 +1229,7 @@ export function AppShell(): JSX.Element {
         onChangeViewMode={setWorkspaceViewMode}
         onOpenSearchPanel={handleOpenSearchPanel}
         onOpenExportCheckPanel={handleOpenExportCheckPanel}
-        onOpenAiPanel={() => {
-          // 确保右侧面板打开，然后切换到 AI 助手 Tab
-          if (!isRightPanelOpen) {
-            toggleRightPanel();
-          }
-          setActiveRightPanelTab('AI助手');
-          openAiPanel();
-        }}
+        onOpenAiPanel={handleOpenAiPanel}
       />
 
       <main className={workspaceClassName}>
@@ -1065,6 +1320,7 @@ export function AppShell(): JSX.Element {
               parseState={parseState}
               resolvedStyleContract={resolvedStyleContract}
               headerFooterContent={styleSettings.headerFooterContent}
+              pdfWatermarkSettings={styleSettings.pdfWatermark}
               selectedNodeId={selectedNodeId}
               selectedBlockIds={selectedBlockIds}
               workspaceRootPath={workspaceRootPath}
@@ -1116,6 +1372,14 @@ export function AppShell(): JSX.Element {
         pageLabel={resolvedStyleContract.pageLabel}
         templateThemeLabel={resolvedStyleContract.templateThemeLabel}
         layoutWarningCount={layoutWarnings.length}
+      />
+
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        commands={commandPaletteCommands}
+        usageCounts={commandPaletteUsageCounts}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onExecute={handleExecuteCommandPaletteCommand}
       />
     </div>
   );
