@@ -2,7 +2,6 @@ import {
   applyPageNumbersToTocItems,
   buildHeadingPageNumberMap,
   buildTocItems,
-  getHeadingText,
   getImageWrapClassName,
   getTocBlockDisplayTitle,
   getVisibleTocItemsForBlock,
@@ -47,7 +46,7 @@ import {
   resolveBlockEffectiveTextMetrics,
 } from '@/engine/style/blockStyleResolution';
 import { resolveColumnSectionContract, shouldLayoutBlockSpanAllColumns } from '@/engine/style/columnLayout';
-import { renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
+import { buildHeaderFooterPageTitles, renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
 import { defaultStyleSettings } from '@/engine/style/presets';
 import type { HeaderFooterContent, ResolvedStyleContract, StyleSettings } from '@/engine/style/types';
 import { resolveAssetSrc } from '@/utils/filePath';
@@ -126,16 +125,20 @@ function buildSemanticRoleStyleDeclarations(
     .map(([name, value]) => `${name}:${value}`);
 }
 
+type SemanticRoleLabelVariant = 'inline' | 'block';
+
 function buildSemanticRoleLabelHtml(
   block: LayoutBlock,
   semanticRoleConfig?: LayoutSemanticRoleConfig,
+  variant: SemanticRoleLabelVariant = 'block',
 ): string {
   const presentation = getSemanticRolePresentation(block, semanticRoleConfig);
   if (!presentation) {
     return '';
   }
 
-  return `<span class="semantic-role-label" data-semantic-label="${escapeHtml(presentation.label)}" aria-hidden="true"></span>`;
+  const tagName = variant === 'inline' ? 'span' : 'div';
+  return `<${tagName} class="semantic-role-label semantic-role-label-${variant}" data-semantic-label="${escapeHtml(presentation.label)}" aria-hidden="true">${escapeHtml(presentation.label)}</${tagName}>`;
 }
 
 function buildBlockStyle(
@@ -392,7 +395,8 @@ function renderBlock(
   answerDisplayMode: AnswerDisplayMode = 'show',
 ): string {
   const inheritedStyle = resolveQuickTextStyleForBlock(block, styles);
-  const semanticRoleLabelHtml = buildSemanticRoleLabelHtml(block, semanticRoleConfig);
+  const semanticInlineRoleLabelHtml = buildSemanticRoleLabelHtml(block, semanticRoleConfig, 'inline');
+  const semanticBlockRoleLabelHtml = buildSemanticRoleLabelHtml(block, semanticRoleConfig, 'block');
   switch (block.type) {
     case 'pageBreak':
       return '';
@@ -408,12 +412,12 @@ function renderBlock(
             ? 'h3'
             : 'h4';
       const classNames = shouldLayoutBlockSpanAllColumns(block, contract) ? ['column-span-all'] : [];
-      return `<${tagName}${buildBlockAttributes(block, styles, contract, classNames, semanticRoleConfig)}>${semanticRoleLabelHtml}${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</${tagName}>`;
+      return `<${tagName}${buildBlockAttributes(block, styles, contract, classNames, semanticRoleConfig)}>${semanticInlineRoleLabelHtml}<span class="semantic-text-content">${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</span></${tagName}>`;
     }
     case 'toc':
       return '';
     case 'paragraph':
-      return `<p${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</p>`;
+      return `<p${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticInlineRoleLabelHtml}<span class="semantic-text-content">${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</span></p>`;
     case 'list': {
       if (block.metadata.kind !== 'list') {
         return '';
@@ -423,13 +427,11 @@ function renderBlock(
         const compactChoiceLayout = resolveCompactChoiceListLayoutWithOptions(block.metadata.items, {
           allowSequenceFromAnyLabel: (block.metadata.runtimeSlice?.startIndex ?? 0) > 0,
         });
-        const rootAttributes = buildBlockAttributes(block, styles, contract, ['choice-option-list'], semanticRoleConfig);
-        const rootAttributesWithColumns = compactChoiceLayout
-          ? rootAttributes.includes(' style="')
-            ? rootAttributes.replace(' style="', ` style="--choice-column-count:${compactChoiceLayout.columns};`)
-            : `${rootAttributes} style="--choice-column-count:${compactChoiceLayout.columns}"`
-          : rootAttributes;
-        return compactChoiceHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${rootAttributesWithColumns}>`);
+        const compactChoiceInnerHtml = compactChoiceHtml.replace(
+          /^<(ol|ul)([^>]*)>/,
+          `<$1$2 class="choice-option-list"${compactChoiceLayout ? ` style="--choice-column-count:${compactChoiceLayout.columns}"` : ''}>`,
+        );
+        return `<div${buildBlockAttributes(block, styles, contract, ['semantic-list-shell'], semanticRoleConfig)}>${semanticBlockRoleLabelHtml}${compactChoiceInnerHtml}</div>`;
       }
       const rootListHtml = renderListTreeNodes(
         buildLayoutListTree(block.metadata.items),
@@ -439,11 +441,11 @@ function renderBlock(
         answerDisplayMode,
         true,
       );
-      return rootListHtml.replace(/^<(ol|ul)([^>]*)>/, `<$1$2${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>`);
+      return `<div${buildBlockAttributes(block, styles, contract, ['semantic-list-shell'], semanticRoleConfig)}>${semanticBlockRoleLabelHtml}${rootListHtml}</div>`;
     }
     case 'blockquote':
       return block.metadata.kind === 'blockquote'
-        ? `<blockquote${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract, semanticRoleConfig, answerDisplayMode)).join('')}</blockquote>`
+        ? `<blockquote${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticBlockRoleLabelHtml}${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, contract, semanticRoleConfig, answerDisplayMode)).join('')}</blockquote>`
         : '';
     case 'columnSection':
       if (block.metadata.kind !== 'columnSection') {
@@ -461,13 +463,13 @@ function renderBlock(
             `--local-column-rule-color:${sectionContract?.themeTokens.bodyOutlineColor ?? '#e4ecf2'}`,
           ],
         );
-        return `<section${sectionAttributes}>${semanticRoleLabelHtml}<div class="local-column-flow">${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, sectionContract, semanticRoleConfig, answerDisplayMode)).join('')}</div></section>`;
+        return `<section${sectionAttributes}>${semanticBlockRoleLabelHtml}<div class="local-column-flow">${block.metadata.blocks.map((nestedBlock) => renderBlock(nestedBlock, styles, sectionContract, semanticRoleConfig, answerDisplayMode)).join('')}</div></section>`;
       }
     case 'code':
-      return `<pre${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticRoleLabelHtml}<code>${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</code></pre>`;
+      return `<pre${buildBlockAttributes(block, styles, contract, [], semanticRoleConfig)}>${semanticBlockRoleLabelHtml}<code>${renderTextRuns(block.textRuns, inheritedStyle, answerDisplayMode)}</code></pre>`;
     case 'equation':
       return block.metadata.kind === 'equation'
-        ? `<div${buildBlockAttributes(block, styles, contract, ['equation-shell'], semanticRoleConfig)}>${semanticRoleLabelHtml}${renderEquationToHtml(block.metadata.value).html}</div>`
+        ? `<div${buildBlockAttributes(block, styles, contract, ['equation-shell'], semanticRoleConfig)}>${semanticBlockRoleLabelHtml}${renderEquationToHtml(block.metadata.value).html}</div>`
         : '';
     case 'table':
       if (block.metadata.kind !== 'table') {
@@ -501,7 +503,7 @@ function renderBlock(
           return `<tr style="height:${rowHeightPx}px">${rowCellsHtml}</tr>`;
         })
         .join('');
-      return `<div class="table-shell"><table${buildBlockAttributes(block, styles, contract, ['preview-table'], semanticRoleConfig)}><colgroup>${colgroupHtml}</colgroup><tbody>${tableRowsHtml}</tbody></table></div>`;
+      return `<div${buildBlockAttributes(block, styles, contract, ['table-shell'], semanticRoleConfig)}>${semanticBlockRoleLabelHtml}<table class="preview-table"><colgroup>${colgroupHtml}</colgroup><tbody>${tableRowsHtml}</tbody></table></div>`;
     case 'image':
       if (block.metadata.kind !== 'image') {
         return '';
@@ -527,7 +529,7 @@ function renderImageBlock(
   const offsetX = layout.offsetX ?? 0;
   const offsetY = layout.offsetY ?? 0;
   const semanticPresentation = getSemanticRolePresentation(block, semanticRoleConfig);
-  const semanticRoleLabelHtml = buildSemanticRoleLabelHtml(block, semanticRoleConfig);
+  const semanticRoleLabelHtml = buildSemanticRoleLabelHtml(block, semanticRoleConfig, 'block');
 
   // 预览与导出统一使用同一套图片环绕语义，旧 block/center/left/right 只在解析层兼容。
   const wrapperStyleParts: string[] = buildSemanticRoleStyleDeclarations(block, semanticRoleConfig);
@@ -654,10 +656,11 @@ function renderPages(
     buildHeadingPageNumberMap(pages),
   );
 
+  const pageTitles = buildHeaderFooterPageTitles(pages, documentTitle);
+
   return pages
-    .map((page) => {
-      const titleBlock = page.blocks.find((block) => block.type === 'heading');
-      const pageTitle = titleBlock ? getHeadingText(titleBlock) || documentTitle : documentTitle;
+    .map((page, pageIndex) => {
+      const pageTitle = pageTitles[pageIndex] ?? documentTitle;
       const metrics = getPageMetrics(page);
       const bodyParts: string[] = [];
       const renderedHeaderFooter = renderHeaderFooterContent(headerFooterContent, {
@@ -682,7 +685,7 @@ function renderPages(
                   .join('')
               : '<div class="toc-empty-state-export">当前文档还没有符合当前目录层级的标题。</div>';
 
-          bodyParts.push(`<section${buildBlockAttributes(block, styles, page.contract, ['toc-block-export'], semanticRoleConfig)}>${buildSemanticRoleLabelHtml(block, semanticRoleConfig)}<div class="toc-block-export-title">${escapeHtml(getTocBlockDisplayTitle(block))}</div>${entries}</section>`);
+          bodyParts.push(`<section${buildBlockAttributes(block, styles, page.contract, ['toc-block-export'], semanticRoleConfig)}>${buildSemanticRoleLabelHtml(block, semanticRoleConfig, 'block')}<div class="toc-block-export-title">${escapeHtml(getTocBlockDisplayTitle(block))}</div>${entries}</section>`);
           continue;
         }
 
@@ -998,6 +1001,10 @@ export function buildExportHtml({
         position: relative;
       }
 
+      .semantic-text-content {
+        min-width: 0;
+      }
+
       .semantic-block-preset-defaultSemanticFrame[data-semantic-preset] {
         border-left: 3px solid var(--semantic-role-color, #3b82f6);
       }
@@ -1037,20 +1044,8 @@ export function buildExportHtml({
       }
 
       .semantic-role-label {
-        position: absolute;
-        top: -11px;
-        left: 8px;
-        z-index: 2;
-        display: inline-flex;
-        max-width: min(190px, calc(100% - 16px));
-        pointer-events: none;
-      }
-
-      .semantic-role-label::before,
-      .page-body :is(ol.semantic-role, ul.semantic-role)[data-semantic-label]::before {
-        display: block;
-        max-width: 100%;
-        padding: 1px 6px;
+        max-width: min(190px, 100%);
+        padding: 1px 8px;
         overflow: hidden;
         color: var(--semantic-role-color, #3b82f6);
         font-size: 10px;
@@ -1058,23 +1053,29 @@ export function buildExportHtml({
         line-height: 1.45;
         text-overflow: ellipsis;
         white-space: nowrap;
-        background: #ffffff;
-        border: 1px solid color-mix(in srgb, var(--semantic-role-color, #3b82f6) 48%, #ffffff);
-        border-radius: 4px;
-        box-shadow: 0 1px 2px rgb(15 23 42 / 8%);
-      }
-
-      .semantic-role-label::before {
-        content: attr(data-semantic-label);
-      }
-
-      .page-body :is(ol.semantic-role, ul.semantic-role)[data-semantic-label]::before {
-        content: attr(data-semantic-label);
-        position: absolute;
-        top: -11px;
-        left: 8px;
-        z-index: 2;
+        background: color-mix(in srgb, var(--semantic-role-bg, rgb(59 130 246 / 8%)) 58%, #ffffff);
+        border: 1px solid color-mix(in srgb, var(--semantic-role-color, #3b82f6) 40%, #ffffff);
+        border-radius: 999px;
+        box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
         pointer-events: none;
+        user-select: none;
+      }
+
+      .semantic-role-label-inline {
+        display: inline-flex;
+        vertical-align: baseline;
+        margin: 0 8px 0 0;
+      }
+
+      .semantic-role-label-block {
+        display: flex;
+        width: fit-content;
+        max-width: min(190px, calc(100% - 8px));
+        margin: 0 0 8px;
+      }
+
+      .semantic-list-shell > :is(ol, ul) {
+        margin: 0;
       }
 
       .page h1,

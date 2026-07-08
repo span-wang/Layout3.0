@@ -27,7 +27,9 @@ function formatRecordTime(createdAt: string): string {
 }
 
 function buildRecordSubtitle(record: AiGenerationRecord): string {
-  return [record.grade, record.subject, record.lengthLabel].filter(Boolean).join(' / ') || '未填写补充条件';
+  return [record.grade, record.subject, record.lengthLabel, record.requirementDescription ? '有要求描述' : null]
+    .filter(Boolean)
+    .join(' / ') || '未填写补充条件';
 }
 
 export function AiGenerationRecordsPanel({
@@ -155,8 +157,17 @@ export function AiGenerationRecordsPanel({
           </div>
           <div className="ai-record-detail-meta">
             <span>{formatRecordTime(selectedRecord.createdAt)}</span>
+            {selectedRecord.grade ? <span>{selectedRecord.grade}</span> : null}
+            {selectedRecord.subject ? <span>{selectedRecord.subject}</span> : null}
+            {selectedRecord.lengthLabel ? <span>{selectedRecord.lengthLabel}</span> : null}
             {selectedRecord.model ? <span>{selectedRecord.model}</span> : null}
           </div>
+          {selectedRecord.requirementDescription ? (
+            <div className="ai-record-requirement">
+              <strong>要求描述</strong>
+              <p>{selectedRecord.requirementDescription}</p>
+            </div>
+          ) : null}
           <pre className="ai-record-content">{selectedRecord.content}</pre>
           <div className="ai-record-actions">
             <button type="button" className="ai-button ai-button-primary" onClick={() => onRestore(selectedRecord)}>

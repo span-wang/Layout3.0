@@ -30,8 +30,52 @@
         "M3",
         "GA"
       ],
-      "status": "未开始",
-      "acceptance": "导出前检查项可提示风险。"
+      "status": "已完成",
+      "acceptance": "右侧新增“导出检查”面板，可在导出 PDF / DOCX 前基于本地规则提示资源、分页、目录、答案视图和 DOCX 兼容性风险；导出前复用同一套检查结果做中文提醒，但 V1 不强制阻断导出。",
+      "startedOn": "2026-07-08",
+      "completedOn": "2026-07-08",
+      "executionBoundary": {
+        "id": "PH4-02-export-check-panel-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：导出检查面板 V1",
+        "confirmedOn": "2026-07-08",
+        "startedOn": "2026-07-08",
+        "completedOn": "2026-07-08",
+        "summary": "本步已完成 `PH4-02-export-check-panel-v1`：1) 新增 `ExportCheckService`，把分页 warnings、图片资源基础风险、目录风险、答案视图提示、页面背景提示和 DOCX 兼容性提示统一收口为错误 / 警告 / 提醒三级结果；2) 右侧面板已新增“导出检查”主 Tab，集中展示导出摘要与逐条中文建议；3) 顶栏已新增“导出检查”入口，可直接打开该面板；4) 导出 PDF / DOCX 前已复用同一套检查结果，只有错误 / 警告会触发确认提示，纯提醒只留在面板里查看；5) 已补定向测试覆盖局部分栏 DOCX 风险、图片路径与绕排风险、答案模式与复杂公式提示；6) 本步未扩到自动修复、深度磁盘扫描或导出拦截。",
+        "included": [
+          "右侧面板新增“导出检查”主 Tab，并提供清晰的中文结果展示。",
+          "顶栏新增“导出检查”入口，点击后打开右侧检查面板。",
+          "新增本地导出检查服务，统一输出错误、警告和提醒三级结果。",
+          "检查范围先覆盖现有分页 warnings、图片资源基础风险、目录风险、答案显示状态提示和 DOCX 兼容性提示。",
+          "导出 PDF / DOCX 前复用同一套检查结果，在开始导出前给出中文提示，但不阻断用户继续导出。",
+          "补最小测试，验证典型导出风险能够被识别。",
+          "完成后执行 `npm run typecheck`、`npm run build`、`npm run progress:build` 和 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不做自动修复。",
+          "不做 AI 导出检查。",
+          "不做真实磁盘文件存在性的深度扫描或批量修复。",
+          "不重构 PDF / DOCX 导出算法本身。",
+          "不做导出质量评分、检查历史、批量报告或导出阻断机制。"
+        ],
+        "followup": [
+          "自动修复、定位到问题块、真实资源丢失扫描和导出前强制拦截，继续归属 `PH4-02` 后续增强。",
+          "更完整的 DOCX 高保真兼容分析和一键修复建议，后续归属导出治理增强任务。",
+          "与资源库联动的丢失扫描、未使用资源清理和批量迁移，后续归属资源管理增强任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH4-02-export-check-panel-v1` 边界可以执行。",
+          "`src/services/ExportCheckService.ts` 已新增统一导出检查服务，并输出错误 / 警告 / 提醒三级结果。",
+          "`src/services/ExportCheckService.test.ts` 已补 3 组定向回归，覆盖局部分栏 DOCX 风险、图片导出风险、答案模式与复杂公式提示。",
+          "`src/components/layout/RightPanel.tsx` 已新增“导出检查”主 Tab 和检查结果面板。",
+          "`src/components/layout/Toolbar.tsx`、`AppShell.tsx` 与 `useWorkspaceFileCommands.ts` 已接通顶栏入口和导出前确认提示联动。",
+          "`src/styles.css` 已补齐导出检查面板样式。",
+          "`npm run typecheck` 成功。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\ExportCheckService.test.ts`，3 个测试全部 pass。",
+          "`npm run build` 成功。",
+          "完成后执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+        ]
+      }
     },
     {
       "id": "PH4-03",

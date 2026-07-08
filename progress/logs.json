@@ -1,6 +1,604 @@
 {
   "entries": [
     {
+      "id": "LOG-474",
+      "date": "2026-07-08",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI 内容生成要求描述 V1",
+      "action": "生成表单扩展/提示词拼接/记录字段同步/记录详情展示/定向测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-12-generate-requirement-description-v1`：1) AI 生成面板的教育内容生成模式已新增“要求描述（可选）”多行输入；2) 生成选项、AI 生成记录类型、主进程记录归一化和 preload 类型已同步新增 `requirementDescription`；3) 讲义、知识点总结、练习题和试卷初稿会把要求描述作为“要求描述”写入 AI 用户提示词，系统提示词也会要求优先满足其中的范围、格式、语气和内容约束；4) AI 生成记录详情已展示要求描述；5) 小红书模式、完整提示词模板系统、AI Provider 和知识库检索链路未在本步扩展。",
+      "verification": [
+        "`src/components/ai/AiGenerateTab.tsx` 已新增要求描述输入，并传入知识库检索词、生成选项和生成记录。",
+        "`src/types/ai.ts`、`electron/main/ai-record-handlers.ts` 与 `electron/preload/index.ts` 已同步扩展字段。",
+        "`src/services/AiService.ts` 已将要求描述写入教育内容生成提示词，并抽出可测试的 `createEducationGenerateUserMessage`。",
+        "`src/components/ai/AiGenerationRecordsPanel.tsx` 与 `src/styles.css` 已补齐记录详情展示。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\AiService.test.ts`，3 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/components/ai/AiGenerationRecordsPanel.tsx",
+        "src/services/AiService.ts",
+        "src/services/AiService.test.ts",
+        "src/types/ai.ts",
+        "electron/main/ai-record-handlers.ts",
+        "electron/preload/index.ts",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续如需继续增强，可单独拆提示词模板、题型比例、难度梯度和答案解析格式等高级参数。"
+    },
+    {
+      "id": "LOG-473",
+      "date": "2026-07-08",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI 内容生成要求描述 V1 边界",
+      "action": "用户确认下一步/边界回写/风险同步",
+      "result": "用户已确认按 `PH3-12-generate-requirement-description-v1` 推进。本步纳入：在教育内容生成模式新增“要求描述（可选）”多行输入框；扩展 `GenerateOptions` 与 AI 生成记录字段；生成讲义、知识点总结、练习题和试卷初稿时将要求描述作为补充要求写入 AI 提示词；AI 生成记录面板展示本次要求描述；补最小回归测试确认要求描述进入提示词。本步明确不纳入完整提示词模板编辑器、小红书模式改造、AI Provider 改造、个人知识库检索链路改造、题型比例 / 难度梯度等高级出题参数面板。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH3-12-generate-requirement-description-v1` 最小边界可以执行。",
+        "`progress/tasks/phase-3.json` 已更新 `PH3-12` 当前执行边界，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-072`，记录要求描述若扩成完整提示词模板系统会明显扩面的范围风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现要求描述输入、类型扩展、提示词拼接、记录保存和最小回归测试。"
+    },
+    {
+      "id": "LOG-472",
+      "date": "2026-07-08",
+      "taskIds": [
+        "PH4-02"
+      ],
+      "phaseMilestone": "第四阶段 / M3",
+      "step": "完成导出检查面板 V1",
+      "action": "检查服务落地/右侧面板接入/顶栏入口接线/导出前确认联动/定向测试/构建验证/进度同步",
+      "result": "已完成 `PH4-02-export-check-panel-v1`：1) 新增 `ExportCheckService`，统一收口分页 warnings、图片资源基础风险、目录风险、答案视图提示、页面背景提示和 DOCX 兼容性提示；2) 右侧面板已新增“导出检查”主 Tab，可集中查看错误 / 警告 / 提醒三级结果；3) 顶栏已新增“导出检查”入口；4) 导出 PDF / DOCX 前已复用同一套检查结果，只有错误 / 警告会触发确认提示，纯提醒只留在面板查看；5) 已补 3 组定向回归覆盖局部分栏 DOCX 风险、图片路径与绕排风险、答案模式与复杂公式提示。",
+      "verification": [
+        "`src/services/ExportCheckService.ts` 已新增统一导出检查服务。",
+        "`src/services/ExportCheckService.test.ts` 已补 3 组定向回归。",
+        "`src/components/layout/RightPanel.tsx` 已新增“导出检查”主 Tab 和结果面板。",
+        "`src/components/layout/Toolbar.tsx`、`src/components/layout/AppShell.tsx` 与 `src/components/layout/useWorkspaceFileCommands.ts` 已接通顶栏入口和导出前提示联动。",
+        "`src/styles.css` 已补齐导出检查面板样式。",
+        "`npm run typecheck` 成功。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\ExportCheckService.test.ts`，3 个测试全部 pass。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/services/ExportCheckService.ts",
+        "src/services/ExportCheckService.test.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/RightPanel.tsx",
+        "src/components/layout/Toolbar.tsx",
+        "src/components/layout/useWorkspaceFileCommands.ts",
+        "src/styles.css",
+        "progress/config.json",
+        "progress/tasks/phase-4.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续如需继续增强，可优先拆真实资源丢失扫描、定位到问题块、导出拦截策略和自动修复建议。"
+    },
+    {
+      "id": "LOG-471",
+      "date": "2026-07-08",
+      "taskIds": [
+        "PH4-02"
+      ],
+      "phaseMilestone": "第四阶段 / M3",
+      "step": "确认导出检查面板 V1 边界",
+      "action": "用户确认下一步/边界回写/风险同步",
+      "result": "用户已确认按 `PH4-02-export-check-panel-v1` 推进。本步纳入：右侧面板新增“导出检查”主 Tab、顶栏新增导出检查入口、本地规则检查服务统一输出错误/警告/提醒，并先覆盖分页 warnings、图片资源基础风险、目录风险、答案显示状态提示和 DOCX 兼容性提示；导出 PDF / DOCX 前复用同一套检查结果做中文提醒，但 V1 不强制阻断导出。本步明确不纳入自动修复、AI 检查、真实磁盘文件深度扫描、导出质量评分和导出拦截机制。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH4-02-export-check-panel-v1` 边界可以执行。",
+        "`progress/tasks/phase-4.json` 已更新 `PH4-02` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-071`，记录导出检查若一步扩成自动修复、深度扫描或强制拦截会明显扩面的范围风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-4.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现导出检查服务、右侧检查面板和导出前提示联动。"
+    },
+    {
+      "id": "LOG-470",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-12"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成刷新后输入框点击恢复 V1",
+      "action": "文档切换交互态清理/透明遮罩点击修复/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-12-input-click-recovery-v1`：1) `CanvasPane` 现已在 `documentEpoch` 变化时同步清空旧文档残留的编辑态、公式编辑器、浮动工具条、右键菜单、图片 / 表格拖拽态和相关草稿缓存；2) `AppShell` 已在文档切换时同步清空画布文字选区、编辑请求和滚动定位请求；3) `styles.css` 已把公式编辑遮罩默认态改为 `pointer-events: none`，只在可见态接收点击，不再形成透明拦截层；4) 本步未修改 Markdown 导入规则、`.layout` 结构或分页算法。",
+      "verification": [
+        "`src/components/layout/CanvasPane.tsx` 已新增基于 `documentEpoch` 的局部交互态清理，覆盖编辑态、浮动工具条、公式编辑器、右键菜单和图片 / 表格拖拽态。",
+        "`src/components/layout/AppShell.tsx` 已在文档切换时同步清空画布临时选区、编辑请求和滚动定位请求。",
+        "`src/styles.css` 已将 `.equation-editor-modal` 默认 `pointer-events` 从 `auto` 收口为 `none`，保留 `.equation-editor-modal-visible` 继续接收点击。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "由于浏览器版不带 Electron 桌面文件接口，本轮未补完整“真实导入文件后”自动化回归；仍需在真实桌面窗口继续复测刷新后与新导入后的输入框点击。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后请用户在真实 Electron 窗口重点复测两类路径：1) 直接刷新界面后点击各类输入框；2) 新导入文件后点击顶栏、左侧、右侧和 AI / 知识库输入框。"
+    },
+    {
+      "id": "LOG-469",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-12"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认刷新后输入框点击恢复 V1 边界",
+      "action": "用户确认修复/边界回写/风险登记",
+      "result": "用户已确认按 `PH2-12-input-click-recovery-v1` 推进。本步纳入：在文档刷新、恢复草稿、打开新文件或重新导入后，清理 `CanvasPane` 和 `AppShell` 中会跨文档残留的临时交互状态，并修复公式编辑遮罩在不可见过渡态仍拦截点击的问题，让所有输入框恢复可点击、可聚焦、可输入。本步明确不纳入修改 Markdown 导入规则、`.layout` 结构、分页算法、性能优化或 UI 重设计。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-12-input-click-recovery-v1` 最小修复边界可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-12` 下追加当前并行小步边界，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-070`，记录刷新 / 新导入后旧交互态或透明遮罩残留会吞掉输入点击的返工风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现文档切换时的局部交互态清理和透明遮罩点击恢复。"
+    },
+    {
+      "id": "LOG-467",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 RAGFlow 混合检索 V1",
+      "action": "配置扩展/检索服务改造/结果解释展示/AI 检索词增强/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-12-ragflow-hybrid-retrieval-v1`：1) `RagflowConfig` 已从单一 `topK` 扩展为“片段数、召回池、阈值、向量权重、关键词混合、高亮返回”组合；2) `KnowledgeBaseService` 已把 RAGFlow retrieval 的 `page_size` 与 `top_k` 分离，并显式传入混合检索参数；3) 检索结果已保留综合分、关键词分、向量分、高亮摘要和重要关键词，前端不再只看到黑盒片段；4) 知识库面板已可直接调这些参数并查看命中解释；5) AI 生成检索词已按讲义、总结、练习、试卷场景附加不同意图词，更适合教辅资料召回。",
+      "verification": [
+        "`src/types/knowledge.ts` 已扩展 RAGFlow 混合检索配置与结果类型。",
+        "`src/store/slices/knowledgeBaseSlice.ts` 已兼容旧 `topK` 配置并新增混合检索参数持久化。",
+        "`src/services/KnowledgeBaseService.ts` 已改造 RAGFlow 请求体并保留命中解释字段。",
+        "`src/components/knowledge/KnowledgeBasePanel.tsx` 已新增 RAGFlow 混合检索参数输入和结果说明展示。",
+        "`src/components/ai/AiGenerateTab.tsx` 已增强教辅生成场景的知识检索词。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 与 `npm run progress:check` 成功，展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "src/types/knowledge.ts",
+        "src/store/slices/knowledgeBaseSlice.ts",
+        "src/services/KnowledgeBaseService.ts",
+        "src/components/knowledge/KnowledgeBasePanel.tsx",
+        "src/components/ai/AiGenerateTab.tsx",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后建议用户在真实 RAGFlow 服务上重点复测：不同召回池 / 阈值 / 向量权重下的检索质量，以及 AI 生成带入知识片段后的内容稳定性。"
+    },
+    {
+      "id": "LOG-465",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 RAGFlow 混合检索 V1 边界",
+      "action": "用户确认下一步/边界回写/风险同步",
+      "result": "用户已确认按 `PH3-12-ragflow-hybrid-retrieval-v1` 推进。本步纳入：扩展 RAGFlow 混合检索参数、拆开召回池与最终返回条数、保留更完整的命中解释信息、补齐知识库面板必要配置项，并让 AI 生成链路复用这套更稳定的检索口径。本步明确不纳入上传文件、自动切片、`ima` 双源混排、知识图谱、复杂元数据治理和模型 Provider 改造。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH3-12-ragflow-hybrid-retrieval-v1` 最小方案可以执行。",
+        "`progress/tasks/phase-3.json` 已把 `PH3-12` 当前执行边界切到 `RAGFlow` 混合检索子步，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-069`，记录 RAGFlow 混合检索若与上传、切片、双源混排一起推进会过度扩面的范围风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现 RAGFlow 混合检索参数扩展、结果解释展示和 AI 生成链路联动。"
+    },
+    {
+      "id": "LOG-464",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 ima 检索修复 V1",
+      "action": "原始命中展示口径收口/正文读取失败回退/面板提示增强/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-12-ima-retrieval-debug-fix-v1`：1) `ima` 检索测试面板已从“只展示可读正文条目”调整为“优先展示原始命中”；2) 命中的知识条目即使正文读取失败，也会回退显示标题或高亮摘要；3) 命中的文件夹不再被直接过滤掉，而会显示为“命中文件夹”；4) 这样用户可以更容易区分“无结果”“命中文件夹”“命中条目但正文未读出”三类情况；5) 本步不改 `ima` 写入能力、不改模型 Provider，也不扩展文件夹浏览器。",
+      "verification": [
+        "`src/types/knowledge.ts` 已新增 `ImaKnowledgeSearchHit` 命中类型。",
+        "`src/services/KnowledgeBaseService.ts` 已新增 `searchImaKnowledgeHits`，保留原始命中并回退预览。",
+        "`src/components/knowledge/KnowledgeBasePanel.tsx` 已改为展示 `ima` 原始命中、文件夹命中和正文回退提示。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 与 `npm run progress:check` 成功，展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "src/types/knowledge.ts",
+        "src/services/KnowledgeBaseService.ts",
+        "src/components/knowledge/KnowledgeBasePanel.tsx",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后请用户用当前知识库再次复测 `ima` 检索测试，观察现在是否能看到命中条目、文件夹命中或正文回退提示。"
+    },
+    {
+      "id": "LOG-463",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 ima 检索修复 V1 边界",
+      "action": "用户确认下一步/边界回写/风险同步",
+      "result": "用户已确认按 `PH3-12-ima-retrieval-debug-fix-v1` 推进。本步纳入：修复 `ima` 检索结果过滤过严、原始命中不展示、正文读取失败时缺少回退展示，以及真实错误信息不透明的问题；必要时同步调整知识库列表或检索辅助接口口径。本步明确不纳入把 `ima` 接成模型 Provider，也不纳入知识库上传、网页导入、笔记写入追加、自动切片、自动同步或双源混合排序。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH3-12-ima-retrieval-debug-fix-v1` 最小方案可以执行。",
+        "`progress/tasks/phase-3.json` 已把 `PH3-12` 当前执行边界切到 `ima` 检索修复子步，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-068`，记录原始命中可能被过早过滤、且错误提示不透明的返工风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始修复 `ima` 原始检索命中展示、正文读取回退和真实错误提示。"
+    },
+    {
+      "id": "LOG-462",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 ima 只读知识接入 V1",
+      "action": "知识源状态扩展/ima 服务封装/知识库面板接线/AI 生成上下文接线/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-12-ima-readonly-knowledge-v1`：1) 个人知识库状态层新增 `ima` 配置、知识库列表、当前选中知识库和 `关闭 / RAGFlow / ima` 生成来源切换；2) `KnowledgeBaseService` 已接入 `ima` 官方只读链路，覆盖连接测试、可用知识库列表、知识条目搜索，以及命中条目的笔记正文 / 原文读取；3) 左侧“个人知识库”面板已新增 `ima` 配置区、知识库选择和检索测试界面；4) AI 生成 Tab 已支持把 `ima` 检索结果拼成知识上下文后参与讲义、知识点总结、练习题和试卷初稿生成；5) 本步继续保留现有 RAGFlow 和 Open Notebook 能力，不把 `ima` 扩展为写入型知识库能力或模型 Provider。",
+      "verification": [
+        "`src/types/knowledge.ts` 已新增 `ima` 相关类型和知识来源枚举。",
+        "`src/store/slices/knowledgeBaseSlice.ts` 已新增 `ima` 配置持久化、知识库选择和生成来源切换。",
+        "`src/services/KnowledgeBaseService.ts` 已新增 `ima` 连接测试、知识库列表、知识条目搜索和正文读取链路。",
+        "`src/components/knowledge/KnowledgeBasePanel.tsx` 已新增 `ima` 配置区、知识库选择和检索测试界面。",
+        "`src/components/ai/AiGenerateTab.tsx` 已接通 `ima` 作为 AI 生成知识上下文来源。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 与 `npm run progress:check` 成功，展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "src/types/knowledge.ts",
+        "src/store/slices/knowledgeBaseSlice.ts",
+        "src/services/KnowledgeBaseService.ts",
+        "src/components/knowledge/KnowledgeBasePanel.tsx",
+        "src/components/ai/AiGenerateTab.tsx",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后让用户用真实 `ima` 凭证重点验证：知识库列表、条目检索、正文读取，以及 AI 生成带入 `ima` 上下文是否符合预期。"
+    },
+    {
+      "id": "LOG-461",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-12"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 ima 只读知识接入 V1 边界",
+      "action": "用户确认下一步/边界回写/风险同步",
+      "result": "用户已确认按 `PH3-12-ima-readonly-knowledge-v1` 推进。本步纳入：在现有“个人知识库”面板中新增 `ima` 的 `Client ID / API Key` 配置、连接测试、知识库列表、知识条目搜索，以及笔记正文 / 原文读取；并把这些读取结果接入现有 AI 生成知识上下文链路，让讲义、知识点总结、练习题和试卷初稿可基于 `ima` 检索结果生成。本步明确不纳入把 `ima` 接成 AI 模型 Provider，也不纳入知识库上传、网页导入、笔记写入追加、自动切片、自动同步或双源混合排序。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH3-12-ima-readonly-knowledge-v1` 最小方案可以执行。",
+        "`progress/tasks/phase-3.json` 已把 `PH3-12` 当前执行边界切到 `ima` 子步，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-067`，记录 `ima` 不是现成模型 Provider 且原文读取粒度与 RAGFlow 不同的接入风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始在现有个人知识库能力上接入 `ima` 配置、只读检索和 AI 上下文链路。"
+    },
+    {
+      "id": "LOG-466",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成 Delete 快捷删除选中顶层块 V1",
+      "action": "全局键盘事件接线/编辑态隔离/现有删除链路复用/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-delete-key-shortcut-v1`：`AppShell` 的现有全局键盘事件入口已接通 `Delete` 快捷删除；当画布区域选中某一个顶层块时，按 `Delete` 会直接复用 `deleteLayoutTopLevelBlock` 删除当前块，并保留图片资源清理、相邻块选中迁移、撤销/重做、未保存标记和分页刷新口径；当焦点位于输入框、富文本原位编辑或其他可编辑区域时，`Delete` 仍只删除文字，不触发整块删除；多选块删除、`Backspace` 和结构级快捷删除未纳入本步。",
+      "verification": [
+        "`src/components/layout/AppShell.tsx` 已新增 `Delete` 快捷删除入口，并限制为画布区域非编辑态触发。",
+        "快捷删除继续复用现有 `deleteLayoutTopLevelBlock`，没有新增第二套删除写回逻辑。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/AppShell.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；随后让用户在画布里重点复测：普通块选中后按 `Delete` 是否直接删除，以及文字编辑态下 `Delete` 是否仍只删文字。"
+    },
+    {
+      "id": "LOG-459",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认 Delete 快捷删除选中顶层块 V1 边界",
+      "action": "用户确认下一步/边界登记/风险同步",
+      "result": "用户已确认按 `PH2-05B-delete-key-shortcut-v1` 推进。本步纳入：选中画布中的某一个顶层块后，按键盘 `Delete` 直接删除当前块，并继续复用现有 `deleteLayoutTopLevelBlock`，保持图片资源清理、相邻块选中迁移、撤销/重做、未保存标记和分页刷新一致；当焦点位于输入框、富文本原位编辑或其他可编辑区域时，`Delete` 仍只删除文字，不触发整块删除。本步明确不纳入 `Backspace`、多选块批量删除、引用内部子块/列表项/表格结构级快捷删除和确认弹窗。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-05B-delete-key-shortcut-v1` 最小方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下新增本步边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-066`，记录 `Delete` 键若不隔离编辑态会误删整块的交互风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后接通 `AppShell` 的 `Delete` 快捷键，复用现有顶层块删除链路，并完成类型检查与构建验证。"
+    },
+    {
+      "id": "LOG-458",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-18A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成页眉页脚默认内容与 H1 口径调整 V1",
+      "action": "默认值调整/共享标题解析接通/旧工程回退断言更新/定向单测/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-18A-default-header-footer-h1-page-number-v1`：1) 默认页眉已改为只显示当前页所属一级标题的纯文字，默认页脚只显示页码；2) 画布预览、HTML/PDF 与 DOCX 导出已共用同一套共享标题解析逻辑，只识别 H1，并在当前页没有 H1 时向前继承最近一级标题；3) 旧 `.layout` 文件缺少 `headerFooterContent` 时会回退到新默认，但已显式保存过页眉页脚内容的工程文件保持原值；4) 已补齐定向单测和旧工程回退断言。首页不同、奇偶页不同、页码格式和页眉页脚富文本仍留在后续任务。",
+      "verification": [
+        "`src/engine/style/presets.ts`、`src/engine/style/headerFooterContent.ts`、`src/components/layout/CanvasPane.tsx`、`src/services/exportHtml.ts`、`src/services/exportDocx.ts` 已完成默认值与共享标题解析接通。",
+        "`scripts/m2-smoke.ts` 已更新旧工程默认回退断言；`src/engine/style/headerFooterContent.test.ts` 已新增 2 条定向单测并全部通过。",
+        "`npm run typecheck` 成功。",
+        "`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\style\\headerFooterContent.test.ts` 通过，2 个测试全部 pass。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m2` 在当前工作区两次超时（120s 与 300s），未返回断言结果；本步已以定向单测、类型检查和完整构建作为补充验证。"
+      ],
+      "affectedFiles": [
+        "src/engine/style/presets.ts",
+        "src/engine/style/headerFooterContent.ts",
+        "src/engine/style/headerFooterContent.test.ts",
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/services/exportDocx.ts",
+        "scripts/m2-smoke.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；若后续需要让 DOCX 连续流导出也更接近预览逐页 H1 页眉，再继续拆 `PH2-21` 小步。"
+    },
+    {
+      "id": "LOG-457",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-18A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认页眉页脚默认内容与 H1 口径调整 V1 边界",
+      "action": "用户确认下一步/边界登记/任务卡新增/风险同步",
+      "result": "用户已确认“页眉页脚默认只展示页眉：一级标题（纯文字，有格式直接去除）页脚：页数”。本步按 `PH2-18A-default-header-footer-h1-page-number-v1` 推进：只调整默认页眉页脚内容与共享一级标题解析口径，让默认页眉显示当前页所属一级标题纯文字、默认页脚显示页码；已保存过自定义页眉页脚内容的工程文件保持原值，不在本步扩展页码格式、首页不同或奇偶页规则。",
+      "verification": [
+        "用户已回复“确定”，确认当前 `PH2-18A-default-header-footer-h1-page-number-v1` 最小方案可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-18A` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-065`，记录默认值调整误伤历史工程内容的兼容风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后调整默认页眉页脚内容、补共享一级标题解析函数，并完成定向验证。"
+    },
+    {
+      "id": "LOG-456",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-10A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成图片重锚定与隐藏测量层分页回退返修",
+      "action": "图片拖拽释放重锚定/store action 接通/测量层 flow-root 回退/类型检查/构建验证/进度同步",
+      "result": "已完成两处 `PH2-10A` 返修：1) 四周型/紧密型顶层图片拖拽释放时，会根据落点重新选择顶层块锚点并移动图片块顺序，避免图片拖走后原位置仍保留绕排障碍；2) `.measurement-block` 已恢复为 `display: flow-root`，先恢复隐藏测量层既有块级隔离，降低上一轮图片绕排测量实验对分页算法的全局影响。透明轮廓、跨页自由定位、DOCX 浮动对象、图层顺序和逐行真实浮动测量继续后续另拆。",
+      "verification": [
+        "`src/components/layout/CanvasPane.tsx` 已补源节点标记和图片拖拽释放重锚定逻辑。",
+        "`src/engine/document-model/operations.ts`、`src/store/slices/documentSlice.ts`、`src/store/types.ts` 已接通顶层图片块移动操作。",
+        "`src/styles.css` 已把 `.measurement-block` 恢复为 `display: flow-root`。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功并已重新生成展示文档。",
+        "`npm run progress:check` 成功，展示文档与结构化进度源一致。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/engine/document-model/operations.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/store/types.ts",
+        "src/styles.css",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "让用户重点复测：图片纵向拖走后原位置文字是否恢复，以及普通长文档分页是否回到上一轮稳定状态；若继续推进 Word 级图片绕排，需要先补分页回归样例，再拆逐行浮动测量小步。"
+    },
+    {
+      "id": "LOG-455",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-10A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认隐藏测量层 flow-root 回退分页修复 V1 边界",
+      "action": "用户确认下一步/返工边界登记/风险同步",
+      "result": "用户反馈上一轮图片复杂绕排改动后分页算法被改坏，并确认继续处理。本步按 `PH2-10A-measurement-flow-root-rollback-v1` 推进：只把隐藏测量层普通块 `.measurement-block` 恢复为 `display: flow-root`，先恢复既有分页测量稳定性；图片拖动后的重锚定修复继续保留，不在本步重写分页算法或继续深化逐行真实浮动测量。",
+      "verification": [
+        "用户已回复“确定 / 继续”，确认当前最小止血方案可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-10A` 下追加 `PH2-10A-measurement-flow-root-rollback-v1` 边界，写明本步纳入、本步明确不纳入和后续归属。",
+        "`progress/risks.json` 已新增 `RISK-064`，记录隐藏测量层 `flow-root` 调整引发分页漂移的返工风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后最小修改 `src/styles.css`，把 `.measurement-block` 恢复为 `display: flow-root`，并完成类型检查、构建和进度同步。"
+    },
+    {
+      "id": "LOG-460",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-03"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成默认视图改为预览 V1",
+      "action": "默认状态调整/静态核对/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-03-default-preview-view-v1`：1) `src/store/slices/uiSlice.ts` 已把默认 `workspaceViewMode` 从 `split` 改为 `preview`，新建/打开文档时会优先进入预览工作台；2) 分屏能力和导入源码只读快照面板继续保留，用户仍可手动切到分屏查看；3) 本步未删除分屏，也未改 Markdown 一次性导入、`.layout` 保存恢复、源码范围显示或语法映射链路。",
+      "verification": [
+        "静态搜索确认默认值只落在 `src/store/slices/uiSlice.ts`，未发现其他位置把默认视图重新写回 `split`。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-3.json` 已将 `PH3-03` 更新为已完成，并补 `completedOn`、完成摘要和验证项。",
+        "`progress/risks.json` 已更新 `RISK-062` 当前处理方式，记录默认视图改为预览 V1 已完成。"
+      ],
+      "affectedFiles": [
+        "src/store/slices/uiSlice.ts",
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；若后续确认分屏本身也没有必要，再继续拆工作台简化小步。"
+    },
+    {
+      "id": "LOG-454",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-03"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认默认视图改为预览 V1 边界",
+      "action": "用户确认下一步/边界登记/任务卡回写/风险同步",
+      "result": "用户确认“先不删吧，但是默认视图改为预览视图”。本步按 `PH3-03-default-preview-view-v1` 推进：保留分屏能力和导入源码只读快照面板，但默认工作台视图从 `分屏视图` 改为 `预览视图`；本步不删除分屏，也不改 Markdown 一次性导入、`.layout` 保存恢复、源码范围显示或语法映射链路。",
+      "verification": [
+        "用户已明确确认当前 `PH3-03-default-preview-view-v1` 最小方案可以执行。",
+        "`progress/tasks/phase-3.json` 已更新 `PH3-03` 执行边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-062`，记录默认切到预览后分屏快照入口可见性下降的范围调整风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后把默认工作台视图从分屏改为预览，并完成类型检查、构建和进度同步。"
+    },
+    {
+      "id": "LOG-451",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH3-03"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认删除源码视图 V1 边界",
+      "action": "用户确认下一步/范围调整登记/任务卡更新/风险同步",
+      "result": "用户已确认直接删除源码视图，原因是当前项目已经完全脱离源码视图。本步按 `PH3-03-remove-source-view-v1` 推进：删除独立 `源码视图` 模式，只保留 `分屏视图 / 预览视图` 两种工作台；同步收口 `WorkspaceViewMode`、工作台标题文案、状态栏与右侧摘要，以及资源/搜索/大纲等定位场景里对 `source -> split` 的遗留兜底；分屏中的导入源码只读快照继续保留，不在本步扩成整个快照面板退场。",
+      "verification": [
+        "用户已回复“直接删除源码视图当前项目已经完全脱离源码视图了”，确认当前 `PH3-03-remove-source-view-v1` 边界可以执行。",
+        "`progress/tasks/phase-3.json` 已更新 `PH3-03` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-061`，记录删除源码视图若只删表层入口会留下状态分支与文案残留的范围调整风险。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后删除源码视图相关类型、入口、状态分支和联动兜底。"
+    },
+    {
       "id": "LOG-446",
       "date": "2026-07-07",
       "taskIds": [
@@ -11428,6 +12026,88 @@
         "当前执行看板.md (待生成)"
       ],
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续如需继续压缩其他面板文案，可按同样方式继续收口。"
+    },
+    {
+      "id": "LOG-452",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-10A"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认图片纵向拖动后重锚定返修 V1 边界",
+      "action": "用户确认返工/范围收口/风险登记",
+      "result": "用户已确认按 `PH2-10A-image-reanchor-after-drag-v1` 返修。本步只修四周型/紧密型图片纵向拖动后的旧锚点残留问题：在拖拽释放时，根据图片落点把顶层图片块移动到新的块锚点附近，再保留相对新锚点的小偏移量；原位置正文需要恢复绕排，新位置正文开始按新锚点绕排。本步明确不扩到引用容器内图片、跨页自由定位、透明轮廓紧密绕排或 DOCX 浮动对象。",
+      "verification": [
+        "用户已回复“确定”，确认当前返修边界可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-10A` 下追加 `PH2-10A-image-reanchor-after-drag-v1` 边界说明。",
+        "`progress/risks.json` 已新增 `RISK-063`，记录图片纵向移动后旧锚点残留的返工原因。",
+        "`npm run progress:build` 已执行；`npm run progress:check` 在本轮文件更新前提示展示产物未同步，待本轮返修完成后重新校验。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "开始实现图片拖拽释放后的顶层重锚定、来源块 ID 暴露和最小验证。"
+    },
+    {
+      "id": "LOG-453",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-07-semantic-block-template"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认语义标签块内胶囊返修 V1 边界",
+      "action": "用户确认返修/范围收口/DOM 测量约束登记",
+      "result": "用户已确认按 `PH2-07-semantic-inline-pill-label-v1` 返修，并补充要求“同时要保证 dom 测量”。本步纳入：把当前语义标签从块外悬浮样式收口为块内真实 DOM 胶囊；移除依赖 `::before` 生成标签文案的方案；补齐列表块的显式语义标签渲染；同步画布预览、隐藏测量层与 HTML/PDF 导出使用同一套语义标签结构和样式口径，确保隐藏 DOM 测量继续真实反映返修后的标签表现。本步明确不纳入：不改语义模型字段、不改块模板库、不扩到当前未接块模板的其他块类型、不改分页算法本身或 `.layout` 结构。",
+      "verification": [
+        "用户已回复“确定，但同时要保证 dom 测量”，确认当前返修边界可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-07-semantic-block-template` 下追加 `PH2-07-semantic-inline-pill-label-v1` 边界说明，并将任务状态切回 `进行中`。",
+        "`progress/risks.json` 已更新 `RISK-039`，记录此次返修必须与隐藏 DOM 测量层保持一致口径。",
+        "`npm run progress:build` 与 `npm run progress:check` 即将执行，确保开工前展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现块内胶囊语义标签、列表显式标签渲染和隐藏测量层 / 导出同步收口。"
+    },
+    {
+      "id": "LOG-468",
+      "date": "2026-07-07",
+      "taskIds": [
+        "PH2-07-semantic-block-template"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成语义标签块内胶囊返修 V1",
+      "action": "语义标签 DOM 改造/测量节点收口/列表 wrapper 补齐/导出同步/回归验证/进度同步",
+      "result": "已完成 `PH2-07-semantic-inline-pill-label-v1`：1) `CanvasPane.tsx` 与 `exportHtml.ts` 已把语义标签改成块内真实 DOM 胶囊，不再依赖 `::before` 生成标签文案；2) 标题 / 段落的 `data-measure-text-node-id` 已从块根节点收口到正文内容 wrapper，避免隐藏 DOM 测量把语义标签文本误计入真实换行偏移；3) 列表块已改成显式 wrapper + 真实标签，移除 `ol / ul` 上的伪元素补丁；4) `styles.css` 与导出内嵌 CSS 已同步新增块内胶囊样式，画布预览、隐藏 DOM 测量层与 HTML/PDF 导出继续共用同一套语义标签结构和样式口径；5) `fromMarkdown.test.ts` 与 `semanticRole.test.ts` 已补充真实标签文本导出断言。",
+      "verification": [
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts src\\engine\\document-model\\semanticRole.test.ts`，23 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run smoke:m2` 在当前工作区执行 244 秒后超时，尚未拿到全量冒烟结果。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-07-semantic-inline-pill-label-v1` 标记为已完成，并补充完成摘要、验证项和处理结论。",
+        "`progress/risks.json` 已更新 `RISK-039` 当前处理方式，记录语义胶囊返修与 DOM 测量口径收口结果。"
+      ],
+      "affectedFiles": [
+        "src/components/layout/CanvasPane.tsx",
+        "src/services/exportHtml.ts",
+        "src/styles.css",
+        "src/engine/document-model/fromMarkdown.test.ts",
+        "src/engine/document-model/semanticRole.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续如需继续微调胶囊尺寸、不同主题下的细节，继续归属 `PH2-07` 视觉收口小步。"
     }
   ]
 }

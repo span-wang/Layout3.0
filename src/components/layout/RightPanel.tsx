@@ -62,6 +62,11 @@ import {
   themeDefinitions,
 } from '@/engine/style/presets';
 import { selectLocalImageFile } from '@/services/FileService';
+import {
+  getExportCheckSeverityLabel,
+  getExportCheckTargetLabel,
+  type ExportCheckResult,
+} from '@/services/ExportCheckService';
 import { headerFooterVariableLabels } from '@/engine/style/headerFooterContent';
 import { getBlockStyleSourceSummary, resolveBlockDefaultTextMetrics } from '@/engine/style/blockStyleResolution';
 import { listPaginationAlgorithms } from '@/engine/typesetting';
@@ -101,9 +106,10 @@ interface RightPanelProps {
   workspaceViewMode: WorkspaceViewMode;
   layoutWarnings: LayoutWarning[];
   canvasTextSelection: CanvasTextSelectionState;
+  exportCheckResult: ExportCheckResult;
 }
 
-type RightMainTab = '对象属性' | '页面设置' | '语法映射' | '语义规则' | 'AI助手';
+type RightMainTab = '对象属性' | '页面设置' | '导出检查' | '语法映射' | '语义规则' | 'AI助手';
 
 const rightMainTabs: Array<{
   id: RightMainTab;
@@ -119,6 +125,11 @@ const rightMainTabs: Array<{
     id: '页面设置',
     label: '页面设置',
     description: '控制页面规格、边距与模板',
+  },
+  {
+    id: '导出检查',
+    label: '导出检查',
+    description: '导出前查看 PDF / DOCX 风险',
   },
   {
     id: '语法映射',
@@ -381,14 +392,7 @@ const blockquoteStructureActions: Array<{
 ];
 
 function getViewModeLabel(workspaceViewMode: WorkspaceViewMode): string {
-  switch (workspaceViewMode) {
-    case 'source':
-      return '源码视图';
-    case 'preview':
-      return '预览视图';
-    default:
-      return '分屏视图';
-  }
+  return workspaceViewMode === 'preview' ? '预览视图' : '分屏视图';
 }
 
 function renderSummaryCard(label: string, value: string): JSX.Element {
@@ -3206,6 +3210,62 @@ function renderLayoutWarningsPanel(layoutWarnings: LayoutWarning[]): JSX.Element
   );
 }
 
+function renderExportCheckPanel(exportCheckResult: ExportCheckResult): JSX.Element {
+  const { items, summary } = exportCheckResult;
+  if (items.length === 0) {
+    return (
+      <section className="detail-panel export-check-panel">
+        <div className="detail-panel-head">
+          <h3>导出检查</h3>
+          <span>当前没有发现需要额外提醒的导出风险</span>
+        </div>
+        <div className="object-empty-state">当前文档可以直接继续导出；后续新增规则后，这里会继续补齐更细的提示。</div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="detail-panel export-check-panel">
+      <div className="detail-panel-head">
+        <h3>导出检查</h3>
+        <span>错误 {summary.errorCount} 条，警告 {summary.warningCount} 条，提醒 {summary.noticeCount} 条</span>
+      </div>
+      <div className="export-check-summary-grid">
+        <div className="export-check-summary-card severity-error">
+          <strong>{summary.errorCount}</strong>
+          <span>错误</span>
+        </div>
+        <div className="export-check-summary-card severity-warning">
+          <strong>{summary.warningCount}</strong>
+          <span>警告</span>
+        </div>
+        <div className="export-check-summary-card severity-notice">
+          <strong>{summary.noticeCount}</strong>
+          <span>提醒</span>
+        </div>
+      </div>
+      <div className="export-check-list">
+        {items.map((item) => (
+          <article key={item.id} className={`export-check-card severity-${item.severity}`}>
+            <div className="export-check-card-head">
+              <strong>{item.title}</strong>
+              <div className="export-check-chip-group">
+                <span className={`export-check-chip severity-${item.severity}`}>
+                  {getExportCheckSeverityLabel(item.severity)}
+                </span>
+                <span className="export-check-chip target-chip">{getExportCheckTargetLabel(item.target)}</span>
+                <span className="export-check-chip target-chip">{item.category}</span>
+              </div>
+            </div>
+            <p>{item.message}</p>
+            <span>{item.suggestion}</span>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function renderPageSpecPanel({
   resolvedStyleContract,
   styleSettings,
@@ -4203,6 +4263,7 @@ export function RightPanel({
   workspaceViewMode,
   layoutWarnings,
   canvasTextSelection,
+  exportCheckResult,
 }: RightPanelProps): JSX.Element {
   const resolvedStyleContract = useResolvedStyleContract();
   const styleSettings = useAppStore((state) => state.styleSettings);
@@ -4735,6 +4796,10 @@ export function RightPanel({
           <AiPanel />
         </div>
       );
+    }
+
+    if (activeRightPanelTab === '导出检查') {
+      return <div className="right-panel-detail">{renderExportCheckPanel(exportCheckResult)}</div>;
     }
 
     return (

@@ -1401,6 +1401,8 @@ async function main(): Promise<void> {
   const restoredLegacyHeaderFooterProject = parseLayoutProjectFile(legacyHeaderFooterProjectFile);
   assert(
     restoredLegacyHeaderFooterProject.styleSettings.headerFooterContent.header.left === '{本页标题}' &&
+      restoredLegacyHeaderFooterProject.styleSettings.headerFooterContent.header.right === '' &&
+      restoredLegacyHeaderFooterProject.styleSettings.headerFooterContent.footer.left === '' &&
       restoredLegacyHeaderFooterProject.styleSettings.headerFooterContent.footer.right === '{页码}',
     'M2 冒烟失败：旧工程文件缺少页眉页脚内容时没有回退到默认配置',
   );

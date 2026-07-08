@@ -14,7 +14,7 @@
       "milestoneIds": [
         "M2"
       ],
-      "status": "已完成",
+      "status": "进行中",
       "acceptance": "第二阶段计划已调整为结构化文档模型优先，风险区记录当前纯 Markdown 解析链路对富文本编辑的影响，并沉淀到 `结构化文档模型V1方案.md`。"
     },
     {
@@ -681,6 +681,56 @@
             "右键菜单统一化、批量删除和多选操作：后续继续归属 `PH2-05B` 或交互增强小步。",
             "更复杂块编辑器、图片替换、表格列宽拖拽和其他复杂块交互：后续继续归属 `PH2-10`。",
             "分页质量、真实测量分页和更复杂跨页稳定性：后续归属 `PH2-09`。"
+          ]
+        },
+        {
+          "id": "PH2-05B-delete-key-shortcut-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：Delete 快捷删除选中顶层块 V1",
+          "confirmedOn": "2026-07-07",
+          "startedOn": "2026-07-07",
+          "completedOn": "2026-07-07",
+          "summary": "本小步已完成 `PH2-05B-delete-key-shortcut-v1`：1) `AppShell.tsx` 的现有全局键盘事件入口已接通 `Delete` 快捷删除；2) 当画布区域已选中某一个顶层块时，按 `Delete` 会直接复用 `deleteLayoutTopLevelBlock` 删除当前块，并继续保留相邻块选中迁移、图片资源清理、撤销/重做、未保存标记和分页刷新；3) 焦点位于 `input`、`textarea`、`select`、`contenteditable` 或画布原位编辑态时，`Delete` 仍只执行原有文字删除，不触发整块删除；4) 多选块删除、`Backspace` 和结构级快捷删除继续留在后续任务。",
+          "inScope": [
+            "在现有全局键盘事件入口中接入 `Delete` 快捷删除能力。",
+            "仅当当前画布已选中某一个顶层块时触发快捷删除；选中列表项或表格单元格时，继续复用现有“删除所属顶层块”的口径。",
+            "删除动作继续复用 `deleteLayoutTopLevelBlock`，保持图片资源清理、相邻块选中迁移、撤销/重做、未保存标记和分页刷新行为一致。",
+            "删除成功后给出中文反馈，口径与右侧“删除当前块”保持一致。",
+            "补充最小验证，确认快捷删除不会破坏现有 `Ctrl/Cmd+Z`、`Ctrl/Cmd+Shift+Z`、`Ctrl/Cmd+Y` 和搜索快捷键。"
+          ],
+          "interactionRules": [
+            "当事件目标位于 `input`、`textarea`、`select`、`contenteditable` 或画布原位编辑态时，`Delete` 只保留原有文字删除语义，不触发块删除。",
+            "本步只接 `Delete`，不接 `Backspace`，避免与文本编辑、输入法和表单输入冲突。",
+            "本步不新增右键菜单、顶部按钮或二次确认弹窗，继续以“快捷删除 + 撤销恢复”为最小闭环。",
+            "删除成功后继续沿用现有右侧面板切换、选中文本状态清空和画布重绘行为。"
+          ],
+          "writebackRules": [
+            "快捷删除只复用现有 `LayoutDocument.blocks` 与 `LayoutDocument.resources` 写回链路，不新增 `.layout` 顶层字段。",
+            "快捷删除不反写 Markdown 源码快照。",
+            "删除成功后必须保持 `isDirty=true`，确保 `.layout` 保存和自动草稿继续持久化。"
+          ],
+          "consistencyRules": [
+            "实现过程中继续保持中文文案与中文注释。",
+            "快捷删除与右侧“删除当前块”必须共享同一套删除口径，避免一个删的是顶层块、另一个删的是局部节点。",
+            "本步不改分页算法，只确保删除后的分页预览、自动草稿、`.layout` 保存和 HTML/PDF 导出继续消费同一份块列表。"
+          ],
+          "outOfScope": [
+            "不做 `Backspace` 删除块。",
+            "不做多选块批量删除。",
+            "不做引用内部子块、列表项、表格行列的结构级快捷删除。",
+            "不做二次确认弹窗、回收站或额外删除保护机制。",
+            "不顺手重构全局快捷键系统或块选择系统。"
+          ],
+          "deferredTo": [
+            "`Backspace` 删除、批量删除和更完整删除保护：后续继续归属 `PH2-05B` 或第三阶段体验增强任务。",
+            "引用内部子块、列表项、表格结构级快捷编辑：后续继续归属复杂结构编辑增强小步。",
+            "右键菜单统一化与更多块级快捷操作：后续继续归属交互增强任务。"
+          ],
+          "verification": [
+            "`src/components/layout/AppShell.tsx` 已复用现有全局键盘事件入口接通 `Delete` 快捷删除，并限制为画布区域非编辑态触发。",
+            "快捷删除继续复用 `deleteLayoutTopLevelBlock`，未新增第二套删除写回逻辑。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。"
           ]
         },
         {
@@ -1776,7 +1826,7 @@
         "PH2-07-semantic-role-style-binding"
       ],
       "startedOn": "2026-07-06",
-      "completedOn": "2026-07-06",
+      "completedOn": "2026-07-07",
       "executionBoundary": {
         "id": "PH2-07-semantic-block-template-v1",
         "confirmed": true,
@@ -1832,7 +1882,49 @@
           "`npm run build` 成功。"
         ],
         "resolution": "已完成语义块模板 V1：当前 `paragraph / heading / list / blockquote` 4 类块已支持块模板默认映射、块级手动覆盖和清除语义恢复；普通块与语义块共用同一套内置块模板库；自定义语义角色可配置默认块模板；画布预览、HTML/PDF 导出与 `.layout` 保存恢复已经共用同一套块模板解析结果。"
-      }
+      },
+      "parallelExecutionBoundaries": [
+        {
+          "id": "PH2-07-semantic-inline-pill-label-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：语义标签块内胶囊返修 V1",
+          "confirmedOn": "2026-07-07",
+          "startedOn": "2026-07-07",
+          "completedOn": "2026-07-07",
+          "summary": "已完成 `PH2-07-semantic-inline-pill-label-v1`：1) `CanvasPane.tsx` 与 `exportHtml.ts` 已把语义标签改成块内真实 DOM 胶囊，不再依赖 `::before` 生成文案；2) 标题 / 段落的 `data-measure-text-node-id` 已收口到正文内容 wrapper，避免标签文本混入真实换行偏移；3) 列表块已改成显式 wrapper + 真实标签，移除 `ol / ul` 的伪元素补丁；4) 画布预览、隐藏 DOM 测量层与 HTML/PDF 导出继续共用同一套语义标签结构和样式口径；5) 定向回归、`npm run typecheck` 与 `npm run build` 均通过，`npm run smoke:m2` 在当前工作区超时，待后续全量复测。",
+          "included": [
+            "将 `CanvasPane.tsx` 里的语义标签改为块内真实文本节点，不再依赖 `::before` 生成标签文案。",
+            "把语义标签视觉收口为块内胶囊：浅底色、细边框、小圆角，位置贴近块内容顶部，避免再悬在块外。",
+            "补齐 `list` 块的显式语义标签渲染，移除 `ol / ul` 上依赖 `::before` 的特殊补丁。",
+            "同步调整 `src/styles.css` 与 `src/services/exportHtml.ts`，确保画布预览、隐藏测量层和 HTML/PDF 导出使用同一套语义标签结构。",
+            "保证隐藏 DOM 测量层继续渲染真实标签 DOM，测量结果与正式画布一致，不因返修重新退回块外伪元素口径。",
+            "完成后执行 `npm run progress:build`、`npm run progress:check`、`npm run typecheck` 和 `npm run build`。"
+          ],
+          "excluded": [
+            "不改 `LayoutBlock.semantic`、`semanticPreset`、自定义语义角色配置或 `.layout` 文件结构。",
+            "不新增块模板种类，不开放语义标签位置、颜色、字号的独立可视化配置。",
+            "不改分页算法本身，不新增新的测量缓存键或新的分页规则；本步只保证现有隐藏 DOM 测量继续正确消费返修后的标签 DOM。",
+            "不扩到 `table / image / code / equation / toc` 等当前未接块模板的块类型。"
+          ],
+          "followup": [
+            "如果后续还要继续微调胶囊尺寸、字重、间距或不同主题下的细节，再继续归属 `PH2-07` 视觉收口小步。",
+            "如果后续希望语义标签完全不占正文高度，同时仍保持块内视觉，需要另拆测量契约和壳层布局小步。"
+          ],
+          "verification": [
+            "用户已回复“确定，但同时要保证 dom 测量”，确认当前返修边界可以执行。",
+            "`progress/tasks/phase-2.json` 已追加 `PH2-07-semantic-inline-pill-label-v1` 边界说明，并在完成后将 `PH2-07-semantic-block-template` 保持为 `已完成`。",
+            "`progress/risks.json` 已更新 `RISK-039`，记录此次返修与隐藏 DOM 测量层的统一口径和完成处理结果。",
+            "`src/components/layout/CanvasPane.tsx` 已把语义标签改为真实 DOM 胶囊，并把标题 / 段落的测量节点收口到正文 wrapper。",
+            "`src/styles.css` 与 `src/services/exportHtml.ts` 已移除语义标签的 `::before` 方案，并同步新增块内胶囊样式与列表 wrapper 口径。",
+            "`src/engine/document-model/fromMarkdown.test.ts` 与 `src/engine/document-model/semanticRole.test.ts` 已补充真实标签文本导出断言。",
+            "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\fromMarkdown.test.ts src\\engine\\document-model\\semanticRole.test.ts`，23 个测试全部 pass。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功。",
+            "`npm run smoke:m2` 在当前工作区执行 244 秒后超时，尚未拿到全量冒烟结果。"
+          ],
+          "resolution": "已完成语义标签块内胶囊返修 V1：语义标签现在作为块内真实 DOM 胶囊渲染，列表不再依赖伪元素补丁；标题和段落的真实换行测量已避开标签文本，避免 DOM 测量把语义标签内容误当成正文参与分页切分。"
+        }
+      ]
     },
     {
       "id": "PH2-08",
@@ -3839,6 +3931,70 @@
           "`npm run smoke:m2` 在当前工作区连续两次超时，未返回断言结果；本步已改用聚焦图片绕排的定向脚本作为补充验证，全量冒烟超时需后续单独治理。",
           "`npm run progress:build` 成功。",
           "`npm run progress:check` 成功。"
+        ],
+        "parallelExecutionBoundaries": [
+          {
+            "id": "PH2-10A-image-reanchor-after-drag-v1",
+            "confirmed": true,
+            "statusLabel": "已完成：图片纵向拖动后重锚定返修 V1",
+            "confirmedOn": "2026-07-07",
+            "startedOn": "2026-07-07",
+            "completedOn": "2026-07-07",
+            "summary": "本步已完成 `PH2-10A-image-reanchor-after-drag-v1`：四周型/紧密型顶层图片拖拽释放时，会根据图片落点寻找页面正文中的新块锚点，把图片块移动到新锚点之后，并把 `offsetY` 折算为相对新锚点的小偏移；原锚点位置不再继续持有该图片的绕排障碍，新位置开始按新块顺序参与画布预览、分页估算和 HTML/PDF 导出。",
+            "inScope": [
+              "只修四周型/紧密型图片纵向拖动后的旧位置绕排残留问题。",
+              "在拖拽释放时，根据图片落点为顶层图片块重新选择锚点，并调整顶层块顺序。",
+              "继续复用现有 `offsetX / offsetY / wrapSide` 字段，让图片在新锚点附近保留小偏移。",
+              "让画布预览、分页估算和 HTML/PDF 导出在图片重锚定后一起恢复旧位置正文并在新位置重新绕排。",
+              "补最小验证，至少覆盖类型检查、构建、进度生成和一轮真实界面验证。"
+            ],
+            "outOfScope": [
+              "不扩到引用容器、局部分栏容器或表格单元格内部的图片重锚定。",
+              "不做跨页自由定位、透明轮廓紧密绕排、DOCX 浮动对象或图层顺序。",
+              "不顺手重写图片拖动交互或整个分页算法。"
+            ],
+            "deferredTo": [
+              "容器内图片重锚定、跨页自由定位和更完整对象锚点系统继续归属 `PH2-10A` 后续深化。",
+              "DOCX 浮动对象和更接近 Word 的对象排版兼容继续归属 `PH2-21` / `PH2-10A`。"
+            ],
+            "verification": [
+              "`src/components/layout/CanvasPane.tsx` 已为画布块补充源节点标记，并在四周型/紧密型图片拖拽释放时根据落点重新选择顶层锚点。",
+              "`src/engine/document-model/operations.ts` 已新增顶层图片块移动操作；`src/store/slices/documentSlice.ts` 与 `src/store/types.ts` 已接通对应 store action。",
+              "`npm run typecheck` 成功。",
+              "`npm run build` 成功。",
+              "真实界面拖拽回归尚未在当前环境完成；本步先以模型顺序重锚定、类型检查和构建作为最小验证，后续可补专门的图片拖拽 UI 自动化。"
+            ]
+          },
+          {
+            "id": "PH2-10A-measurement-flow-root-rollback-v1",
+            "confirmed": true,
+            "statusLabel": "已完成：隐藏测量层 flow-root 回退分页修复 V1",
+            "confirmedOn": "2026-07-07",
+            "startedOn": "2026-07-07",
+            "completedOn": "2026-07-07",
+            "summary": "本步已完成 `PH2-10A-measurement-flow-root-rollback-v1`：隐藏测量层普通块 `.measurement-block` 已恢复为 `display: flow-root`，先恢复既有分页测量隔离，降低上一轮图片绕排测量实验对分页算法的全局影响；图片拖动后的重锚定逻辑继续保留。",
+            "inScope": [
+              "只回退隐藏测量层普通块 `.measurement-block` 的显示隔离方式，恢复为 `display: flow-root`。",
+              "保留图片自由拖动、左右绕排侧切换和拖拽释放后的顶层重锚定逻辑。",
+              "运行 `npm run typecheck`、`npm run build`、`npm run progress:build`、`npm run progress:check` 做最小验证。"
+            ],
+            "outOfScope": [
+              "不重写分页算法，不调整 `PH2-09` 的分页策略。",
+              "不继续扩展透明轮廓、跨页自由定位、DOCX 浮动对象或图层顺序。",
+              "不在本步继续深化隐藏测量层对浮动图片逐行真实测量的实验。"
+            ],
+            "deferredTo": [
+              "更接近 Word 的逐行浮动障碍测量后续需要单独拆任务，并先建立分页回归样例后再推进。",
+              "跨页自由定位和完整对象锚点系统继续归属 `PH2-10A` 后续深化。"
+            ],
+            "verification": [
+              "`src/styles.css` 已把 `.measurement-block` 从 `display: block` 恢复为 `display: flow-root`。",
+              "`npm run typecheck` 成功。",
+              "`npm run build` 成功。",
+              "`npm run progress:build` 成功。",
+              "`npm run progress:check` 成功。"
+            ]
+          }
         ]
       }
     },
@@ -4009,6 +4165,48 @@
             "若本步后仍存在无关输入导致的整体卡顿，再单独拆 `CanvasPane` 渲染隔离或隐藏测量层降频任务，继续归属 `PH2-12` 或后续性能任务。",
             "AI 面板内大结果流式渲染导致的局部卡顿，后续归属 `PH3-01` 增强。",
             "更完整的性能指标、长文档压测和发布前性能优化，后续归属第四阶段性能优化。"
+          ]
+        },
+        {
+          "id": "PH2-12-input-click-recovery-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：刷新后输入框点击恢复 V1",
+          "confirmedOn": "2026-07-07",
+          "startedOn": "2026-07-07",
+          "completedOn": "2026-07-07",
+          "summary": "本步已完成 `PH2-12-input-click-recovery-v1`：1) `CanvasPane` 现已在 `documentEpoch` 变化时同步清理旧文档残留的编辑态、公式编辑器、浮动工具条、右键菜单、图片 / 表格拖拽态和相关草稿缓存，避免透明层或拖拽态跨文档继续吞掉点击；2) `AppShell` 已在文档切换时同步清空画布文字选区、编辑请求和滚动定位请求，避免旧文档的临时交互态继续挂到新文档；3) 公式编辑遮罩默认态已改为 `pointer-events: none`，只在可见态接收点击，不再出现“看不见但挡住所有输入框”的透明遮罩；4) 本步未修改 Markdown 导入规则、`.layout` 结构或分页算法。",
+          "inScope": [
+            "在文档刷新、恢复草稿、打开新文件或重新导入后，统一清理 `CanvasPane` 中会跨文档残留的临时交互状态，包括编辑态、浮动工具条、公式编辑器、右键菜单和拖拽中的局部状态。",
+            "同步清理 `AppShell` 中与画布原位编辑相关的临时文字选区状态，避免旧文档的 `canvasTextSelection` 继续影响新文档界面。",
+            "修复公式编辑遮罩在不可见过渡态仍接收点击的问题，避免出现“透明层看不见但挡住输入框”的情况。",
+            "保持现有输入框、面板、中文文案和 `.layout` 数据结构不变，只修点击与聚焦恢复。",
+            "完成后运行 `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check`。"
+          ],
+          "interactionRules": [
+            "修复后，刷新界面或新导入文件后，顶部工具栏、左侧搜索、右侧属性和 AI / 知识库等输入框都应恢复可点击、可聚焦、可输入。",
+            "文档切换时只重置临时 UI 交互态，不应误清真实文档数据、页面设置、撤销历史或当前已保存内容。",
+            "不改变已有按钮布局、面板结构和用户操作路径。"
+          ],
+          "writebackRules": [
+            "本步不新增 `.layout` 顶层字段，不修改 Markdown 导入结果和文档模型结构。",
+            "交互态清理只落在前端组件局部状态与既有 store 临时视图状态，不新增第二套持久化机制。",
+            "修复后的点击恢复逻辑继续复用现有 `documentEpoch`、组件状态和样式类名，不单独引入新的全局事件总线。"
+          ],
+          "consistencyRules": [
+            "实现过程中继续保持中文注释，尤其说明为什么文档切换时需要清理局部交互态。",
+            "只做输入框点击恢复，不顺手重构分页算法、导入流程、右侧属性面板架构或 Electron 文件链路。",
+            "修复后不能破坏现有画布编辑、公式编辑、图片拖拽、右键菜单和浮动工具条的正常使用。"
+          ],
+          "outOfScope": [
+            "不改 Markdown 导入规则，不处理题目拆分、语法映射或知识库检索逻辑。",
+            "不处理输入卡顿性能问题，不把本步扩成渲染性能优化或测量层降频治理。",
+            "不修改 `.layout` 保存恢复格式，不新增新的全局弹层系统或状态管理框架。",
+            "不重做 UI 视觉设计，不新增按钮、提示卡或设置项。"
+          ],
+          "deferredTo": [
+            "若修复后仍存在明显输入卡顿，再继续归属 `PH2-12` 后续性能小步。",
+            "更完整的弹层生命周期治理、全局交互态治理和跨组件状态归并，后续另拆治理任务。",
+            "导入链路本身的解析或分页问题，继续归属 `PH2-04`、`PH2-09` 等原任务。"
           ]
         }
       ]
@@ -4932,6 +5130,67 @@
           "更完整分页质量、页眉页脚高度自动适配和溢出提示：后续归属 `PH2-09` / `PH2-12`。"
         ],
         "completedOn": "2026-06-28"
+      }
+    },
+    {
+      "id": "PH2-18A",
+      "sequence": "18A",
+      "order": 180.5,
+      "title": "页眉页脚默认内容与 H1 口径调整 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "style-module",
+        "ui-components",
+        "typesetting-engine",
+        "export-pipeline"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "新建文档与旧 `.layout` 缺少 `headerFooterContent` 时，默认页眉只显示一级标题纯文字、默认页脚只显示页码；画布预览、HTML/PDF、DOCX 与 `.layout` 保存恢复继续共用同一口径。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-18"
+      ],
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH2-18A-default-header-footer-h1-page-number-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：页眉页脚默认内容与 H1 口径调整 V1",
+        "confirmedOn": "2026-07-07",
+        "startedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH2-18A-default-header-footer-h1-page-number-v1`：1) 默认页眉已改为只显示当前页所属一级标题的纯文字，默认页脚只显示页码；2) 画布预览、HTML/PDF 与 DOCX 导出已共用同一套共享标题解析逻辑，只识别一级标题，并在当前页没有 H1 时向前继承最近一级标题；3) 旧 `.layout` 文件缺少 `headerFooterContent` 时会回退到新的默认配置，但已显式保存过页眉页脚内容的工程文件保持原值；4) 已补充定向单测并通过类型检查与构建验证。全量 `smoke:m2` 在当前工作区两次超时，未返回断言结果，本步先以定向验证闭环。",
+        "included": [
+          "调整 `StyleSettings.headerFooterContent` 默认值，让默认页眉只保留一级标题，默认页脚只保留页码。",
+          "补齐共享页眉标题解析逻辑：只识别一级标题，取纯文字内容，并在当前页没有一级标题时向前继承最近一级标题；若全文尚无一级标题，则回退文档标题。",
+          "让画布预览、HTML/PDF 导出与 DOCX 导出共同消费同一套默认内容和一级标题解析口径，避免三条链路表现不一致。",
+          "保持旧 `.layout` 文件兼容：只有缺少 `headerFooterContent` 时才回退到新默认，已保存过自定义内容的工程文件不被改写。",
+          "补充最小验证，覆盖默认值、旧工程回退口径与导出/预览关键路径。"
+        ],
+        "excluded": [
+          "不批量改写用户已经自定义过的页眉页脚内容。",
+          "不把 `{本页标题}` 变量的名称或手工输入语义整体替换成“一级标题”。",
+          "不做页码格式、起始页、首页不同、奇偶页不同或节级页眉页脚规则。",
+          "不做页眉页脚富文本、图片 Logo、边框线样式或模板化编辑器扩展。"
+        ],
+        "followup": [
+          "页码格式、起始页、首页不同与奇偶页规则：后续继续归属 `PH2-11`。",
+          "页眉页脚富文本、图片 Logo、样式编辑与模板增强：后续继续归属 `PH2-18` 或新增模板任务。",
+          "DOCX 连续流导出里更高保真的逐页 `{本页标题}` 语义：后续继续归属 `PH2-21`。"
+        ],
+        "verification": [
+          "`src/engine/style/presets.ts` 已把默认页眉页脚内容收口为 `页眉=本页标题`、`页脚=页码`，不再默认展示页面规格与模板主题。",
+          "`src/engine/style/headerFooterContent.ts` 已新增共享一级标题解析函数，只识别 H1、输出纯文字，并在没有 H1 的页向前继承最近一级标题。",
+          "`src/components/layout/CanvasPane.tsx`、`src/services/exportHtml.ts` 与 `src/services/exportDocx.ts` 已共同接入新的共享页眉标题解析口径。",
+          "`scripts/m2-smoke.ts` 已更新旧工程默认回退断言；`src/engine/style/headerFooterContent.test.ts` 已新增默认标题解析定向单测。",
+          "`npm run typecheck` 成功。",
+          "`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\style\\headerFooterContent.test.ts` 通过，2 个测试全部 pass。",
+          "`npm run build` 成功。",
+          "`npm run smoke:m2` 在当前工作区两次超时（120s 与 300s），未返回断言结果；本步已以定向单测、类型检查和完整构建作为补充验证。"
+        ]
       }
     },
     {

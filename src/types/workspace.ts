@@ -2,7 +2,7 @@ import type { TextRangeSelection, TextRun } from '@/engine/document-model';
 
 export type LeftPanelTab = '文件' | '大纲' | '搜索' | '资源' | '个人知识库' | 'AI生成记录';
 
-export type WorkspaceViewMode = 'source' | 'split' | 'preview';
+export type WorkspaceViewMode = 'split' | 'preview';
 
 export type PageSettingsTab =
   | '页面规格'

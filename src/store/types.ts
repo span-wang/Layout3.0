@@ -329,6 +329,10 @@ export interface DocumentSlice {
     offsetX?: number | null;
     offsetY?: number | null;
   }) => void;
+  moveLayoutImageBlockAfterAnchor: (payload: {
+    nodeId: string;
+    anchorBlockId: string | null;
+  }) => { didUpdate: boolean; selectedNodeId: string | null };
   applyLayoutNodeBlockStyle: (payload: {
     nodeId: string;
     blockStyleOverrides: BlockStyleOverrides;

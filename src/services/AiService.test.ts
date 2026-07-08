@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createGenerateSystemPrompt } from './AiService';
+import { createEducationGenerateUserMessage, createGenerateSystemPrompt } from './AiService';
 
 test('PH2-07 AI 默认教育生成提示词包含语义角色前缀规范', () => {
   const prompt = createGenerateSystemPrompt('exercise');
@@ -19,4 +19,21 @@ test('PH2-07 小红书生成提示词不混入教育语义角色前缀', () => {
   assert.doesNotMatch(prompt, /role:题干/);
   assert.doesNotMatch(prompt, /role:答案/);
   assert.doesNotMatch(prompt, /role:解析/);
+});
+
+test('PH3-12 AI 教育内容生成提示词包含要求描述', () => {
+  const message = createEducationGenerateUserMessage({
+    type: 'exercise',
+    topic: '一次函数',
+    grade: '八年级',
+    subject: '数学',
+    requirementDescription: '  题目要从易到难，并给出答案解析  ',
+    length: 'medium',
+  });
+
+  assert.match(message, /主题：一次函数/);
+  assert.match(message, /年级：八年级/);
+  assert.match(message, /科目：数学/);
+  assert.match(message, /要求描述：题目要从易到难，并给出答案解析/);
+  assert.doesNotMatch(message, /要求描述：\s{2}/);
 });

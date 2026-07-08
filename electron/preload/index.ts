@@ -37,6 +37,7 @@ interface AiGenerationRecord {
   topic: string;
   grade?: string;
   subject?: string;
+  requirementDescription?: string;
   length?: 'short' | 'medium' | 'long';
   lengthLabel?: string;
   provider?: 'openai' | 'anthropic' | 'custom';

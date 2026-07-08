@@ -71,6 +71,8 @@ export interface GenerateOptions {
   grade?: string;
   /** 科目（可选） */
   subject?: string;
+  /** 要求描述（可选） */
+  requirementDescription?: string;
   /** 内容长度 */
   length?: 'short' | 'medium' | 'long';
   /** 小红书使用：文章原始标题 */
@@ -102,6 +104,8 @@ export interface AiGenerationRecord {
   grade?: string;
   /** 科目（可选） */
   subject?: string;
+  /** 要求描述（可选） */
+  requirementDescription?: string;
   /** 内容长度 */
   length?: 'short' | 'medium' | 'long';
   /** 内容长度中文名 */

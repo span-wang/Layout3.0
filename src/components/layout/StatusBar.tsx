@@ -26,14 +26,7 @@ function getStatusLabel(parseState: ParseState): string {
 }
 
 function getViewModeLabel(workspaceViewMode: WorkspaceViewMode): string {
-  switch (workspaceViewMode) {
-    case 'source':
-      return '源码视图';
-    case 'preview':
-      return '预览视图';
-    default:
-      return '分屏视图';
-  }
+  return workspaceViewMode === 'preview' ? '预览视图' : '分屏视图';
 }
 
 export function StatusBar({

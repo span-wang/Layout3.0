@@ -344,6 +344,7 @@ export function createGenerateSystemPrompt(type: GenerateType): string {
 9. 讲义和知识点总结中，核心概念优先使用 role:重点，示例使用 role:例题，过程说明使用 role:步骤，常见错误使用 role:易错，章节收束使用 role:总结。
 10. 不要为每一行都机械添加 role:；只有承担明确语义的正文块才添加。
 11. 如果用户提供了个人知识库资料，优先依据资料生成，不要编造资料里没有的具体事实。
+12. 如果用户提供了要求描述，请优先满足其中的范围、格式、语气和内容约束。
 
 示例：
 role:重点 一次函数的图像是一条直线。
@@ -352,6 +353,40 @@ role:答案 y = 7。
 role:解析 将 x = 3 代入 y = 2x + 1，得到 y = 2 × 3 + 1 = 7。
 
 请直接生成内容，不要有额外的解释说明。`;
+}
+
+export function createEducationGenerateUserMessage(options: GenerateOptions): string {
+  const typeLabels: Record<string, string> = {
+    lecture: '讲义',
+    summary: '知识点总结',
+    exercise: '练习题',
+    exam: '试卷初稿',
+  };
+
+  const lengthLabels: Record<string, string> = {
+    short: '简短',
+    medium: '中等长度',
+    long: '详细完整',
+  };
+
+  let message = `请生成一份${typeLabels[options.type] || options.type}。\n\n主题：${options.topic}`;
+
+  if (options.grade) {
+    message += `\n年级：${options.grade}`;
+  }
+  if (options.subject) {
+    message += `\n科目：${options.subject}`;
+  }
+  if (options.requirementDescription?.trim()) {
+    message += `\n要求描述：${options.requirementDescription.trim()}`;
+  }
+  message += `\n长度要求：${lengthLabels[options.length || 'medium'] || '中等长度'}`;
+
+  if (options.knowledgeContext?.trim()) {
+    message += `\n\n请优先依据以下个人知识库资料生成，资料不足时才做合理补全，但不要编造具体事实：\n\n${options.knowledgeContext.trim()}`;
+  }
+
+  return message;
 }
 
 /**
@@ -883,34 +918,7 @@ ${content}`;
       return this.getXiaohongshuCoverUserMessage(options);
     }
 
-    const typeLabels: Record<string, string> = {
-      lecture: '讲义',
-      summary: '知识点总结',
-      exercise: '练习题',
-      exam: '试卷初稿',
-    };
-
-    const lengthLabels: Record<string, string> = {
-      short: '简短',
-      medium: '中等长度',
-      long: '详细完整',
-    };
-
-    let message = `请生成一份${typeLabels[options.type] || options.type}。\n\n主题：${options.topic}`;
-
-    if (options.grade) {
-      message += `\n年级：${options.grade}`;
-    }
-    if (options.subject) {
-      message += `\n科目：${options.subject}`;
-    }
-    message += `\n长度要求：${lengthLabels[options.length || 'medium'] || '中等长度'}`;
-
-    if (options.knowledgeContext?.trim()) {
-      message += `\n\n请优先依据以下个人知识库资料生成，资料不足时才做合理补全，但不要编造具体事实：\n\n${options.knowledgeContext.trim()}`;
-    }
-
-    return message;
+    return createEducationGenerateUserMessage(options);
   }
 
   private getXiaohongshuTitleUserMessage(options: GenerateOptions): string {

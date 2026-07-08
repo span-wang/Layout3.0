@@ -43,6 +43,7 @@ import {
   updateTableStructureByCell,
   mergeTableCellsByRange,
   mergeTopLevelTextBlocksByIds,
+  moveTopLevelImageBlockAfterAnchor,
   normalizeLayoutDocumentSyntaxMappingConfig,
   normalizeSemanticRoleConfig,
   normalizeSyntaxMappingConfig,
@@ -3109,6 +3110,34 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       );
       applyDocumentMutation(state, nodeId, result);
     }),
+  moveLayoutImageBlockAfterAnchor: ({ nodeId, anchorBlockId }) => {
+    let outcome = { didUpdate: false, selectedNodeId: null as string | null };
+    set((state) => {
+      if (!state.layoutDocument) {
+        return;
+      }
+
+      const result = moveTopLevelImageBlockAfterAnchor(state.layoutDocument.blocks, nodeId, anchorBlockId);
+      if (!result.didUpdate) {
+        return;
+      }
+
+      pushDocumentHistory(state);
+      state.layoutDocument.blocks = result.blocks;
+      refreshDocumentMeta(state, result.blocks);
+      state.layoutDocument.viewState.selectedNodeId = result.selectedNodeId ?? nodeId;
+      state.layoutDocument.viewState.tableSelection = null;
+      state.layoutDocument.viewState.blockSelection = null;
+      state.isDirty = true;
+      state.parseState = 'ready';
+      state.parseError = null;
+      outcome = {
+        didUpdate: true,
+        selectedNodeId: result.selectedNodeId ?? nodeId,
+      };
+    });
+    return outcome;
+  },
   applyLayoutNodeBlockStyle: ({ nodeId, blockStyleOverrides }) =>
     set((state) => {
       if (!state.layoutDocument) {

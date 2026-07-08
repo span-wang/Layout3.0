@@ -1139,6 +1139,43 @@ export function deleteTopLevelBlockById(
   };
 }
 
+export function moveTopLevelImageBlockAfterAnchor(
+  blocks: LayoutBlock[],
+  imageBlockId: string,
+  anchorBlockId: string | null,
+): { blocks: LayoutBlock[]; didUpdate: boolean; selectedNodeId: string | null } {
+  const imageIndex = blocks.findIndex((block) => block.id === imageBlockId);
+  if (imageIndex < 0) {
+    return { blocks, didUpdate: false, selectedNodeId: null };
+  }
+
+  const imageBlock = blocks[imageIndex];
+  if (imageBlock.type !== 'image' || imageBlock.metadata.kind !== 'image') {
+    return { blocks, didUpdate: false, selectedNodeId: null };
+  }
+
+  const remainingBlocks = blocks.filter((block) => block.id !== imageBlockId);
+  let insertIndex = remainingBlocks.length;
+
+  if (anchorBlockId !== null) {
+    const anchorIndex = remainingBlocks.findIndex((block) => block.id === anchorBlockId);
+    insertIndex = anchorIndex >= 0 ? anchorIndex + 1 : remainingBlocks.length;
+  }
+
+  const nextBlocks = [
+    ...remainingBlocks.slice(0, insertIndex),
+    imageBlock,
+    ...remainingBlocks.slice(insertIndex),
+  ];
+
+  const didUpdate = nextBlocks.some((block, index) => block.id !== blocks[index]?.id);
+  return {
+    blocks: didUpdate ? nextBlocks : blocks,
+    didUpdate,
+    selectedNodeId: didUpdate ? imageBlockId : null,
+  };
+}
+
 export function buildBlockRangeSelection(
   blocks: LayoutBlock[],
   anchorBlockId: string,

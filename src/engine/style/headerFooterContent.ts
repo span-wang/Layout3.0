@@ -1,3 +1,4 @@
+import { getHeadingText, type LayoutBlock } from '@/engine/document-model';
 import type { HeaderFooterContent, HeaderFooterLineContent, ResolvedStyleContract } from './types';
 
 export interface HeaderFooterRenderContext {
@@ -17,9 +18,41 @@ const variableLabels = ['{文档标题}', '{本页标题}', '{页码}', '{总页
 
 export const headerFooterVariableLabels: string[] = [...variableLabels];
 
+interface HeaderFooterPageTitleSource {
+  blocks: LayoutBlock[];
+}
+
 function normalizeTitle(value: string, fallback: string): string {
   const trimmed = value.trim();
   return trimmed || fallback;
+}
+
+function normalizeOptionalTitle(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() ?? '';
+  return trimmed || null;
+}
+
+function resolvePageOwnHeading1Title(blocks: LayoutBlock[]): string | null {
+  const headingBlock = blocks.find(
+    (block) => block.type === 'heading' && block.metadata.kind === 'heading' && block.metadata.depth === 1,
+  );
+  return headingBlock ? normalizeOptionalTitle(getHeadingText(headingBlock)) : null;
+}
+
+// 页眉默认显示“当前页所属一级标题”，因此没有 H1 的页需要向前继承最近一级标题。
+export function buildHeaderFooterPageTitles(
+  pages: HeaderFooterPageTitleSource[],
+  fallbackTitle: string,
+): string[] {
+  let currentTitle = normalizeTitle(fallbackTitle, '未命名文档');
+
+  return pages.map((page) => {
+    const heading1Title = resolvePageOwnHeading1Title(page.blocks);
+    if (heading1Title) {
+      currentTitle = heading1Title;
+    }
+    return currentTitle;
+  });
 }
 
 function renderTemplateText(template: string, context: HeaderFooterRenderContext): string {

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { exportCurrentDocumentAsDocx, exportCurrentDocumentAsPdf } from '@/services/ExportService';
+import {
+  buildExportCheckConfirmMessage,
+  getExportCheckItemsForTarget,
+  type ExportCheckResult,
+} from '@/services/ExportCheckService';
 import { clearDraft, loadDraft, saveDraft } from '@/services/DraftService';
 import {
   createBlankDocument,
@@ -42,6 +47,8 @@ const DRAFT_AUTO_SAVE_DELAY = 3000;
 interface UseWorkspaceFileCommandsPayload {
   displayedPageLayouts: PageLayout[];
   tocItems: TocItem[];
+  exportCheckResult: ExportCheckResult;
+  onOpenExportCheckPanel: () => void;
 }
 
 interface WorkspaceFileCommands {
@@ -71,6 +78,8 @@ interface WorkspaceFileCommands {
 export function useWorkspaceFileCommands({
   displayedPageLayouts,
   tocItems,
+  exportCheckResult,
+  onOpenExportCheckPanel,
 }: UseWorkspaceFileCommandsPayload): WorkspaceFileCommands {
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -598,6 +607,19 @@ export function useWorkspaceFileCommands({
     if (!layoutDocument || isExporting || displayedPageLayouts.length === 0) return;
 
     const documentTitle = layoutDocument.title || tocItems[0]?.text || '未命名文档';
+    const pdfCheckItems = getExportCheckItemsForTarget(exportCheckResult, 'pdf');
+    const pdfConfirmMessage = buildExportCheckConfirmMessage(exportCheckResult, 'pdf');
+    if (pdfConfirmMessage) {
+      onOpenExportCheckPanel();
+      const shouldContinue = window.confirm(pdfConfirmMessage);
+      if (!shouldContinue) {
+        showMessage(
+          pdfCheckItems.length > 0 ? '已取消导出 PDF，请先处理右侧“导出检查”中的提示' : '已取消导出 PDF',
+        );
+        return;
+      }
+    }
+
     setIsExporting(true);
     showMessage('正在导出 PDF…');
 
@@ -628,6 +650,19 @@ export function useWorkspaceFileCommands({
     if (!layoutDocument || isExporting || displayedPageLayouts.length === 0) return;
 
     const documentTitle = layoutDocument.title || tocItems[0]?.text || '未命名文档';
+    const docxCheckItems = getExportCheckItemsForTarget(exportCheckResult, 'docx');
+    const docxConfirmMessage = buildExportCheckConfirmMessage(exportCheckResult, 'docx');
+    if (docxConfirmMessage) {
+      onOpenExportCheckPanel();
+      const shouldContinue = window.confirm(docxConfirmMessage);
+      if (!shouldContinue) {
+        showMessage(
+          docxCheckItems.length > 0 ? '已取消导出 DOCX，请先处理右侧“导出检查”中的提示' : '已取消导出 DOCX',
+        );
+        return;
+      }
+    }
+
     setIsExporting(true);
     showMessage('正在导出 DOCX…');
 

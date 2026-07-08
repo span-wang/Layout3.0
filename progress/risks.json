@@ -309,8 +309,8 @@
       "date": "2026-07-06",
       "type": "范围调整",
       "description": "语义块模板如果一步扩到所有块类型、允许改变块高度，或与现有文档模板/主题同权叠加，会同时牵动分页高度、标题主题装饰、列表/引用外壳冲突和旧 `.layout` 文件迁移脏写风险。",
-      "impactScope": "PH2-07 语义块模板 V1、LayoutDocument 块级样式状态、RightPanel 对象属性、CanvasPane 画布预览、HTML/PDF 导出、`.layout` 保存恢复、旧文件兼容",
-      "currentHandling": "已完成 `PH2-07-semantic-block-template-v1`：当前已把风险收口为最小闭环并落地代码，只支持 `paragraph / heading / list / blockquote` 4 类块；内置 `默认语义框 / 侧边强调 / 浅色卡片 / 警示框` 4 种不改高度的块模板；块模板只接管外壳样式，普通块和语义块共用同一套模板库；旧文件只在运行时按“语义角色 -> 默认块模板”解析，不批量回填新字段；只有用户手动改块模板或触发语义前备份时才写入块级状态。后续若继续扩到更多块类型、可改高度模板或模板编辑器，需另拆小步并重新评估分页与主题冲突。"
+      "impactScope": "PH2-07 语义块模板 V1、LayoutDocument 块级样式状态、RightPanel 对象属性、CanvasPane 画布预览、隐藏 DOM 测量层、HTML/PDF 导出、`.layout` 保存恢复、旧文件兼容",
+      "currentHandling": "已完成 `PH2-07-semantic-block-template-v1`：当前已把风险收口为最小闭环并落地代码，只支持 `paragraph / heading / list / blockquote` 4 类块；内置 `默认语义框 / 侧边强调 / 浅色卡片 / 警示框` 4 种不改高度的块模板；块模板只接管外壳样式，普通块和语义块共用同一套模板库；旧文件只在运行时按“语义角色 -> 默认块模板”解析，不批量回填新字段；只有用户手动改块模板或触发语义前备份时才写入块级状态。2026-07-07 用户进一步反馈当前语义标签悬在块外、视觉生硬，并明确要求返修时保证隐藏 DOM 测量口径不被带偏；该返修已按 `PH2-07-semantic-inline-pill-label-v1` 完成：`CanvasPane.tsx` / `exportHtml.ts` / `styles.css` 已把语义标签改成块内真实 DOM 胶囊并移除 `::before` 方案；标题 / 段落的 `data-measure-text-node-id` 已收口到正文 wrapper，避免标签文本混入真实换行偏移；列表块也已切到显式 wrapper + 真实标签。定向回归、`npm run typecheck` 与 `npm run build` 均通过；`npm run smoke:m2` 在当前工作区超时，后续仍需补一次全量冒烟。后续若继续扩到更多块类型、可改高度模板或模板编辑器，需另拆小步并重新评估分页与主题冲突。"
     },
     {
       "id": "RISK-040",
@@ -479,6 +479,102 @@
       "description": "个人知识库接入依赖本机外部服务状态。当前 `RAGFlow` 预期端口 `9380`、`Open Notebook` 预期端口 `8502 / 5055` 均未监听，Docker 也未处于可用状态；如果本步直接把功能边界扩成“必须完成真实双服务联调和完整生成闭环”，会把 UI、连接器开发和本地环境排障耦合在一起，导致最小可验收版本失焦。",
       "impactScope": "PH3-12 个人知识库接入 V1、左侧知识库面板、Electron 主进程知识库请求、RAGFlow 检索接入、Open Notebook 连接管理、AI 生成知识库上下文链路",
       "currentHandling": "已完成第一轮实现：左侧“个人知识库”面板、RAGFlow / Open Notebook 连接配置与探活、RAGFlow 数据集读取和检索测试入口、以及 AI 生成结合 RAGFlow 上下文的代码链路都已落地，并已通过 `npm run typecheck` 与 `npm run build`。当前继续保留本风险，原因是本机 `9380 / 8502 / 5055` 端口仍未监听、Docker 也未恢复，尚未完成真实双服务联调；待本机服务启动后，再补齐实机验证与更深层的 Open Notebook 检索能力。"
+    },
+    {
+      "id": "RISK-061",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "项目当前已经切到 `.layout` 结构化模型作为唯一编辑真相源，独立 `源码视图` 已不再符合真实工作流；但如果这一步只删除顶部入口而不一起收口 `source` 状态分支、工作台文案和侧栏定位联动，界面里仍会残留不可达或误导性的“源码视图”逻辑。",
+      "impactScope": "PH3-03 删除源码视图 V1、AppShell 工作台布局、Toolbar 视图切换、StatusBar/RightPanel 视图摘要、workspace 视图模式类型与常量",
+      "currentHandling": "本步按 `PH3-03-remove-source-view-v1` 推进：正式删除独立 `源码视图` 模式，只保留 `分屏视图 / 预览视图`；同时同步收口 `WorkspaceViewMode`、默认状态、工作台标题文案，以及资源/搜索/大纲等定位场景里对 `source -> split` 的遗留兜底。分屏中的“导入源码只读快照”暂时保留，避免把视图模式删除一步扩成导入溯源面板整体退场。"
+    },
+    {
+      "id": "RISK-062",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "默认工作台从分屏切到预览后，导入源码只读快照会从“打开即见”变成“需要手动切到分屏才能看到”。如果这一步顺手把分屏能力、导入溯源说明或侧栏跳转一起改掉，会扩大到工作台结构与导入认知的联动调整。",
+      "impactScope": "PH3-03 默认视图改为预览 V1、UISlice 默认状态、Toolbar 视图切换、AppShell 工作台默认呈现、导入源码只读快照可见性",
+      "currentHandling": "已完成 `PH3-03-default-preview-view-v1`：默认 `workspaceViewMode` 已从 `split` 改为 `preview`，新建/打开文档时优先进入预览工作台；分屏入口与导入源码只读快照面板继续保留，不同步删除分屏能力或改造导入链路。若后续确认连分屏都不再需要，再另拆工作台简化任务。"
+    },
+    {
+      "id": "RISK-063",
+      "date": "2026-07-07",
+      "type": "返工",
+      "description": "四周型/紧密型图片当前已支持自由拖动和页面级绕排，但如果只更新 `offsetX / offsetY` 而不同时调整图片块的顶层锚点顺序，图片纵向移动后旧位置的正文仍会继续按原锚点绕排，表现为“图片已经拖走，原位置文字却不恢复”。",
+      "impactScope": "PH2-10A 图片自由拖动与复杂绕排 V1、CanvasPane 拖拽释放、LayoutDocument 顶层块顺序、Typesetting Engine 分页输入、HTML/PDF 导出",
+      "currentHandling": "已完成 `PH2-10A-image-reanchor-after-drag-v1`：四周型/紧密型顶层图片在拖拽释放时会按落点重选锚点并调整顶层块顺序，再保留相对新锚点的小偏移量；原位置正文恢复绕排，新位置正文按新锚点重新绕排。容器内图片、跨页自由定位和 DOCX 浮动对象继续后续另拆。"
+    },
+    {
+      "id": "RISK-064",
+      "date": "2026-07-07",
+      "type": "返工",
+      "description": "上一轮图片复杂绕排为了让隐藏测量层感知前序浮动图片，把普通 `.measurement-block` 从 `flow-root` 调整为普通 `block`。该变化会改变既有块级测量隔离和外边距/浮动影响边界，可能让原本稳定的分页算法在非图片场景也出现页高计算漂移。",
+      "impactScope": "PH2-10A 图片自由拖动与复杂绕排 V1、隐藏测量层、Typesetting Engine 分页估算、画布分页预览、HTML/PDF 导出前置分页结果",
+      "currentHandling": "已完成 `PH2-10A-measurement-flow-root-rollback-v1` 最小回退：恢复 `.measurement-block { display: flow-root; }`，保留图片拖动重锚定逻辑，暂缓逐行真实浮动测量实验；后续若继续推进 Word 级绕排，需要先建立分页回归样例再拆新任务。"
+    },
+    {
+      "id": "RISK-065",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "页眉页脚默认内容如果直接通过修改 `{本页标题}` 全局语义或批量回写所有历史工程的 `headerFooterContent` 来实现，会影响已自定义页眉页脚的 `.layout` 文件，并让画布、HTML/PDF、DOCX 三条链路在“默认值”和“历史自定义值”之间出现口径混淆。",
+      "impactScope": "PH2-18A 页眉页脚默认内容与 H1 口径调整 V1、StyleSettings 默认值与旧文件归一化、CanvasPane 页眉页脚预览、HTML/PDF 导出、DOCX 导出、`.layout` 保存恢复",
+      "currentHandling": "已完成 `PH2-18A-default-header-footer-h1-page-number-v1`：默认页眉页脚内容已收口为“一级标题纯文字 + 页码”，共享标题解析只识别 H1 并在无 H1 的页向前继承最近一级标题；旧工程只有在缺少 `headerFooterContent` 时才回退到新默认，已显式保存过内容的文档保持原值，不批量迁移 `{本页标题}` 变量名称或用户自定义内容。"
+    },
+    {
+      "id": "RISK-066",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "顶层块删除原先只通过右侧对象属性按钮触发，新增 `Delete` 键后如果不严格隔离编辑态和输入控件焦点，用户在画布原位编辑、表单输入或输入法组合输入过程中按删除键时，可能误删整个块而不是删除文字。",
+      "impactScope": "PH2-05B Delete 快捷删除选中顶层块 V1、AppShell 全局键盘事件、CanvasPane 原位编辑、RightPanel 表单输入、顶层块删除链路",
+      "currentHandling": "已完成 `PH2-05B-delete-key-shortcut-v1`：`AppShell` 现有全局键盘事件只会在画布区域的非编辑态响应 `Delete`，事件目标位于 `input`、`textarea`、`select`、`contenteditable` 或画布原位编辑态时继续保留原生文字删除语义；快捷删除仍复用现有 `deleteLayoutTopLevelBlock`。`Backspace`、批量删除和结构级快捷删除继续留在后续任务。"
+    },
+    {
+      "id": "RISK-067",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "`ima` 官方接口属于知识库 / 笔记业务 API，不是现成的 OpenAI 兼容模型接口；同时它更偏“知识条目搜索 + 原文读取”，不像 RAGFlow 那样天然返回可直接拼接的分块检索结果。如果本步同时追求“替换 AI Provider、支持知识库写入、上传文件、混合召回和自动切片”，会把 `AiService`、知识库面板、生成链路和外部接口适配一起放大，超出最小可验收边界。",
+      "impactScope": "PH3-12-ima-readonly-knowledge-v1、KnowledgeBaseService、KnowledgeBasePanel、AI 生成知识上下文链路、个人知识库后续增强任务",
+      "currentHandling": "已完成第一轮只读接入：当前已接入 `Client ID / API Key` 配置、连接测试、知识库列表、知识条目搜索和笔记 / 原文读取，并把读取结果接入 AI 生成上下文；明确不把 `ima` 接成模型 Provider，不做知识库写入、上传文件、自动同步、自动切片或双源混合排序。后续若用户确认继续扩面，再单独拆增强子步。"
+    },
+    {
+      "id": "RISK-068",
+      "date": "2026-07-07",
+      "type": "返工",
+      "description": "`ima` 搜索结果同时可能包含条目命中、文件夹命中和暂时不便直接读取正文的媒体。当前如果只保留“可直接读出正文”的结果，或在正文读取失败时不显示原始命中与真实错误信息，用户会看到“已连接、已选知识库，但无法检索”的假空结果，难以判断是接口无结果还是前端过滤过严。",
+      "impactScope": "PH3-12-ima-retrieval-debug-fix-v1、KnowledgeBaseService、KnowledgeBasePanel、AI 生成知识上下文拼接、后续 ima 体验增强任务",
+      "currentHandling": "已完成首轮检索修复：当前已保留原始命中展示、正文读取失败时回退到标题 / 高亮摘要，且文件夹命中不再被静默过滤；这样用户可以直接看到原始检索命中，而不是误判为完全无结果。后续如果继续增强为文件夹浏览、类型筛选或更深原文抽取，再单独拆步推进。"
+    },
+    {
+      "id": "RISK-069",
+      "date": "2026-07-07",
+      "type": "范围调整",
+      "description": "RAGFlow 官方 retrieval 虽然支持关键词 + 向量混合、召回池大小、相似度阈值、重排和元数据过滤等能力，但如果这一步同时追求上传文件、切片治理、自动建索引、`ima` 双源混排、知识图谱和完整提示词编排，会把知识库面板、状态持久化、检索服务、AI 生成链路和外部环境联调一起放大，难以在当前 `PH3-12` 内形成清晰可验收的小步。",
+      "impactScope": "PH3-12-ragflow-hybrid-retrieval-v1、KnowledgeBaseService、KnowledgeBasePanel、knowledgeBaseSlice、AI 生成知识上下文链路、后续个人知识库增强任务",
+      "currentHandling": "已完成 `PH3-12-ragflow-hybrid-retrieval-v1`：当前 RAGFlow 检索已收口为参数化、可解释的混合检索 V1，覆盖结果条数、召回池、相似度阈值、向量权重、关键词混合和结果诊断展示；现有数据集选择、面板结构与 AI 生成知识来源切换继续保持稳定，不同步扩到上传、切片、双源混排、知识图谱或复杂元数据治理。后续如需继续放大能力，再按用户确认单独拆子步。"
+    },
+    {
+      "id": "RISK-070",
+      "date": "2026-07-07",
+      "type": "返工",
+      "description": "界面刷新、恢复草稿或重新导入文档后，若 `CanvasPane` 中的编辑态、浮动工具条、公式编辑遮罩或拖拽态继续跨文档残留，或者透明弹层在不可见时仍保留点击命中，就会把顶栏、左侧、右侧和 AI / 知识库等输入框的点击全部吞掉，形成“所有输入框都无法点击使用”的假禁用状态。",
+      "impactScope": "PH2-12-input-click-recovery-v1、CanvasPane 画布交互态、AppShell 临时选区状态、公式编辑遮罩、刷新 / 新导入后的全局输入体验",
+      "currentHandling": "已完成 `PH2-12-input-click-recovery-v1`：当前已用 `documentEpoch` 驱动 `CanvasPane` 和 `AppShell` 在文档切换时清理旧交互态，覆盖编辑态、公式编辑器、浮动工具条、右键菜单和图片 / 表格拖拽草稿；同时把公式编辑遮罩默认态改为 `pointer-events: none`，只在可见态接收点击。`npm run typecheck` 与 `npm run build` 已通过；本轮未补完整 Electron 文件导入自动化回归，仍建议继续做真实桌面复测。"
+    },
+    {
+      "id": "RISK-071",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "导出检查如果一步扩成“真实磁盘资源扫描 + 自动修复 + 强制拦截导出 + 全格式高保真诊断”，会同时牵动资源协议、文件系统访问、PDF / DOCX 导出链路、对象定位和交互确认流程，容易让当前最需要的“先看见风险”能力迟迟不能交付。",
+      "impactScope": "PH4-02 导出检查面板 V1、ExportService、右侧面板、工具栏导出入口、资源与 DOCX 兼容提示",
+      "currentHandling": "已完成 `PH4-02-export-check-panel-v1`：当前已落地本地规则检查最小闭环，覆盖分页 warnings、图片资源基础风险、目录风险、答案视图提示、页面背景提示和 DOCX 兼容性提示，并在导出前复用同一套结果做中文提醒；自动修复、深度扫描和导出阻断继续后续单拆。"
+    },
+    {
+      "id": "RISK-072",
+      "date": "2026-07-08",
+      "type": "范围调整",
+      "description": "AI 内容生成新增“要求描述”若同步扩成完整提示词模板系统、变量字段库、题型比例、难度梯度和专业出题参数面板，会把当前单字段补强扩大到提示词编排、记录筛选、知识库检索和多任务模板治理，难以形成一个可快速验收的小步。",
+      "impactScope": "PH3-12-generate-requirement-description-v1、AiGenerateTab、AiService、AI 生成记录、后续教辅生成增强任务",
+      "currentHandling": "已完成 `PH3-12-generate-requirement-description-v1` 最小闭环：教育内容生成模式已新增可选“要求描述”，并同步进入 `GenerateOptions`、提示词、AI 生成记录落盘与记录详情展示；小红书模式、完整模板系统、模型 Provider、个人知识库检索和出题高级参数均未在本步扩展。"
     }
   ]
 }

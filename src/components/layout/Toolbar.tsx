@@ -7,6 +7,7 @@ import {
   Eraser,
   FileDown,
   FilePlus2,
+  FileSearch,
   FileUp,
   FlaskConical,
   Files,
@@ -20,7 +21,6 @@ import {
   ListTree,
   PanelLeft,
   PanelRight,
-  PanelsTopLeft,
   Pilcrow,
   RectangleHorizontal,
   Redo2,
@@ -110,11 +110,11 @@ interface ToolbarProps {
   onToggleRightPanel: () => void;
   onChangeViewMode: (mode: WorkspaceViewMode) => void;
   onOpenSearchPanel: () => void;
+  onOpenExportCheckPanel: () => void;
   onOpenAiPanel: () => void;
 }
 
-const viewModeIcons: Record<WorkspaceViewMode, typeof PanelsTopLeft> = {
-  source: PanelsTopLeft,
+const viewModeIcons: Record<WorkspaceViewMode, typeof SquareSplitHorizontal> = {
   split: SquareSplitHorizontal,
   preview: RectangleHorizontal,
 };
@@ -324,6 +324,7 @@ export function Toolbar({
   onToggleRightPanel,
   onChangeViewMode,
   onOpenSearchPanel,
+  onOpenExportCheckPanel,
   onOpenAiPanel,
 }: ToolbarProps): JSX.Element {
   const layoutDocument = useAppStore((state) => state.layoutDocument);
@@ -627,6 +628,9 @@ export function Toolbar({
             onClick={onExportDocx}
           >
             <FileDown size={18} />
+          </ToolButton>
+          <ToolButton label="导出检查" onClick={onOpenExportCheckPanel}>
+            <FileSearch size={18} />
           </ToolButton>
           <span className="toolbar-divider" />
           <ToolButton label="撤销" disabled={!canUndo} onClick={onUndo}>
@@ -1105,7 +1109,7 @@ export function Toolbar({
                 aria-label="打开化学图式组合设计器"
                 onClick={openChemistryComposer}
               >
-                <PanelsTopLeft size={15} />
+                <Columns2 size={15} />
                 <span>组合设计</span>
               </button>
               <button

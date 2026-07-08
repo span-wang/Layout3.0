@@ -507,10 +507,10 @@ export const defaultStyleSettings: StyleSettings = {
     header: {
       left: '{本页标题}',
       center: '',
-      right: '{页面规格}',
+      right: '',
     },
     footer: {
-      left: '{模板主题}',
+      left: '',
       center: '',
       right: '{页码}',
     },

@@ -20,6 +20,7 @@ interface AiGenerationRecord {
   topic: string;
   grade?: string;
   subject?: string;
+  requirementDescription?: string;
   length?: GenerateLength;
   lengthLabel?: string;
   provider?: AiProvider;
@@ -122,6 +123,7 @@ function normalizeRecord(value: unknown): AiGenerationRecord | null {
     topic: raw.topic,
     grade: typeof raw.grade === 'string' ? raw.grade : undefined,
     subject: typeof raw.subject === 'string' ? raw.subject : undefined,
+    requirementDescription: typeof raw.requirementDescription === 'string' ? raw.requirementDescription : undefined,
     length: isKnownGenerateLength(raw.length) ? raw.length : undefined,
     lengthLabel: typeof raw.lengthLabel === 'string' ? raw.lengthLabel : undefined,
     provider: isKnownProvider(raw.provider) ? raw.provider : undefined,

@@ -26,7 +26,6 @@ import {
   applyTextRunPatchToTextRuns,
   buildLayoutListTree,
   clearTextFormattingInTextRuns,
-  getHeadingText,
   getLayoutBlockPlainText,
   buildSemanticClassName,
   buildSemanticPresetClassName,
@@ -89,7 +88,7 @@ import {
   resolveQuickTextStyleForBlock,
   resolveQuickTextStyleForRun,
 } from '@/engine/style/quickTextStyle';
-import { renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
+import { buildHeaderFooterPageTitles, renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
 import type { HeaderFooterContent, ResolvedStyleContract } from '@/engine/style/types';
 import type {
   MeasuredTableRowHeights,
@@ -263,10 +262,36 @@ interface ActiveImageDrag {
   startOffsetX: number;
   startOffsetY: number;
   startRenderedLeftPx: number;
+  startRenderedTopPx: number;
   viewportWidthPx: number;
+  viewportHeightPx: number;
   pageContentWidthPx: number;
   isTextWrapped: boolean;
   pageScale: number;
+}
+
+function getLayoutBlockSourceNodeId(block: LayoutBlock): string {
+  if (block.type === 'heading' && block.metadata.kind === 'heading' && block.metadata.runtimeSlice?.sourceNodeId) {
+    return block.metadata.runtimeSlice.sourceNodeId;
+  }
+
+  if (block.type === 'paragraph' && block.metadata.kind === 'paragraph' && block.metadata.runtimeSlice?.sourceNodeId) {
+    return block.metadata.runtimeSlice.sourceNodeId;
+  }
+
+  if (block.type === 'list' && block.metadata.kind === 'list' && block.metadata.runtimeSlice?.fragmentIndex) {
+    return block.id.replace(/-list-fragment-\d+$/, '');
+  }
+
+  if (block.type === 'table' && block.metadata.kind === 'table' && block.metadata.runtimeSlice?.fragmentIndex) {
+    return block.id.replace(/-page-fragment-\d+$/, '');
+  }
+
+  if (block.type === 'columnSection' && block.metadata.kind === 'columnSection' && block.metadata.runtimeSlice?.sourceNodeId) {
+    return block.metadata.runtimeSlice.sourceNodeId;
+  }
+
+  return block.id;
 }
 
 interface ActiveTableColumnResize {
@@ -1181,11 +1206,6 @@ function renderTextRuns(
   ));
 }
 
-function getPageTitle(blocks: LayoutBlock[], fallbackTitle: string): string {
-  const headingBlock = blocks.find((block) => block.type === 'heading');
-  return (headingBlock ? getHeadingText(headingBlock) : null) || fallbackTitle;
-}
-
 function getEditableBlockNode(block: LayoutBlock): EditableCanvasNode | null {
   if (!isEditableLayoutTextBlock(block)) {
     return null;
@@ -1573,6 +1593,7 @@ function createSelectableBlockProps(
   return {
     className: classNames,
     'data-layout-node-id': block.id,
+    'data-source-node-id': getLayoutBlockSourceNodeId(block),
     ...(semanticPresetPresentation ? { 'data-semantic-preset': semanticPresetPresentation.presetId } : {}),
     ...(block.semantic?.roleId ? { 'data-semantic-role': block.semantic.roleId } : {}),
     ...(semanticPresentation ? { 'data-semantic-label': semanticPresentation.label } : {}),
@@ -1684,22 +1705,80 @@ function createSelectableEquationBlockProps({
   };
 }
 
+type SemanticRoleLabelVariant = 'inline' | 'block';
+
 function renderSemanticRoleLabel(
   block: LayoutBlock,
   semanticRoleConfig?: LayoutSemanticRoleConfig,
+  variant: SemanticRoleLabelVariant = 'block',
 ): ReactNode {
   const semanticPresentation = getSemanticRolePresentation(block, semanticRoleConfig);
   if (!semanticPresentation) {
     return null;
   }
 
-  // 标签文本通过 CSS content 渲染，避免进入真实文本测量结果。
+  const className = `semantic-role-label semantic-role-label-${variant}`;
+  if (variant === 'inline') {
+    return (
+      <span
+        className={className}
+        data-semantic-label={semanticPresentation.label}
+        data-measure-skip="true"
+        aria-hidden="true"
+      >
+        {semanticPresentation.label}
+      </span>
+    );
+  }
+
+  return (
+    <div
+      className={className}
+      data-semantic-label={semanticPresentation.label}
+      data-measure-skip="true"
+      aria-hidden="true"
+    >
+      {semanticPresentation.label}
+    </div>
+  );
+}
+
+function renderMeasuredTextBlockContent(
+  nodeId: string,
+  content: ReactNode,
+  isEditing: boolean,
+): ReactNode {
+  if (isEditing) {
+    return content;
+  }
+
   return (
     <span
-      className="semantic-role-label"
-      data-semantic-label={semanticPresentation.label}
-      aria-hidden="true"
-    />
+      className="semantic-text-content"
+      data-measure-text-node-id={nodeId}
+    >
+      {content}
+    </span>
+  );
+}
+
+function renderSemanticListBlock(
+  key: string,
+  selectableProps: ReturnType<typeof createSelectableBlockProps>,
+  blockStyle: CSSProperties,
+  semanticRoleLabel: ReactNode,
+  listContent: ReactNode,
+): JSX.Element {
+  return (
+    <div
+      key={key}
+      {...selectableProps}
+      className={`${selectableProps.className} semantic-list-shell`.trim()}
+      style={blockStyle}
+    >
+      {semanticRoleLabel}
+      {listContent}
+    </div>
   );
 }
 
@@ -2813,7 +2892,8 @@ function renderBlock(
     documentStyles,
   );
   const blockStyle = buildBlockStyle(block, effectiveLineHeight, tableResizeState?.pageContract, semanticRoleConfig);
-  const semanticRoleLabel = renderSemanticRoleLabel(block, semanticRoleConfig);
+  const semanticInlineRoleLabel = renderSemanticRoleLabel(block, semanticRoleConfig, 'inline');
+  const semanticBlockRoleLabel = renderSemanticRoleLabel(block, semanticRoleConfig, 'block');
   const isEditing = editingNodeId === block.id;
   const getSelectableBlockProps = (className = '') =>
     createSelectableBlockProps(
@@ -2897,11 +2977,10 @@ function renderBlock(
           <h1
             key={`${block.id}-${index}`}
             {...getSelectableBlockProps(headingClassName)}
-            data-measure-text-node-id={block.id}
             style={blockStyle}
           >
-            {semanticRoleLabel}
-            {content}
+            {semanticInlineRoleLabel}
+            {renderMeasuredTextBlockContent(block.id, content, isEditing)}
           </h1>
         );
       }
@@ -2911,11 +2990,10 @@ function renderBlock(
           <h2
             key={`${block.id}-${index}`}
             {...getSelectableBlockProps(headingClassName)}
-            data-measure-text-node-id={block.id}
             style={blockStyle}
           >
-            {semanticRoleLabel}
-            {content}
+            {semanticInlineRoleLabel}
+            {renderMeasuredTextBlockContent(block.id, content, isEditing)}
           </h2>
         );
       }
@@ -2925,11 +3003,10 @@ function renderBlock(
           <h4
             key={`${block.id}-${index}`}
             {...getSelectableBlockProps(headingClassName)}
-            data-measure-text-node-id={block.id}
             style={blockStyle}
           >
-            {semanticRoleLabel}
-            {content}
+            {semanticInlineRoleLabel}
+            {renderMeasuredTextBlockContent(block.id, content, isEditing)}
           </h4>
         );
       }
@@ -2938,11 +3015,10 @@ function renderBlock(
         <h3
           key={`${block.id}-${index}`}
           {...getSelectableBlockProps(headingClassName)}
-          data-measure-text-node-id={block.id}
           style={blockStyle}
         >
-          {semanticRoleLabel}
-          {content}
+          {semanticInlineRoleLabel}
+          {renderMeasuredTextBlockContent(block.id, content, isEditing)}
         </h3>
       );
     }
@@ -2960,7 +3036,7 @@ function renderBlock(
             {...getSelectableBlockProps()}
             className="toc-block"
           >
-            {semanticRoleLabel}
+            {semanticBlockRoleLabel}
             <div className="toc-block-title">{getTocBlockDisplayTitle(block)}</div>
             {visibleTocItems.length > 0 ? (
               <div className="toc-block-list">
@@ -2992,35 +3068,38 @@ function renderBlock(
         <p
           key={`${block.id}-${index}`}
           {...getSelectableBlockProps()}
-          data-measure-text-node-id={block.id}
           style={blockStyle}
         >
-          {semanticRoleLabel}
-          {isEditing
-            ? isRichTextCanvasEditorKind(editingKind ?? 'paragraph')
-              ? (
-                <RichTextCanvasEditor
-                  nodeId={block.id}
-                  kind={editingKind ?? 'paragraph'}
-                  textRuns={editingDraftTextRuns ?? block.textRuns}
-                  activeSelection={activeSelection}
-                  richEditorRef={richEditorRef}
-                  onSelectionChange={onSelectionChange}
-                  onDraftChange={onEditDraftTextRunsChange}
-                  onCommit={onCommitEdit}
-                  onCancel={onCancelEdit}
-                />
-              )
-              : renderBlockEditor({
-                  editorRef,
-                  kind: editingKind ?? 'paragraph',
-                  editingText,
-                  onChange: onEditTextChange,
-                  onSelectionChange,
-                  onCommit: onCommitEdit,
-                  onCancel: onCancelEdit,
-                })
-            : renderTextRuns(block.textRuns, '空文本块', inheritedTextStyle, answerDisplayMode)}
+          {semanticInlineRoleLabel}
+          {renderMeasuredTextBlockContent(
+            block.id,
+            isEditing
+              ? isRichTextCanvasEditorKind(editingKind ?? 'paragraph')
+                ? (
+                  <RichTextCanvasEditor
+                    nodeId={block.id}
+                    kind={editingKind ?? 'paragraph'}
+                    textRuns={editingDraftTextRuns ?? block.textRuns}
+                    activeSelection={activeSelection}
+                    richEditorRef={richEditorRef}
+                    onSelectionChange={onSelectionChange}
+                    onDraftChange={onEditDraftTextRunsChange}
+                    onCommit={onCommitEdit}
+                    onCancel={onCancelEdit}
+                  />
+                )
+                : renderBlockEditor({
+                    editorRef,
+                    kind: editingKind ?? 'paragraph',
+                    editingText,
+                    onChange: onEditTextChange,
+                    onSelectionChange,
+                    onCommit: onCommitEdit,
+                    onCancel: onCancelEdit,
+                  })
+              : renderTextRuns(block.textRuns, '空文本块', inheritedTextStyle, answerDisplayMode),
+            isEditing,
+          )}
         </p>
       );
     case 'list': {
@@ -3032,26 +3111,67 @@ function renderBlock(
       const compactChoiceLayout = resolveCompactChoiceListLayoutWithOptions(block.metadata.items, {
         allowSequenceFromAnyLabel: (block.metadata.runtimeSlice?.startIndex ?? 0) > 0,
       });
-      const listStyle = compactChoiceLayout
+      const compactChoiceListStyle = compactChoiceLayout
         ? ({
-            ...blockStyle,
             ['--choice-column-count' as string]: String(compactChoiceLayout.columns),
           } as CSSProperties)
-        : blockStyle;
+        : undefined;
 
       if (compactChoiceLayout) {
-        return (
+        return renderSemanticListBlock(
+          `list-${block.id}-${index}`,
+          getSelectableBlockProps(),
+          blockStyle,
+          semanticBlockRoleLabel,
+          (
+            <ListTag
+              className="choice-option-list"
+              start={block.metadata.ordered ? block.metadata.start ?? 1 : undefined}
+              style={compactChoiceListStyle}
+            >
+              {renderCompactChoiceListItems({
+                block,
+                answerDisplayMode,
+                documentStyles,
+                items: compactChoiceLayout.items,
+                selectedNodeId,
+                editingNodeId,
+                editingKind,
+                editingDraftTextRuns,
+                editingText,
+                activeSelection,
+                richEditorRef,
+                editorRef,
+                onSelectNode,
+                onPrepareSelectNode,
+                onStartEditing,
+                onSelectionChange,
+                onEditDraftTextRunsChange,
+                onEditTextChange,
+                onCommitEdit,
+                onCancelEdit,
+                onListItemContextMenu: onListItemContextMenu ?? (() => undefined),
+              })}
+            </ListTag>
+          ),
+        );
+      }
+
+      const listTree = buildLayoutListTree(block.metadata.items);
+      return renderSemanticListBlock(
+        `list-${block.id}-${index}`,
+        getSelectableBlockProps(),
+        blockStyle,
+        semanticBlockRoleLabel,
+        (
           <ListTag
-            key={`list-${block.id}-${index}`}
-            {...getSelectableBlockProps('choice-option-list')}
             start={block.metadata.ordered ? block.metadata.start ?? 1 : undefined}
-            style={listStyle}
           >
-            {renderCompactChoiceListItems({
+            {renderListTreeNodes({
               block,
               answerDisplayMode,
               documentStyles,
-              items: compactChoiceLayout.items,
+              nodes: listTree,
               selectedNodeId,
               editingNodeId,
               editingKind,
@@ -3069,44 +3189,10 @@ function renderBlock(
               onCommitEdit,
               onCancelEdit,
               onListItemContextMenu: onListItemContextMenu ?? (() => undefined),
+              fallbackOrdered: block.metadata.ordered,
             })}
           </ListTag>
-        );
-      }
-
-      const listTree = buildLayoutListTree(block.metadata.items);
-      return (
-        <ListTag
-          key={`list-${block.id}-${index}`}
-          {...getSelectableBlockProps()}
-          start={block.metadata.ordered ? block.metadata.start ?? 1 : undefined}
-          style={listStyle}
-        >
-          {renderListTreeNodes({
-            block,
-            answerDisplayMode,
-            documentStyles,
-            nodes: listTree,
-            selectedNodeId,
-            editingNodeId,
-            editingKind,
-            editingDraftTextRuns,
-            editingText,
-            activeSelection,
-            richEditorRef,
-            editorRef,
-            onSelectNode,
-            onPrepareSelectNode,
-            onStartEditing,
-            onSelectionChange,
-            onEditDraftTextRunsChange,
-            onEditTextChange,
-            onCommitEdit,
-            onCancelEdit,
-            onListItemContextMenu: onListItemContextMenu ?? (() => undefined),
-            fallbackOrdered: block.metadata.ordered,
-          })}
-        </ListTag>
+        ),
       );
     }
     case 'blockquote':
@@ -3116,7 +3202,7 @@ function renderBlock(
           {...getSelectableBlockProps('quote-block')}
           style={blockStyle}
         >
-          {semanticRoleLabel}
+          {semanticBlockRoleLabel}
           {block.metadata.blocks.map((item, childIndex) =>
             renderBlock(
               item,
@@ -3185,7 +3271,7 @@ function renderBlock(
             {...getSelectableBlockProps('local-column-section')}
             style={sectionStyle}
           >
-            {semanticRoleLabel}
+            {semanticBlockRoleLabel}
             <div className="local-column-flow">
               {block.metadata.blocks.map((item, childIndex) =>
                 renderBlock(
@@ -3248,7 +3334,7 @@ function renderBlock(
           {...getSelectableBlockProps('code-block')}
           style={blockStyle}
         >
-          {semanticRoleLabel}
+          {semanticBlockRoleLabel}
           <code>
             {isEditing
               ? isRichTextCanvasEditorKind(editingKind ?? 'code')
@@ -3300,10 +3386,10 @@ function renderBlock(
           <div
             key={`table-${block.id}-${index}`}
             {...getSelectableBlockProps('table-shell')}
-            style={buildSemanticRoleStyleVariables(block, semanticRoleConfig) as CSSProperties}
+            style={blockStyle}
           >
-            {semanticRoleLabel}
-            <table className="preview-table" style={blockStyle}>
+            {semanticBlockRoleLabel}
+            <table className="preview-table">
               <colgroup>
                 {resolvedColumnWidths.map((width, columnIndex) => (
                   <col key={`${block.id}-col-${columnIndex + 1}`} style={{ width: `${width}px` }} />
@@ -3464,7 +3550,7 @@ function renderBlock(
             {...getSelectableBlockProps(buildImageShellClassName(block, selectedNodeId, imageLayout))}
             style={buildImageStyle(block, semanticRoleConfig, imageLayout)}
           >
-            {semanticRoleLabel}
+            {semanticBlockRoleLabel}
             {block.metadata.src ? (
               <>
                 <span
@@ -3582,7 +3668,7 @@ function renderBlock(
           })}
           style={blockStyle}
         >
-          {semanticRoleLabel}
+          {semanticBlockRoleLabel}
           <div
             className="equation-preview"
             dangerouslySetInnerHTML={renderEquationPreview(block.metadata.value)}
@@ -3687,8 +3773,10 @@ function CanvasPaneComponent({
   onMeasuredTableRowHeightsChange,
   workspaceRootPath,
 }: CanvasPaneProps): JSX.Element {
+  const documentEpoch = useAppStore((state) => state.documentEpoch);
   const fontFaceCss = buildFontFaceCss(documentResources, workspaceRootPath);
   const updateLayoutImageAttributes = useAppStore((state) => state.updateLayoutImageAttributes);
+  const moveLayoutImageBlockAfterAnchor = useAppStore((state) => state.moveLayoutImageBlockAfterAnchor);
   const tableSelection = useAppStore((state) => state.layoutDocument?.viewState.tableSelection ?? null);
   const updateLayoutTableColumnWidths = useAppStore((state) => state.updateLayoutTableColumnWidths);
   const updateLayoutTableRowHeight = useAppStore((state) => state.updateLayoutTableRowHeight);
@@ -3783,6 +3871,52 @@ function CanvasPaneComponent({
   } as CSSProperties;
   const isMultiColumnPage = resolvedStyleContract.columnCount > 1;
   const pageBodyClassName = isMultiColumnPage ? 'page-body page-body-columns' : 'page-body';
+
+  useLayoutEffect(() => {
+    // 新文档加载后必须丢弃旧文档残留的弹层、拖拽态和编辑态，避免透明层继续吞掉点击。
+    setEditingNodeId(null);
+    setEditingKind(null);
+    setEditingText('');
+    setEditingDraftTextRuns(null);
+    setEditingSelection(null);
+    setActiveEquationEditor(null);
+    setActiveImageResize(null);
+    setActiveImageCrop(null);
+    setActiveImageDrag(null);
+    setActiveTableColumnResize(null);
+    setActiveTableRowResize(null);
+    setDraftImageSizes({});
+    setDraftImageCrops({});
+    setDraftImageOffsets({});
+    setDraftTableColumnWidths({});
+    setDraftTableRowHeights({});
+    setMeasuredImageVisibleSizes({});
+    setFloatingToolbarPosition(null);
+    setFloatingToolbarMenu(null);
+    setBlockToolbarPosition(null);
+    setListItemContextMenu(null);
+    pendingScrollSnapshotRef.current = null;
+    blockMeasurementCacheRef.current = {};
+    pendingSelectionAfterCommitRef.current = null;
+    activeImageResizeRef.current = null;
+    activeImageCropRef.current = null;
+    activeImageDragRef.current = null;
+    activeTableColumnResizeRef.current = null;
+    activeTableRowResizeRef.current = null;
+    draftImageSizesRef.current = {};
+    draftImageCropsRef.current = {};
+    draftImageOffsetsRef.current = {};
+    draftTableColumnWidthsRef.current = {};
+    draftTableRowHeightsRef.current = {};
+    skipBlurCommitRef.current = false;
+    onTextSelectionChange({
+      nodeId: null,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+  }, [documentEpoch, onTextSelectionChange]);
 
   useLayoutEffect(() => {
     const pageStack = pageStackRef.current;
@@ -4302,6 +4436,41 @@ function CanvasPaneComponent({
               ...imageAttributes,
             });
           }
+        }
+      }
+
+      if (dragState.isTextWrapped) {
+        const canvasPane = canvasPaneRef.current;
+        const imageElement = canvasPane?.querySelector<HTMLElement>(`.image-viewport[data-layout-node-id="${escapeDataAttributeValue(dragState.nodeId)}"]`);
+        const pageBodyElement = imageElement?.closest<HTMLElement>('.page-body');
+        const pageBodyRect = pageBodyElement?.getBoundingClientRect();
+        const imageRect = imageElement?.getBoundingClientRect();
+
+        if (canvasPane && pageBodyElement && pageBodyRect && imageRect) {
+          const imageCenterY = imageRect.top + imageRect.height / 2;
+          const candidateBlocks = Array.from(
+            pageBodyElement.querySelectorAll<HTMLElement>('.selectable-layout-block[data-layout-node-id]'),
+          )
+            .filter((element) => {
+              const nodeId = element.dataset.layoutNodeId;
+              return !!nodeId && nodeId !== dragState.nodeId && !element.querySelector('.image-viewport[data-layout-node-id]');
+            })
+            .map((element) => {
+              const nodeId = element.dataset.layoutNodeId!;
+              const sourceNodeId = element.dataset.sourceNodeId ?? nodeId;
+              const rect = element.getBoundingClientRect();
+              return { nodeId, sourceNodeId, rect };
+            })
+            .filter((entry) => entry.rect.bottom <= imageCenterY + 4);
+
+          const anchorBlockId = candidateBlocks.length > 0
+            ? candidateBlocks[candidateBlocks.length - 1].sourceNodeId
+            : null;
+
+          moveLayoutImageBlockAfterAnchor({
+            nodeId: dragState.nodeId,
+            anchorBlockId,
+          });
         }
       }
 
@@ -4860,7 +5029,11 @@ function CanvasPaneComponent({
     const startRenderedLeftPx = pageBodyRect
       ? Math.round((viewportRect.left - pageBodyRect.left) / safeScale)
       : currentOffset.offsetX;
+    const startRenderedTopPx = pageBodyRect
+      ? Math.round((viewportRect.top - pageBodyRect.top) / safeScale)
+      : currentOffset.offsetY;
     const viewportWidthPx = Math.max(1, Math.round(viewportRect.width / safeScale));
+    const viewportHeightPx = Math.max(1, Math.round(viewportRect.height / safeScale));
     const pageContentWidthPx = pageBodyRect
       ? Math.max(viewportWidthPx, Math.round(pageBodyRect.width / safeScale))
       : resolvedStyleContract.contentWidthPx;
@@ -4874,7 +5047,9 @@ function CanvasPaneComponent({
       startOffsetX: currentOffset.offsetX,
       startOffsetY: currentOffset.offsetY,
       startRenderedLeftPx,
+      startRenderedTopPx,
       viewportWidthPx,
+      viewportHeightPx,
       pageContentWidthPx,
       isTextWrapped,
       pageScale,
@@ -5293,6 +5468,8 @@ function CanvasPaneComponent({
     commitEditingNode();
   };
 
+  const pageTitles = buildHeaderFooterPageTitles(pageLayouts, documentTitle);
+
   return (
     <section
       className={isCondensed ? 'canvas-pane canvas-pane-condensed' : 'canvas-pane'}
@@ -5559,8 +5736,8 @@ function CanvasPaneComponent({
             <div className="canvas-state">正在导入 Markdown…</div>
           ) : null}
           <div className="page-stack" ref={pageStackRef}>
-            {pageLayouts.map((page) => {
-              const pageTitle = getPageTitle(page.blocks, documentTitle);
+            {pageLayouts.map((page, pageIndex) => {
+              const pageTitle = pageTitles[pageIndex] ?? documentTitle;
               const { frameStyle, pageStyle } = createPageDisplayStyles(page, isCondensed, pageStackWidth);
               const displayWidth = resolvePageDisplayWidth(page.contract.pageWidthPx, isCondensed, pageStackWidth);
               const pageScale = displayWidth / page.contract.pageWidthPx;

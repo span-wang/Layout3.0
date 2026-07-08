@@ -9,6 +9,7 @@ import {
   searchLayoutDocument,
   type DocumentSearchResult,
 } from '@/services/DocumentSearchService';
+import { runExportChecks } from '@/services/ExportCheckService';
 import {
   applyPageNumbersToTocItems,
   buildHeadingPageNumberMap,
@@ -109,6 +110,29 @@ function findImageBlockById(blocks: LayoutBlock[], blockId: string): LayoutBlock
   return null;
 }
 
+const topLevelBlockDeleteLabels: Partial<Record<LayoutBlock['type'], string>> = {
+  paragraph: '空文本块',
+  heading: '标题',
+  toc: '目录',
+  list: '列表',
+  table: '表格',
+  image: '图片',
+  equation: '公式',
+  blockquote: '引用',
+  columnSection: '局部分栏区段',
+  code: '代码块',
+  columnBreak: '分栏断点',
+  pageBreak: '分页符',
+};
+
+function getTopLevelBlockDeleteMessage(blockType: LayoutBlock['type'] | null): string {
+  if (!blockType) {
+    return '已删除当前块';
+  }
+
+  return `已删除${topLevelBlockDeleteLabels[blockType] ?? '当前块'}`;
+}
+
 export function AppShell(): JSX.Element {
   const resolvedStyleContract = useResolvedStyleContract();
   const [measuredBlockHeights, setMeasuredBlockHeights] = useState<Record<string, number>>({});
@@ -146,6 +170,7 @@ export function AppShell(): JSX.Element {
     draftTextRuns: null,
   });
 
+  const documentEpoch = useAppStore((state) => state.documentEpoch);
   const filePath = useAppStore((state) => state.filePath);
   const workspaceRootPath = useAppStore((state) => state.workspaceRootPath);
   const currentDirectoryPath = useAppStore((state) => state.currentDirectoryPath);
@@ -185,14 +210,14 @@ export function AppShell(): JSX.Element {
   const replaceMultipleLayoutNodeTexts = useAppStore((state) => state.replaceMultipleLayoutNodeTexts);
   const updateLayoutImageAttributes = useAppStore((state) => state.updateLayoutImageAttributes);
   const insertLayoutMarkdownBlocks = useAppStore((state) => state.insertLayoutMarkdownBlocks);
+  const deleteLayoutTopLevelBlock = useAppStore((state) => state.deleteLayoutTopLevelBlock);
   const mergeLayoutSelectedBlocks = useAppStore((state) => state.mergeLayoutSelectedBlocks);
   const wrapLayoutSelectedBlocksInColumns = useAppStore((state) => state.wrapLayoutSelectedBlocksInColumns);
   const undoLayoutDocument = useAppStore((state) => state.undoLayoutDocument);
   const redoLayoutDocument = useAppStore((state) => state.redoLayoutDocument);
   const canUndoLayoutDocument = useAppStore((state) => state.documentHistoryPast.length > 0);
   const canRedoLayoutDocument = useAppStore((state) => state.documentHistoryFuture.length > 0);
-  const shouldShowEditor = workspaceViewMode !== 'preview';
-  const shouldShowCanvas = workspaceViewMode !== 'source';
+  const isSplitView = workspaceViewMode === 'split';
   const displayedPageLayouts =
     parseState === 'error'
       ? pageLayouts
@@ -222,6 +247,34 @@ export function AppShell(): JSX.Element {
   // 答案隐藏会重排语义块，画布只需要在文档真实变化时重新拿派生块，避免分页写回造成测量层反复刷新。
   const renderableDocumentBlocks = useMemo(() => getRenderableLayoutBlocksForView(layoutDocument), [layoutDocument]);
   const characterCount = layoutDocument?.meta.characterCount ?? 0;
+  const exportCheckResult = useMemo(
+    () =>
+      runExportChecks({
+        layoutDocument,
+        renderableBlocks: renderableDocumentBlocks,
+        pages: displayedPageLayouts,
+        styleSettings,
+        tocItems,
+        documentFilePath: filePath,
+        workspaceRootPath,
+      }),
+    [displayedPageLayouts, filePath, layoutDocument, renderableDocumentBlocks, styleSettings, tocItems, workspaceRootPath],
+  );
+
+  useEffect(() => {
+    // 文档切换后，旧画布的临时编辑/滚动请求不应继续影响新文档界面。
+    setDragSource(null);
+    setRequestedEditNodeId(null);
+    setRequestedScrollToNodeId(null);
+    setCanvasTextSelection({
+      nodeId: null,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+  }, [documentEpoch]);
+
   const {
     isSaving,
     isExporting,
@@ -244,7 +297,17 @@ export function AppShell(): JSX.Element {
     handleImportFont,
     handleExportPdf,
     handleExportDocx,
-  } = useWorkspaceFileCommands({ displayedPageLayouts, tocItems });
+  } = useWorkspaceFileCommands({
+    displayedPageLayouts,
+    tocItems,
+    exportCheckResult,
+    onOpenExportCheckPanel: () => {
+      if (!isRightPanelOpen) {
+        toggleRightPanel();
+      }
+      setActiveRightPanelTab('导出检查');
+    },
+  });
   const {
     handleInsertImage,
     handleInsertChemistryApparatus,
@@ -266,7 +329,7 @@ export function AppShell(): JSX.Element {
     'workspace',
     isLeftPanelOpen ? 'workspace-left-open' : 'workspace-left-closed',
     isRightPanelOpen ? 'workspace-right-open' : 'workspace-right-closed',
-    shouldShowEditor && shouldShowCanvas ? 'workspace-split-mode' : 'workspace-single-mode',
+    isSplitView ? 'workspace-split-mode' : 'workspace-single-mode',
   ].join(' ');
 
   const saveStatusLabel = isSaving ? '保存中' : isDirty ? '未保存' : '已保存';
@@ -386,9 +449,6 @@ export function AppShell(): JSX.Element {
       setActiveRightPanelTab('对象属性');
       setActiveTab('资源');
       setRequestedScrollToNodeId(blockId);
-      if (workspaceViewMode === 'source') {
-        setWorkspaceViewMode('split');
-      }
       setCanvasTextSelection({
         nodeId: blockId,
         text: '',
@@ -397,7 +457,7 @@ export function AppShell(): JSX.Element {
         draftTextRuns: null,
       });
     },
-    [selectLayoutNode, setActiveRightPanelTab, setActiveTab, setWorkspaceViewMode, workspaceViewMode],
+    [selectLayoutNode, setActiveRightPanelTab, setActiveTab],
   );
 
   const handleReplaceImageResource = useCallback(
@@ -477,15 +537,19 @@ export function AppShell(): JSX.Element {
     setSearchFocusRequestKey((currentKey) => currentKey + 1);
   }, [isLeftPanelOpen, setActiveTab, toggleLeftPanel]);
 
+  const handleOpenExportCheckPanel = useCallback(() => {
+    if (!isRightPanelOpen) {
+      toggleRightPanel();
+    }
+    setActiveRightPanelTab('导出检查');
+  }, [isRightPanelOpen, setActiveRightPanelTab, toggleRightPanel]);
+
   const handleSelectSearchResult = useCallback(
     (result: DocumentSearchResult) => {
       setSelectedSearchResultId(result.id);
       selectLayoutNode(result.nodeId);
       setActiveRightPanelTab('对象属性');
       setRequestedScrollToNodeId(result.nodeId);
-      if (workspaceViewMode === 'source') {
-        setWorkspaceViewMode('split');
-      }
       setCanvasTextSelection({
         nodeId: result.nodeId,
         text: '',
@@ -494,7 +558,7 @@ export function AppShell(): JSX.Element {
         draftTextRuns: null,
       });
     },
-    [selectLayoutNode, setActiveRightPanelTab, setWorkspaceViewMode, workspaceViewMode],
+    [selectLayoutNode, setActiveRightPanelTab],
   );
 
   const handleReplaceSearchResults = useCallback(
@@ -747,6 +811,30 @@ export function AppShell(): JSX.Element {
     showMessage('已重做');
   }, [redoLayoutDocument, showMessage]);
 
+  const handleDeleteSelectedTopLevelBlock = useCallback(() => {
+    if (!selectedNodeId || selectedBlockIds.length > 1) {
+      return;
+    }
+
+    const result = deleteLayoutTopLevelBlock({
+      nodeId: selectedNodeId,
+    });
+    if (!result.didDelete) {
+      showMessage('当前块删除失败');
+      return;
+    }
+
+    setRequestedScrollToNodeId(null);
+    setCanvasTextSelection({
+      nodeId: result.selectedNodeId,
+      text: '',
+      selection: null,
+      isEditing: false,
+      draftTextRuns: null,
+    });
+    showMessage(getTopLevelBlockDeleteMessage(result.deletedBlockType));
+  }, [deleteLayoutTopLevelBlock, selectedBlockIds.length, selectedNodeId, showMessage]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
@@ -761,6 +849,24 @@ export function AppShell(): JSX.Element {
         !!target &&
         (target.isContentEditable ||
           !!target.closest('input, textarea, select, [contenteditable="true"]'));
+      const isCanvasShortcutTarget =
+        !target || target === document.body || !!target.closest('.canvas-pane-scroll');
+      const isDeleteShortcut = event.key === 'Delete';
+      if (
+        isDeleteShortcut &&
+        isCanvasShortcutTarget &&
+        !isEditingTarget &&
+        !canvasTextSelection.isEditing &&
+        !event.ctrlKey &&
+        !event.metaKey
+      ) {
+        handleDeleteSelectedTopLevelBlock();
+        if (selectedNodeId && selectedBlockIds.length <= 1) {
+          event.preventDefault();
+        }
+        return;
+      }
+
       if (isEditingTarget || !(event.ctrlKey || event.metaKey)) {
         return;
       }
@@ -784,7 +890,15 @@ export function AppShell(): JSX.Element {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleOpenSearchPanel, handleRedoLayoutDocument, handleUndoLayoutDocument]);
+  }, [
+    canvasTextSelection.isEditing,
+    handleDeleteSelectedTopLevelBlock,
+    handleOpenSearchPanel,
+    handleRedoLayoutDocument,
+    handleUndoLayoutDocument,
+    selectedBlockIds.length,
+    selectedNodeId,
+  ]);
 
   const handleDragStart = (e: React.DragEvent, entry: WorkspaceDirectoryEntry) => {
     setDragSource(entry.path);
@@ -852,6 +966,7 @@ export function AppShell(): JSX.Element {
         onToggleRightPanel={toggleRightPanel}
         onChangeViewMode={setWorkspaceViewMode}
         onOpenSearchPanel={handleOpenSearchPanel}
+        onOpenExportCheckPanel={handleOpenExportCheckPanel}
         onOpenAiPanel={() => {
           // 确保右侧面板打开，然后切换到 AI 助手 Tab
           if (!isRightPanelOpen) {
@@ -922,70 +1037,60 @@ export function AppShell(): JSX.Element {
             <div>
               <strong>当前工作台</strong>
               <span>
-                {workspaceViewMode === 'source'
-                  ? '聚焦导入源码快照'
-                  : workspaceViewMode === 'preview'
-                    ? '聚焦分页预览'
-                    : '同时查看源码快照与分页'}
+                {workspaceViewMode === 'preview' ? '聚焦分页预览' : '同时查看源码快照与分页'}
               </span>
             </div>
             {workspaceMessage ? <span className="workspace-message">{workspaceMessage}</span> : null}
           </div>
 
-          <div
-            className={
-              shouldShowEditor && shouldShowCanvas ? 'center-panels center-panels-split' : 'center-panels'
-            }
-          >
-            {shouldShowEditor ? (
+          <div className={isSplitView ? 'center-panels center-panels-split' : 'center-panels'}>
+            {isSplitView ? (
               <EditorPane
                 parseState={parseState}
                 source={source}
-                isCondensed={shouldShowCanvas}
+                isCondensed
               />
             ) : null}
 
-            {shouldShowCanvas ? (
-              <CanvasPane
-                documentTitle={layoutDocument?.title ?? '未命名文档'}
-                documentBlockCount={renderableDocumentBlocks.length}
-                documentBlocks={renderableDocumentBlocks}
-                documentResources={layoutDocument?.resources ?? []}
-                documentStyles={layoutDocument?.styles ?? { blockStyles: {}, textStyles: {} }}
-                semanticRoleConfig={layoutDocument?.meta.semanticRoleConfig}
-                answerDisplayMode={answerDisplayMode}
-                pageLayouts={displayedPageLayouts}
-                parseError={parseError}
-                parseState={parseState}
-                resolvedStyleContract={resolvedStyleContract}
-                headerFooterContent={styleSettings.headerFooterContent}
-                selectedNodeId={selectedNodeId}
-                selectedBlockIds={selectedBlockIds}
-                workspaceRootPath={workspaceRootPath}
-                onSelectNode={handleSelectLayoutNode}
-                onSelectBlock={handleSelectLayoutBlock}
-                onSelectTableCell={handleSelectLayoutTableCell}
-                onClearSelection={handleClearLayoutSelection}
-                onMergeSelectedBlocks={handleMergeSelectedBlocks}
-                onWrapSelectedBlocksInColumns={handleWrapSelectedBlocksInColumns}
-                onCommitNodeText={handleCommitLayoutNodeText}
-                onCommitNodeRichText={handleCommitLayoutNodeRichText}
-                onTextSelectionChange={setCanvasTextSelection}
-                tocItems={tocItems}
-                onNavigateToNode={handleNavigateToNode}
-                requestedStartEditingNodeId={requestedEditNodeId}
-                onConsumeRequestedStartEditingNode={handleConsumeRequestedEditNode}
-                requestedScrollToNodeId={requestedScrollToNodeId}
-                onConsumeRequestedScrollToNode={handleConsumeRequestedScrollNode}
-                isCondensed={shouldShowEditor}
-                onMeasuredBlockHeightsChange={handleMeasuredBlockHeightsChange}
-                onMeasuredTextLineBreaksChange={handleMeasuredTextLineBreaksChange}
-                textFragmentMeasurementJobs={textFragmentMeasurementJobs}
-                onMeasuredTextFragmentHeightsChange={handleMeasuredTextFragmentHeightsChange}
-                tableRowMeasurementJobs={tableRowMeasurementJobs}
-                onMeasuredTableRowHeightsChange={handleMeasuredTableRowHeightsChange}
-              />
-            ) : null}
+            <CanvasPane
+              documentTitle={layoutDocument?.title ?? '未命名文档'}
+              documentBlockCount={renderableDocumentBlocks.length}
+              documentBlocks={renderableDocumentBlocks}
+              documentResources={layoutDocument?.resources ?? []}
+              documentStyles={layoutDocument?.styles ?? { blockStyles: {}, textStyles: {} }}
+              semanticRoleConfig={layoutDocument?.meta.semanticRoleConfig}
+              answerDisplayMode={answerDisplayMode}
+              pageLayouts={displayedPageLayouts}
+              parseError={parseError}
+              parseState={parseState}
+              resolvedStyleContract={resolvedStyleContract}
+              headerFooterContent={styleSettings.headerFooterContent}
+              selectedNodeId={selectedNodeId}
+              selectedBlockIds={selectedBlockIds}
+              workspaceRootPath={workspaceRootPath}
+              onSelectNode={handleSelectLayoutNode}
+              onSelectBlock={handleSelectLayoutBlock}
+              onSelectTableCell={handleSelectLayoutTableCell}
+              onClearSelection={handleClearLayoutSelection}
+              onMergeSelectedBlocks={handleMergeSelectedBlocks}
+              onWrapSelectedBlocksInColumns={handleWrapSelectedBlocksInColumns}
+              onCommitNodeText={handleCommitLayoutNodeText}
+              onCommitNodeRichText={handleCommitLayoutNodeRichText}
+              onTextSelectionChange={setCanvasTextSelection}
+              tocItems={tocItems}
+              onNavigateToNode={handleNavigateToNode}
+              requestedStartEditingNodeId={requestedEditNodeId}
+              onConsumeRequestedStartEditingNode={handleConsumeRequestedEditNode}
+              requestedScrollToNodeId={requestedScrollToNodeId}
+              onConsumeRequestedScrollToNode={handleConsumeRequestedScrollNode}
+              isCondensed={isSplitView}
+              onMeasuredBlockHeightsChange={handleMeasuredBlockHeightsChange}
+              onMeasuredTextLineBreaksChange={handleMeasuredTextLineBreaksChange}
+              textFragmentMeasurementJobs={textFragmentMeasurementJobs}
+              onMeasuredTextFragmentHeightsChange={handleMeasuredTextFragmentHeightsChange}
+              tableRowMeasurementJobs={tableRowMeasurementJobs}
+              onMeasuredTableRowHeightsChange={handleMeasuredTableRowHeightsChange}
+            />
           </div>
         </section>
 
@@ -997,6 +1102,7 @@ export function AppShell(): JSX.Element {
             workspaceViewMode={workspaceViewMode}
             layoutWarnings={layoutWarnings}
             canvasTextSelection={canvasTextSelection}
+            exportCheckResult={exportCheckResult}
           />
         ) : null}
       </main>

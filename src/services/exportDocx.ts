@@ -32,7 +32,6 @@ import {
   buildLayoutListTree,
   buildTocItems,
   chunkCompactChoiceItems,
-  getHeadingText,
   getLayoutListItemKind,
   getLayoutListItemLevel,
   getTocBlockDisplayTitle,
@@ -53,7 +52,7 @@ import {
   type LayoutTableRow,
   type TextRun,
 } from '@/engine/document-model';
-import { renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
+import { buildHeaderFooterPageTitles, renderHeaderFooterContent } from '@/engine/style/headerFooterContent';
 import { defaultStyleSettings } from '@/engine/style/presets';
 import {
   getQuickTextStyleRule,
@@ -574,15 +573,6 @@ function buildDynamicHeaderFooterParagraph(payload: {
       }),
     ],
   });
-}
-
-function resolvePageTitle(page: PageLayout, documentTitle: string): string {
-  const titleBlock = page.blocks.find((block) => block.type === 'heading');
-  if (!titleBlock) {
-    return documentTitle;
-  }
-
-  return getHeadingText(titleBlock) || documentTitle;
 }
 
 function buildListParagraphs(
@@ -1271,6 +1261,7 @@ export async function buildDocxArrayBuffer(payload: DocxExportPayload): Promise<
   const headerFooterContent = payload.styleSettings?.headerFooterContent ?? defaultStyleSettings.headerFooterContent;
   const tocItems = buildRuntimeTocItems(payload.pages);
   const sourceBlocks = resolveSourceBlocksForDocx(payload);
+  const pageTitles = buildHeaderFooterPageTitles(payload.pages, payload.title);
 
   if (payload.pages.length === 0) {
     const document = new Document({
@@ -1289,7 +1280,7 @@ export async function buildDocxArrayBuffer(payload: DocxExportPayload): Promise<
 
   if (canUseContinuousDocxFlow(payload.pages)) {
     const firstPage = payload.pages[0];
-    const pageTitle = resolvePageTitle(firstPage, payload.title);
+    const pageTitle = pageTitles[0] ?? payload.title;
     const section = {
       properties: buildSectionProperties(firstPage),
       headers: {
@@ -1341,7 +1332,7 @@ export async function buildDocxArrayBuffer(payload: DocxExportPayload): Promise<
   // 当后续真的出现跨页页面设置差异时，暂时回退到按页兜底，避免页尺寸/页边距被错误合并。
   const sections = await Promise.all(
     payload.pages.map(async (page, index) => {
-      const pageTitle = resolvePageTitle(page, payload.title);
+      const pageTitle = pageTitles[index] ?? payload.title;
       const renderedHeaderFooter = renderHeaderFooterContent(headerFooterContent, {
         documentTitle: payload.title,
         pageTitle,

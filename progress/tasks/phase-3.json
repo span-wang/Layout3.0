@@ -132,8 +132,51 @@
       "milestoneIds": [
         "M4"
       ],
-      "status": "未开始",
-      "acceptance": "源码、分屏、预览切换可用。"
+      "status": "已完成",
+      "acceptance": "工作台只保留分屏视图与预览视图切换；默认进入预览视图；导入源码只读快照仅在分屏中展示；资源/搜索/大纲等定位联动不再依赖已删除的源码视图。",
+      "owner": "工作台体验组",
+      "startedOn": "2026-07-07",
+      "completedOn": "2026-07-07",
+      "executionBoundary": {
+        "id": "PH3-03-default-preview-view-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：默认视图改为预览 V1",
+        "confirmedOn": "2026-07-07",
+        "startedOn": "2026-07-07",
+        "completedOn": "2026-07-07",
+        "summary": "本步已完成 `PH3-03-default-preview-view-v1`：1) 分屏能力继续保留，顶部仍可在 `分屏视图 / 预览视图` 之间切换；2) 默认 `workspaceViewMode` 已从 `split` 改为 `preview`，新建/打开文档时会先进入预览工作台；3) 导入源码只读快照仍只在用户主动切到分屏时展示，不影响现有导入追溯与 `.layout` 工程工作流。",
+        "included": [
+          "把默认 `workspaceViewMode` 从 `split` 调整为 `preview`，让新建/打开文档时优先进入预览工作台。",
+          "保持顶部 `分屏视图 / 预览视图` 切换继续可用，不删除分屏能力。",
+          "保持“导入源码只读快照”面板只在分屏模式下展示，不改其只读属性和导入来源定位用途。",
+          "同步收口任务验收描述、工作台相关中文文案和必要进度记录，明确当前默认进入预览视图。",
+          "界面文案、按钮、提示和必要代码注释继续全部使用中文。",
+          "完成后执行 `npm run typecheck`、`npm run build`、`npm run progress:build` 和 `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不在本步删除分屏能力，也不删除“导入源码只读快照”面板本身。",
+          "不在本步调整 Markdown 一次性导入、`.layout` 保存恢复、源码范围显示或语法映射链路。",
+          "不在本步顺手重做中间工作区布局、工具栏结构或左右侧面板的其他无关交互。",
+          "不在本步同步重构需求基线文档中所有历史分屏/预览表述，文档收敛另行拆步。"
+        ],
+        "followup": [
+          "如果后续确认连分屏中的只读源码快照也不再需要，再另拆工作台简化或导入溯源面板退场任务。",
+          "如果后续确认分屏本身也没有必要，再继续归属 `PH3-03` 或工作台简化后续小步。"
+        ],
+        "verification": [
+          "用户已回复“先不删吧，但是默认视图改为预览视图”，确认当前 `PH3-03-default-preview-view-v1` 边界可以执行。",
+          "`progress/tasks/phase-3.json` 已更新 `PH3-03` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+          "`progress/risks.json` 已新增 `RISK-062`，记录默认切到预览后分屏快照入口可见性下降的范围调整风险。",
+          "开工前已执行 `npm run progress:build`，并在修正记录后继续执行 `npm run progress:check`，确保展示层与结构化真相源一致。",
+          "`src/store/slices/uiSlice.ts` 已把默认 `workspaceViewMode` 从 `split` 调整为 `preview`。",
+          "静态搜索确认当前默认值只落在 `src/store/slices/uiSlice.ts`，未发现其他位置把默认视图写回 `split`。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。",
+          "`npm run progress:build` 成功。",
+          "`npm run progress:check` 成功。"
+        ],
+        "resolution": "已完成默认视图改为预览 V1：分屏能力和导入源码只读快照面板继续保留，但新建/打开文档时默认先进入预览工作台；若后续确认分屏本身也没有必要，再继续拆工作台简化小步。"
+      }
     },
     {
       "id": "PH3-04",
@@ -494,41 +537,44 @@
       ],
       "startedOn": "2026-07-07",
       "executionBoundary": {
-        "id": "PH3-12-personal-knowledge-base-v1",
+        "id": "PH3-12-generate-requirement-description-v1",
         "confirmed": true,
-        "statusLabel": "进行中：个人知识库接入 V1",
-        "confirmedOn": "2026-07-07",
-        "startedOn": "2026-07-07",
-        "summary": "本步按用户确认推进 `PH3-12-personal-knowledge-base-v1`：左侧菜单栏新增“个人知识库”，先把 RAGFlow 作为正式知识检索源接入现有 AI 生成链路，把 Open Notebook 纳入个人知识库工作台与连接管理。V1 先完成连接配置、状态测试、RAGFlow 数据集检索与片段拉取，以及基于知识片段生成知识清单 / 教辅讲义 / 同步练习 / 单元试卷草稿的最小闭环，不在本步扩成完整知识库运营系统。",
-        "included": [
-          "左侧菜单栏新增“个人知识库”入口，并提供独立知识库面板。",
-          "新增个人知识库连接配置：支持填写 RAGFlow Base URL、API Key，以及 Open Notebook 服务地址等本机连接信息。",
-          "新增知识库连接测试与状态提示，明确展示服务是否可达、端口是否监听、接口是否返回有效结果。",
-          "接入 RAGFlow 数据集列表与检索接口，支持选择一个或多个数据集，并按主题拉取相关知识片段。",
-          "在现有 AI 生成链路中新增“结合个人知识库”上下文能力，让知识库片段可参与知识清单、教辅讲义、同步练习和单元试卷草稿生成。",
-          "Open Notebook 本步先纳入服务健康检查、基础入口展示与个人工作台说明，不把它作为主生成链路的强依赖。",
-          "界面文案、按钮、提示与必要代码注释继续全部使用中文。",
-          "完成后执行 `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check`。"
+        "statusLabel": "已完成：AI 内容生成要求描述 V1",
+        "confirmedOn": "2026-07-08",
+        "startedOn": "2026-07-08",
+        "completedOn": "2026-07-08",
+        "summary": "本步已完成 `PH3-12-generate-requirement-description-v1`：1) AI 生成面板的教育内容生成模式已新增“要求描述（可选）”多行输入框；2) `GenerateOptions` 与 AI 生成记录类型已新增 `requirementDescription` 字段；3) 生成讲义、知识点总结、练习题和试卷初稿时，要求描述会作为“要求描述”写入用户提示词，系统提示词也要求优先满足其中的范围、格式、语气和内容约束；4) AI 生成记录落盘、主进程归一化、preload 类型和记录面板详情展示已同步保留该字段；5) 小红书模式保持现有“选题 / 补充要求”入口不变，本步未扩展为完整提示词模板系统。",
+        "inScope": [
+          "在 AI 生成面板的教育内容生成模式中新增“要求描述（可选）”多行输入框，界面文案保持中文。",
+          "扩展 `GenerateOptions` 与 AI 生成记录类型，新增可选 `requirementDescription` 字段。",
+          "生成讲义、知识点总结、练习题和试卷初稿时，将要求描述作为“补充要求”写入 `AiService` 用户提示词。",
+          "AI 生成成功后，记录文件继续保存主题、年级、科目、长度等字段，并额外保存本次要求描述。",
+          "AI 生成记录面板展示本次要求描述，便于回看当时生成约束。",
+          "补充最小回归测试，确认要求描述会进入教育内容生成提示词。",
+          "完成后执行 `npm run typecheck`、相关定向测试、`npm run build`、`npm run progress:build` 与 `npm run progress:check`。"
         ],
-        "excluded": [
-          "不在本步实现 RAGFlow 或 Open Notebook 的自动部署、自动启动、自动灌库与索引构建。",
-          "不在本步实现 Open Notebook 深度检索、笔记内容抽取和与 RAGFlow 的双向自动同步。",
-          "不在本步实现知识库文档上传、删除、批量重建索引或多用户权限控制。",
-          "不在本步实现出版级试卷模板、专项导出样式、自动排版成最终成品试卷。",
-          "不在本步扩展账号体系、云同步、团队共享、收藏夹、标签或知识库运营后台。"
+        "outOfScope": [
+          "不新增完整提示词模板编辑器、字段模板库、变量系统或多套生成模板。",
+          "不修改小红书标题 / 文案 / 主图方案模式的现有输入结构。",
+          "不改 AI Provider、模型配置、主进程请求链路、个人知识库检索链路或知识库参数。",
+          "不新增题型比例、难度梯度、答案解析格式等专业出题参数面板。",
+          "不调整生成结果插入当前文档、撤销栈、分页、导出或 `.layout` 文件结构。"
         ],
-        "followup": [
-          "Open Notebook 的 notebook / note 深度检索与内容抽取：后续归属个人知识库增强任务。",
-          "知识库文档上传、同步、重建索引与台账管理：后续归属知识库运营增强任务。",
-          "题型比例、难度梯度、答案解析细粒度控制与专业导出模板：后续归属教辅生成增强任务。",
-          "服务自动启动、Docker 环境检查与一键联调：后续归属本地环境治理任务。"
+        "deferredTo": [
+          "完整提示词模板、字段变量和不同生成任务的高级参数：后续归属教辅生成增强任务。",
+          "题型比例、难度梯度、答案解析格式、知识点覆盖范围等细粒度出题控制：后续归属 AI 教辅生成增强任务。",
+          "RAGFlow 与 `ima` 的双源混合召回、统一排序和来源解释：后续继续归属 `PH3-12` 增强子步。",
+          "更完整的 AI 历史记录搜索、标签、收藏和按要求描述筛选：后续归属 `PH3-07` 或 AI 体验增强任务。"
         ],
         "verification": [
-          "用户已回复“确定”，确认当前 `PH3-12-personal-knowledge-base-v1` 边界可以执行。",
-          "`progress/tasks/phase-3.json` 已新增 `PH3-12` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
-          "`progress/risks.json` 已新增 `RISK-060`，记录本机知识库服务未启动与外部接口联调不稳定的接入风险。",
-          "`progress/logs.json` 已追加本步边界确认日志。",
-          "开工前将执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+          "用户已回复“确定”，确认当前 `PH3-12-generate-requirement-description-v1` 最小边界可以执行。",
+          "`src/components/ai/AiGenerateTab.tsx` 已新增教育内容生成模式的“要求描述（可选）”输入，并把字段传入知识库检索词、生成选项和生成记录。",
+          "`src/types/ai.ts`、`electron/main/ai-record-handlers.ts` 与 `electron/preload/index.ts` 已同步扩展 AI 生成记录字段。",
+          "`src/services/AiService.ts` 已将要求描述写入教育内容生成用户提示词，并通过系统提示词要求优先满足该约束。",
+          "`src/components/ai/AiGenerationRecordsPanel.tsx` 与 `src/styles.css` 已让生成记录详情展示要求描述。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\AiService.test.ts`，3 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
         ]
       }
     }

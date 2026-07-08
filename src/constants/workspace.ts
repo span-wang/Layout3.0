@@ -19,7 +19,6 @@ export const workspaceViewModes: Array<{
   label: string;
   description: string;
 }> = [
-  { id: 'source', label: '源码视图', description: '查看导入源码快照' },
   { id: 'split', label: '分屏视图', description: '同时查看源码快照与分页结果' },
   { id: 'preview', label: '预览视图', description: '聚焦分页画布与排版效果' },
 ];
