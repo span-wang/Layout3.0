@@ -703,6 +703,54 @@
       "description": "用户已明确要求当前不做 `PH3-05` 首次使用引导。如果继续把它保留为待确认下一步，后续看板会持续推荐一个已经被用户排除的方向，容易干扰 `PH3-12` 个人知识库真实联调和 `PH3-07` M4 链路验证的推进顺序。",
       "impactScope": "PH3-05 首次使用引导、第三阶段当前执行看板、M4 下一步推荐顺序、后续帮助与引导体验规划",
       "currentHandling": "已将 `PH3-05` 状态调整为 `暂缓`，当前不再设计或实现首次使用引导。后续除非用户重新确认恢复该任务，否则第三阶段优先继续处理 `PH3-12` 个人知识库真实联调收尾或 `PH3-07` M4 链路验证；更完整帮助中心与快捷键说明仍可在 `PH4-05` 文档与帮助任务中单独推进。"
+    },
+    {
+      "id": "RISK-089",
+      "date": "2026-07-08",
+      "type": "返工",
+      "description": "当前化学 SVG 虽然已多轮扩容和精修，但用户反馈仍然“太粗糙、不严谨”，并明确指出素材不是透明背景；如果只继续增加部件或只修静态模板，仍会在真实教学讲义、试卷排版和主题背景上呈现为粗糙白底图片，影响产品采用。",
+      "impactScope": "PH2-05B-chemistry-native-scientific-transparent-diagrams-v1、chemistryApparatus SVG 素材库、ChemistryComposerDialog 组合导出、Toolbar 化学图式入口、LayoutDocument 图片块预览与导出",
+      "currentHandling": "2026-07-09 已按用户质疑重新打开并完成真实重绘返工：高频基础器材和 10 个成套模板已补齐教学科学制图关键细节，透明底与组合导出辅助层隐藏继续保留；本步未接外部素材、未新增化学块类型，也未扩大到仿真或结构式编辑器。"
+    },
+    {
+      "id": "RISK-090",
+      "date": "2026-07-09",
+      "type": "返工",
+      "description": "前一轮把透明底和线宽统一误写为“教学式科学制图已完成”，导致进度状态早于真实产出。如果不先纠偏，后续会继续把粗糙器材当作已验收素材，影响缩略图、组合画布和导出图片三处观感。",
+      "impactScope": "PH2-05B-chemistry-native-scientific-transparent-diagrams-v1、progress 真相源、chemistryApparatus SVG 素材库、化学组合设计器",
+      "currentHandling": "已先将该化学图式小步从完成状态纠正为进行中返工，再完成高频器材和 10 个模板的真实 SVG 重绘，并用定向测试、类型检查、构建和进度校验收尾。后续仍需以真实视觉验收为准，不再把仅通过透明底或线宽测试视为科学制图完成。"
+    },
+    {
+      "id": "RISK-091",
+      "date": "2026-07-09",
+      "type": "返工",
+      "description": "用户继续要求化学图式达到“最佳科学状态”。如果本轮只做局部线条美化，而不逐项校准器皿比例、导管插入、液面弯月线、刻度、塞孔、夹持、过滤三靠和加热/收集关系，素材仍可能在真实教学讲义和试卷场景中显得不严谨；但若一步扩展到仿真、结构式编辑器或完整自动布线，又会偏离当前图示质量精修目标。",
+      "impactScope": "PH2-05B-chemistry-scientific-accuracy-polish-v2、chemistryApparatus SVG 素材库、化学图式模板库、ChemistryComposerDialog 缩略图与组合导出、LayoutDocument 图片块预览与导出",
+      "currentHandling": "已完成 `PH2-05B-chemistry-scientific-accuracy-polish-v2`：本轮保持 40 个部件与 10 个模板数量不变，重点补强长颈漏斗、分液漏斗、滴定管、冷凝管、过滤、制气、收集和蒸发装置的科学细节，并新增 V2 定向测试覆盖核心部件、模板关系、透明底和素材数量不回退；未接外部素材、未新增化学块类型、未扩展仿真、结构式编辑器或组合编辑器新交互。"
+    },
+    {
+      "id": "RISK-092",
+      "date": "2026-07-09",
+      "type": "返工",
+      "description": "当前锥形瓶、圆底烧瓶和平底烧瓶的液面仍画成贴底月牙状，用户已直接指出这不符合静止液体的重力状态。如果本轮继续在“整体看起来还行”的层面含糊通过，后续会把明显不科学的液面继续带入缩略图、组合画布和导出图片；但若顺手把所有容器液面口径全部重做，又会把一次针对性返修扩大成整套容器系统改版。",
+      "impactScope": "PH2-05B-chemistry-liquid-surface-correction-v3、锥形瓶/圆底烧瓶/平底烧瓶静态部件缩略图、ChemistryComposerDialog 动态容器渲染、组合导出与图片块预览",
+      "currentHandling": "已完成 `PH2-05B-chemistry-liquid-surface-correction-v3`：本轮只修锥形瓶、圆底烧瓶和平底烧瓶的静态与动态液面路径，让液体上边界回到近水平自由液面，并新增液面定向测试锁住这三类烧瓶的画法；未顺手扩到其他容器、模板关系或编辑器交互。"
+    },
+    {
+      "id": "RISK-093",
+      "date": "2026-07-09",
+      "type": "范围调整",
+      "description": "AI 教育内容生成从一次性生成正文改成“大纲审核后再生成正文”后，如果顺手扩展到小红书全链路、提示词模板中心、大纲结构化编辑、生成记录格式重做或知识库引用系统，会把一个明确的交互改造放大成 AI 工作流重构，影响 M4 收口稳定性。",
+      "impactScope": "PH3-01-ai-outline-review-generation-v1、AiGenerateTab、AiService、AI 教育内容提示词、AI 生成记录、PH3-12 知识库上下文复用、LayoutDocument 插入链路",
+      "currentHandling": "已完成 `PH3-01-ai-outline-review-generation-v1`：教育内容四类生成已改为先生成可编辑大纲，用户审核后再依据该大纲生成最终 Markdown 正文；小红书链路、提示词模板中心、大纲结构化编辑、记录格式、分页和导出均未纳入。知识库启用时正文阶段复用大纲阶段同一批检索上下文，不扩成正文脚注或块级引用系统。"
+    },
+    {
+      "id": "RISK-094",
+      "date": "2026-07-09",
+      "type": "范围调整",
+      "description": "文章结构模板如果加入内置模板、示例模板、模板市场、云同步、导入导出、结构化拖拽编辑或章节级局部重生成，会明显偏离用户当前要求的“模板由我自己定义、新增”，并把最小的 AI 输出结构约束扩成完整模板系统。",
+      "impactScope": "PH3-01-ai-custom-structure-template-v1、AiGenerateTab、AiSlice localStorage、AiService 提示词、AI 教育内容大纲与正文生成链路",
+      "currentHandling": "已完成 `PH3-01-ai-custom-structure-template-v1`：文章结构模板 V1 已按用户要求收口为本机自定义模板库，初始为空，只提供新增、编辑、删除和选择；模板只通过 localStorage 保存，选择后进入大纲和正文提示词；不提供内置模板、示例模板、云同步、导入导出、结构化编辑器或小红书模板。"
     }
   ]
 }

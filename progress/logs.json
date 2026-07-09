@@ -1,6 +1,220 @@
 {
   "entries": [
     {
+      "id": "LOG-516",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成烧瓶类液面修正 V3",
+      "action": "烧瓶液面 path 修正/液面回归测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-chemistry-liquid-surface-correction-v3`：1) `src/constants/chemistryApparatus.ts` 已新增受限液面路径 helper，并把锥形瓶、圆底烧瓶和平底烧瓶的静态缩略图液面改成近水平自由液面；2) `buildEditableContainerBody` 中对应三类动态容器也已统一改成同一口径，液面上边界不再贴底鼓成月牙状；3) `src/constants/chemistryApparatus.test.ts` 已新增烧瓶类液面回归，直接校验液面第一段为近水平弯月面；4) 定向测试、类型检查、完整构建和进度校验全部通过。",
+      "verification": [
+        "`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\constants\\chemistryApparatus.test.ts` 通过，7 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-liquid-surface-correction-v3` 收口为已完成。",
+        "`progress/risks.json` 已更新 `RISK-092` 当前处理结果。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/constants/chemistryApparatus.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续如继续发现个别容器液面不科学，再按具体器材逐个拆小步修正。"
+    },
+    {
+      "id": "LOG-515",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认烧瓶类液面修正 V3 边界",
+      "action": "用户指出科学错误/边界回写/风险登记/进度同步",
+      "result": "用户在查看当前化学图式缩略图后直接指出烧瓶类液面不对，并要求立即调整。本步按 `PH2-05B-chemistry-liquid-surface-correction-v3` 推进：只修锥形瓶、圆底烧瓶和平底烧瓶的静态部件 SVG 与动态容器液面路径，让液体上边界回到近水平自由液面、下边界再顺着容器底部收拢；本步明确不顺手调整其他容器、模板装置关系或组合编辑器交互。",
+      "verification": [
+        "用户已直接指出“你这些液面对么？？”并进一步明确回复“调整呀”。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-liquid-surface-correction-v3` 边界，写明本步纳入、本步明确不纳入和验收标准。",
+        "`progress/risks.json` 已新增 `RISK-092`，记录烧瓶类液面科学错误返修风险与范围控制。",
+        "开工前将执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；随后修正 `src/constants/chemistryApparatus.ts` 中三类烧瓶的静态与动态液面路径，并补充液面定向测试。"
+    },
+    {
+      "id": "LOG-514",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成化学图式科学准确性精修 V2",
+      "action": "核心器材科学细节精修/模板装置关系校准/定向测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-chemistry-scientific-accuracy-polish-v2`：1) `src/constants/chemistryApparatus.ts` 已继续精修核心特殊器材，长颈漏斗补齐椭圆口沿、锥形过渡和下端长颈，分液漏斗补齐双颈、球胆、液面、活塞和下端细管，滴定管补齐开口、双壁量管、密刻度、阀门和出液段，冷凝管补齐外水套、内管、进出水支管和水流方向；2) 过滤模板已校准为漏斗颈伸入烧杯并贴近内壁，补“三靠过滤”提示；3) 制气、CO2 收集和蒸发模板补齐漏斗下端液封、导管接近瓶底和石棉网承托等科学关系；4) 新增 V2 定向测试覆盖 40 个部件、10 个模板、核心科学细节和透明底不回退；5) 定向测试、类型检查和完整构建均通过。",
+      "verification": [
+        "`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\constants\\chemistryApparatus.test.ts` 通过，6 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-scientific-accuracy-polish-v2` 收口为已完成。",
+        "`progress/risks.json` 已更新 `RISK-091` 当前处理结果。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/constants/chemistryApparatus.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续若继续增强化学图式，应优先基于真实视觉验收选择个别器材或模板做人工微调。"
+    },
+    {
+      "id": "LOG-513",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认化学图式科学准确性精修 V2 边界",
+      "action": "用户确认方案/边界回写/风险登记/进度同步",
+      "result": "用户确认继续精修化学图式，要求达到最佳科学状态。本步按 `PH2-05B-chemistry-scientific-accuracy-polish-v2` 推进：在上一轮透明底和真实重绘基础上，继续对现有 40 个化学部件与 10 个成套实验模板做科学准确性二次校准，重点覆盖器皿比例、口沿、瓶颈、底座、管壁厚度、弯月液面、刻度密度、塞孔位置、导管端口、铁架台夹持、过滤三靠、加热/收集/蒸发关系；本步明确不接外部素材、不做分子结构式编辑器、不做实验动画仿真、不新增 `.layout` 化学块类型，也不重做组合编辑器交互。",
+      "verification": [
+        "用户已回复“确定”，确认当前 V2 精修边界可以执行。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-scientific-accuracy-polish-v2` 边界，写明本步纳入、本步明确不纳入、验收标准和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-091`，记录科学准确性精修若只做表面美化或扩成仿真/结构式能力的双向风险。",
+        "开工前将执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；随后精修 `src/constants/chemistryApparatus.ts` 中核心器材与模板 SVG，并补充科学细节定向测试。"
+    },
+    {
+      "id": "LOG-512",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成化学图式真实科学制图重绘返工",
+      "action": "高频器材 SVG 重绘/10 个实验模板重绘/定向测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-chemistry-native-scientific-transparent-diagrams-v1` 的真实重绘返工：1) `src/constants/chemistryApparatus.ts` 中试管、烧杯、锥形瓶、集气瓶、量筒、漏斗、直导管、弯导管、橡胶塞/单孔塞/双孔塞、铁架台、酒精灯等高频基础器材已重新绘制，补齐口沿、弯月液面、刻度、塞孔、导管端口、夹持和灯芯火焰关系；2) 可编辑容器动态 SVG 已同步改造，组合画布中拖入的试管、烧杯、锥形瓶、集气瓶和量筒不再沿用粗糙旧形态；3) 10 个成套实验模板已同步重绘导管插入位置、塞孔、液面、收集瓶、水槽、过滤、蒸发和支架夹持关系；4) 保持项目原创 SVG、透明底、现有组合设计器和图片块插入/导出链路不变。",
+      "verification": [
+        "`src/constants/chemistryApparatus.test.ts` 已新增高频器材科学制图关键细节回归，覆盖试管、烧杯、锥形瓶、集气瓶、量筒、漏斗、导管、塞子、铁架台和酒精灯。",
+        "`src/constants/chemistryApparatus.test.ts` 已新增 10 个成套模板关系回归，覆盖导管伸入液面/瓶口、向上排空气、排水法、加热试管口略向下、长颈漏斗、过滤引流和蒸发皿加热关系。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\constants\\chemistryApparatus.test.ts`，5 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/constants/chemistryApparatus.test.ts",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续如需继续增强化学图式，可单独拆插入后可回编、自动布线或人工视觉微调小步。"
+    },
+    {
+      "id": "LOG-511",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "纠正化学科学制图完成状态并确认真实重绘返工边界",
+      "action": "用户质疑/状态纠偏/返工风险登记/边界回写",
+      "result": "用户质疑“你都没做么”后，确认上一轮 `PH2-05B-chemistry-native-scientific-transparent-diagrams-v1` 只完成透明底、线宽颜色和组合导出辅助层隐藏，尚未达到真实重绘高频器材和 10 个成套模板的验收标准。已将该小步从 `已完成` 纠正为 `进行中：教学式原生科学制图真实重绘返工`，并补充 `RISK-090` 记录完成状态早于真实产出的返工风险。",
+      "verification": [
+        "用户已再次回复“确定”，确认继续按真实重绘返工推进。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-05B-chemistry-native-scientific-transparent-diagrams-v1` 从完成状态纠正为进行中返工，并移除本轮完成结论。",
+        "`progress/risks.json` 已更新 `RISK-089` 当前处理方式，并新增 `RISK-090` 记录本次状态纠偏和返工风险。",
+        "开工前执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后真实重绘高频基础器材和 10 个成套实验模板，并补充可以锁住科学制图细节的定向测试。"
+    },
+    {
+      "id": "LOG-510",
+      "date": "2026-07-08",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成教学式原生化学科学制图透明底 V1",
+      "action": "透明底 SVG 重绘/组合导出透明背景修正/定向测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-05B-chemistry-native-scientific-transparent-diagrams-v1`：1) `src/constants/chemistryApparatus.ts` 的化学模板和部件 SVG 已收口为透明背景，不再内置整张白底矩形，并统一调整为更接近教学讲义和试卷的原生科学制图线稿风格；2) `ChemistryComposerDialog.tsx` 的组合导出在生成 PNG 前会隐藏画布辅助背景、工作区边框、端点手柄和选中轮廓，最终插入文档的化学组合图保持透明底；3) 新增定向测试覆盖化学素材 data URI 不再内置白底，并继续覆盖特殊容器动态渲染；4) `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check` 全部通过。"
+      ,
+      "verification": [
+        "`src/constants/chemistryApparatus.test.ts` 新增透明底回归，确认模板与部件 SVG 不再内置整张白底矩形。",
+        "`src/components/layout/ChemistryComposerDialog.tsx` 已在导出时隐藏辅助层，避免把编辑器白底带进最终 PNG。",
+        "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\constants\\chemistryApparatus.test.ts`。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。"
+      ],
+      "affectedFiles": [
+        "src/constants/chemistryApparatus.ts",
+        "src/constants/chemistryApparatus.test.ts",
+        "src/components/layout/ChemistryComposerDialog.tsx",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "本步已完成；后续如需继续提升化学图式的可编辑性、自动布线或插入后的二次编辑，再另拆 `PH2-05B` 后续子步。"
+    },
+    {
+      "id": "LOG-509",
+      "date": "2026-07-08",
+      "taskIds": [
+        "PH2-05B"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认教学式原生化学科学制图透明底 V1 边界",
+      "action": "用户确认方案/边界回写/风险登记/进度同步",
+      "result": "用户明确反馈当前化学图示仍然太粗糙、不严谨，需要重做成教学式原生科学制图，并补充指出当前 SVG 不是透明背景。已按用户确认将本步登记为 `PH2-05B-chemistry-native-scientific-transparent-diagrams-v1`：本步纳入重做化学图式视觉规范、高频基础器材与 10 个成套模板的科学制图细节、去除 SVG 白底、修正组合设计器最终导出白底问题；本步明确不纳入分子结构式编辑器、实验动画仿真、外部素材库、`.layout` 化学块类型、插入文档后的二次回编或分页/导出主流程重构。",
+      "verification": [
+        "用户已回复“确定”，确认按教学式原生科学制图透明底方案推进。",
+        "`progress/tasks/phase-2.json` 已在 `PH2-05B` 下追加 `PH2-05B-chemistry-native-scientific-transparent-diagrams-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-089`，记录化学图示科学制图质量和透明底返工风险。",
+        "开工前将执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；随后重做 `src/constants/chemistryApparatus.ts` 的科学制图 SVG 规范，并修正 `ChemistryComposerDialog` 组合导出透明背景。"
+    },
+    {
       "id": "LOG-504",
       "date": "2026-07-08",
       "taskIds": [
@@ -13116,6 +13330,133 @@
         "当前执行看板.md (待生成)"
       ],
       "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；PH2-14 本小步完成后，下一步可回到 `PH3-12` 个人知识库真实联调收尾或按用户确认进入 `PH3-07` M4 链路验证。"
+    },
+    {
+      "id": "LOG-517",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI 大纲审核后生成正文 V1 边界",
+      "action": "用户确认/边界回写/风险登记/进度同步",
+      "result": "用户已确认把 AI 教育内容生成改成“先生成大纲、用户可修改审核、审核通过后再生成正文”。本步按 `PH3-01-ai-outline-review-generation-v1` 推进：只覆盖讲义、知识点总结、练习题和试卷初稿四类教育内容；先生成可编辑大纲，大纲审核后再依据审核后的大纲生成最终 Markdown 正文；知识库启用时正文阶段复用同一批知识库上下文；最终正文仍由用户点击“插入当前文档”后才写入 LayoutDocument。本步明确不纳入小红书链路、提示词模板中心、大纲结构化编辑、生成记录格式重做、分页和导出调整。",
+      "verification": [
+        "用户已回复“确定”，确认当前小步方案可以执行。",
+        "`progress/tasks/phase-3.json` 已在 `PH3-01` 下追加 `PH3-01-ai-outline-review-generation-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-093`，记录 AI 生成链路若扩成完整工作流重构的范围风险。",
+        "开工前将执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现教育内容先大纲审核再生成正文的前端链路、提示词方法和定向回归。"
+    },
+    {
+      "id": "LOG-518",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI 大纲审核后生成正文 V1",
+      "action": "AI 生成链路改造/大纲审核 UI/提示词方法新增/定向测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-01-ai-outline-review-generation-v1`：1) 教育内容四类生成入口已改为先生成可编辑大纲；2) 用户可以在 AI 面板中修改大纲，再点击“审核通过，生成正文”生成最终 Markdown 正文；3) 正文生成会携带用户审核后的大纲，并继续继承主题、年级、科目、要求描述、长度、语义块勾选和知识库上下文；4) RAGFlow 启用时正文阶段复用大纲阶段检索到的同一批知识库上下文与来源；5) AI 生成记录仍只保存最终正文，不保存中间大纲；6) 小红书标题、文案和主图方案链路保持原样。",
+      "verification": [
+        "`src/types/ai.ts` 已新增 `reviewedOutline` 字段。",
+        "`src/services/AiService.ts` 已新增大纲阶段提示词、审核大纲生成正文提示词和对应流式入口。",
+        "`src/components/ai/AiGenerateTab.tsx` 已接入大纲审核区与两步生成按钮。",
+        "`src/styles.css` 已补齐大纲编辑框稳定样式。",
+        "`src/services/AiService.test.ts` 已新增 3 条提示词回归。",
+        "`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\AiService.test.ts` 通过，9 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-3.json` 已将 `PH3-01-ai-outline-review-generation-v1` 收口为已修复，并把 `PH3-01` 恢复为 `已完成`。",
+        "`progress/risks.json` 已更新 `RISK-093` 当前处理结果。",
+        "`progress/config.json` 已更新 AI Service 模块摘要。"
+      ],
+      "affectedFiles": [
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/services/AiService.ts",
+        "src/services/AiService.test.ts",
+        "src/types/ai.ts",
+        "src/styles.css",
+        "progress/tasks/phase-3.json",
+        "progress/config.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续如需大纲结构化编辑、局部重生成、保存大纲审核痕迹或改造小红书链路，再另拆 AI 体验增强小步。"
+    },
+    {
+      "id": "LOG-519",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "确认 AI 自定义文章结构模板 V1 边界",
+      "action": "用户确认/边界回写/风险登记/进度同步",
+      "result": "用户明确不要内置文章结构模板，所有模板都由用户自己定义、新增和维护。本步按 `PH3-01-ai-custom-structure-template-v1` 推进：在 AI 教育内容生成中新增本机自定义结构模板库，模板库初始为空，支持新增、编辑、删除和选择；选择模板后，大纲阶段必须按模板结构生成，正文阶段必须同时遵守模板结构和用户审核后的大纲；模板 V1 只保存到本机 localStorage，不写入 `.layout`、AI 生成记录或工作区文件。本步明确不纳入内置模板、示例模板、模板市场、云同步、导入导出、结构化编辑器、小红书模板、分页和导出调整。",
+      "verification": [
+        "用户已回复“确定”，并明确“不要内置模板，所有模板交给我自己去定义、新增”。",
+        "`progress/tasks/phase-3.json` 已在 `PH3-01` 下追加 `PH3-01-ai-custom-structure-template-v1` 边界，写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/risks.json` 已新增 `RISK-094`，记录文章结构模板若扩成完整模板系统的范围风险。",
+        "开工前将执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/tasks/phase-3.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现本机自定义结构模板状态、AI 生成设置区模板管理 UI、提示词接入和定向回归。"
+    },
+    {
+      "id": "LOG-520",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH3-01"
+      ],
+      "phaseMilestone": "第三阶段 / M4",
+      "step": "完成 AI 自定义文章结构模板 V1",
+      "action": "模板库状态新增/模板管理 UI/提示词接入/定向测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH3-01-ai-custom-structure-template-v1`：1) AI 教育内容生成设置区已新增“文章结构模板”管理入口；2) 模板库初始为空，不提供内置模板、默认模板或示例模板；3) 用户可新增、编辑、删除和选择模板，模板字段包含模板名称、适用类型、文章结构和输出要求；4) 模板 V1 只保存在本机 localStorage，不写入 `.layout`、AI 生成记录或工作区文件；5) 选中模板后，大纲阶段会按模板组织结构，正文阶段会同时遵守模板结构和用户审核后的大纲；6) 小红书标题、文案和主图方案链路保持原样。",
+      "verification": [
+        "`src/types/ai.ts` 已新增 `EducationGenerateType`、`AiStructureTemplateScope`、`AiStructureTemplate`，并为 `GenerateOptions` 补充 `structureTemplate`。",
+        "`src/store/slices/aiSlice.ts` 已新增模板库 localStorage 读写与选择状态，初始不写入任何模板。",
+        "`src/components/ai/AiGenerateTab.tsx` 已新增模板选择、创建、编辑、删除和空态入口，且仅教育内容生成类型显示。",
+        "`src/services/AiService.ts` 已把用户自定义模板注入大纲与正文提示词。",
+        "`src/services/AiService.test.ts` 已新增 2 条模板提示词回归。",
+        "`rg -n \"内置模板|示例模板|默认模板|我的讲义结构|我的总结结构\" src` 已确认测试名之外没有产品内置模板痕迹。",
+        "`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\AiService.test.ts` 通过，11 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`npm run progress:build` 成功。",
+        "`npm run progress:check` 成功。"
+      ],
+      "affectedFiles": [
+        "src/components/ai/AiGenerateTab.tsx",
+        "src/services/AiService.ts",
+        "src/services/AiService.test.ts",
+        "src/store/slices/aiSlice.ts",
+        "src/types/ai.ts",
+        "src/styles.css",
+        "progress/tasks/phase-3.json",
+        "progress/config.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md",
+        "当前执行看板.md"
+      ],
+      "next": "后续如需模板导入导出、工作区模板库、结构化模板编辑器、模板与生成记录联动或小红书结构模板，再另拆 AI 体验增强小步。"
     }
   ]
 }

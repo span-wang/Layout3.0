@@ -95,42 +95,58 @@ function svgDataUri(svg: string): string {
 function buildTemplateSvg(label: string, body: string): string {
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="400" height="240" viewBox="0 0 400 240" role="img" aria-label="${label}">
-  <rect width="400" height="240" fill="#ffffff"/>
+  <title>${label}</title>
   <defs>
-    <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <path d="M0 0 L8 3 L0 6 Z" fill="#111827"/>
+    <marker id="arrow" markerWidth="7" markerHeight="5" refX="6.5" refY="2.5" orient="auto">
+      <path d="M0 0 L7 2.5 L0 5 Z" fill="#0f172a"/>
     </marker>
-    <pattern id="dots" width="8" height="8" patternUnits="userSpaceOnUse">
-      <circle cx="2" cy="2" r="1.1" fill="#111827"/>
+    <pattern id="dots" width="7" height="7" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.95" fill="#0f172a"/>
     </pattern>
   </defs>
   <style>
-    .outline{fill:none;stroke:#111827;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-    .detail{fill:none;stroke:#111827;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round}
-    .guide{fill:none;stroke:#111827;stroke-width:1.15;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:4 4}
-    .liquid{fill:#f4fbfb;stroke:#111827;stroke-width:1.3;stroke-linejoin:round}
-    .solid{fill:url(#dots);stroke:#111827;stroke-width:1.3;stroke-linejoin:round}
-    .stopper{fill:#111827}
-    .label{fill:#111827;font-family:Arial,"Microsoft YaHei",sans-serif;font-size:15px;font-weight:600}
-    .note{fill:#4b5563;font-family:Arial,"Microsoft YaHei",sans-serif;font-size:12px}
-    .gas{fill:#111827;font-family:Arial,"Microsoft YaHei",sans-serif;font-size:18px;font-weight:700}
+    svg{background:transparent}
+    .scientific-layer{shape-rendering:geometricPrecision;text-rendering:geometricPrecision}
+    .outline{fill:none;stroke:#0f172a;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round}
+    .detail{fill:none;stroke:#0f172a;stroke-width:1.05;stroke-linecap:round;stroke-linejoin:round}
+    .guide{fill:none;stroke:#475569;stroke-width:0.95;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:3.5 4}
+    .liquid{fill:#dff7fb;fill-opacity:.62;stroke:#0f172a;stroke-width:1.05;stroke-linejoin:round}
+    .solid{fill:url(#dots);stroke:#0f172a;stroke-width:1.05;stroke-linejoin:round}
+    .stopper{fill:#1f2937}
+    .label{fill:#0f172a;font-family:Arial,"Microsoft YaHei",sans-serif;font-size:14px;font-weight:600}
+    .note{fill:#475569;font-family:Arial,"Microsoft YaHei",sans-serif;font-size:12px}
+    .gas{fill:#0f172a;font-family:Arial,"Microsoft YaHei",sans-serif;font-size:17px;font-weight:700}
   </style>
-  ${body}
+  <g class="scientific-layer">
+    ${body}
+  </g>
 </svg>`.trim();
 }
 
 function buildPartSvg(label: string, body: string): string {
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="220" height="170" viewBox="0 0 220 170" role="img" aria-label="${label}">
-  <rect width="220" height="170" fill="#ffffff"/>
+  <title>${label}</title>
+  <defs>
+    <pattern id="part-dots" width="7" height="7" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.95" fill="#0f172a"/>
+    </pattern>
+    <marker id="part-arrow" markerWidth="7" markerHeight="5" refX="6.5" refY="2.5" orient="auto">
+      <path d="M0 0 L7 2.5 L0 5 Z" fill="#0f172a"/>
+    </marker>
+  </defs>
   <style>
-    .outline{fill:none;stroke:#111827;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
-    .detail{fill:none;stroke:#111827;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
-    .liquid{fill:#f4fbfb;stroke:#111827;stroke-width:1.2;stroke-linejoin:round}
-    .solid{fill:#111827;fill-opacity:.14;stroke:#111827;stroke-width:1.2;stroke-linejoin:round}
-    .dark{fill:#111827}
+    svg{background:transparent}
+    .scientific-layer{shape-rendering:geometricPrecision}
+    .outline{fill:none;stroke:#0f172a;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+    .detail{fill:none;stroke:#0f172a;stroke-width:0.95;stroke-linecap:round;stroke-linejoin:round}
+    .liquid{fill:#dff7fb;fill-opacity:.62;stroke:#0f172a;stroke-width:0.95;stroke-linejoin:round}
+    .solid{fill:url(#part-dots);stroke:#0f172a;stroke-width:0.95;stroke-linejoin:round}
+    .dark{fill:#1f2937}
   </style>
-  ${body}
+  <g class="scientific-layer">
+    ${body}
+  </g>
 </svg>`.trim();
 }
 
@@ -141,6 +157,22 @@ function clampContainerLevel(level: number): number {
 function buildLiquidPath(left: number, right: number, top: number, bottom: number, curveDepth: number): string {
   const centerX = (left + right) / 2;
   return `M${left} ${bottom}L${left} ${top}Q${centerX} ${top - curveDepth} ${right} ${top}L${right} ${bottom}Z`;
+}
+
+function buildContainedLiquidPath(
+  centerX: number,
+  topY: number,
+  bottomY: number,
+  topHalfWidth: number,
+  bottomHalfWidth: number,
+  meniscusDepth: number,
+  baseCurveDepth: number,
+): string {
+  const topLeft = centerX - topHalfWidth;
+  const topRight = centerX + topHalfWidth;
+  const bottomLeft = centerX - bottomHalfWidth;
+  const bottomRight = centerX + bottomHalfWidth;
+  return `M${topLeft} ${topY}Q${centerX} ${topY + meniscusDepth} ${topRight} ${topY}L${bottomRight} ${bottomY}Q${centerX} ${bottomY + baseCurveDepth} ${bottomLeft} ${bottomY}Z`;
 }
 
 function buildScaleMarks(
@@ -405,64 +437,75 @@ function buildEditableContainerBody(
 
   switch (kind) {
     case 'testTube': {
-      const liquidTop = 97 - state.liquidLevel * 0.42;
+      const liquidTop = 114 - state.liquidLevel * 0.62;
       return buildPartSvg(
         label,
         `
-  <path class="outline" d="M88 18h30"/>
-  <path class="outline" d="M92 18v73q0 18 11 28q11-10 11-28V18"/>
-  <path class="detail" d="M95 18v70q0 13 8 22"/>
-  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(96, 110, liquidTop, 99, 4)}"/>` : ''}
-  ${state.showStopper ? '<rect class="dark" x="88" y="13" width="34" height="9" rx="2"/>' : ''}
+  <ellipse class="outline" cx="110" cy="22" rx="18" ry="5"/>
+  <path class="outline" d="M92 22v80q0 24 18 30q18-6 18-30V22"/>
+  <path class="detail" d="M98 27v72q0 18 12 24"/>
+  <path class="detail" d="M122 27v72q0 18-12 24"/>
+  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(97, 123, liquidTop, 113, 3)}"/>` : ''}
+  ${state.showStopper ? '<path class="dark" d="M91 12h38l-4 12H95z"/><ellipse cx="110" cy="20" rx="5.2" ry="2.8" fill="#ffffff" fill-opacity=".9"/>' : ''}
   `,
       );
     }
     case 'beaker': {
-      const liquidTop = 116 - state.liquidLevel * 0.6;
+      const liquidTop = 123 - state.liquidLevel * 0.72;
       return buildPartSvg(
         label,
         `
-  <path class="outline" d="M58 26h76"/>
-  <path class="outline" d="M135 26q10 0 13 7q2 5-2 10"/>
-  <path class="outline" d="M64 26v89q0 12 12 12h49q12 0 12-12V47"/>
-  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(66, 136, liquidTop, 127, 5)}"/>` : ''}
-  ${state.showScaleMarks ? buildScaleMarks(78, 55, 105, 18, 12, 12) : ''}
+  <path class="outline" d="M57 30h81q12 0 17 7q3 5-3 11"/>
+  <path class="outline" d="M66 31v90q0 10 10 13h49q10-3 10-13V48"/>
+  <path class="detail" d="M66 31q35 9 70 0"/>
+  <path class="detail" d="M76 126h49"/>
+  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(68, 133, liquidTop, 127, 4)}"/>` : ''}
+  ${state.showScaleMarks ? buildScaleMarks(82, 53, 111, 18, 10, 10) : ''}
+  <path class="detail" d="M140 36q5 2 8 6"/>
   `,
       );
     }
     case 'conicalFlask': {
-      const liquidTop = 122 - state.liquidLevel * 0.55;
+      const liquidTop = 127 - state.liquidLevel * 0.62;
+      const topHalfWidth = Math.max(14, Math.min(33, Math.round(33 - (124 - liquidTop) * 0.42)));
+      const bottomHalfWidth = Math.min(36, topHalfWidth + 6);
       return buildPartSvg(
         label,
         `
-  <path class="outline" d="M92 20h34"/>
-  <path class="outline" d="M98 20v34l-37 58q-6 10 7 18h82q13-8 7-18l-37-58V20"/>
-  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(76, 142, liquidTop, 121, 6)}"/>` : ''}
-  <path class="detail" d="M83 96Q109 105 135 96"/>
-  ${state.showStopper ? '<rect class="dark" x="92" y="14" width="34" height="9" rx="2"/>' : ''}
+  <ellipse class="outline" cx="110" cy="22" rx="18" ry="5"/>
+  <path class="outline" d="M100 22v37l-39 61q-5 8 8 13h82q13-5 8-13l-39-61V22"/>
+  <path class="detail" d="M100 59q10 7 20 0"/>
+  <path class="detail" d="M77 103q33 10 66 0"/>
+  ${state.showLiquid ? `<path class="liquid" d="${buildContainedLiquidPath(110, liquidTop, 124, topHalfWidth, bottomHalfWidth, 3, 5)}"/>` : ''}
+  ${state.showStopper ? '<path class="dark" d="M91 12h38l-4 12H95z"/><ellipse cx="110" cy="20" rx="5.4" ry="2.6" fill="#ffffff" fill-opacity=".9"/>' : ''}
   `,
       );
     }
     case 'gasJar': {
-      const liquidTop = 124 - state.liquidLevel * 0.72;
+      const liquidTop = 129 - state.liquidLevel * 0.76;
       return buildPartSvg(
         label,
         `
-  <path class="outline" d="M83 26q0-10 8-10h38q8 0 8 10v88q0 16-15 19h-16q-15-3-15-19Z"/>
-  ${state.showScaleMarks ? '<path class="detail" d="M86 42h48"/><path class="detail" d="M91 80h38"/><path class="detail" d="M91 103h38"/>' : '<path class="detail" d="M86 42h48"/>'}
-  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(92, 128, liquidTop, 132, 4)}"/>` : ''}
-  ${state.showStopper ? '<rect class="dark" x="84" y="13" width="52" height="8" rx="2"/>' : ''}
+  <ellipse class="outline" cx="110" cy="27" rx="31" ry="8"/>
+  <path class="outline" d="M79 27v89q0 15 15 20h32q15-5 15-20V27"/>
+  <path class="detail" d="M84 42q26 7 52 0"/>
+  <path class="detail" d="M88 124q22 6 44 0"/>
+  ${state.showScaleMarks ? '<path class="detail" d="M95 62h30M95 82h21M95 102h30"/>' : ''}
+  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(84, 136, liquidTop, 128, 4)}"/>` : ''}
+  ${state.showStopper ? '<path class="dark" d="M77 14h66l-5 11H82z"/>' : ''}
   `,
       );
     }
     case 'roundBottomFlask': {
       const liquidTop = 122 - state.liquidLevel * 0.5;
+      const topHalfWidth = Math.max(16, Math.min(31, Math.round(31 - Math.abs(liquidTop - 106) * 0.28)));
+      const bottomHalfWidth = Math.max(22, topHalfWidth - 4);
       return buildPartSvg(
         label,
         `
   <path class="outline" d="M95 18h30"/>
   <path class="outline" d="M101 18v50q-26 8-34 30q-7 21 8 36q13 13 35 13q22 0 35-13q15-15 8-36q-8-22-34-30V18"/>
-  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(79, 141, liquidTop, 133, 7)}"/>` : ''}
+  ${state.showLiquid ? `<path class="liquid" d="${buildContainedLiquidPath(110, liquidTop, 130, topHalfWidth, bottomHalfWidth, 3, 8)}"/>` : ''}
   <path class="detail" d="M95 75Q110 84 125 75"/>
   ${state.showStopper ? '<rect class="dark" x="95" y="12" width="30" height="9" rx="2"/>' : ''}
   `,
@@ -470,12 +513,13 @@ function buildEditableContainerBody(
     }
     case 'flatBottomFlask': {
       const liquidTop = 124 - state.liquidLevel * 0.52;
+      const topHalfWidth = Math.max(18, Math.min(30, Math.round(30 - Math.abs(liquidTop - 108) * 0.22)));
       return buildPartSvg(
         label,
         `
   <path class="outline" d="M94 18h32"/>
   <path class="outline" d="M100 18v47q-27 10-36 42q-4 15 8 27h76q12-12 8-27q-9-32-36-42V18"/>
-  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(76, 144, liquidTop, 126, 6)}"/>` : ''}
+  ${state.showLiquid ? `<path class="liquid" d="${buildContainedLiquidPath(110, liquidTop, 126, topHalfWidth, 24, 3, 2)}"/>` : ''}
   <path class="detail" d="M82 100Q110 108 138 100"/>
   ${state.showStopper ? '<rect class="dark" x="94" y="12" width="32" height="9" rx="2"/>' : ''}
   `,
@@ -503,23 +547,24 @@ function buildEditableContainerBody(
   ${state.showStopper ? '<path class="dark" d="M96 20h28l5 14H91z"/>' : '<path class="outline" d="M92 20h36l3 14H89z"/>'}
   <path class="outline" d="M91 36h38"/>
   <path class="outline" d="M83 36v89q0 11 11 11h32q11 0 11-11V36"/>
-  <rect x="91" y="72" width="38" height="34" rx="3" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
+  <rect x="91" y="72" width="38" height="34" rx="3" fill="#ffffff" fill-opacity=".82" stroke="#0f172a" stroke-width="0.95"/>
   <path class="detail" d="M98 86h24M100 96h20"/>
   ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(86, 134, liquidTop, 132, 4)}"/>` : ''}
   `,
       );
     }
     case 'graduatedCylinder': {
-      const liquidTop = 132 - state.liquidLevel * 0.84;
+      const liquidTop = 132 - state.liquidLevel * 0.88;
       return buildPartSvg(
         label,
         `
-  <ellipse class="outline" cx="108" cy="27" rx="25" ry="8"/>
-  <path class="outline" d="M83 27v96q0 8 8 12h34q8-4 8-12V27"/>
-  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(86, 130, liquidTop, 132, 4)}"/>` : ''}
-  ${state.showScaleMarks ? buildScaleMarks(96, 46, 114, 17, 11, 13) : ''}
-  <path class="outline" d="M74 142h68"/>
-  <path class="detail" d="M95 134h26l11 8H84Z"/>
+  <ellipse class="outline" cx="110" cy="27" rx="25" ry="7"/>
+  <path class="outline" d="M85 27v96q0 9 9 12h32q9-3 9-12V27"/>
+  <path class="detail" d="M90 42q20 5 40 0"/>
+  ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(88, 132, liquidTop, 130, 3)}"/>` : ''}
+  ${state.showScaleMarks ? buildScaleMarks(98, 45, 113, 18, 10, 8) : ''}
+  <path class="outline" d="M72 143h76"/>
+  <path class="detail" d="M94 135h32l14 8H80Z"/>
   `,
       );
     }
@@ -529,13 +574,16 @@ function buildEditableContainerBody(
       return buildPartSvg(
         label,
         `
-  ${state.showStopper ? '<rect class="dark" x="93" y="14" width="34" height="9" rx="2"/>' : '<path class="outline" d="M96 18h28"/>'}
-  <path class="outline" d="M100 22v24"/>
-  <path class="outline" d="M100 46q-18 13-24 31q-6 18 5 34q10 15 29 18v12h0v-12q19-3 29-18q11-16 5-34q-6-18-24-31V22"/>
-  <path class="detail" d="M110 129v15"/>
-  <path class="outline" d="M95 134h30"/>
-  <circle cx="110" cy="134" r="4.5" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
-  <path class="detail" d="M125 134h18"/>
+  ${state.showStopper ? '<path class="dark" d="M93 14h34l-4 10H97z"/>' : '<ellipse class="outline" cx="110" cy="20" rx="16" ry="5"/>'}
+  <path class="outline" d="M101 24v23"/>
+  <path class="outline" d="M119 24v23"/>
+  <path class="outline" d="M101 47q-24 15-27 41q-3 28 28 41h16q31-13 28-41q-3-26-27-41"/>
+  <path class="detail" d="M83 87q27 10 54 0"/>
+  <path class="detail" d="M110 129v14"/>
+  <path class="outline" d="M96 134h28"/>
+  <circle cx="110" cy="134" r="4.5" fill="#ffffff" fill-opacity=".92" stroke="#0f172a" stroke-width="0.95"/>
+  <path class="detail" d="M124 134h19"/>
+  <path class="outline" d="M106 143h8l-3 18h-2Z"/>
   ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(86, 134, liquidTop, 123, 6)}"/>` : ''}
   ${state.valveOpen ? '<path class="detail" d="M143 134h16M111 139v10"/>' : '<path class="detail" d="M143 134h16M103 127l14 14"/>'}
   `,
@@ -547,13 +595,15 @@ function buildEditableContainerBody(
       return buildPartSvg(
         label,
         `
-  <path class="outline" d="M101 20h18"/>
-  <path class="outline" d="M104 20v100l6 24l6-24V20"/>
+  <ellipse class="outline" cx="110" cy="20" rx="12" ry="4"/>
+  <path class="outline" d="M102 20v99l8 25l8-25V20"/>
+  <path class="detail" d="M106 24v91M114 24v91"/>
   ${state.showLiquid ? `<path class="liquid" d="${buildLiquidPath(106, 114, liquidTop, 118, 3)}"/>` : ''}
-  ${state.showScaleMarks ? buildScaleMarks(120, 38, 106, -10, -7, 13) : ''}
+  ${state.showScaleMarks ? buildScaleMarks(122, 35, 109, -12, -7, 8) : ''}
   <path class="outline" d="M92 116h36"/>
-  <circle cx="110" cy="116" r="4" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
+  <circle cx="110" cy="116" r="4" fill="#ffffff" fill-opacity=".92" stroke="#0f172a" stroke-width="0.95"/>
   <path class="detail" d="M128 116h20"/>
+  <path class="detail" d="M110 121v16"/>
   ${state.valveOpen ? '<path class="detail" d="M137 116h15M110 121v13"/>' : '<path class="detail" d="M137 116h15M103 109l14 14"/>'}
   `,
       );
@@ -605,25 +655,26 @@ const co2LimewaterSvg = buildTemplateSvg(
   '二氧化碳通入澄清石灰水',
   `
   <path class="outline" d="M30 204h324"/>
-  <path class="outline" d="M70 60h38"/>
-  <path class="outline" d="M76 60v34l-28 77q-4 12 11 21h60q15-9 11-21l-28-77V60"/>
-  <path class="detail" d="M84 60v33l-22 63"/>
-  <path class="solid" d="M60 170Q89 182 118 170v18Q108 197 89 197Q70 197 60 188Z"/>
-  <rect class="stopper" x="74" y="52" width="31" height="10" rx="2"/>
-  <path class="outline" d="M91 52v-20h77q18 0 24 17q3 8 3 17v81"/>
-  <path class="detail" d="M101 33h47" marker-end="url(#arrow)"/>
-  <path class="outline" d="M190 68h42"/>
-  <path class="outline" d="M195 68v102q0 9 7 15q7 6 14 6h3q7 0 14-6q7-6 7-15V68"/>
-  <path class="detail" d="M198 84h39"/>
-  <path class="liquid" d="M199 141Q219 135 239 141v25q0 9-6 14q-6 5-14 5h0q-8 0-14-5q-6-5-6-14Z"/>
-  <rect class="stopper" x="189" y="60" width="44" height="9" rx="2"/>
-  <circle cx="220" cy="145" r="3" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
-  <circle cx="215" cy="155" r="2.3" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
-  <circle cx="225" cy="161" r="2.2" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
+  <ellipse class="outline" cx="86" cy="62" rx="21" ry="6"/>
+  <path class="outline" d="M74 62v39l-34 72q-5 10 8 17h76q13-7 8-17l-34-72V62"/>
+  <path class="liquid" d="M55 158Q86 169 117 158v24q-8 8-31 8q-23 0-31-8Z"/>
+  <path class="solid" d="M61 169Q86 177 111 169v11q-6 6-25 6q-19 0-25-6Z"/>
+  <path class="stopper" d="M69 52h34l-4 12H73z"/>
+  <ellipse cx="88" cy="58" rx="4.6" ry="2.3" fill="#ffffff" fill-opacity=".92"/>
+  <path class="outline" d="M88 54v-20h84q18 0 24 15q4 10 4 25v70"/>
+  <path class="detail" d="M107 34h52" marker-end="url(#arrow)"/>
+  <ellipse class="outline" cx="228" cy="72" rx="25" ry="7"/>
+  <path class="outline" d="M203 72v94q0 12 8 18q7 5 17 5q10 0 17-5q8-6 8-18V72"/>
+  <path class="liquid" d="M205 142Q228 136 251 142v22q0 10-7 15q-6 4-16 4q-10 0-16-4q-7-5-7-15Z"/>
+  <path class="detail" d="M200 144h27"/>
+  <path class="detail" d="M227 144v22"/>
+  <circle cx="226" cy="153" r="3" fill="none" stroke="#0f172a" stroke-width="0.9"/>
+  <circle cx="219" cy="163" r="2.3" fill="none" stroke="#0f172a" stroke-width="0.8"/>
+  <circle cx="235" cy="166" r="2.4" fill="none" stroke="#0f172a" stroke-width="0.8"/>
   <text class="label" x="47" y="226">大理石 + 稀盐酸</text>
-  <text class="label" x="255" y="142">澄清石灰水</text>
-  <text class="note" x="261" y="161">变浑浊</text>
-  <text class="gas" x="141" y="28">CO<tspan baseline-shift="sub" font-size="12">2</tspan></text>
+  <text class="label" x="261" y="145">澄清石灰水</text>
+  <text class="note" x="262" y="164">导管伸入液面下</text>
+  <text class="gas" x="142" y="29">CO<tspan baseline-shift="sub" font-size="12">2</tspan></text>
   `,
 );
 
@@ -631,22 +682,25 @@ const co2CollectionSvg = buildTemplateSvg(
   '二氧化碳收集装置',
   `
   <path class="outline" d="M30 204h324"/>
-  <path class="outline" d="M64 62h38"/>
-  <path class="outline" d="M70 62v35l-27 75q-5 12 11 21h59q16-9 11-21L97 97V62"/>
-  <path class="solid" d="M57 169Q84 180 111 169v18Q101 196 84 196Q67 196 57 187Z"/>
-  <rect class="stopper" x="69" y="54" width="30" height="9" rx="2"/>
-  <path class="outline" d="M86 54V35h149q20 0 25 17q2 8 2 19v77"/>
-  <path class="detail" d="M113 35h77" marker-end="url(#arrow)"/>
-  <path class="outline" d="M260 56q0-10 9-10h38q9 0 9 10v119q0 18-17 18h-22q-17 0-17-18Z"/>
-  <path class="detail" d="M262 74h52"/>
-  <path class="guide" d="M269 104h37"/>
-  <path class="guide" d="M269 133h37"/>
-  <path class="outline" d="M242 45h90"/>
-  <path class="detail" d="M317 41l18 0"/>
-  <text class="label" x="46" y="226">反应瓶</text>
-  <text class="label" x="232" y="226">向上排空气收集</text>
-  <text class="gas" x="155" y="31">CO<tspan baseline-shift="sub" font-size="12">2</tspan></text>
-  <text class="note" x="318" y="48">玻璃片</text>
+  <ellipse class="outline" cx="84" cy="64" rx="20" ry="6"/>
+  <path class="outline" d="M72 64v38l-33 71q-5 10 8 17h74q13-7 8-17l-33-71V64"/>
+  <path class="solid" d="M56 170Q84 180 112 170v13q-7 7-28 7q-21 0-28-7Z"/>
+  <path class="stopper" d="M67 54h34l-4 12H71z"/>
+  <ellipse cx="86" cy="60" rx="4.5" ry="2.3" fill="#ffffff" fill-opacity=".92"/>
+  <path class="outline" d="M86 56V35h150q20 0 27 17q3 8 3 21v91"/>
+  <path class="detail" d="M112 35h76" marker-end="url(#arrow)"/>
+  <path class="outline" d="M266 59q0-10 9-10h40q9 0 9 10v115q0 17-16 19h-26q-16-2-16-19Z"/>
+  <ellipse class="outline" cx="295" cy="59" rx="29" ry="8"/>
+  <path class="detail" d="M270 76q25 7 50 0"/>
+  <path class="detail" d="M266 164h30"/>
+  <path class="guide" d="M275 105h38M275 132h38"/>
+  <path class="outline" d="M252 48h88"/>
+  <path class="detail" d="M335 44h18"/>
+  <text class="label" x="45" y="226">反应瓶</text>
+  <text class="label" x="229" y="226">向上排空气收集 CO₂</text>
+  <text class="note" x="282" y="160">导管接近瓶底</text>
+  <text class="gas" x="156" y="31">CO<tspan baseline-shift="sub" font-size="12">2</tspan></text>
+  <text class="note" x="315" y="39">玻璃片</text>
   `,
 );
 
@@ -654,24 +708,26 @@ const oxygenWaterCollectionSvg = buildTemplateSvg(
   '氧气排水法收集装置',
   `
   <path class="outline" d="M30 204h324"/>
-  <path class="outline" d="M62 64h38"/>
-  <path class="outline" d="M68 64v35l-27 73q-5 12 11 21h58q16-9 11-21L94 99V64"/>
-  <path class="solid" d="M55 169Q81 179 107 169v18Q98 196 81 196Q64 196 55 187Z"/>
-  <rect class="stopper" x="67" y="56" width="30" height="9" rx="2"/>
-  <path class="outline" d="M84 56V35h73q17 0 23 16q4 8 4 18v92h34"/>
-  <path class="detail" d="M112 35h51" marker-end="url(#arrow)"/>
-  <path class="outline" d="M182 122h154v61q0 10-8 16q-8 6-18 6H208q-10 0-18-6q-8-6-8-16Z"/>
-  <path class="liquid" d="M185 140Q259 131 333 140v42q0 8-6 12q-6 4-16 4H207q-10 0-16-4q-6-4-6-12Z"/>
-  <path class="outline" d="M226 49q0-9 8-9h34q8 0 8 9v80h-50Z"/>
-  <path class="detail" d="M226 64h50"/>
-  <path class="outline" d="M184 129h51"/>
-  <circle cx="229" cy="161" r="3" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
-  <circle cx="239" cy="152" r="2.6" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
-  <circle cx="249" cy="161" r="2.3" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
-  <text class="gas" x="122" y="30">O<tspan baseline-shift="sub" font-size="12">2</tspan></text>
-  <text class="label" x="232" y="34">倒置集气瓶</text>
-  <text class="label" x="248" y="226">水槽</text>
-  <text class="note" x="252" y="160">气泡</text>
+  <ellipse class="outline" cx="82" cy="65" rx="20" ry="6"/>
+  <path class="outline" d="M70 65v37l-32 71q-5 10 8 17h72q13-7 8-17l-32-71V65"/>
+  <path class="solid" d="M55 170Q82 179 109 170v13q-7 7-27 7q-20 0-27-7Z"/>
+  <path class="stopper" d="M65 55h34l-4 12H69z"/>
+  <ellipse cx="84" cy="61" rx="4.5" ry="2.3" fill="#ffffff" fill-opacity=".92"/>
+  <path class="outline" d="M84 57V36h76q18 0 25 16q4 8 4 20v89h32"/>
+  <path class="detail" d="M112 36h51" marker-end="url(#arrow)"/>
+  <path class="outline" d="M180 123h158v60q0 11-9 17q-8 5-20 5H209q-12 0-20-5q-9-6-9-17Z"/>
+  <path class="liquid" d="M183 141Q259 132 335 141v42q0 8-7 12q-7 4-18 4H208q-11 0-18-4q-7-4-7-12Z"/>
+  <path class="outline" d="M226 49q0-9 8-9h36q8 0 8 9v80h-52Z"/>
+  <ellipse class="outline" cx="252" cy="49" rx="26" ry="7"/>
+  <path class="detail" d="M227 64q25 6 50 0"/>
+  <path class="outline" d="M185 130h48"/>
+  <circle cx="230" cy="161" r="3" fill="none" stroke="#0f172a" stroke-width="0.85"/>
+  <circle cx="241" cy="153" r="2.5" fill="none" stroke="#0f172a" stroke-width="0.8"/>
+  <circle cx="251" cy="162" r="2.3" fill="none" stroke="#0f172a" stroke-width="0.8"/>
+  <text class="gas" x="122" y="31">O<tspan baseline-shift="sub" font-size="12">2</tspan></text>
+  <text class="label" x="224" y="35">倒置集气瓶</text>
+  <text class="label" x="247" y="226">水槽</text>
+  <text class="note" x="252" y="160">导管伸入瓶口</text>
   `,
 );
 
@@ -679,20 +735,22 @@ const oxygenAirCollectionSvg = buildTemplateSvg(
   '氧气向上排空气法收集装置',
   `
   <path class="outline" d="M30 204h324"/>
-  <path class="outline" d="M66 63h38"/>
-  <path class="outline" d="M72 63v35l-27 74q-4 12 11 21h58q16-9 11-21L98 98V63"/>
-  <path class="solid" d="M59 169Q85 179 111 169v18Q102 196 85 196Q68 196 59 187Z"/>
-  <rect class="stopper" x="71" y="55" width="30" height="9" rx="2"/>
-  <path class="outline" d="M88 55V35h162q19 0 24 17q3 8 3 19v79"/>
+  <ellipse class="outline" cx="84" cy="64" rx="20" ry="6"/>
+  <path class="outline" d="M72 64v38l-33 71q-5 10 8 17h74q13-7 8-17l-33-71V64"/>
+  <path class="solid" d="M56 170Q84 180 112 170v13q-7 7-28 7q-21 0-28-7Z"/>
+  <path class="stopper" d="M67 54h34l-4 12H71z"/>
+  <ellipse cx="86" cy="60" rx="4.5" ry="2.3" fill="#ffffff" fill-opacity=".92"/>
+  <path class="outline" d="M86 56V35h165q19 0 26 17q4 9 4 22v76"/>
   <path class="detail" d="M116 35h78" marker-end="url(#arrow)"/>
-  <path class="outline" d="M275 56q0-10 9-10h34q9 0 9 10v119q0 18-17 18h-18q-17 0-17-18Z"/>
-  <path class="detail" d="M278 128h46"/>
-  <path class="guide" d="M282 94h38"/>
-  <path class="guide" d="M282 124h38"/>
-  <path class="detail" d="M292 144Q312 124 307 89" marker-end="url(#arrow)"/>
+  <path class="outline" d="M278 58q0-10 9-10h36q9 0 9 10v116q0 17-16 19h-22q-16-2-16-19Z"/>
+  <ellipse class="outline" cx="305" cy="58" rx="27" ry="8"/>
+  <path class="detail" d="M282 76q23 6 46 0"/>
+  <path class="outline" d="M281 150h31"/>
+  <path class="guide" d="M287 95h35M287 124h35"/>
+  <path class="detail" d="M294 144Q313 122 309 90" marker-end="url(#arrow)"/>
   <text class="gas" x="146" y="30">O<tspan baseline-shift="sub" font-size="12">2</tspan></text>
-  <text class="label" x="239" y="226">向上排空气法</text>
-  <text class="note" x="324" y="85">空气逸出</text>
+  <text class="label" x="237" y="226">向上排空气法</text>
+  <text class="note" x="320" y="87">空气逸出</text>
   `,
 );
 
@@ -700,24 +758,27 @@ const heatedTestTubeGasSvg = buildTemplateSvg(
   '加热试管制气体',
   `
   <path class="outline" d="M28 204h328"/>
-  <path class="outline" d="M61 178h96"/>
-  <path class="outline" d="M109 178V86"/>
-  <path class="outline" d="M77 103l146-30"/>
-  <path class="outline" d="M86 117l145-30"/>
-  <path class="outline" d="M86 117q-16 3-20-10q-3-12 9-16"/>
-  <path class="solid" d="M108 106l49-10 3 13-49 11Z"/>
-  <rect class="stopper" x="214" y="71" width="29" height="11" rx="2" transform="rotate(-12 214 71)"/>
-  <path class="outline" d="M232 79l52-11q17-4 23 7q5 9 5 17v46"/>
-  <path class="outline" d="M285 138h51"/>
-  <path class="outline" d="M292 138v36q0 16 19 16h6q19 0 19-16v-36"/>
-  <path class="detail" d="M254 77h37" marker-end="url(#arrow)"/>
-  <path class="outline" d="M146 159q-11-18 0-36q11-18 12-18q1 0 12 18q11 18 0 36"/>
-  <path class="outline" d="M141 167h34"/>
-  <path class="outline" d="M131 204l18-28h18l18 28"/>
-  <path class="detail" d="M100 92l117-25"/>
+  <path class="outline" d="M63 180h96"/>
+  <path class="outline" d="M110 180V83"/>
+  <circle cx="110" cy="101" r="4" fill="#ffffff" fill-opacity=".92" stroke="#0f172a" stroke-width="1"/>
+  <path class="outline" d="M110 101h115"/>
+  <path class="outline" d="M80 103l143-31"/>
+  <path class="outline" d="M88 118l143-31"/>
+  <path class="outline" d="M88 118q-18 4-22-10q-3-12 11-17"/>
+  <path class="solid" d="M109 107l48-10 3 13-48 11Z"/>
+  <path class="stopper" d="M214 71l31-7l2 13l-31 7z"/>
+  <ellipse cx="232" cy="74" rx="4.2" ry="2.2" fill="#ffffff" fill-opacity=".92" transform="rotate(-12 232 74)"/>
+  <path class="outline" d="M233 77l52-11q18-4 25 8q5 8 5 18v47"/>
+  <ellipse class="outline" cx="315" cy="139" rx="27" ry="7"/>
+  <path class="outline" d="M288 139v35q0 14 17 17h20q17-3 17-17v-35"/>
+  <path class="detail" d="M255 75h38" marker-end="url(#arrow)"/>
+  <path class="outline" d="M146 159q-14-19 0-39q11-17 13-17q2 0 13 17q14 20 0 39"/>
+  <path class="detail" d="M159 123q-5 10 0 22q6-12 0-22"/>
+  <path class="outline" d="M141 167h36"/>
+  <path class="outline" d="M130 204l20-29h20l20 29"/>
   <text class="label" x="82" y="226">酒精灯加热</text>
-  <text class="note" x="66" y="82">固体混合物</text>
-  <text class="label" x="274" y="226">收集气体</text>
+  <text class="note" x="61" y="83">试管口略向下</text>
+  <text class="label" x="275" y="226">收集气体</text>
   `,
 );
 
@@ -725,22 +786,24 @@ const conicalFlaskGasSvg = buildTemplateSvg(
   '锥形瓶反应制气体',
   `
   <path class="outline" d="M30 204h324"/>
-  <path class="outline" d="M71 76h46"/>
-  <path class="outline" d="M80 76v41l-35 55q-8 11 7 21h94q15-10 7-21l-35-55V76"/>
-  <path class="liquid" d="M60 162Q99 176 138 162v20Q131 190 99 190Q67 190 60 182Z"/>
-  <path class="solid" d="M67 169Q97 179 127 169v11Q122 186 97 186Q72 186 67 180Z"/>
-  <path class="outline" d="M60 36h18"/>
-  <path class="outline" d="M69 36v88"/>
-  <ellipse class="outline" cx="69" cy="31" rx="16" ry="7"/>
-  <rect class="stopper" x="75" y="68" width="38" height="10" rx="2"/>
-  <path class="outline" d="M94 68V38h129q18 0 24 17q3 8 3 18v51"/>
-  <path class="detail" d="M147 40h69" marker-end="url(#arrow)"/>
-  <path class="outline" d="M248 125h57"/>
-  <path class="outline" d="M256 125v48q0 8 6 13q6 5 14 5h9q8 0 14-5q6-5 6-13v-48"/>
-  <path class="detail" d="M259 137h43"/>
-  <text class="label" x="38" y="226">长颈漏斗 + 锥形瓶</text>
-  <text class="note" x="288" y="119">导出气体</text>
-  <text class="gas" x="176" y="34">气体</text>
+  <ellipse class="outline" cx="96" cy="75" rx="26" ry="7"/>
+  <path class="outline" d="M84 75v40l-38 59q-6 9 8 17h84q14-8 8-17l-38-59V75"/>
+  <path class="liquid" d="M59 162Q96 174 133 162v21q-8 8-37 8q-29 0-37-8Z"/>
+  <path class="solid" d="M66 169Q96 179 126 169v12q-7 5-30 5q-23 0-30-5Z"/>
+  <ellipse class="outline" cx="66" cy="33" rx="16" ry="7"/>
+  <path class="outline" d="M57 33h18l-5 93h-8Z"/>
+  <path class="stopper" d="M74 66h44l-5 12H79z"/>
+  <ellipse cx="89" cy="72" rx="4.5" ry="2.3" fill="#ffffff" fill-opacity=".92"/>
+  <ellipse cx="105" cy="72" rx="4.5" ry="2.3" fill="#ffffff" fill-opacity=".92"/>
+  <path class="outline" d="M105 67V40h121q18 0 25 16q4 9 4 22v48"/>
+  <path class="detail" d="M147 41h69" marker-end="url(#arrow)"/>
+  <ellipse class="outline" cx="282" cy="127" rx="28" ry="7"/>
+  <path class="outline" d="M254 127v47q0 9 7 14q6 4 21 4q15 0 21-4q7-5 7-14v-47"/>
+  <path class="detail" d="M259 139q23 6 46 0"/>
+  <text class="label" x="36" y="226">长颈漏斗 + 锥形瓶</text>
+  <text class="note" x="42" y="151">漏斗下端液封</text>
+  <text class="note" x="290" y="119">导出气体</text>
+  <text class="gas" x="176" y="35">气体</text>
   `,
 );
 
@@ -748,20 +811,20 @@ const co2FullTestSvg = buildTemplateSvg(
   '检验二氧化碳是否集满',
   `
   <path class="outline" d="M34 204h312"/>
-  <path class="outline" d="M183 55q0-10 8-10h36q8 0 8 10v117q0 18-18 18h-16q-18 0-18-18Z"/>
-  <path class="detail" d="M185 72h48"/>
-  <path class="guide" d="M191 108h36"/>
-  <path class="guide" d="M191 136h36"/>
-  <path class="outline" d="M172 48h74"/>
-  <path class="detail" d="M105 86l78 20"/>
-  <path class="detail" d="M98 84l-32-9"/>
-  <path class="outline" d="M57 66q11-22 25-10q4 3 5 10q15-9 24 6q6 11-2 21"/>
-  <path class="detail" d="M57 101l39-31"/>
-  <path class="detail" d="M83 108l18-30"/>
-  <path class="detail" d="M64 62l25 39"/>
-  <text class="gas" x="199" y="121">CO<tspan baseline-shift="sub" font-size="12">2</tspan></text>
+  <ellipse class="outline" cx="210" cy="56" rx="29" ry="8"/>
+  <path class="outline" d="M181 56v116q0 17 17 20h24q17-3 17-20V56"/>
+  <path class="detail" d="M185 73q25 7 50 0"/>
+  <path class="guide" d="M190 107h40M190 135h40"/>
+  <path class="outline" d="M168 48h86"/>
+  <path class="detail" d="M103 87l79 20"/>
+  <path class="detail" d="M96 85l-34-9"/>
+  <path class="outline" d="M55 66q12-22 26-10q4 3 5 10q15-9 25 6q6 11-2 21"/>
+  <path class="detail" d="M56 102l40-32"/>
+  <path class="detail" d="M83 109l18-31"/>
+  <path class="detail" d="M64 62l25 40"/>
+  <text class="gas" x="199" y="122">CO<tspan baseline-shift="sub" font-size="12">2</tspan></text>
   <text class="label" x="40" y="226">燃着木条靠近瓶口</text>
-  <text class="note" x="257" y="76">火焰熄灭</text>
+  <text class="note" x="258" y="76">火焰熄灭</text>
   <text class="note" x="247" y="94">说明已集满</text>
   `,
 );
@@ -770,21 +833,23 @@ const airtightnessTestSvg = buildTemplateSvg(
   '检查装置气密性',
   `
   <path class="outline" d="M30 204h324"/>
-  <path class="outline" d="M63 64h40"/>
-  <path class="outline" d="M69 64v35l-27 73q-4 12 11 21h59q15-9 11-21L96 99V64"/>
-  <rect class="stopper" x="68" y="56" width="30" height="9" rx="2"/>
-  <path class="outline" d="M85 56V36h117q18 0 24 17q3 8 3 18v86h23"/>
-  <path class="detail" d="M113 36h63" marker-end="url(#arrow)"/>
-  <path class="outline" d="M252 128h74"/>
-  <path class="outline" d="M258 128v45q0 17 16 17h30q16 0 16-17v-45"/>
-  <path class="liquid" d="M260 160Q289 154 318 160v13q0 7-5 12q-5 5-12 5h-24q-7 0-12-5q-5-5-5-12Z"/>
-  <circle cx="288" cy="170" r="3" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
-  <circle cx="298" cy="161" r="2.7" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
-  <circle cx="308" cy="170" r="2.3" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
-  <path class="detail" d="M40 116q15-12 34 0"/>
-  <path class="detail" d="M41 132q15-12 34 0"/>
-  <path class="detail" d="M42 148q15-12 34 0"/>
-  <text class="label" x="44" y="226">手握试管</text>
+  <ellipse class="outline" cx="84" cy="65" rx="21" ry="6"/>
+  <path class="outline" d="M72 65v37l-33 72q-5 10 8 17h74q13-7 8-17l-33-72V65"/>
+  <path class="stopper" d="M67 55h34l-4 12H71z"/>
+  <ellipse cx="86" cy="61" rx="4.5" ry="2.3" fill="#ffffff" fill-opacity=".92"/>
+  <path class="outline" d="M86 57V36h119q18 0 25 16q4 9 4 22v86h25"/>
+  <path class="detail" d="M114 36h63" marker-end="url(#arrow)"/>
+  <ellipse class="outline" cx="292" cy="129" rx="38" ry="7"/>
+  <path class="outline" d="M254 129v44q0 16 17 19h42q17-3 17-19v-44"/>
+  <path class="liquid" d="M257 160Q292 154 327 160v14q0 9-8 13q-7 4-27 4q-20 0-27-4q-8-4-8-13Z"/>
+  <path class="detail" d="M234 160h34"/>
+  <circle cx="287" cy="171" r="3" fill="none" stroke="#0f172a" stroke-width="0.85"/>
+  <circle cx="298" cy="162" r="2.7" fill="none" stroke="#0f172a" stroke-width="0.85"/>
+  <circle cx="310" cy="171" r="2.3" fill="none" stroke="#0f172a" stroke-width="0.85"/>
+  <path class="detail" d="M41 116q15-12 34 0"/>
+  <path class="detail" d="M42 132q15-12 34 0"/>
+  <path class="detail" d="M43 148q15-12 34 0"/>
+  <text class="label" x="44" y="226">手握容器</text>
   <text class="label" x="228" y="226">导管口有气泡</text>
   <text class="note" x="131" y="31">空气受热膨胀</text>
   `,
@@ -794,22 +859,24 @@ const filtrationSvg = buildTemplateSvg(
   '过滤装置',
   `
   <path class="outline" d="M28 204h328"/>
-  <path class="outline" d="M84 49v155"/>
-  <path class="outline" d="M61 204h46"/>
-  <path class="outline" d="M84 94h128"/>
-  <path class="outline" d="M166 73h76"/>
-  <path class="outline" d="M150 79h72l-35 66Z"/>
-  <path class="detail" d="M160 87h52l-25 47Z"/>
-  <path class="outline" d="M187 145v22"/>
-  <path class="outline" d="M236 126h54"/>
-  <path class="outline" d="M244 126v47q0 8 6 13q6 5 14 5h6q8 0 14-5q6-5 6-13v-47"/>
-  <path class="liquid" d="M246 161Q267 156 288 161v11q0 7-5 11q-5 4-13 4h-6q-8 0-13-4q-5-4-5-11Z"/>
-  <path class="detail" d="M127 53l84 44"/>
-  <path class="detail" d="M121 61l83 44"/>
-  <text class="label" x="69" y="226">铁架台</text>
-  <text class="label" x="139" y="64">玻璃棒</text>
-  <text class="note" x="230" y="98">滤纸</text>
-  <text class="note" x="296" y="161">滤液</text>
+  <path class="outline" d="M83 48v156"/>
+  <path class="outline" d="M58 204h58"/>
+  <circle cx="83" cy="94" r="4.5" fill="#ffffff" fill-opacity=".92" stroke="#0f172a" stroke-width="1"/>
+  <path class="outline" d="M83 94h132"/>
+  <ellipse class="outline" cx="188" cy="75" rx="43" ry="9"/>
+  <path class="outline" d="M148 78l40 70l40-70"/>
+  <path class="detail" d="M160 88l28 48l28-48"/>
+  <path class="outline" d="M188 148v22"/>
+  <ellipse class="outline" cx="226" cy="129" rx="38" ry="8"/>
+  <path class="outline" d="M188 129v48q0 10 9 15h58q9-5 9-15v-48"/>
+  <path class="liquid" d="M193 163Q226 156 259 163v13q0 7-7 11q-6 3-26 3q-20 0-26-3q-7-4-7-11Z"/>
+  <path class="detail" d="M188 170q14-8 29-5"/>
+  <path class="detail" d="M126 53l82 44"/>
+  <path class="detail" d="M120 61l82 44"/>
+  <text class="label" x="68" y="226">铁架台</text>
+  <text class="label" x="138" y="64">玻璃棒引流</text>
+  <text class="note" x="229" y="98">滤纸</text>
+  <text class="note" x="271" y="162">三靠过滤</text>
   `,
 );
 
@@ -817,121 +884,139 @@ const evaporationDishSvg = buildTemplateSvg(
   '蒸发皿加热',
   `
   <path class="outline" d="M30 204h324"/>
-  <path class="outline" d="M156 110h88"/>
-  <path class="outline" d="M164 110q8 24 36 24q28 0 36-24"/>
-  <path class="liquid" d="M170 114Q200 122 230 114q-5 11-30 11q-25 0-30-11Z"/>
-  <path class="detail" d="M145 90l98 23"/>
-  <path class="detail" d="M143 98l98 23"/>
-  <path class="outline" d="M132 143h136"/>
-  <path class="detail" d="M144 143l20 61"/>
-  <path class="detail" d="M256 143l-20 61"/>
-  <path class="outline" d="M185 174q-11-17 0-34q11-17 15-17q4 0 15 17q11 17 0 34"/>
+  <ellipse class="outline" cx="200" cy="111" rx="47" ry="10"/>
+  <path class="outline" d="M156 112q9 26 44 26q35 0 44-26"/>
+  <path class="liquid" d="M168 116Q200 124 232 116q-6 12-32 12q-26 0-32-12Z"/>
+  <path class="detail" d="M145 91l98 23"/>
+  <path class="detail" d="M143 99l98 23"/>
+  <rect x="133" y="143" width="134" height="12" fill="none" stroke="#0f172a" stroke-width="1.05"/>
+  <path class="detail" d="M149 143v12M165 143v12M181 143v12M197 143v12M213 143v12M229 143v12M245 143v12"/>
+  <path class="detail" d="M144 155l20 49"/>
+  <path class="detail" d="M256 155l-20 49"/>
+  <path class="detail" d="M200 155v49"/>
+  <path class="outline" d="M185 174q-14-18 0-38q12-16 15-16q3 0 15 16q14 20 0 38"/>
+  <path class="detail" d="M200 139q-5 9 0 22q6-13 0-22"/>
   <path class="outline" d="M180 181h40"/>
-  <path class="outline" d="M170 204l19-28h22l19 28"/>
+  <path class="outline" d="M169 204l20-28h22l20 28"/>
   <path class="guide" d="M171 80q29-18 58 0"/>
   <path class="guide" d="M181 65q19-10 38 0"/>
   <text class="label" x="159" y="226">酒精灯加热</text>
-  <text class="label" x="255" y="102">蒸发皿</text>
-  <text class="note" x="86" y="92">玻璃棒搅拌</text>
+  <text class="label" x="255" y="103">蒸发皿</text>
+  <text class="note" x="256" y="151">石棉网承托</text>
+  <text class="note" x="78" y="93">玻璃棒搅拌</text>
   `,
 );
 
 const partTestTubeSvg = buildPartSvg(
   '试管部件',
   `
-  <path class="outline" d="M88 18h30"/>
-  <path class="outline" d="M92 18v73q0 18 11 28q11-10 11-28V18"/>
-  <path class="detail" d="M95 18v70q0 13 8 22"/>
-  <path class="liquid" d="M95 82Q103 86 111 82v12Q111 103 103 110Q95 103 95 94Z"/>
+  <ellipse class="outline" cx="110" cy="22" rx="18" ry="5"/>
+  <path class="outline" d="M92 22v80q0 24 18 30q18-6 18-30V22"/>
+  <path class="detail" d="M98 27v72q0 18 12 24"/>
+  <path class="detail" d="M122 27v72q0 18-12 24"/>
+  <path class="liquid" d="M97 88Q110 84 123 88v25q0 14-13 19q-13-5-13-19Z"/>
   `,
 );
 
 const partBeakerSvg = buildPartSvg(
   '烧杯部件',
   `
-  <path class="outline" d="M58 26h76"/>
-  <path class="outline" d="M135 26q10 0 13 7q2 5-2 10"/>
-  <path class="outline" d="M64 26v89q0 12 12 12h49q12 0 12-12V47"/>
-  <path class="liquid" d="M66 87Q101 80 136 87v28q0 12-12 12H78q-12 0-12-12Z"/>
-  <path class="detail" d="M78 55h18M78 67h14M78 79h18"/>
+  <path class="outline" d="M57 30h81q12 0 17 7q3 5-3 11"/>
+  <path class="outline" d="M66 31v90q0 10 10 13h49q10-3 10-13V48"/>
+  <path class="detail" d="M66 31q35 9 70 0"/>
+  <path class="liquid" d="M68 88Q101 81 133 88v39q0 7-8 9H76q-8-2-8-9Z"/>
+  <path class="detail" d="M82 53h18M82 63h10M82 73h18M82 83h10M82 93h18M82 103h10M82 113h18"/>
+  <path class="detail" d="M140 36q5 2 8 6"/>
   `,
 );
 
 const partConicalFlaskSvg = buildPartSvg(
   '锥形瓶部件',
   `
-  <path class="outline" d="M92 20h34"/>
-  <path class="outline" d="M98 20v34l-37 58q-6 10 7 18h82q13-8 7-18l-37-58V20"/>
-  <path class="liquid" d="M76 104Q109 115 142 104v14Q135 126 109 126Q83 126 76 118Z"/>
-  <path class="detail" d="M83 96Q109 105 135 96"/>
+  <ellipse class="outline" cx="110" cy="22" rx="18" ry="5"/>
+  <path class="outline" d="M100 22v37l-39 61q-5 8 8 13h82q13-5 8-13l-39-61V22"/>
+  <path class="detail" d="M100 59q10 7 20 0"/>
+  <path class="detail" d="M77 103q33 10 66 0"/>
+  <path class="liquid" d="${buildContainedLiquidPath(110, 109, 124, 27, 33, 3, 5)}"/>
   `,
 );
 
 const partGasJarSvg = buildPartSvg(
   '集气瓶部件',
   `
-  <path class="outline" d="M83 26q0-10 8-10h38q8 0 8 10v88q0 16-15 19h-16q-15-3-15-19Z"/>
-  <path class="detail" d="M86 42h48"/>
-  <path class="detail" d="M91 80h38"/>
-  <path class="detail" d="M91 103h38"/>
+  <ellipse class="outline" cx="110" cy="27" rx="31" ry="8"/>
+  <path class="outline" d="M79 27v89q0 15 15 20h32q15-5 15-20V27"/>
+  <path class="detail" d="M84 42q26 7 52 0"/>
+  <path class="detail" d="M88 124q22 6 44 0"/>
+  <path class="detail" d="M95 62h30M95 82h21M95 102h30"/>
   `,
 );
 
 const partFunnelSvg = buildPartSvg(
   '漏斗部件',
   `
-  <path class="outline" d="M57 28h106L115 87v42h-10V87Z"/>
-  <path class="detail" d="M73 43h74"/>
-  <path class="detail" d="M106 87h18"/>
+  <ellipse class="outline" cx="110" cy="31" rx="55" ry="11"/>
+  <path class="outline" d="M57 31l46 58v43h14V89l46-58"/>
+  <path class="detail" d="M73 43q37 10 74 0"/>
+  <path class="detail" d="M103 89h14"/>
+  <path class="detail" d="M110 132v16"/>
   `,
 );
 
 const partLongNeckFunnelSvg = buildPartSvg(
   '长颈漏斗部件',
   `
-  <path class="outline" d="M76 20h68l-28 33v73h-12V53Z"/>
-  <path class="detail" d="M90 34h40"/>
-  <path class="detail" d="M104 53h12"/>
+  <ellipse class="outline" cx="110" cy="25" rx="37" ry="8"/>
+  <path class="outline" d="M74 25l30 36v73h12V61l30-36"/>
+  <path class="detail" d="M88 37q22 7 44 0"/>
+  <path class="detail" d="M104 61h12"/>
+  <path class="detail" d="M110 134v17"/>
   `,
 );
 
 const partSeparatoryFunnelSvg = buildPartSvg(
   '分液漏斗部件',
   `
-  <path class="outline" d="M94 18h32"/>
-  <path class="outline" d="M100 24q-18 15-18 38q0 23 28 46q28-23 28-46q0-23-18-38"/>
-  <path class="detail" d="M87 62h46"/>
-  <path class="outline" d="M110 108v18"/>
-  <path class="outline" d="M99 120h22"/>
-  <circle cx="110" cy="120" r="2.2" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
+  <ellipse class="outline" cx="110" cy="20" rx="18" ry="5"/>
+  <path class="outline" d="M101 24v22M119 24v22"/>
+  <path class="outline" d="M101 46q-24 15-27 41q-3 28 28 42h16q31-14 28-42q-3-26-27-41"/>
+  <path class="liquid" d="M83 88q27 10 54 0v24q-6 9-27 12q-21-3-27-12Z"/>
+  <path class="detail" d="M110 129v13"/>
+  <path class="outline" d="M96 134h28"/>
+  <circle cx="110" cy="134" r="4.5" fill="#ffffff" fill-opacity=".92" stroke="#0f172a" stroke-width="0.95"/>
+  <path class="detail" d="M124 134h18"/>
+  <path class="outline" d="M106 143h8l-3 18h-2Z"/>
   `,
 );
 
 const partStraightTubeSvg = buildPartSvg(
   '直导管部件',
   `
-  <path class="outline" d="M43 77h130"/>
-  <path class="outline" d="M43 89h130"/>
-  <path class="detail" d="M53 83h110"/>
+  <path class="outline" d="M42 76h136"/>
+  <path class="outline" d="M42 90h136"/>
+  <path class="detail" d="M52 83h116"/>
+  <path class="detail" d="M42 76q-8 7 0 14M178 76q8 7 0 14"/>
   `,
 );
 
 const partBentTubeSvg = buildPartSvg(
   '弯导管部件',
   `
-  <path class="outline" d="M56 121V72q0-18 18-18h86"/>
-  <path class="outline" d="M68 121V83q0-16 16-16h76"/>
-  <path class="detail" d="M62 116q6-5 6-13V78q0-12 12-12h72"/>
+  <path class="outline" d="M55 123V74q0-21 21-21h87"/>
+  <path class="outline" d="M69 123V84q0-17 17-17h77"/>
+  <path class="detail" d="M62 116q7-6 7-16V79q0-12 12-12h72"/>
+  <path class="detail" d="M55 123q7 7 14 0M163 53q7 7 0 14"/>
   `,
 );
 
 const partRubberStopperSvg = buildPartSvg(
   '橡胶塞部件',
   `
-  <path class="dark" d="M68 57h84l12 37H56z"/>
-  <ellipse cx="110" cy="69" rx="8" ry="4.5" fill="#ffffff"/>
-  <path class="detail" d="M82 74h56"/>
-  <path class="detail" d="M76 84h68"/>
+  <path class="dark" d="M67 55h86l13 40H54z"/>
+  <ellipse cx="110" cy="68" rx="8" ry="4.5" fill="#ffffff" fill-opacity=".94"/>
+  <path class="detail" d="M80 75h60"/>
+  <path class="detail" d="M74 86h72"/>
+  <path class="detail" d="M62 95h96"/>
   `,
 );
 
@@ -948,23 +1033,28 @@ const partWaterTroughSvg = buildPartSvg(
 const partIronStandSvg = buildPartSvg(
   '铁架台部件',
   `
-  <path class="outline" d="M64 130h84"/>
-  <path class="outline" d="M106 24v106"/>
-  <path class="outline" d="M106 49h62"/>
-  <path class="outline" d="M157 49v27"/>
-  <path class="detail" d="M149 76h16"/>
-  <path class="detail" d="M66 130h80"/>
+  <path class="outline" d="M55 137h110"/>
+  <path class="detail" d="M64 129h92"/>
+  <path class="outline" d="M88 28v101"/>
+  <circle cx="88" cy="56" r="5" fill="#ffffff" fill-opacity=".92" stroke="#0f172a" stroke-width="1"/>
+  <path class="outline" d="M88 56h72"/>
+  <path class="outline" d="M151 47q22 9 22 19q0 10-22 19"/>
+  <path class="detail" d="M151 58h20M151 74h20"/>
+  <path class="detail" d="M88 31h11M88 126h11"/>
   `,
 );
 
 const partAlcoholLampSvg = buildPartSvg(
   '酒精灯部件',
   `
-  <path class="outline" d="M104 30q-10 15 0 31q10-16 0-31"/>
-  <path class="outline" d="M94 67h20"/>
-  <path class="outline" d="M91 67v17l-27 39h80l-27-39V67"/>
-  <path class="detail" d="M76 105Q104 116 132 105"/>
-  <path class="detail" d="M84 92h40"/>
+  <path class="outline" d="M104 28q-15 20 0 39q15-19 0-39"/>
+  <path class="detail" d="M104 42q-6 9 0 18q6-9 0-18"/>
+  <path class="outline" d="M92 71h24"/>
+  <path class="detail" d="M99 67h10"/>
+  <path class="outline" d="M89 71v17l-28 40h86l-28-40V71"/>
+  <path class="detail" d="M75 108Q104 118 133 108"/>
+  <path class="detail" d="M83 94h42"/>
+  <path class="detail" d="M72 128h64"/>
   `,
 );
 
@@ -979,12 +1069,13 @@ const partGlassRodSvg = buildPartSvg(
 const partGraduatedCylinderSvg = buildPartSvg(
   '量筒部件',
   `
-  <ellipse class="outline" cx="108" cy="27" rx="25" ry="8"/>
-  <path class="outline" d="M83 27v96q0 8 8 12h34q8-4 8-12V27"/>
-  <path class="liquid" d="M85 91Q108 86 131 91v31q0 7-7 10H92q-7-3-7-10Z"/>
-  <path class="detail" d="M96 46h17M96 59h11M96 72h17M96 85h11M96 98h17M96 111h11"/>
-  <path class="outline" d="M74 142h68"/>
-  <path class="detail" d="M95 134h26l11 8H84Z"/>
+  <ellipse class="outline" cx="110" cy="27" rx="25" ry="7"/>
+  <path class="outline" d="M85 27v96q0 9 9 12h32q9-3 9-12V27"/>
+  <path class="detail" d="M90 42q20 5 40 0"/>
+  <path class="liquid" d="M88 84Q110 79 132 84v46q0 5-6 7H94q-6-2-6-7Z"/>
+  <path class="detail" d="M98 45h18M98 53h10M98 61h14M98 69h10M98 77h18M98 85h10M98 93h14M98 101h10M98 109h18M98 117h10"/>
+  <path class="outline" d="M72 143h76"/>
+  <path class="detail" d="M94 135h32l14 8H80Z"/>
   `,
 );
 
@@ -993,7 +1084,7 @@ const partRoundBottomFlaskSvg = buildPartSvg(
   `
   <path class="outline" d="M95 18h30"/>
   <path class="outline" d="M101 18v50q-26 8-34 30q-7 21 8 36q13 13 35 13q22 0 35-13q15-15 8-36q-8-22-34-30V18"/>
-  <path class="liquid" d="M78 115Q110 125 142 115q-4 18-32 18q-28 0-32-18Z"/>
+  <path class="liquid" d="${buildContainedLiquidPath(110, 106, 130, 29, 25, 3, 8)}"/>
   <path class="detail" d="M95 75Q110 84 125 75"/>
   `,
 );
@@ -1003,7 +1094,7 @@ const partFlatBottomFlaskSvg = buildPartSvg(
   `
   <path class="outline" d="M94 18h32"/>
   <path class="outline" d="M100 18v47q-27 10-36 42q-4 15 8 27h76q12-12 8-27q-9-32-36-42V18"/>
-  <path class="liquid" d="M76 112Q110 123 144 112v14q-3 8-12 8H88q-9 0-12-8Z"/>
+  <path class="liquid" d="${buildContainedLiquidPath(110, 108, 126, 28, 24, 3, 2)}"/>
   <path class="detail" d="M82 100Q110 108 138 100"/>
   `,
 );
@@ -1025,7 +1116,7 @@ const partReagentBottleSvg = buildPartSvg(
   <path class="dark" d="M96 20h28l5 14H91z"/>
   <path class="outline" d="M91 36h38"/>
   <path class="outline" d="M83 36v89q0 11 11 11h32q11 0 11-11V36"/>
-  <rect x="91" y="72" width="38" height="34" rx="3" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
+  <rect x="91" y="72" width="38" height="34" rx="3" fill="#ffffff" fill-opacity=".82" stroke="#0f172a" stroke-width="0.95"/>
   <path class="detail" d="M98 86h24M100 96h20"/>
   <path class="liquid" d="M86 113Q110 108 134 113v11q0 8-8 8H94q-8 0-8-8Z"/>
   `,
@@ -1085,7 +1176,7 @@ const partRubberHoseSvg = buildPartSvg(
 const partGlassPlateSvg = buildPartSvg(
   '玻璃片部件',
   `
-  <rect x="58" y="56" width="104" height="58" rx="4" fill="#ffffff" stroke="#111827" stroke-width="2.1"/>
+  <rect x="58" y="56" width="104" height="58" rx="4" fill="none" stroke="#0f172a" stroke-width="1.75"/>
   <path class="detail" d="M70 102L148 66"/>
   <path class="detail" d="M84 108L160 73"/>
   <path class="detail" d="M58 56l104 58"/>
@@ -1095,21 +1186,23 @@ const partGlassPlateSvg = buildPartSvg(
 const partSingleHoleStopperSvg = buildPartSvg(
   '单孔塞部件',
   `
-  <path class="dark" d="M63 56h94l14 42H49z"/>
-  <ellipse cx="110" cy="74" rx="9" ry="5" fill="#ffffff"/>
-  <path class="detail" d="M77 82h66"/>
-  <path class="detail" d="M70 93h80"/>
+  <path class="dark" d="M63 55h94l14 42H49z"/>
+  <ellipse cx="110" cy="73" rx="9" ry="5" fill="#ffffff" fill-opacity=".94"/>
+  <path class="detail" d="M76 82h68"/>
+  <path class="detail" d="M69 93h82"/>
+  <path class="detail" d="M58 97h104"/>
   `,
 );
 
 const partDoubleHoleStopperSvg = buildPartSvg(
   '双孔塞部件',
   `
-  <path class="dark" d="M63 56h94l14 42H49z"/>
-  <ellipse cx="95" cy="74" rx="8" ry="4.5" fill="#ffffff"/>
-  <ellipse cx="125" cy="74" rx="8" ry="4.5" fill="#ffffff"/>
-  <path class="detail" d="M77 82h66"/>
-  <path class="detail" d="M70 93h80"/>
+  <path class="dark" d="M63 55h94l14 42H49z"/>
+  <ellipse cx="95" cy="73" rx="8" ry="4.5" fill="#ffffff" fill-opacity=".94"/>
+  <ellipse cx="125" cy="73" rx="8" ry="4.5" fill="#ffffff" fill-opacity=".94"/>
+  <path class="detail" d="M76 82h68"/>
+  <path class="detail" d="M69 93h82"/>
+  <path class="detail" d="M58 97h104"/>
   `,
 );
 
@@ -1128,10 +1221,10 @@ const partTripodSvg = buildPartSvg(
 const partWireGauzeSvg = buildPartSvg(
   '石棉网部件',
   `
-  <rect x="56" y="43" width="108" height="84" fill="#ffffff" stroke="#111827" stroke-width="2.1"/>
+  <rect x="56" y="43" width="108" height="84" fill="none" stroke="#0f172a" stroke-width="1.75"/>
   <path class="detail" d="M74 43v84M92 43v84M110 43v84M128 43v84M146 43v84"/>
   <path class="detail" d="M56 57h108M56 71h108M56 85h108M56 99h108M56 113h108"/>
-  <rect x="91" y="66" width="38" height="38" fill="#111827" fill-opacity=".12" stroke="#111827" stroke-width="1.2"/>
+  <rect x="91" y="66" width="38" height="38" fill="#0f172a" fill-opacity=".1" stroke="#0f172a" stroke-width="0.95"/>
   `,
 );
 
@@ -1151,7 +1244,7 @@ const partIronClampSvg = buildPartSvg(
   <path class="outline" d="M52 84h74"/>
   <path class="outline" d="M124 64q38 8 38 20q0 12-38 20"/>
   <path class="detail" d="M123 75h35M123 93h35"/>
-  <circle cx="82" cy="84" r="8" fill="#ffffff" stroke="#111827" stroke-width="1.4"/>
+  <circle cx="82" cy="84" r="8" fill="none" stroke="#0f172a" stroke-width="1.05"/>
   `,
 );
 
@@ -1182,32 +1275,36 @@ const partDropperSvg = buildPartSvg(
   <path class="dark" d="M86 35q0-16 24-16q24 0 24 16q0 12-12 17H98q-12-5-12-17Z"/>
   <path class="outline" d="M99 53h22l-8 80q-1 10-3 10q-2 0-3-10Z"/>
   <path class="liquid" d="M103 78h14l-4 40q-1 7-3 7q-2 0-3-7Z"/>
-  <circle cx="110" cy="151" r="3" fill="#ffffff" stroke="#111827" stroke-width="1.1"/>
+  <circle cx="110" cy="151" r="3" fill="none" stroke="#0f172a" stroke-width="0.85"/>
   `,
 );
 
 const partBuretteSvg = buildPartSvg(
   '滴定管部件',
   `
-  <path class="outline" d="M101 20h18"/>
-  <path class="outline" d="M104 20v102l6 22l6-22V20"/>
-  <path class="detail" d="M120 44h-10M120 57h-7M120 70h-10M120 83h-7M120 96h-10"/>
+  <ellipse class="outline" cx="110" cy="20" rx="12" ry="4"/>
+  <path class="outline" d="M102 20v102l8 22l8-22V20"/>
+  <path class="detail" d="M106 25v92M114 25v92"/>
+  <path class="detail" d="M122 36h-12M122 44h-7M122 52h-10M122 60h-7M122 68h-12M122 76h-7M122 84h-10M122 92h-7M122 100h-12M122 108h-7"/>
   <path class="outline" d="M92 116h36"/>
-  <circle cx="110" cy="116" r="4" fill="#ffffff" stroke="#111827" stroke-width="1.2"/>
+  <circle cx="110" cy="116" r="4" fill="#ffffff" fill-opacity=".92" stroke="#0f172a" stroke-width="0.95"/>
   <path class="detail" d="M128 116h20"/>
+  <path class="detail" d="M110 121v16"/>
   `,
 );
 
 const partCondenserSvg = buildPartSvg(
   '冷凝管部件',
   `
-  <path class="outline" d="M43 87h134"/>
-  <path class="outline" d="M43 103h134"/>
-  <path class="detail" d="M54 95h112"/>
-  <path class="outline" d="M70 70l20 17"/>
-  <path class="outline" d="M130 103l20 17"/>
-  <path class="detail" d="M70 70h-25M150 120h25"/>
-  <path class="detail" d="M61 78l11-15M142 112l-11 15"/>
+  <path class="outline" d="M42 84h136"/>
+  <path class="outline" d="M42 106h136"/>
+  <path class="detail" d="M55 95h110"/>
+  <path class="detail" d="M55 89h110M55 101h110"/>
+  <path class="outline" d="M70 70l22 14"/>
+  <path class="outline" d="M128 106l22 14"/>
+  <path class="detail" d="M70 70h-27M150 120h27"/>
+  <path class="detail" d="M61 78l12-16M142 112l-12 16"/>
+  <path class="detail" d="M76 112h70" marker-end="url(#part-arrow)"/>
   `,
 );
 

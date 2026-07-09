@@ -21,6 +21,9 @@ const composerHeight = 460;
 const chemistryPartViewboxWidth = 220;
 const chemistryPartViewboxHeight = 170;
 const connectorSnapThresholdPx = 24;
+const composerBackgroundNodeId = 'chemistry-composer-background';
+const composerWorkAreaNodeId = 'chemistry-composer-work-area';
+const composerExportHelperName = 'chemistry-composer-export-helper';
 
 export interface ChemistryCompositionInsertPayload {
   src: string;
@@ -698,15 +701,38 @@ export function ChemistryComposerDialog({
       return;
     }
 
-    // 导出前临时隐藏选框，避免把编辑状态带进最终图片。
+    const exportHelperNodes = [composerBackgroundNodeId, composerWorkAreaNodeId]
+      .map((nodeId) => stage.findOne(`#${nodeId}`))
+      .filter((node): node is Konva.Node => !!node);
+    stage.find(`.${composerExportHelperName}`).forEach((node) => exportHelperNodes.push(node));
+    const selectedPartNode =
+      selectedPartElement && selectedElementId ? stage.findOne(`#${selectedElementId}`) : null;
+    const selectedPartStroke = selectedPartNode?.getAttr('stroke');
+    const selectedPartStrokeWidth = selectedPartNode?.getAttr('strokeWidth');
+
+    // 导出前临时隐藏选框、端点手柄和画布辅助背景，最终 PNG 才能保持透明底。
     transformer?.visible(false);
+    exportHelperNodes.forEach((node) => node.visible(false));
+    selectedPartNode?.setAttrs({ stroke: undefined, strokeWidth: 0 });
     transformer?.getLayer()?.batchDraw();
-    const src = stage.toDataURL({
-      mimeType: 'image/png',
-      pixelRatio: 2,
-    });
-    transformer?.visible(true);
-    transformer?.getLayer()?.batchDraw();
+    let src = '';
+
+    try {
+      src = stage.toDataURL({
+        mimeType: 'image/png',
+        pixelRatio: 2,
+      });
+    } finally {
+      if (selectedPartNode) {
+        selectedPartNode.setAttrs({
+          stroke: selectedPartStroke,
+          strokeWidth: selectedPartStrokeWidth,
+        });
+      }
+      exportHelperNodes.forEach((node) => node.visible(true));
+      transformer?.visible(true);
+      transformer?.getLayer()?.batchDraw();
+    }
 
     onInsertComposition({
       src,
@@ -862,8 +888,17 @@ export function ChemistryComposerDialog({
                 }}
               >
                 <Layer>
-                  <Rect x={0} y={0} width={composerWidth} height={composerHeight} fill="#ffffff" />
                   <Rect
+                    id={composerBackgroundNodeId}
+                    x={0}
+                    y={0}
+                    width={composerWidth}
+                    height={composerHeight}
+                    fill="#ffffff"
+                    listening={false}
+                  />
+                  <Rect
+                    id={composerWorkAreaNodeId}
                     x={28}
                     y={28}
                     width={composerWidth - 56}
@@ -871,6 +906,7 @@ export function ChemistryComposerDialog({
                     fill="#ffffff"
                     stroke="#d7e1ea"
                     strokeWidth={1}
+                    listening={false}
                   />
                   {elements.map((element) => {
                     if (element.kind === 'part') {
@@ -995,6 +1031,7 @@ export function ChemistryComposerDialog({
                         />
                         {snappedStartTarget ? (
                           <Circle
+                            name={composerExportHelperName}
                             x={snappedStartTarget.position.x}
                             y={snappedStartTarget.position.y}
                             radius={5}
@@ -1006,6 +1043,7 @@ export function ChemistryComposerDialog({
                         ) : null}
                         {snappedEndTarget ? (
                           <Circle
+                            name={composerExportHelperName}
                             x={snappedEndTarget.position.x}
                             y={snappedEndTarget.position.y}
                             radius={5}
@@ -1018,6 +1056,7 @@ export function ChemistryComposerDialog({
                         {element.id === selectedElementId ? (
                           <>
                             <Circle
+                              name={composerExportHelperName}
                               x={startHandlePosition.x}
                               y={startHandlePosition.y}
                               radius={8}
@@ -1046,6 +1085,7 @@ export function ChemistryComposerDialog({
                               }
                             />
                             <Circle
+                              name={composerExportHelperName}
                               x={endHandlePosition.x}
                               y={endHandlePosition.y}
                               radius={8}
@@ -1080,6 +1120,7 @@ export function ChemistryComposerDialog({
                   })}
                   {hoverSnapTarget ? (
                     <Circle
+                      name={composerExportHelperName}
                       x={hoverSnapTarget.position.x}
                       y={hoverSnapTarget.position.y}
                       radius={10}

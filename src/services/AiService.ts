@@ -430,6 +430,29 @@ ${buildNumberedPromptRules(promptRules)}${
 请直接生成内容，不要有额外的解释说明。`;
 }
 
+export function createEducationOutlineSystemPrompt(type: GenerateType): string {
+  const typeLabels: Record<string, string> = {
+    lecture: '讲义',
+    summary: '知识点总结',
+    exercise: '练习题',
+    exam: '试卷初稿',
+  };
+
+  return `你是一个专业的教育内容策划助手，擅长先把教学内容拆成可审核的大纲。
+
+大纲任务：${typeLabels[type] || type}
+
+大纲规则：
+1. 只生成大纲草稿，不要生成完整正文。
+2. 使用中文 Markdown 输出，优先使用 #、##、### 和列表。
+3. 大纲要具体到可直接展开正文的层级，标出每一部分应包含的要点、题型、答案或解析位置。
+4. 不要输出完整讲解段落、完整题目正文、完整答案解析或大段例题展开。
+5. 不要输出 role: 前缀；语义块只在最终正文生成阶段使用。
+6. 如果有个人知识库参考资料，只把它用于确定大纲范围和要点，不要把资料原文整段复制进大纲。
+
+请直接输出大纲草稿，不要解释你将如何生成。`;
+}
+
 export function createEducationGenerateUserMessage(options: GenerateOptions): string {
   const typeLabels: Record<string, string> = {
     lecture: '讲义',
@@ -481,6 +504,66 @@ export function createEducationGenerateUserMessage(options: GenerateOptions): st
   }
 
   return sections.join('\n\n');
+}
+
+function createStructureTemplatePromptSection(options: GenerateOptions): string | null {
+  const template = options.structureTemplate;
+  if (!template?.structure.trim()) {
+    return null;
+  }
+
+  return [
+    '用户自定义文章结构模板',
+    `模板名称：${template.name.trim() || '未命名模板'}`,
+    '文章结构：',
+    template.structure.trim(),
+    template.outputRules?.trim()
+      ? `输出要求：\n${template.outputRules.trim()}`
+      : '输出要求：未填写',
+  ].join('\n');
+}
+
+export function createEducationOutlineUserMessage(options: GenerateOptions): string {
+  const typeLabels: Record<string, string> = {
+    lecture: '讲义',
+    summary: '知识点总结',
+    exercise: '练习题',
+    exam: '试卷初稿',
+  };
+  const templateSection = createStructureTemplatePromptSection(options);
+
+  return `${createEducationGenerateUserMessage(options)}
+${templateSection ? `\n\n${templateSection}` : ''}
+
+当前只需要先生成一份“${typeLabels[options.type] || options.type}”的大纲草稿。
+
+大纲输出要求：
+1. 不要生成完整正文，只输出可供用户审核和修改的大纲。
+2. 大纲要覆盖最终正文的章节、知识点、题目区、答案区、解析区或总结区。
+3. 每个大纲项可以写简短说明，但不要展开成完整段落。
+4. 如果提供了用户自定义文章结构模板，必须按该模板组织大纲，不要擅自新增、删除或改名模板主结构；可以在模板章节下补充二级或三级内容。
+5. 如果信息不足，请在大纲中用“待补充”标出，不要编造具体事实。`;
+}
+
+export function createEducationContentFromOutlineUserMessage(options: GenerateOptions): string {
+  const reviewedOutline = options.reviewedOutline?.trim();
+  if (!reviewedOutline) {
+    throw new Error('请先确认大纲后再生成正文');
+  }
+  const templateSection = createStructureTemplatePromptSection(options);
+
+  return `${createEducationGenerateUserMessage(options)}
+${templateSection ? `\n\n${templateSection}` : ''}
+
+已审核大纲：
+${reviewedOutline}
+
+正文生成要求：
+1. 必须严格依据以上“已审核大纲”展开最终正文，不要擅自改写大纲结构。
+2. 可以把大纲中的简短要点扩写为完整 Markdown 内容。
+3. 如果大纲里标有答案、解析、易错、说明、总结或注意，请结合当前启用的语义块规则输出。
+4. 如果提供了用户自定义文章结构模板，最终正文必须保持模板主结构和审核后大纲一致，不要擅自新增、删除或改名模板主结构。
+5. 不要再次输出“大纲草稿”或审核说明，直接输出最终正文。`;
 }
 
 /**
@@ -786,6 +869,40 @@ export class AiService {
   ): Promise<string> {
     const systemPrompt = this.getGenerateSystemPrompt(options);
     const userMessage = this.getGenerateUserMessage(options);
+
+    return this.streamGenerate(systemPrompt, userMessage, onChunk, signal);
+  }
+
+  /**
+   * 生成教育内容大纲（流式）
+   * @param options 生成选项
+   * @param onChunk 流式回调
+   * @param signal abort 信号
+   */
+  async generateOutline(
+    options: GenerateOptions,
+    onChunk: StreamCallback,
+    signal?: AbortSignal
+  ): Promise<string> {
+    const systemPrompt = createEducationOutlineSystemPrompt(options.type);
+    const userMessage = createEducationOutlineUserMessage(options);
+
+    return this.streamGenerate(systemPrompt, userMessage, onChunk, signal);
+  }
+
+  /**
+   * 按用户审核后的大纲生成教育内容正文（流式）
+   * @param options 生成选项，必须包含 reviewedOutline
+   * @param onChunk 流式回调
+   * @param signal abort 信号
+   */
+  async generateFromOutline(
+    options: GenerateOptions,
+    onChunk: StreamCallback,
+    signal?: AbortSignal
+  ): Promise<string> {
+    const systemPrompt = this.getGenerateSystemPrompt(options);
+    const userMessage = createEducationContentFromOutlineUserMessage(options);
 
     return this.streamGenerate(systemPrompt, userMessage, onChunk, signal);
   }

@@ -10,7 +10,15 @@ import { addAiGenerationRecord } from '@/services/AiGenerationRecordService';
 import { knowledgeBaseService } from '@/services/KnowledgeBaseService';
 import { parseKnowledgeSourcesFromContext } from '@/services/knowledgeSourceAnnotation';
 import { layoutDocumentToMarkdown } from '@/services/layoutDocumentMarkdown';
-import type { AiGenerateSemanticRoleId, GenerateOptions, GenerateType } from '@/types/ai';
+import type {
+  AiConfigProfile,
+  AiGenerateSemanticRoleId,
+  AiStructureTemplate,
+  AiStructureTemplateScope,
+  EducationGenerateType,
+  GenerateOptions,
+  GenerateType,
+} from '@/types/ai';
 import {
   AI_GENERATE_SEMANTIC_ROLE_OPTIONS,
   GENERATE_TYPE_LABELS,
@@ -21,6 +29,18 @@ import { KnowledgeSourceList } from './KnowledgeSourceList';
 
 function isXiaohongshuGenerateType(type: GenerateType): boolean {
   return type === 'xiaohongshuTitle' || type === 'xiaohongshuCopy' || type === 'xiaohongshuCover';
+}
+
+function isEducationGenerateType(type: GenerateType): type is EducationGenerateType {
+  return type === 'lecture' || type === 'summary' || type === 'exercise' || type === 'exam';
+}
+
+function createAiStructureTemplateId(): string {
+  return `ai-structure-template-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getStructureTemplateScopeLabel(scope: AiStructureTemplateScope): string {
+  return scope === 'all' ? '全部类型' : GENERATE_TYPE_LABELS[scope];
 }
 
 function getFirstUsefulLine(content: string): string {
@@ -71,6 +91,21 @@ function buildKnowledgeRetrievalQuery(options: {
     .join(' ');
 }
 
+interface GenerateContext {
+  isXiaohongshuMode: boolean;
+  articleTitle: string;
+  articleContent: string;
+  normalizedTopic: string;
+  shouldUseKnowledgeContext: boolean;
+}
+
+interface GenerateKnowledgeContext {
+  knowledgeContext?: string;
+  knowledgeSources: KnowledgeSourceReference[];
+}
+
+type ActiveGenerateStep = 'outline' | 'content' | null;
+
 export function AiGenerateTab(): JSX.Element {
   const isGenerating = useAppStore((state) => state.isGenerating);
   const generatedContent = useAppStore((state) => state.generatedContent);
@@ -94,6 +129,11 @@ export function AiGenerateTab(): JSX.Element {
   const ragflowDatasets = useAppStore((state) => state.ragflowDatasets);
   const selectedRagflowDatasetIds = useAppStore((state) => state.selectedRagflowDatasetIds);
   const knowledgeSourceForGenerate = useAppStore((state) => state.knowledgeSourceForGenerate);
+  const aiStructureTemplates = useAppStore((state) => state.aiStructureTemplates);
+  const selectedAiStructureTemplateId = useAppStore((state) => state.selectedAiStructureTemplateId);
+  const upsertAiStructureTemplate = useAppStore((state) => state.upsertAiStructureTemplate);
+  const deleteAiStructureTemplate = useAppStore((state) => state.deleteAiStructureTemplate);
+  const setSelectedAiStructureTemplateId = useAppStore((state) => state.setSelectedAiStructureTemplateId);
 
   const [generateType, setGenerateType] = useState<GenerateType>('lecture');
   const [topic, setTopic] = useState('');
@@ -103,6 +143,17 @@ export function AiGenerateTab(): JSX.Element {
   const [length, setLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [selectedXiaohongshuTitle, setSelectedXiaohongshuTitle] = useState('');
   const [selectedXiaohongshuCopy, setSelectedXiaohongshuCopy] = useState('');
+  const [outlineDraft, setOutlineDraft] = useState('');
+  const [outlineKnowledgeContext, setOutlineKnowledgeContext] = useState<string | undefined>();
+  const [outlineKnowledgeSources, setOutlineKnowledgeSources] = useState<KnowledgeSourceReference[]>([]);
+  const [activeGenerateStep, setActiveGenerateStep] = useState<ActiveGenerateStep>(null);
+  const [isStructureTemplateEditorOpen, setIsStructureTemplateEditorOpen] = useState(false);
+  const [editingStructureTemplateId, setEditingStructureTemplateId] = useState<string | null>(null);
+  const [structureTemplateName, setStructureTemplateName] = useState('');
+  const [structureTemplateScope, setStructureTemplateScope] = useState<AiStructureTemplateScope>('all');
+  const [structureTemplateStructure, setStructureTemplateStructure] = useState('');
+  const [structureTemplateOutputRules, setStructureTemplateOutputRules] = useState('');
+  const [structureTemplateError, setStructureTemplateError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleToggleSemanticRole = (roleId: AiGenerateSemanticRoleId, checked: boolean) => {
@@ -113,6 +164,365 @@ export function AiGenerateTab(): JSX.Element {
     setGenerateSemanticRoleIds(nextRoleIds);
   };
 
+  const getSelectedStructureTemplate = (): AiStructureTemplate | undefined => {
+    if (!isEducationGenerateType(generateType)) {
+      return undefined;
+    }
+
+    const selectedTemplate = aiStructureTemplates.find((template) => template.id === selectedAiStructureTemplateId);
+    if (!selectedTemplate) {
+      return undefined;
+    }
+
+    return selectedTemplate.scope === 'all' || selectedTemplate.scope === generateType
+      ? selectedTemplate
+      : undefined;
+  };
+
+  const resetStructureTemplateEditor = () => {
+    setEditingStructureTemplateId(null);
+    setStructureTemplateName('');
+    setStructureTemplateScope(isEducationGenerateType(generateType) ? generateType : 'all');
+    setStructureTemplateStructure('');
+    setStructureTemplateOutputRules('');
+    setStructureTemplateError(null);
+  };
+
+  const handleCreateStructureTemplate = () => {
+    resetStructureTemplateEditor();
+    setIsStructureTemplateEditorOpen(true);
+  };
+
+  const handleEditStructureTemplate = () => {
+    const selectedTemplate = getSelectedStructureTemplate();
+    if (!selectedTemplate) {
+      setStructureTemplateError('请先选择要编辑的模板');
+      return;
+    }
+
+    setEditingStructureTemplateId(selectedTemplate.id);
+    setStructureTemplateName(selectedTemplate.name);
+    setStructureTemplateScope(selectedTemplate.scope);
+    setStructureTemplateStructure(selectedTemplate.structure);
+    setStructureTemplateOutputRules(selectedTemplate.outputRules ?? '');
+    setStructureTemplateError(null);
+    setIsStructureTemplateEditorOpen(true);
+  };
+
+  const handleSaveStructureTemplate = () => {
+    const name = structureTemplateName.trim();
+    const structure = structureTemplateStructure.trim();
+    const outputRules = structureTemplateOutputRules.trim();
+
+    if (!name) {
+      setStructureTemplateError('请填写模板名称');
+      return;
+    }
+    if (!structure) {
+      setStructureTemplateError('请填写文章结构');
+      return;
+    }
+
+    const existingTemplate = editingStructureTemplateId
+      ? aiStructureTemplates.find((template) => template.id === editingStructureTemplateId)
+      : null;
+    const now = new Date().toISOString();
+    upsertAiStructureTemplate({
+      id: existingTemplate?.id ?? createAiStructureTemplateId(),
+      name,
+      scope: structureTemplateScope,
+      structure,
+      outputRules: outputRules || undefined,
+      createdAt: existingTemplate?.createdAt ?? now,
+      updatedAt: now,
+    });
+    resetStructureTemplateEditor();
+    setIsStructureTemplateEditorOpen(false);
+  };
+
+  const handleDeleteStructureTemplate = () => {
+    const selectedTemplate = getSelectedStructureTemplate();
+    if (!selectedTemplate) {
+      setStructureTemplateError('请先选择要删除的模板');
+      return;
+    }
+
+    if (!window.confirm(`确定要删除「${selectedTemplate.name}」这个文章结构模板吗？`)) {
+      return;
+    }
+
+    deleteAiStructureTemplate(selectedTemplate.id);
+    if (editingStructureTemplateId === selectedTemplate.id) {
+      resetStructureTemplateEditor();
+      setIsStructureTemplateEditorOpen(false);
+    }
+  };
+
+  const resetOutlineReview = () => {
+    setOutlineDraft('');
+    setOutlineKnowledgeContext(undefined);
+    setOutlineKnowledgeSources([]);
+  };
+
+  const resolveGenerateContext = (): GenerateContext => {
+    const isXiaohongshuMode = isXiaohongshuGenerateType(generateType);
+    const articleTitle = layoutDocument?.title?.trim() || '';
+    const articleContent = layoutDocument ? layoutDocumentToMarkdown(layoutDocument) : '';
+    const normalizedTopic = topic.trim() || articleTitle || selectedXiaohongshuTitle.trim();
+    const shouldUseKnowledgeContext = !isXiaohongshuMode && knowledgeSourceForGenerate !== 'none';
+
+    return {
+      isXiaohongshuMode,
+      articleTitle,
+      articleContent,
+      normalizedTopic,
+      shouldUseKnowledgeContext,
+    };
+  };
+
+  const validateGenerateContext = (context: GenerateContext): boolean => {
+    if (!context.normalizedTopic && !context.articleContent.trim()) {
+      setGenerateError('请输入主题');
+      return false;
+    }
+
+    if ((generateType === 'xiaohongshuCopy' || generateType === 'xiaohongshuCover') && !selectedXiaohongshuTitle.trim()) {
+      setGenerateError('请先填写已选小红书标题');
+      return false;
+    }
+
+    if (generateType === 'xiaohongshuCover' && !selectedXiaohongshuCopy.trim()) {
+      setGenerateError('请先填写小红书文案，主图方案需要结合文案生成');
+      return false;
+    }
+
+    return true;
+  };
+
+  const buildGenerateOptions = (
+    context: GenerateContext,
+    extra?: {
+      knowledgeContext?: string;
+      reviewedOutline?: string;
+    }
+  ): GenerateOptions => ({
+    type: generateType,
+    topic: context.normalizedTopic,
+    grade: context.isXiaohongshuMode ? undefined : grade.trim() || undefined,
+    subject: context.isXiaohongshuMode ? undefined : subject.trim() || undefined,
+    requirementDescription: context.isXiaohongshuMode ? undefined : requirementDescription.trim() || undefined,
+    length: context.isXiaohongshuMode ? undefined : length,
+    semanticRoleIds: context.isXiaohongshuMode ? undefined : generateSemanticRoleIds,
+    articleTitle: context.isXiaohongshuMode ? context.articleTitle || context.normalizedTopic : undefined,
+    articleContent: context.isXiaohongshuMode ? context.articleContent : undefined,
+    selectedTitle: context.isXiaohongshuMode ? selectedXiaohongshuTitle.trim() || undefined : undefined,
+    selectedCopy: context.isXiaohongshuMode ? selectedXiaohongshuCopy.trim() || undefined : undefined,
+    knowledgeContext: extra?.knowledgeContext,
+    reviewedOutline: extra?.reviewedOutline,
+    structureTemplate: context.isXiaohongshuMode
+      ? undefined
+      : (() => {
+          const selectedTemplate = getSelectedStructureTemplate();
+          return selectedTemplate
+            ? {
+                name: selectedTemplate.name,
+                structure: selectedTemplate.structure,
+                outputRules: selectedTemplate.outputRules,
+              }
+            : undefined;
+        })(),
+  });
+
+  const loadKnowledgeContext = async (
+    context: GenerateContext,
+    signal: AbortSignal
+  ): Promise<GenerateKnowledgeContext> => {
+    if (!context.shouldUseKnowledgeContext) {
+      return { knowledgeSources: [] };
+    }
+
+    const knowledgeQuery = buildKnowledgeRetrievalQuery({
+      generateType,
+      topic: context.normalizedTopic,
+      grade,
+      subject,
+      requirementDescription,
+    });
+
+    if (selectedRagflowDatasetIds.length === 0) {
+      throw new Error('请先在「个人知识库」里至少选择一个 RAGFlow 数据集');
+    }
+
+    const datasetNameMap = new Map(ragflowDatasets.map((dataset) => [dataset.id, dataset.name]));
+    // 大纲阶段先锁定一批知识库资料，正文阶段复用它，避免两次检索口径不一致。
+    const retrievalResult = await knowledgeBaseService.buildRagflowKnowledgeContext({
+      config: ragflowConfig,
+      datasetIds: selectedRagflowDatasetIds,
+      query: knowledgeQuery,
+      datasetNameMap,
+      signal,
+    });
+
+    if (!retrievalResult.context.trim()) {
+      throw new Error('当前主题没有检索到可用知识片段，请先在「个人知识库」里调整知识源或检索词');
+    }
+
+    return {
+      knowledgeContext: retrievalResult.context,
+      knowledgeSources: parseKnowledgeSourcesFromContext({
+        sourceType: 'ragflow',
+        context: retrievalResult.context,
+      }),
+    };
+  };
+
+  const saveGenerationRecord = async (
+    finalContent: string,
+    options: GenerateOptions,
+    knowledgeSources: KnowledgeSourceReference[],
+    config: AiConfigProfile
+  ) => {
+    if (!finalContent.trim()) {
+      return;
+    }
+
+    try {
+      // 只在最终正文生成完成后保存记录；中间大纲不落盘，避免历史记录混入半成品。
+      const recordDirectory = await addAiGenerationRecord({
+        workspaceRootPath: workspaceRootPath ?? currentDirectoryPath,
+        record: {
+          type: options.type,
+          typeLabel: GENERATE_TYPE_LABELS[options.type],
+          topic: options.topic,
+          grade: options.grade,
+          subject: options.subject,
+          requirementDescription: options.requirementDescription,
+          length: options.length,
+          lengthLabel: options.length ? LENGTH_LABELS[options.length] : undefined,
+          provider: config.provider,
+          model: config.model,
+          knowledgeSources: knowledgeSources.length > 0 ? knowledgeSources : undefined,
+          content: finalContent,
+        },
+      });
+      setAiGenerationRecordDirectory(recordDirectory);
+    } catch (recordError) {
+      setAiGenerationRecordsError(
+        recordError instanceof Error ? recordError.message : 'AI 生成记录保存失败',
+      );
+    }
+  };
+
+  const handleGenerateError = (error: unknown) => {
+    if (error instanceof Error && error.name === 'AbortError') {
+      setGenerateError('生成已取消');
+    } else if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+      setGenerateError('网络错误：主进程无法连接到 AI 服务。\n\n请检查 Base URL、API Key、模型名称和本机网络连接。');
+    } else {
+      setGenerateError(error instanceof Error ? error.message : '生成失败');
+    }
+  };
+
+  const beginGenerateRequest = (step: Exclude<ActiveGenerateStep, null>): AbortController => {
+    startGenerating();
+    setActiveGenerateStep(step);
+    setAiGenerationRecordsError(null);
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    return abortController;
+  };
+
+  const endGenerateRequest = () => {
+    finishGenerating();
+    abortControllerRef.current = null;
+    setActiveGenerateStep(null);
+  };
+
+  const runXiaohongshuGenerate = async (context: GenerateContext, config: AiConfigProfile) => {
+    const abortController = beginGenerateRequest('content');
+    try {
+      // 小红书链路保持原有“一次生成结果、用户再插入”的交互，不进入大纲审核流。
+      aiService.configure(config);
+      resetOutlineReview();
+      const options = buildGenerateOptions(context);
+      const finalContent = await aiService.generate(options, (content) => {
+        updateGeneratedContent(content);
+      }, abortController.signal);
+      await saveGenerationRecord(finalContent, options, [], config);
+    } catch (error) {
+      handleGenerateError(error);
+    } finally {
+      endGenerateRequest();
+    }
+  };
+
+  const runEducationOutlineGenerate = async (context: GenerateContext, config: AiConfigProfile) => {
+    const abortController = beginGenerateRequest('outline');
+    try {
+      aiService.configure(config);
+      setOutlineDraft('');
+      setOutlineKnowledgeContext(undefined);
+      setOutlineKnowledgeSources([]);
+
+      const { knowledgeContext, knowledgeSources } = await loadKnowledgeContext(context, abortController.signal);
+      setOutlineKnowledgeContext(knowledgeContext);
+      setOutlineKnowledgeSources(knowledgeSources);
+      setGeneratedKnowledgeSources(knowledgeSources);
+
+      const options = buildGenerateOptions(context, { knowledgeContext });
+      const outline = await aiService.generateOutline(options, (content) => {
+        setOutlineDraft(content);
+      }, abortController.signal);
+      setOutlineDraft(outline);
+    } catch (error) {
+      handleGenerateError(error);
+    } finally {
+      endGenerateRequest();
+    }
+  };
+
+  const handleGenerateContentFromOutline = async () => {
+    const config = useAppStore.getState().getAiConfigForTask('generate');
+    if (!config) {
+      setGenerateError('请先在「设置」中为「内容生成」分配可用 AI 配置');
+      return;
+    }
+
+    const context = resolveGenerateContext();
+    if (!validateGenerateContext(context)) {
+      return;
+    }
+
+    const reviewedOutline = outlineDraft.trim();
+    if (!reviewedOutline) {
+      setGenerateError('请先生成并确认大纲');
+      return;
+    }
+
+    if (context.shouldUseKnowledgeContext && !outlineKnowledgeContext?.trim()) {
+      setGenerateError('请先重新生成大纲，让大纲和正文使用同一批知识库资料');
+      return;
+    }
+
+    const abortController = beginGenerateRequest('content');
+    try {
+      aiService.configure(config);
+      setGeneratedKnowledgeSources(outlineKnowledgeSources);
+      const options = buildGenerateOptions(context, {
+        knowledgeContext: outlineKnowledgeContext,
+        reviewedOutline,
+      });
+      const finalContent = await aiService.generateFromOutline(options, (content) => {
+        updateGeneratedContent(content);
+      }, abortController.signal);
+      await saveGenerationRecord(finalContent, options, outlineKnowledgeSources, config);
+    } catch (error) {
+      handleGenerateError(error);
+    } finally {
+      endGenerateRequest();
+    }
+  };
+
   const handleGenerate = async () => {
     const config = useAppStore.getState().getAiConfigForTask('generate');
     if (!config) {
@@ -120,137 +530,17 @@ export function AiGenerateTab(): JSX.Element {
       return;
     }
 
-    const isXiaohongshuMode = isXiaohongshuGenerateType(generateType);
-    const articleTitle = layoutDocument?.title?.trim() || '';
-    const articleContent = layoutDocument ? layoutDocumentToMarkdown(layoutDocument) : '';
-    const normalizedTopic = topic.trim() || articleTitle || selectedXiaohongshuTitle.trim();
-    const shouldUseKnowledgeContext = !isXiaohongshuMode && knowledgeSourceForGenerate !== 'none';
-
-    if (!normalizedTopic && !articleContent.trim()) {
-      setGenerateError('请输入主题');
+    const context = resolveGenerateContext();
+    if (!validateGenerateContext(context)) {
       return;
     }
 
-    if ((generateType === 'xiaohongshuCopy' || generateType === 'xiaohongshuCover') && !selectedXiaohongshuTitle.trim()) {
-      setGenerateError('请先填写已选小红书标题');
+    if (context.isXiaohongshuMode) {
+      await runXiaohongshuGenerate(context, config);
       return;
     }
 
-    if (generateType === 'xiaohongshuCover' && !selectedXiaohongshuCopy.trim()) {
-      setGenerateError('请先填写小红书文案，主图方案需要结合文案生成');
-      return;
-    }
-
-    try {
-      // 每次生成前按任务分配加载配置，避免多个 AI 功能互相抢同一套配置。
-      aiService.configure(config);
-
-      startGenerating();
-      setAiGenerationRecordsError(null);
-      const abortController = new AbortController();
-      abortControllerRef.current = abortController;
-
-      let knowledgeContext: string | undefined;
-      let knowledgeSources: KnowledgeSourceReference[] = [];
-      if (shouldUseKnowledgeContext) {
-        const knowledgeQuery = buildKnowledgeRetrievalQuery({
-          generateType,
-          topic: normalizedTopic,
-          grade,
-          subject,
-          requirementDescription,
-        });
-
-        if (selectedRagflowDatasetIds.length === 0) {
-          setGenerateError('请先在「个人知识库」里至少选择一个 RAGFlow 数据集');
-          finishGenerating();
-          return;
-        }
-
-        const datasetNameMap = new Map(ragflowDatasets.map((dataset) => [dataset.id, dataset.name]));
-        // 先从知识库拿到与主题最相关的资料片段，再交给 AI 生成完整教辅内容。
-        const retrievalResult = await knowledgeBaseService.buildRagflowKnowledgeContext({
-          config: ragflowConfig,
-          datasetIds: selectedRagflowDatasetIds,
-          query: knowledgeQuery,
-          datasetNameMap,
-          signal: abortController.signal,
-        });
-
-        if (!retrievalResult.context.trim()) {
-          setGenerateError('当前主题没有检索到可用知识片段，请先在「个人知识库」里调整知识源或检索词');
-          finishGenerating();
-          return;
-        }
-
-        knowledgeContext = retrievalResult.context;
-        knowledgeSources = parseKnowledgeSourcesFromContext({
-          sourceType: 'ragflow',
-          context: retrievalResult.context,
-        });
-        setGeneratedKnowledgeSources(knowledgeSources);
-      }
-
-      const options: GenerateOptions = {
-        type: generateType,
-        topic: normalizedTopic,
-        grade: isXiaohongshuMode ? undefined : grade.trim() || undefined,
-        subject: isXiaohongshuMode ? undefined : subject.trim() || undefined,
-        requirementDescription: isXiaohongshuMode ? undefined : requirementDescription.trim() || undefined,
-        length: isXiaohongshuMode ? undefined : length,
-        semanticRoleIds: isXiaohongshuMode ? undefined : generateSemanticRoleIds,
-        articleTitle: isXiaohongshuMode ? articleTitle || normalizedTopic : undefined,
-        articleContent: isXiaohongshuMode ? articleContent : undefined,
-        selectedTitle: isXiaohongshuMode ? selectedXiaohongshuTitle.trim() || undefined : undefined,
-        selectedCopy: isXiaohongshuMode ? selectedXiaohongshuCopy.trim() || undefined : undefined,
-        knowledgeContext,
-      };
-
-      const finalContent = await aiService.generate(options, (content) => {
-        updateGeneratedContent(content);
-      }, abortController.signal);
-
-      if (finalContent.trim()) {
-        try {
-          // 生成完成后把结果写入用户工作区文件夹，前端只刷新展示列表。
-          const recordDirectory = await addAiGenerationRecord({
-            workspaceRootPath: workspaceRootPath ?? currentDirectoryPath,
-            record: {
-              type: options.type,
-              typeLabel: GENERATE_TYPE_LABELS[options.type],
-              topic: options.topic,
-              grade: options.grade,
-              subject: options.subject,
-              requirementDescription: options.requirementDescription,
-              length: options.length,
-              lengthLabel: options.length ? LENGTH_LABELS[options.length] : undefined,
-              provider: config?.provider,
-              model: config?.model,
-              knowledgeSources: knowledgeSources.length > 0 ? knowledgeSources : undefined,
-              content: finalContent,
-            },
-          });
-          setAiGenerationRecordDirectory(recordDirectory);
-        } catch (recordError) {
-          setAiGenerationRecordsError(
-            recordError instanceof Error ? recordError.message : 'AI 生成记录保存失败',
-          );
-        }
-      }
-
-      finishGenerating();
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        setGenerateError('生成已取消');
-      } else if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
-        setGenerateError('网络错误：主进程无法连接到 AI 服务。\n\n请检查 Base URL、API Key、模型名称和本机网络连接。');
-      } else {
-        setGenerateError(error instanceof Error ? error.message : '生成失败');
-      }
-      finishGenerating();
-    } finally {
-      abortControllerRef.current = null;
-    }
+    await runEducationOutlineGenerate(context, config);
   };
 
   const handleStopGenerate = () => {
@@ -268,6 +558,7 @@ export function AiGenerateTab(): JSX.Element {
       }
 
       clearGeneratedContent();
+      resetOutlineReview();
     } catch (error) {
       setGenerateError(error instanceof Error ? error.message : '插入失败：无法解析 AI 生成内容');
     }
@@ -275,6 +566,7 @@ export function AiGenerateTab(): JSX.Element {
 
   const handleClear = () => {
     clearGeneratedContent();
+    resetOutlineReview();
   };
 
   const handleFillTitleFromResult = () => {
@@ -305,6 +597,22 @@ export function AiGenerateTab(): JSX.Element {
     knowledgeSourceForGenerate === 'ragflow'
       ? `已选 ${selectedKnowledgeDatasetCount} 个数据集`
       : '可在左侧个人知识库开启';
+  const availableStructureTemplates = isEducationGenerateType(generateType)
+    ? aiStructureTemplates.filter((template) => template.scope === 'all' || template.scope === generateType)
+    : [];
+  const selectedStructureTemplate = getSelectedStructureTemplate();
+  const selectedStructureTemplateValue = selectedStructureTemplate?.id ?? '';
+  const stopGenerateLabel =
+    activeGenerateStep === 'outline'
+      ? '停止生成大纲'
+      : activeGenerateStep === 'content'
+        ? '停止生成正文'
+        : '停止生成';
+  const startGenerateLabel = isXiaohongshuMode
+    ? '开始生成'
+    : outlineDraft.trim()
+      ? '重新生成大纲'
+      : '生成大纲';
 
   return (
     <div className="ai-generate-tab">
@@ -465,6 +773,131 @@ export function AiGenerateTab(): JSX.Element {
               </div>
 
               <div className="ai-form-group">
+                <label htmlFor="ai-structure-template">文章结构模板</label>
+                <select
+                  id="ai-structure-template"
+                  className="ai-select"
+                  value={selectedStructureTemplateValue}
+                  onChange={(event) => setSelectedAiStructureTemplateId(event.target.value || null)}
+                  disabled={isGenerating || availableStructureTemplates.length === 0}
+                >
+                  <option value="">
+                    {availableStructureTemplates.length > 0 ? '不使用模板' : '暂无模板，请先新增'}
+                  </option>
+                  {availableStructureTemplates.map((template) => (
+                    <option key={template.id} value={template.id}>
+                      {template.name}（{getStructureTemplateScopeLabel(template.scope)}）
+                    </option>
+                  ))}
+                </select>
+                <div className="ai-template-actions">
+                  <button
+                    type="button"
+                    className="ai-button ai-button-small"
+                    onClick={handleCreateStructureTemplate}
+                    disabled={isGenerating}
+                  >
+                    新增模板
+                  </button>
+                  <button
+                    type="button"
+                    className="ai-button ai-button-small"
+                    onClick={handleEditStructureTemplate}
+                    disabled={isGenerating || !selectedStructureTemplate}
+                  >
+                    编辑模板
+                  </button>
+                  <button
+                    type="button"
+                    className="ai-button ai-button-small ai-button-danger"
+                    onClick={handleDeleteStructureTemplate}
+                    disabled={isGenerating || !selectedStructureTemplate}
+                  >
+                    删除模板
+                  </button>
+                </div>
+                {structureTemplateError && (
+                  <div className="ai-error ai-template-error">
+                    <span>{structureTemplateError}</span>
+                  </div>
+                )}
+                {isStructureTemplateEditorOpen && (
+                  <div className="ai-template-editor">
+                    <div className="ai-form-group">
+                      <label htmlFor="ai-template-name">模板名称</label>
+                      <input
+                        id="ai-template-name"
+                        type="text"
+                        className="ai-input"
+                        value={structureTemplateName}
+                        onChange={(event) => setStructureTemplateName(event.target.value)}
+                        disabled={isGenerating}
+                      />
+                    </div>
+                    <div className="ai-form-group">
+                      <label htmlFor="ai-template-scope">适用类型</label>
+                      <select
+                        id="ai-template-scope"
+                        className="ai-select"
+                        value={structureTemplateScope}
+                        onChange={(event) => setStructureTemplateScope(event.target.value as AiStructureTemplateScope)}
+                        disabled={isGenerating}
+                      >
+                        <option value="all">全部类型</option>
+                        <option value="lecture">讲义</option>
+                        <option value="summary">知识点总结</option>
+                        <option value="exercise">练习题</option>
+                        <option value="exam">试卷初稿</option>
+                      </select>
+                    </div>
+                    <div className="ai-form-group">
+                      <label htmlFor="ai-template-structure">文章结构</label>
+                      <textarea
+                        id="ai-template-structure"
+                        className="ai-textarea ai-template-structure-textarea"
+                        value={structureTemplateStructure}
+                        onChange={(event) => setStructureTemplateStructure(event.target.value)}
+                        disabled={isGenerating}
+                        rows={8}
+                      />
+                    </div>
+                    <div className="ai-form-group">
+                      <label htmlFor="ai-template-output-rules">输出要求（可选）</label>
+                      <textarea
+                        id="ai-template-output-rules"
+                        className="ai-textarea"
+                        value={structureTemplateOutputRules}
+                        onChange={(event) => setStructureTemplateOutputRules(event.target.value)}
+                        disabled={isGenerating}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="ai-template-actions">
+                      <button
+                        type="button"
+                        className="ai-button ai-button-small ai-button-primary"
+                        onClick={handleSaveStructureTemplate}
+                        disabled={isGenerating}
+                      >
+                        保存模板
+                      </button>
+                      <button
+                        type="button"
+                        className="ai-button ai-button-small"
+                        onClick={() => {
+                          resetStructureTemplateEditor();
+                          setIsStructureTemplateEditorOpen(false);
+                        }}
+                        disabled={isGenerating}
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="ai-form-group">
                 <label>语义块生成</label>
                 <div className="ai-semantic-role-grid">
                   {AI_GENERATE_SEMANTIC_ROLE_OPTIONS.map((option) => {
@@ -508,14 +941,40 @@ export function AiGenerateTab(): JSX.Element {
       <div className="ai-section">
         {isGenerating ? (
           <button type="button" className="ai-button ai-button-stop" onClick={handleStopGenerate}>
-            停止生成
+            {stopGenerateLabel}
           </button>
         ) : (
           <button type="button" className="ai-button ai-button-primary" onClick={handleGenerate}>
-            开始生成
+            {startGenerateLabel}
           </button>
         )}
       </div>
+
+      {!isXiaohongshuMode && outlineDraft && (
+        <div className="ai-section ai-result-section">
+          <h3 className="ai-section-title">大纲审核</h3>
+          <textarea
+            className="ai-textarea ai-outline-textarea"
+            value={outlineDraft}
+            onChange={(event) => setOutlineDraft(event.target.value)}
+            disabled={isGenerating}
+            rows={10}
+          />
+          <div className="ai-result-actions">
+            <button
+              type="button"
+              className="ai-button ai-button-primary"
+              onClick={handleGenerateContentFromOutline}
+              disabled={isGenerating || !outlineDraft.trim()}
+            >
+              审核通过，生成正文
+            </button>
+            <button type="button" className="ai-button" onClick={handleGenerate} disabled={isGenerating}>
+              重新生成大纲
+            </button>
+          </div>
+        </div>
+      )}
 
       {generatedContent && (
         <div className="ai-section ai-result-section">

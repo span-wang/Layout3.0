@@ -22,6 +22,8 @@ import type {
   AiTaskConfigAssignments,
   AiTaskType,
   AiProvider,
+  AiStructureTemplate,
+  AiStructureTemplateScope,
 } from '@/types/ai';
 import {
   DEFAULT_AI_GENERATE_SEMANTIC_ROLE_IDS,
@@ -51,6 +53,8 @@ export interface AiSlice {
   aiGenerationRecords: AiGenerationRecord[];
   aiGenerationRecordDirectoryPath: string | null;
   aiGenerationRecordsError: string | null;
+  aiStructureTemplates: AiStructureTemplate[];
+  selectedAiStructureTemplateId: string | null;
 
   // 优化状态
   isOptimizing: boolean;
@@ -96,6 +100,9 @@ export interface AiSlice {
     records: AiGenerationRecord[];
   }) => void;
   setAiGenerationRecordsError: (error: string | null) => void;
+  upsertAiStructureTemplate: (template: AiStructureTemplate) => void;
+  deleteAiStructureTemplate: (templateId: string) => void;
+  setSelectedAiStructureTemplateId: (templateId: string | null) => void;
 
   // 优化 actions
   startOptimizing: () => void;
@@ -136,9 +143,12 @@ export interface AiSlice {
 const LEGACY_AI_CONFIG_KEY = 'layout3-ai-config';
 const AI_CONFIGS_KEY = 'layout3-ai-configs-v1';
 const AI_TASK_ASSIGNMENTS_KEY = 'layout3-ai-task-assignments-v1';
+const AI_STRUCTURE_TEMPLATES_KEY = 'layout3-ai-structure-templates-v1';
+const AI_SELECTED_STRUCTURE_TEMPLATE_KEY = 'layout3-ai-selected-structure-template-id-v1';
 const PAGINATION_BATCH_ANALYSIS_KEY = 'layout3-pagination-batch-analysis-v1';
 
 const aiTaskTypes: AiTaskType[] = ['generate', 'optimize', 'check', 'regexRecognition'];
+const aiStructureTemplateScopes: AiStructureTemplateScope[] = ['all', 'lecture', 'summary', 'exercise', 'exam'];
 
 function isKnownProvider(value: unknown): value is AiProvider {
   return value === 'openai' || value === 'anthropic' || value === 'custom';
@@ -146,6 +156,10 @@ function isKnownProvider(value: unknown): value is AiProvider {
 
 function createAiConfigId(): string {
   return `ai-config-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function createAiStructureTemplateId(): string {
+  return `ai-structure-template-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function isUsableAiConfig(config: AiConfig | null | undefined): boolean {
@@ -174,6 +188,76 @@ function normalizeAiConfigProfile(raw: unknown, index: number): AiConfigProfile 
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : now,
     updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now,
   };
+}
+
+function isAiStructureTemplateScope(value: unknown): value is AiStructureTemplateScope {
+  return typeof value === 'string' && aiStructureTemplateScopes.includes(value as AiStructureTemplateScope);
+}
+
+function normalizeAiStructureTemplate(raw: unknown, index: number): AiStructureTemplate | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const value = raw as Partial<AiStructureTemplate>;
+  const name = typeof value.name === 'string' ? value.name.trim() : '';
+  const structure = typeof value.structure === 'string' ? value.structure.trim() : '';
+  if (!name || !structure) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  return {
+    id: typeof value.id === 'string' && value.id.trim()
+      ? value.id
+      : `${createAiStructureTemplateId()}-${index}`,
+    name,
+    scope: isAiStructureTemplateScope(value.scope) ? value.scope : 'all',
+    structure,
+    outputRules: typeof value.outputRules === 'string' ? value.outputRules.trim() : undefined,
+    createdAt: typeof value.createdAt === 'string' ? value.createdAt : now,
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now,
+  };
+}
+
+function saveAiStructureTemplateSettings(templates: AiStructureTemplate[], selectedTemplateId: string | null): void {
+  try {
+    localStorage.setItem(AI_STRUCTURE_TEMPLATES_KEY, JSON.stringify(templates));
+    if (selectedTemplateId) {
+      localStorage.setItem(AI_SELECTED_STRUCTURE_TEMPLATE_KEY, selectedTemplateId);
+    } else {
+      localStorage.removeItem(AI_SELECTED_STRUCTURE_TEMPLATE_KEY);
+    }
+  } catch {
+    // 忽略本机存储异常，避免影响当前 AI 生成流程。
+  }
+}
+
+function loadAiStructureTemplateSettings(): Pick<AiSlice, 'aiStructureTemplates' | 'selectedAiStructureTemplateId'> {
+  try {
+    const storedTemplates = localStorage.getItem(AI_STRUCTURE_TEMPLATES_KEY);
+    const parsedTemplates = storedTemplates ? (JSON.parse(storedTemplates) as unknown) : [];
+    const templates = Array.isArray(parsedTemplates)
+      ? parsedTemplates
+          .map((template, index) => normalizeAiStructureTemplate(template, index))
+          .filter((template): template is AiStructureTemplate => template !== null)
+      : [];
+    const storedSelectedId = localStorage.getItem(AI_SELECTED_STRUCTURE_TEMPLATE_KEY);
+    const selectedAiStructureTemplateId =
+      storedSelectedId && templates.some((template) => template.id === storedSelectedId)
+        ? storedSelectedId
+        : null;
+
+    return {
+      aiStructureTemplates: templates,
+      selectedAiStructureTemplateId,
+    };
+  } catch {
+    return {
+      aiStructureTemplates: [],
+      selectedAiStructureTemplateId: null,
+    };
+  }
 }
 
 function createProfileFromLegacyConfig(config: AiConfig): AiConfigProfile {
@@ -439,6 +523,7 @@ export const createAiSlice = (
 ): AiSlice => {
   // 从 localStorage 恢复多配置；旧单配置会迁移为“默认配置”。
   const initialAiSettings = loadAiSettings();
+  const initialAiStructureTemplateSettings = loadAiStructureTemplateSettings();
   const initialPaginationBatchAnalysis = loadPaginationBatchAnalysis();
 
   return {
@@ -461,6 +546,8 @@ export const createAiSlice = (
     aiGenerationRecords: [],
     aiGenerationRecordDirectoryPath: null,
     aiGenerationRecordsError: null,
+    aiStructureTemplates: initialAiStructureTemplateSettings.aiStructureTemplates,
+    selectedAiStructureTemplateId: initialAiStructureTemplateSettings.selectedAiStructureTemplateId,
 
     // 优化状态
     isOptimizing: false,
@@ -592,6 +679,46 @@ export const createAiSlice = (
 
     setAiGenerationRecordsError: (error: string | null) =>
       set({ aiGenerationRecordsError: error }),
+
+    upsertAiStructureTemplate: (template: AiStructureTemplate) =>
+      set((state) => {
+        const exists = state.aiStructureTemplates.some((item) => item.id === template.id);
+        const nextTemplates = exists
+          ? state.aiStructureTemplates.map((item) => (item.id === template.id ? template : item))
+          : [...state.aiStructureTemplates, template];
+        const nextSelectedId = template.id;
+        saveAiStructureTemplateSettings(nextTemplates, nextSelectedId);
+        return {
+          aiStructureTemplates: nextTemplates,
+          selectedAiStructureTemplateId: nextSelectedId,
+        };
+      }),
+
+    deleteAiStructureTemplate: (templateId: string) =>
+      set((state) => {
+        const nextTemplates = state.aiStructureTemplates.filter((template) => template.id !== templateId);
+        const nextSelectedId =
+          state.selectedAiStructureTemplateId === templateId
+            ? null
+            : state.selectedAiStructureTemplateId;
+        saveAiStructureTemplateSettings(nextTemplates, nextSelectedId);
+        return {
+          aiStructureTemplates: nextTemplates,
+          selectedAiStructureTemplateId: nextSelectedId,
+        };
+      }),
+
+    setSelectedAiStructureTemplateId: (templateId: string | null) =>
+      set((state) => {
+        const nextSelectedId =
+          templateId && state.aiStructureTemplates.some((template) => template.id === templateId)
+            ? templateId
+            : null;
+        saveAiStructureTemplateSettings(state.aiStructureTemplates, nextSelectedId);
+        return {
+          selectedAiStructureTemplateId: nextSelectedId,
+        };
+      }),
 
     // 优化 actions
     startOptimizing: () =>

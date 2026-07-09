@@ -62,6 +62,38 @@ export type GenerateType =
   | 'xiaohongshuCover';
 
 /**
+ * 教育内容生成类型
+ * 小红书链路不进入文章结构模板 V1。
+ */
+export type EducationGenerateType = 'lecture' | 'summary' | 'exercise' | 'exam';
+
+/**
+ * 自定义文章结构模板适用范围
+ */
+export type AiStructureTemplateScope = 'all' | EducationGenerateType;
+
+/**
+ * 用户自定义文章结构模板
+ * V1 只保存在本机 localStorage，不写入文档或生成记录。
+ */
+export interface AiStructureTemplate {
+  /** 模板唯一 ID */
+  id: string;
+  /** 用户自定义模板名称 */
+  name: string;
+  /** 适用生成类型 */
+  scope: AiStructureTemplateScope;
+  /** 用户定义的 Markdown 文章结构 */
+  structure: string;
+  /** 用户补充的输出要求 */
+  outputRules?: string;
+  /** 创建时间 ISO 字符串 */
+  createdAt: string;
+  /** 更新时间 ISO 字符串 */
+  updatedAt: string;
+}
+
+/**
  * AI 生成时允许勾选的内置语义角色
  * 当前只覆盖仍受支持的内置语义，不把自定义语义混进来。
  */
@@ -160,6 +192,10 @@ export interface GenerateOptions {
   knowledgeContext?: string;
   /** 教育内容生成时允许输出的语义角色；空数组表示不要输出任何 `role:` 前缀 */
   semanticRoleIds?: AiGenerateSemanticRoleId[];
+  /** 用户审核后的大纲，用于第二步生成正文 */
+  reviewedOutline?: string;
+  /** 用户选中的自定义文章结构模板 */
+  structureTemplate?: Pick<AiStructureTemplate, 'name' | 'structure' | 'outputRules'>;
 }
 
 /**
