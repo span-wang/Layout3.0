@@ -751,6 +751,14 @@
       "description": "文章结构模板如果加入内置模板、示例模板、模板市场、云同步、导入导出、结构化拖拽编辑或章节级局部重生成，会明显偏离用户当前要求的“模板由我自己定义、新增”，并把最小的 AI 输出结构约束扩成完整模板系统。",
       "impactScope": "PH3-01-ai-custom-structure-template-v1、AiGenerateTab、AiSlice localStorage、AiService 提示词、AI 教育内容大纲与正文生成链路",
       "currentHandling": "已完成 `PH3-01-ai-custom-structure-template-v1`：文章结构模板 V1 已按用户要求收口为本机自定义模板库，初始为空，只提供新增、编辑、删除和选择；模板只通过 localStorage 保存，选择后进入大纲和正文提示词；不提供内置模板、示例模板、云同步、导入导出、结构化编辑器或小红书模板。"
+    },
+    {
+      "id": "RISK-095",
+      "date": "2026-07-09",
+      "type": "范围调整",
+      "description": "局部分栏快捷入口如果顺手扩成完整快捷键系统、右键菜单、拖拽调整边界、DOCX section 映射或分节系统，会把当前“多个块快速设为双栏/三栏”的小交互扩展成跨 UI、导出和排版的大改。",
+      "impactScope": "PH2-19C-local-column-quick-actions-v1、CanvasPane 块多选浮动工具条、documentSlice 局部分栏包装、Document Model、Typesetting Engine、HTML/PDF 导出后续口径",
+      "currentHandling": "已完成 `PH2-19C-local-column-quick-actions-v1`：本步只增强现有 `columnSection` 的快捷入口，多选连续顶层块后可直接设为双栏或三栏；DOCX 局部分栏、拖拽边界、右键菜单、完整快捷键系统、对象独立跨栏和分节系统均未纳入。"
     }
   ]
 }

@@ -73,6 +73,7 @@ import type {
   BlockStyleOverrides,
   BlockquoteStructureAction,
   BlockMergeReason,
+  ColumnSectionColumnCount,
   LayoutBlock,
   LayoutDocument,
   LayoutFontResource,
@@ -2667,7 +2668,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       mergedCount,
     };
   },
-  wrapLayoutSelectedBlocksInColumns: () => {
+  wrapLayoutSelectedBlocksInColumns: ({ columnCount = 2 }: { columnCount?: ColumnSectionColumnCount } = {}) => {
     let selectedNodeId: string | null = null;
     let didUpdate = false;
     let wrappedCount = 0;
@@ -2684,7 +2685,11 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
         return;
       }
 
-      const result = wrapTopLevelBlocksInColumnSectionByIds(state.layoutDocument.blocks, selection.blockIds);
+      const result = wrapTopLevelBlocksInColumnSectionByIds(
+        state.layoutDocument.blocks,
+        selection.blockIds,
+        columnCount,
+      );
       reason = result.reason;
       wrappedCount = result.wrappedCount;
       if (!result.didUpdate || !result.selectedNodeId) {
@@ -2710,6 +2715,7 @@ export const createDocumentSlice: StoreSlice<DocumentSlice> = (set, get) => ({
       didUpdate,
       reason,
       wrappedCount,
+      columnCount,
     };
   },
   updateLayoutColumnSectionAttributes: ({ nodeId, columnCount, columnGapMm, divider, headingsSpanAll }) =>

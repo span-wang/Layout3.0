@@ -3,6 +3,7 @@ import type {
   AnswerDisplayMode,
   BlockStyleOverrides,
   BlockquoteStructureAction,
+  ColumnSectionColumnCount,
   DocumentFormat,
   ImageBlockMetadata,
   ImageWrapSide,
@@ -255,11 +256,12 @@ export interface DocumentSlice {
     reason: 'merged' | 'invalidSelection' | 'notEnoughBlocks' | 'nonContiguous' | 'unsupportedBlockType' | 'mixedBlockTypes';
     mergedCount: number;
   };
-  wrapLayoutSelectedBlocksInColumns: () => {
+  wrapLayoutSelectedBlocksInColumns: (payload?: { columnCount?: ColumnSectionColumnCount }) => {
     selectedNodeId: string | null;
     didUpdate: boolean;
     reason: 'wrapped' | 'invalidSelection' | 'notEnoughBlocks' | 'nonContiguous' | 'unsupportedBlockType';
     wrappedCount: number;
+    columnCount: ColumnSectionColumnCount;
   };
   updateLayoutColumnSectionAttributes: (payload: {
     nodeId: string;

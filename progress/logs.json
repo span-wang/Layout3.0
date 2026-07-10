@@ -168,8 +168,7 @@
       "phaseMilestone": "第二阶段 / M2",
       "step": "完成教学式原生化学科学制图透明底 V1",
       "action": "透明底 SVG 重绘/组合导出透明背景修正/定向测试/类型检查/构建验证/进度同步",
-      "result": "已完成 `PH2-05B-chemistry-native-scientific-transparent-diagrams-v1`：1) `src/constants/chemistryApparatus.ts` 的化学模板和部件 SVG 已收口为透明背景，不再内置整张白底矩形，并统一调整为更接近教学讲义和试卷的原生科学制图线稿风格；2) `ChemistryComposerDialog.tsx` 的组合导出在生成 PNG 前会隐藏画布辅助背景、工作区边框、端点手柄和选中轮廓，最终插入文档的化学组合图保持透明底；3) 新增定向测试覆盖化学素材 data URI 不再内置白底，并继续覆盖特殊容器动态渲染；4) `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check` 全部通过。"
-      ,
+      "result": "已完成 `PH2-05B-chemistry-native-scientific-transparent-diagrams-v1`：1) `src/constants/chemistryApparatus.ts` 的化学模板和部件 SVG 已收口为透明背景，不再内置整张白底矩形，并统一调整为更接近教学讲义和试卷的原生科学制图线稿风格；2) `ChemistryComposerDialog.tsx` 的组合导出在生成 PNG 前会隐藏画布辅助背景、工作区边框、端点手柄和选中轮廓，最终插入文档的化学组合图保持透明底；3) 新增定向测试覆盖化学素材 data URI 不再内置白底，并继续覆盖特殊容器动态渲染；4) `npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check` 全部通过。",
       "verification": [
         "`src/constants/chemistryApparatus.test.ts` 新增透明底回归，确认模板与部件 SVG 不再内置整张白底矩形。",
         "`src/components/layout/ChemistryComposerDialog.tsx` 已在导出时隐藏辅助层，避免把编辑器白底带进最终 PNG。",
@@ -13457,6 +13456,68 @@
         "当前执行看板.md"
       ],
       "next": "后续如需模板导入导出、工作区模板库、结构化模板编辑器、模板与生成记录联动或小红书结构模板，再另拆 AI 体验增强小步。"
+    },
+    {
+      "id": "LOG-521",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH2-19C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "确认局部分栏快捷入口扩展 V1 边界",
+      "action": "用户确认/边界回写/风险登记/进度同步",
+      "result": "用户确认推进“多个块一起做快捷的分栏”扩展。本步按 `PH2-19C-local-column-quick-actions-v1` 推进：在既有 `columnSection` 局部分栏能力上，把画布多选浮动工具条从单一“设为双栏”扩展为可直接选择“双栏 / 三栏”；底层模型与 store 支持包装时写入指定栏数；成功/失败反馈继续中文化并说明包装块数量或失败原因。本步明确不纳入 DOCX 局部分栏、拖拽调整边界、右键菜单、完整快捷键系统、对象独立跨栏或完整分节系统。",
+      "verification": [
+        "用户已回复“确定”，确认当前方案可以执行。",
+        "`progress/tasks/phase-2.json` 已新增 `PH2-19C` 任务卡，并写明本步纳入、本步明确不纳入和后续归属任务。",
+        "`progress/config.json` 已临时将 `phase-2` 与 `M2` 恢复为 `进行中`，避免新增进行中小步与阶段/里程碑已完成状态不一致。",
+        "`progress/risks.json` 已新增 `RISK-095`，记录快捷分栏若扩成完整分节或快捷键系统的范围风险。",
+        "开工前将执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。"
+      ],
+      "affectedFiles": [
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check`；随后开始实现模型参数、store 动作、画布多选浮动工具条双栏/三栏快捷入口和定向回归。"
+    },
+    {
+      "id": "LOG-522",
+      "date": "2026-07-09",
+      "taskIds": [
+        "PH2-19C"
+      ],
+      "phaseMilestone": "第二阶段 / M2",
+      "step": "完成局部分栏快捷入口扩展 V1",
+      "action": "模型参数扩展/store 接线/多选浮动条双栏三栏入口/定向测试/类型检查/构建验证/进度同步",
+      "result": "已完成 `PH2-19C-local-column-quick-actions-v1`：1) 连续顶层块包装为局部分栏时可直接传入 `columnCount: 2 | 3`，默认仍为双栏；2) store 动作已透传目标栏数并返回实际栏数，便于前台给出明确中文反馈；3) 画布多选浮动工具条已新增“双栏 / 三栏”两个快捷按钮，用户无需先设双栏再去右侧对象属性改成三栏；4) 既有右侧局部分栏属性、解除双栏、分页、HTML/PDF 导出和 `.layout` 保存恢复继续消费同一套 `columnSection` 结构；5) 本步未扩到 DOCX、右键菜单、完整快捷键系统、拖拽边界或分节系统。",
+      "verification": [
+        "`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\columnSection.test.ts` 通过，3 个测试全部 pass。",
+        "`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\typesetting\\algorithms\\estimatedMaxFill.columnSection.test.ts` 通过，2 个测试全部 pass。",
+        "`npm run typecheck` 成功。",
+        "`npm run build` 成功。",
+        "`progress/tasks/phase-2.json` 已将 `PH2-19C` 收口为已完成。",
+        "`progress/config.json` 已将 `phase-2` 与 `M2` 恢复为已完成。",
+        "`progress/risks.json` 已更新 `RISK-095` 当前处理结果。"
+      ],
+      "affectedFiles": [
+        "src/engine/document-model/operations.ts",
+        "src/engine/document-model/columnSection.test.ts",
+        "src/store/types.ts",
+        "src/store/slices/documentSlice.ts",
+        "src/components/layout/AppShell.tsx",
+        "src/components/layout/CanvasPane.tsx",
+        "progress/config.json",
+        "progress/tasks/phase-2.json",
+        "progress/risks.json",
+        "progress/logs.json",
+        "项目开发进度.md (待生成)",
+        "当前执行看板.md (待生成)"
+      ],
+      "next": "执行 `npm run progress:build` 与 `npm run progress:check` 同步展示层；后续如需右键菜单、快捷键、拖拽调整区段边界、DOCX 局部分栏或完整分节系统，再按对应任务另拆小步。"
     }
   ]
 }

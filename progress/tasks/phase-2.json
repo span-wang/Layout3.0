@@ -5893,6 +5893,71 @@
       }
     },
     {
+      "id": "PH2-19C",
+      "sequence": "19C",
+      "order": 190.7,
+      "title": "局部分栏快捷入口扩展 V1",
+      "priority": "P1",
+      "moduleIds": [
+        "document-model",
+        "ui-components",
+        "typesetting-engine"
+      ],
+      "milestoneIds": [
+        "M2"
+      ],
+      "status": "已完成",
+      "acceptance": "用户可在画布多选连续顶层块后，直接快捷设为局部双栏或三栏；成功/失败反馈清晰，底层模型与 store 写回指定栏数，现有画布预览、分页、HTML/PDF 导出和 `.layout` 保存恢复继续消费同一套 `columnSection` 结构。",
+      "owner": "文档链路组",
+      "dependsOn": [
+        "PH2-19A",
+        "PH2-19B"
+      ],
+      "startedOn": "2026-07-09",
+      "executionBoundary": {
+        "id": "PH2-19C-local-column-quick-actions-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：局部分栏快捷入口扩展 V1",
+        "confirmedOn": "2026-07-09",
+        "startedOn": "2026-07-09",
+        "summary": "本步已完成 `PH2-19C-local-column-quick-actions-v1`：1) `wrapTopLevelBlocksInColumnSectionByIds` 与 store 动作已支持传入 `columnCount: 2 | 3`，默认仍保持双栏兼容；2) 画布块多选浮动工具条已从单一“设为双栏”扩展为“双栏 / 三栏”两个快捷按钮，并分别使用双栏、三栏图标；3) 成功反馈会显示实际包装的块数量和目标栏数，失败反馈继续沿用连续块、数量不足和不支持块等中文提示；4) 既有右侧局部分栏属性、解除入口、分页、HTML/PDF 导出和 `.layout` 保存恢复继续复用同一套 `columnSection.metadata.columnCount`；5) 定向模型测试、局部分栏分页回归、类型检查和完整构建均已通过。",
+        "included": [
+          "扩展连续顶层块包装为局部分栏的模型操作，支持传入 `columnCount: 2 | 3`，默认仍兼容双栏。",
+          "扩展 store 的 `wrapLayoutSelectedBlocksInColumns` 动作，允许画布快捷入口直接指定双栏或三栏。",
+          "把画布块多选浮动工具条里的“设为双栏”扩展为“双栏 / 三栏”快捷按钮，并保持中文提示。",
+          "成功反馈显示实际栏数与包装块数量；失败反馈继续覆盖选区不足、非连续、含不支持块等情况。",
+          "补充最小回归测试，覆盖直接包装为三栏和默认双栏兼容。",
+          "完成后执行定向测试、`npm run typecheck`、必要构建，以及 `npm run progress:build` / `npm run progress:check`。"
+        ],
+        "excluded": [
+          "不做 DOCX 局部分栏或 Word section 映射。",
+          "不做拖拽调整局部分栏边界，不做任意文字选区级分栏。",
+          "不做局部分栏嵌套、全局双栏页面里再嵌套局部分栏或完整分节系统。",
+          "不做图片、表格、公式的独立跨栏开关。",
+          "不新增完整快捷键系统、右键菜单、命令面板命令或局部分栏模板库。"
+        ],
+        "followup": [
+          "DOCX 局部分栏映射继续归属 `PH2-21` DOCX 导出深化小步。",
+          "拖拽调整区段边界、右键菜单、命令面板入口和局部分栏模板继续归属 `PH2-19` 后续体验增强。",
+          "对象独立跨栏控制继续归属 `PH2-10` 或对象排版增强任务。",
+          "完整分节分栏、单页分栏和节级页眉页脚后续另拆分节系统任务。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认当前 `PH2-19C-local-column-quick-actions-v1` 边界可以执行。",
+          "`src/engine/document-model/operations.ts` 已支持包装局部分栏时传入 `columnCount: 2 | 3`，默认值仍为 2。",
+          "`src/store/slices/documentSlice.ts` 与 `src/store/types.ts` 已接入 `wrapLayoutSelectedBlocksInColumns({ columnCount })`。",
+          "`src/components/layout/CanvasPane.tsx` 已新增“双栏 / 三栏”快捷按钮；`src/components/layout/AppShell.tsx` 已接入对应成功/失败反馈。",
+          "`src/engine/document-model/columnSection.test.ts` 已新增直接包装三栏回归。",
+          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\document-model\\columnSection.test.ts`，3 个测试全部 pass。",
+          "局部分栏分页回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\engine\\typesetting\\algorithms\\estimatedMaxFill.columnSection.test.ts`，2 个测试全部 pass。",
+          "`npm run typecheck` 成功。",
+          "`npm run build` 成功。"
+        ],
+        "completedOn": "2026-07-09"
+      },
+      "completedOn": "2026-07-09"
+    },
+    {
       "id": "PH2-20-block-split-rendering-adaptation",
       "sequence": "20b",
       "order": 82,

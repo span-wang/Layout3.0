@@ -628,7 +628,11 @@ function isColumnSectionSupportedChild(block: LayoutBlock): boolean {
     block.type !== 'columnSection';
 }
 
-function createColumnSectionBlock(blocks: LayoutBlock[], childBlocks: LayoutBlock[]): LayoutBlock {
+function createColumnSectionBlock(
+  blocks: LayoutBlock[],
+  childBlocks: LayoutBlock[],
+  columnCount: ColumnSectionColumnCount = 2,
+): LayoutBlock {
   const blockId = createInsertedBlockId(blocks, 'columnSection', '局部分栏');
 
   return {
@@ -641,7 +645,7 @@ function createColumnSectionBlock(blocks: LayoutBlock[], childBlocks: LayoutBloc
     pagination: {},
     metadata: {
       kind: 'columnSection',
-      columnCount: 2,
+      columnCount,
       columnGapMm: defaultStyleSettings.columns.gapMm,
       divider: defaultStyleSettings.columns.divider,
       headingsSpanAll: defaultStyleSettings.columns.headingsSpanAll,
@@ -1456,6 +1460,7 @@ export function mergeTopLevelTextBlocksByIds(
 export function wrapTopLevelBlocksInColumnSectionByIds(
   blocks: LayoutBlock[],
   blockIds: string[],
+  columnCount: ColumnSectionColumnCount = 2,
 ): ColumnSectionWrapResult {
   const uniqueBlockIds = Array.from(new Set(blockIds));
   if (uniqueBlockIds.length < 2) {
@@ -1485,7 +1490,7 @@ export function wrapTopLevelBlocksInColumnSectionByIds(
   }
 
   const selectedBlocks = selectedEntries.map((entry) => entry.block);
-  const columnSectionBlock = createColumnSectionBlock(blocks, selectedBlocks);
+  const columnSectionBlock = createColumnSectionBlock(blocks, selectedBlocks, columnCount);
   const selectedBlockIds = new Set(selectedBlocks.map((block) => block.id));
   const nextBlocks = [
     ...blocks.slice(0, firstIndex),

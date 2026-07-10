@@ -18,7 +18,7 @@ import {
   textFontFamilyGroups,
   type FontFamilyGroup,
 } from '@/constants/fontFamilies';
-import { Bold, Columns2, Combine, Eraser, Highlighter, Italic, Strikethrough, Underline, X } from 'lucide-react';
+import { Bold, Columns2, Columns3, Combine, Eraser, Highlighter, Italic, Strikethrough, Underline, X } from 'lucide-react';
 import { highlightColorOptions, standardColorOptions } from '@/constants/styleColors';
 import {
   shouldRenderTextRunAsDictationBlank,
@@ -128,7 +128,7 @@ interface CanvasPaneProps {
   onSelectTableCell: (cellId: string, extendRange: boolean) => void;
   onClearSelection: () => void;
   onMergeSelectedBlocks: () => void;
-  onWrapSelectedBlocksInColumns: () => void;
+  onWrapSelectedBlocksInColumns: (columnCount: 2 | 3) => void;
   onCommitNodeText: (nodeId: string, text: string) => void;
   onCommitNodeRichText: (nodeId: string, textRuns: TextRun[]) => void;
   onTextSelectionChange: (state: CanvasTextSelectionState) => void;
@@ -5779,11 +5779,25 @@ function CanvasPaneComponent({
               onMouseDown={handleFloatingToolbarMouseDown}
               onClick={(event) => {
                 event.stopPropagation();
-                onWrapSelectedBlocksInColumns();
+                onWrapSelectedBlocksInColumns(2);
               }}
             >
               <Columns2 size={15} />
-              <span>设为双栏</span>
+              <span>双栏</span>
+            </button>
+            <button
+              type="button"
+              className="format-clear-button block-selection-merge-button"
+              title="设为三栏"
+              aria-label="设为三栏"
+              onMouseDown={handleFloatingToolbarMouseDown}
+              onClick={(event) => {
+                event.stopPropagation();
+                onWrapSelectedBlocksInColumns(3);
+              }}
+            >
+              <Columns3 size={15} />
+              <span>三栏</span>
             </button>
           </div>
         ) : null}

@@ -65,6 +65,28 @@ test('局部分栏属性更新会只改 columnSection 元数据', () => {
   );
 });
 
+test('局部分栏包装支持直接指定三栏', () => {
+  const result = wrapTopLevelBlocksInColumnSectionByIds(
+    [
+      createParagraphBlock('p-1', '第一段'),
+      createParagraphBlock('p-2', '第二段'),
+      createParagraphBlock('p-3', '第三段'),
+    ],
+    ['p-1', 'p-2', 'p-3'],
+    3,
+  );
+  const columnSection = result.blocks[0];
+
+  assert.equal(result.didUpdate, true);
+  assert.equal(result.wrappedCount, 3);
+  assert(columnSection && columnSection.type === 'columnSection' && columnSection.metadata.kind === 'columnSection');
+  assert.equal(columnSection.metadata.columnCount, 3);
+  assert.deepEqual(
+    columnSection.metadata.blocks.map((block) => block.id),
+    ['p-1', 'p-2', 'p-3'],
+  );
+});
+
 test('解除局部分栏会恢复原始顶层块顺序', () => {
   const wrapped = wrapTopLevelBlocksInColumnSectionByIds(
     [

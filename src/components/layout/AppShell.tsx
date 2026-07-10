@@ -993,8 +993,8 @@ export function AppShell(): JSX.Element {
     showMessage(failureMessage[result.reason]);
   }, [mergeLayoutSelectedBlocks, showMessage]);
 
-  const handleWrapSelectedBlocksInColumns = useCallback(() => {
-    const result = wrapLayoutSelectedBlocksInColumns();
+  const handleWrapSelectedBlocksInColumns = useCallback((columnCount: 2 | 3) => {
+    const result = wrapLayoutSelectedBlocksInColumns({ columnCount });
     if (result.didUpdate) {
       setCanvasTextSelection({
         nodeId: result.selectedNodeId,
@@ -1003,12 +1003,12 @@ export function AppShell(): JSX.Element {
         isEditing: false,
         draftTextRuns: null,
       });
-      showMessage(result.wrappedCount > 0 ? '已设为局部双栏' : '已设为双栏');
+      showMessage(`已将 ${result.wrappedCount} 个块设为局部${result.columnCount}栏`);
       return;
     }
 
     const failureMessage: Record<typeof result.reason, string> = {
-      wrapped: '已设为局部双栏',
+      wrapped: `已设为局部${result.columnCount}栏`,
       invalidSelection: '请选择连续的顶层块',
       notEnoughBlocks: '至少需要选择 2 个块',
       nonContiguous: '只能选择连续块',
