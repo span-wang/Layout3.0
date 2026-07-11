@@ -1,0 +1,1026 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-data-cleaning-shadow-kb-v1",
+  "generatedAt": "2026-07-10T12:35:05.012Z",
+  "shadowDatasetId": "a987b3d27c5b11f18a4e879d5b5dcdeb",
+  "documentCount": 127,
+  "metadataVerifiedCount": 127,
+  "documents": [
+    {
+      "remoteDocumentId": "bb65687e7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "19c2eebe79fa11f1a93a9523fdaa939b__STARTER UNIT 1 答案.docx",
+      "originDocumentId": "19c2eebe79fa11f1a93a9523fdaa939b",
+      "unit": "starter_unit_1",
+      "treatment": "converted_docx",
+      "sha256": "86197c5be2b06007d2bd7bdf5e918b6cb2ec747047c77c43943006ff8edb87e4"
+    },
+    {
+      "remoteDocumentId": "bb74a5fa7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "19ce543e79fa11f1a93a9523fdaa939b__STARTER UNIT 1.docx",
+      "originDocumentId": "19ce543e79fa11f1a93a9523fdaa939b",
+      "unit": "starter_unit_1",
+      "treatment": "converted_docx",
+      "sha256": "374735176d4ad2e3540b81e6262f0ec7692f2fb3fc907e976059cf85e0fdbfa7"
+    },
+    {
+      "remoteDocumentId": "bb8a89247c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "19d8e2dc79fa11f1a93a9523fdaa939b__STARTER UNIT 2 答案.docx",
+      "originDocumentId": "19d8e2dc79fa11f1a93a9523fdaa939b",
+      "unit": "starter_unit_2",
+      "treatment": "converted_docx",
+      "sha256": "6e011d38417ee9b0e0945a8638a20b14bde1a2991916ffa866f802cde129b565"
+    },
+    {
+      "remoteDocumentId": "bb97cf8a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "19e3142879fa11f1a93a9523fdaa939b__STARTER UNIT 2.docx",
+      "originDocumentId": "19e3142879fa11f1a93a9523fdaa939b",
+      "unit": "starter_unit_2",
+      "treatment": "converted_docx",
+      "sha256": "062d29b04a417e7422b114af3f0155931ee03f46f65c6cdba4e68173407f5410"
+    },
+    {
+      "remoteDocumentId": "bba5d3007c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "19fe1dd679fa11f1a93a9523fdaa939b__STARTER UNIT 3 答案.docx",
+      "originDocumentId": "19fe1dd679fa11f1a93a9523fdaa939b",
+      "unit": "starter_unit_3",
+      "treatment": "converted_docx",
+      "sha256": "31850ba0941cad5d3051b2cb7e17615ff395cf6fc8f7d0b652a7ccc95d6cfd49"
+    },
+    {
+      "remoteDocumentId": "bbb063107c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a0923de79fa11f1a93a9523fdaa939b__STARTER UNIT 3.docx",
+      "originDocumentId": "1a0923de79fa11f1a93a9523fdaa939b",
+      "unit": "starter_unit_3",
+      "treatment": "converted_docx",
+      "sha256": "e9b6af159f9070c991c37a52bbbcb1a3692a882490d71eb95c9d7f2f2a39b064"
+    },
+    {
+      "remoteDocumentId": "bbbbea1e7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a13d02279fa11f1a93a9523fdaa939b__UNIT 1 答案.docx",
+      "originDocumentId": "1a13d02279fa11f1a93a9523fdaa939b",
+      "unit": "unit_1",
+      "treatment": "converted_docx",
+      "sha256": "c9d9a64f3be1d68d9837080b7349873ab7afd6f6ec2b5c02c1f6421a83edbdb4"
+    },
+    {
+      "remoteDocumentId": "bbc503a67c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a1e9f7079fa11f1a93a9523fdaa939b__UNIT 1.docx",
+      "originDocumentId": "1a1e9f7079fa11f1a93a9523fdaa939b",
+      "unit": "unit_1",
+      "treatment": "converted_docx",
+      "sha256": "660561733eb0c43622e62b531d9909498b300c635ab475291002499b5279dd34"
+    },
+    {
+      "remoteDocumentId": "bbd0391a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a285b5079fa11f1a93a9523fdaa939b__UNIT 2 答案.docx",
+      "originDocumentId": "1a285b5079fa11f1a93a9523fdaa939b",
+      "unit": "unit_2",
+      "treatment": "converted_docx",
+      "sha256": "d2888b3ce75fc75200529f79ab055ea28966042c588a759ca180bd14a4889653"
+    },
+    {
+      "remoteDocumentId": "bbd935ba7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a337ca679fa11f1a93a9523fdaa939b__UNIT 2.docx",
+      "originDocumentId": "1a337ca679fa11f1a93a9523fdaa939b",
+      "unit": "unit_2",
+      "treatment": "converted_docx",
+      "sha256": "879c2d2c7b6b4fbd708d6cb8d94e93d1d8a2bc3034c87fddf3268b190f563051"
+    },
+    {
+      "remoteDocumentId": "bbe21e5a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a3d1dce79fa11f1a93a9523fdaa939b__UNIT 3 答案.docx",
+      "originDocumentId": "1a3d1dce79fa11f1a93a9523fdaa939b",
+      "unit": "unit_3",
+      "treatment": "converted_docx",
+      "sha256": "51ae226fda7f12b2b113e0c035c514df92c3bebdcca5d56dc27ef79940a40b95"
+    },
+    {
+      "remoteDocumentId": "bbebfc2c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a46e3a479fa11f1a93a9523fdaa939b__UNIT 3.docx",
+      "originDocumentId": "1a46e3a479fa11f1a93a9523fdaa939b",
+      "unit": "unit_3",
+      "treatment": "converted_docx",
+      "sha256": "cc075418c3767a889f4d67337ce76925eb416c5263d89158b287aa660a7fc539"
+    },
+    {
+      "remoteDocumentId": "bbf983067c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a5092aa79fa11f1a93a9523fdaa939b__UNIT 4 答案.docx",
+      "originDocumentId": "1a5092aa79fa11f1a93a9523fdaa939b",
+      "unit": "unit_4",
+      "treatment": "converted_docx",
+      "sha256": "f9b7201b2167e509c2f734507d900bb4a444112c88442580a27a75a2a7030579"
+    },
+    {
+      "remoteDocumentId": "bc0347ba7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a5aa6a079fa11f1a93a9523fdaa939b__UNIT 4.docx",
+      "originDocumentId": "1a5aa6a079fa11f1a93a9523fdaa939b",
+      "unit": "unit_4",
+      "treatment": "converted_docx",
+      "sha256": "a5290538be6a9034cf001fa6a6a3b26e15015c96f9717b8c1fe8b302489ab867"
+    },
+    {
+      "remoteDocumentId": "bc0ff0e67c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a66c2dc79fa11f1a93a9523fdaa939b__UNIT 5 答案.docx",
+      "originDocumentId": "1a66c2dc79fa11f1a93a9523fdaa939b",
+      "unit": "unit_5",
+      "treatment": "converted_docx",
+      "sha256": "d5b503902d7dc8ab18d9e87691636f2da4574346549cdc1181615f55f76e2483"
+    },
+    {
+      "remoteDocumentId": "bc19e2687c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a7045b479fa11f1a93a9523fdaa939b__UNIT 5.docx",
+      "originDocumentId": "1a7045b479fa11f1a93a9523fdaa939b",
+      "unit": "unit_5",
+      "treatment": "converted_docx",
+      "sha256": "06ea4bf828e00895a0968a9bb3b517f9cce10b000439b75c6b1c0e1a0735b4e0"
+    },
+    {
+      "remoteDocumentId": "bc280de87c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a7b497879fa11f1a93a9523fdaa939b__UNIT 6 答案.docx",
+      "originDocumentId": "1a7b497879fa11f1a93a9523fdaa939b",
+      "unit": "unit_6",
+      "treatment": "converted_docx",
+      "sha256": "e19fdfb022c337dbdecb18f2baec0179821d2f1035726ebce3299d6b29cba36b"
+    },
+    {
+      "remoteDocumentId": "bc31a1787c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a86f05c79fa11f1a93a9523fdaa939b__UNIT 6.docx",
+      "originDocumentId": "1a86f05c79fa11f1a93a9523fdaa939b",
+      "unit": "unit_6",
+      "treatment": "converted_docx",
+      "sha256": "80bf997093fbdabc2017d9924d85c37ad8a5239804b1839f487a5fc4daddbe17"
+    },
+    {
+      "remoteDocumentId": "bc3ab6f07c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a92f26279fa11f1a93a9523fdaa939b__UNIT 7 答案.docx",
+      "originDocumentId": "1a92f26279fa11f1a93a9523fdaa939b",
+      "unit": "unit_7",
+      "treatment": "converted_docx",
+      "sha256": "b14b5abaa70d411f04e33cebb87a3cd0d3c7cecbd1fac4199ad0713357c7f230"
+    },
+    {
+      "remoteDocumentId": "bc4485047c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1a9d0fe079fa11f1a93a9523fdaa939b__UNIT 7.docx",
+      "originDocumentId": "1a9d0fe079fa11f1a93a9523fdaa939b",
+      "unit": "unit_7",
+      "treatment": "converted_docx",
+      "sha256": "c30153fffa8189d7d415a0d72caef807bc785ce0d254aea5a94c1c94ab6928d1"
+    },
+    {
+      "remoteDocumentId": "bc5248ec7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1acdffec79fa11f1a93a9523fdaa939b__第一部分　国际音标知识汇总 答案.docx",
+      "originDocumentId": "1acdffec79fa11f1a93a9523fdaa939b",
+      "unit": "general",
+      "treatment": "converted_docx",
+      "sha256": "c4cd6ab912e8d51e4676e83c1b4663c2e947dbe36957a4114f0f47c893a6035d"
+    },
+    {
+      "remoteDocumentId": "bc5d44b87c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "1ad9380879fa11f1a93a9523fdaa939b__第一部分　国际音标知识汇总.docx",
+      "originDocumentId": "1ad9380879fa11f1a93a9523fdaa939b",
+      "unit": "general",
+      "treatment": "converted_docx",
+      "sha256": "9da05439a85a57759d52acc407fcf0dc94ceaed40f008785c555b7ca4847ae96"
+    },
+    {
+      "remoteDocumentId": "bc6711827c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "43d983dc7b8c11f1b1eacb449d41f0c3__02 Unit 1 You and Me(词汇)(解析版).docx",
+      "originDocumentId": "43d983dc7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "healthy_copy",
+      "sha256": "92b049d94d87d102ac44ac92d170ad38c5897055e26a08c70677b455d847b9a8"
+    },
+    {
+      "remoteDocumentId": "bc70d6367c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "43ddec4c7b8c11f1b1eacb449d41f0c3__03 Unit 1 You and Me(语法)(解析版).docx",
+      "originDocumentId": "43ddec4c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "healthy_copy",
+      "sha256": "d02c79e9e154df9c965109391504b74f0eb4d6cba8e30acef33b4247d090091b"
+    },
+    {
+      "remoteDocumentId": "bc7c81847c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "443918927b8c11f1b1eacb449d41f0c3__04 Unit 2 We're Family(词汇)(解析版).docx",
+      "originDocumentId": "443918927b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "healthy_copy",
+      "sha256": "09d6ce86f29e5ee3290dc91f3cc79935248349d460e0d8ea7725102bdf78943a"
+    },
+    {
+      "remoteDocumentId": "bc860cf47c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "443c37ac7b8c11f1b1eacb449d41f0c3__05 Unit 2 We're Family(语法)(解析版).docx",
+      "originDocumentId": "443c37ac7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "healthy_copy",
+      "sha256": "ea5f6dc1608c910b90d345a6e47f4e13f3378e8fc6a40673096588d872efb5a7"
+    },
+    {
+      "remoteDocumentId": "bc9115f47c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "443f38267b8c11f1b1eacb449d41f0c3__05-七年级上册英语语法汇总.pdf",
+      "originDocumentId": "443f38267b8c11f1b1eacb449d41f0c3",
+      "unit": "general",
+      "treatment": "general_copy",
+      "sha256": "f0f7709f80596fbd3c459c0243a6caa34c1a275276d0f67668fa5cc2b59906ee"
+    },
+    {
+      "remoteDocumentId": "bcc38eda7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "444550f87b8c11f1b1eacb449d41f0c3__unit_1__writing.pdf",
+      "originDocumentId": "444550f87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "controlled_split",
+      "sha256": "f40b04c212f8a4f815c12871cfdbcc2f3256f009c46e495c1ffe895ca9b38087"
+    },
+    {
+      "remoteDocumentId": "bcd4bd7c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "444550f87b8c11f1b1eacb449d41f0c3__unit_2__writing.pdf",
+      "originDocumentId": "444550f87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "controlled_split",
+      "sha256": "260a48edea47657739e5566fff47c3595a465a4b564d98d2e09837037f3d5b4b"
+    },
+    {
+      "remoteDocumentId": "bce429887c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "44488a5c7b8c11f1b1eacb449d41f0c3__07 Unit 3 My school(词汇)(解析版).docx",
+      "originDocumentId": "44488a5c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "healthy_copy",
+      "sha256": "f3f3d19c40cfb0049f2555c50a5f005b1938e68db9417585080d1636cc49bb8d"
+    },
+    {
+      "remoteDocumentId": "bceee6487c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "445355d67b8c11f1b1eacb449d41f0c3__08 Unit 3 My school(语法)(解析版).docx",
+      "originDocumentId": "445355d67b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "healthy_copy",
+      "sha256": "2054203d87a07a226119e581b11e55b2a7faa905e58f6991ed634b2a449b8b75"
+    },
+    {
+      "remoteDocumentId": "bcfb6eb87c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "44566a8c7b8c11f1b1eacb449d41f0c3__09 Unit 3 单元主题写作(解析版).docx",
+      "originDocumentId": "44566a8c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "healthy_copy",
+      "sha256": "00ae8164c7882c65f42783978e161b5032df50bf28e63922a77113b9c33f3185"
+    },
+    {
+      "remoteDocumentId": "bd0aab807c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "446075227b8c11f1b1eacb449d41f0c3__14 Unit 4 My Favourite Subject(词汇)(解析版).docx",
+      "originDocumentId": "446075227b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "healthy_copy",
+      "sha256": "e361f6f889e0c2179d5e12cb5712d9d2a5c35f9ecbd7467f2624e84954c855ac"
+    },
+    {
+      "remoteDocumentId": "bd147ba67c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "4463862c7b8c11f1b1eacb449d41f0c3__15 Unit 4 My Favourite Subject(语法)(解析版).docx",
+      "originDocumentId": "4463862c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "healthy_copy",
+      "sha256": "369fc5f19dd418c54b1f89f362dcfe99393d436113782f72a6bbcd34c012c672"
+    },
+    {
+      "remoteDocumentId": "bd1e36827c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "446648947b8c11f1b1eacb449d41f0c3__16 Unit 4 单元主题写作(解析版).docx",
+      "originDocumentId": "446648947b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "healthy_copy",
+      "sha256": "19967fbbeee95eea35a6860ccde02211d3adbde9bffcf1c8a497ebdfefe8f32f"
+    },
+    {
+      "remoteDocumentId": "bd283a567c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "446a8e367b8c11f1b1eacb449d41f0c3__18.Unit 5 Fun Clubs(词汇)(解析版).docx",
+      "originDocumentId": "446a8e367b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "healthy_copy",
+      "sha256": "3a5c1686cd3162b4eb377cee4a5916fd41ea87735a497ac5a05105d8f2e93b1d"
+    },
+    {
+      "remoteDocumentId": "bd34e2247c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "446dfc2e7b8c11f1b1eacb449d41f0c3__19.Unit 5 Fun Clubs(语法)(解析版).docx",
+      "originDocumentId": "446dfc2e7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "healthy_copy",
+      "sha256": "5d8cfdb41bcfa066ab976b3b92b1453f999a8a5fae4ce42fe5e1ed2c9b2bd232"
+    },
+    {
+      "remoteDocumentId": "bd3f30da7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "4470d3ea7b8c11f1b1eacb449d41f0c3__20.Unit 5单元主题写作(解析版).docx",
+      "originDocumentId": "4470d3ea7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "healthy_copy",
+      "sha256": "2e1a0b44f944752a6650cd8885cbfce2311230afa9f7cad384b7c8aa6846c7c5"
+    },
+    {
+      "remoteDocumentId": "bd49cd427c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "4474a7e07b8c11f1b1eacb449d41f0c3__22.Unit 6 A Day in the Life(词汇)(解析版).docx",
+      "originDocumentId": "4474a7e07b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "healthy_copy",
+      "sha256": "c3d9ab9df77cdb326bcd62aaed35dcbebe80259dbbacfd50ef108976912a959b"
+    },
+    {
+      "remoteDocumentId": "bd5435de7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "44780e767b8c11f1b1eacb449d41f0c3__23.Unit 6 A Day in the Life(语法)(解析版).docx",
+      "originDocumentId": "44780e767b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "healthy_copy",
+      "sha256": "32f847205112128b5de962df406090fc65f3be88af4f719fc57ae70e9d1ec033"
+    },
+    {
+      "remoteDocumentId": "bd66591c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "447b33307b8c11f1b1eacb449d41f0c3__24.Unit 6 单元主题写作(解析版).docx",
+      "originDocumentId": "447b33307b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "healthy_copy",
+      "sha256": "a09784dc0075f5b9e160ae66b46d84e259da5a8b7470e3b988ab6c3ff79c8b50"
+    },
+    {
+      "remoteDocumentId": "bd7142c87c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_1__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "controlled_split",
+      "sha256": "78063301c0526e7ead9efc95ae92867544c3232bd687a05154bcaccee4b2e006"
+    },
+    {
+      "remoteDocumentId": "bd8313687c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_2__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "controlled_split",
+      "sha256": "129f481c3f02ab865506f00ef1aa25eadd66b0852c5f410acd15e3814e5057ed"
+    },
+    {
+      "remoteDocumentId": "bd919d347c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_3__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "controlled_split",
+      "sha256": "110ee781e129579e5dba9ab4a5b7cc84f8e8dc70ce85ba4c6c76144c200c99d0"
+    },
+    {
+      "remoteDocumentId": "bdaaa4787c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_4__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "controlled_split",
+      "sha256": "763435a3e6bd39c2e073f9e8db1e9d98e1f686a57e0391027ff3606119b27e02"
+    },
+    {
+      "remoteDocumentId": "bdc194b27c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_5__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "controlled_split",
+      "sha256": "9a44b5cdb09fe44690430a4e221335b8d466731b96422b5fee5746a9f3cd585e"
+    },
+    {
+      "remoteDocumentId": "bdd02b3a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_6__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "controlled_split",
+      "sha256": "6baa3ebcc761c82071eac7177ff5355a26fbabbcdda2cb814f179e6668877bf3"
+    },
+    {
+      "remoteDocumentId": "bddf597a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_7__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "controlled_split",
+      "sha256": "45bc08c863dedc0d656eb7b12c780d1d658d6234ec8475d3f3f6157dccc0c08e"
+    },
+    {
+      "remoteDocumentId": "bdfad5107c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_1__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "controlled_split",
+      "sha256": "46f28b0b210be3099a1b2036a9aaa4a1f2a9b21cc3335b42e4f3e1b26bdfb8b7"
+    },
+    {
+      "remoteDocumentId": "be20b06e7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_2__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "controlled_split",
+      "sha256": "bf4726f04b3d753c34d244f1da09d5a5431a14bc3dafdfc2608ddf1efa9e9285"
+    },
+    {
+      "remoteDocumentId": "be339c567c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_3__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "controlled_split",
+      "sha256": "7a58e39b530a2c3cc362d1382cc8fed59ca0b1d7e700920d44410c5c442880cb"
+    },
+    {
+      "remoteDocumentId": "be44cf127c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_4__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "controlled_split",
+      "sha256": "1383882168398d2c6bf33871e2104cb380464fbeb6179758793110370f8e0a9c"
+    },
+    {
+      "remoteDocumentId": "be5d63387c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_5__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "controlled_split",
+      "sha256": "a03cce1681f6c190ae1388393250477ff4b6a62f00862308bded6a87c3594de2"
+    },
+    {
+      "remoteDocumentId": "be6eeffe7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_6__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "controlled_split",
+      "sha256": "b094d0c3f836d2b061476169f41a9688e6f5d7204988a48634d31cb63e769822"
+    },
+    {
+      "remoteDocumentId": "be7fd1667c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_7__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "controlled_split",
+      "sha256": "9dc1eea079d55798c889b8e5b71097653956a6ff915ef11d1d6fe020c3b91f06"
+    },
+    {
+      "remoteDocumentId": "be8feba07c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "44ae5f447b8c11f1b1eacb449d41f0c3__26.Unit 7 Happy Birthday!(词汇)(解析版).docx",
+      "originDocumentId": "44ae5f447b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "healthy_copy",
+      "sha256": "f1c38edef694a75283eda7c62a4414de6e2d02041218f2f6db35044a3b92cd10"
+    },
+    {
+      "remoteDocumentId": "beb29ede7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "44b15bf47b8c11f1b1eacb449d41f0c3__27.Unit 7 Happy Birthday!(语法)(解析版).docx",
+      "originDocumentId": "44b15bf47b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "healthy_copy",
+      "sha256": "75ca8df07151b22c8883f859320a9d084d138dcf725a042c0b433c6afa51883d"
+    },
+    {
+      "remoteDocumentId": "bebbbc587c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "44b41ace7b8c11f1b1eacb449d41f0c3__28.Unit 7 单元主题写作(解析版).docx",
+      "originDocumentId": "44b41ace7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "healthy_copy",
+      "sha256": "850c5d8c0564eebba01b548d9276b18f851ee8b77716002761413e4fcb8f56aa"
+    },
+    {
+      "remoteDocumentId": "bec73e027c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_1__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "controlled_split",
+      "sha256": "a3cc81a1cf43cb2a8fce52b3c63fc483e678e5fc00c6c2a4014ffa5f1116b3f1"
+    },
+    {
+      "remoteDocumentId": "bef708127c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_2__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "controlled_split",
+      "sha256": "2b4590f1ac14ad77f88e239975239ca4ea9ada0d9383521244d8d4ed7f1c261a"
+    },
+    {
+      "remoteDocumentId": "bf5fda727c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_3__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "controlled_split",
+      "sha256": "2caa1758baf92aacb2ec201a37d0f6e3a2afbae62b2ef8d249c9b66f42a732b9"
+    },
+    {
+      "remoteDocumentId": "bf90733a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_4__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "controlled_split",
+      "sha256": "f6120c3961df7edd7c8b36fbf0d2a4314e8ad4b1a37634a1bd0dbe40136ef353"
+    },
+    {
+      "remoteDocumentId": "bfcc981a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_5__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "controlled_split",
+      "sha256": "7efdf99f7fbcbfb32712f21da89e825fa101307ac306e9e54298f7196537e925"
+    },
+    {
+      "remoteDocumentId": "c01078007c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_6__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "controlled_split",
+      "sha256": "cad2e7daec7b608a3abb9e8da11472f845e7cc79714cdf013960cbeda482f4f4"
+    },
+    {
+      "remoteDocumentId": "c060b2ca7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_7__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "controlled_split",
+      "sha256": "5c4323f7bc8a5c0786cfd866f27cdf92911effdc516782656431aed79c9c85d2"
+    },
+    {
+      "remoteDocumentId": "c0945d467c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5877b70a7b8c11f1b1eacb449d41f0c3__starter_unit_1__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "unit": "starter_unit_1",
+      "treatment": "controlled_split",
+      "sha256": "401c307f2e0f56efa6ee62ce37031cbd6727afdf3f4d9cd7d10fb86f942830d5"
+    },
+    {
+      "remoteDocumentId": "c0a179b87c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_1__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "controlled_split",
+      "sha256": "da3240af1e1f5ddcd5f93456a4d33d30e9f1f1bd9a07ea316f35e40b34610a3f"
+    },
+    {
+      "remoteDocumentId": "c0affc547c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_2__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "controlled_split",
+      "sha256": "7fc03fa52440d1561f835cebad71392d82cda5e23c2abe6b0279119306a1537e"
+    },
+    {
+      "remoteDocumentId": "c0c17c047c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_3__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "controlled_split",
+      "sha256": "a0d31e8d22041279cd895799d3c38a7000e71c06d7bbb688921dc0461b0d9c3c"
+    },
+    {
+      "remoteDocumentId": "c0cfb1667c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_4__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "controlled_split",
+      "sha256": "be73f5371fabbb635384ed111b2a739e83d86b2e3a59b9bc65f2929660a7c89c"
+    },
+    {
+      "remoteDocumentId": "c0de8a9c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_5__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "controlled_split",
+      "sha256": "7c688296a46adf87982608ddb82309bdd4ea165b13384c308d51af77cd1fb1e3"
+    },
+    {
+      "remoteDocumentId": "c0ebfbe67c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_6__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "controlled_split",
+      "sha256": "a7a7e6fac356c2dabfaf98783fd459d35138534bb3f331b95852c47045d087c4"
+    },
+    {
+      "remoteDocumentId": "c0fcc8fe7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_7__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "controlled_split",
+      "sha256": "5f07b909eaeab52232cb548f84310535aee215f4c1889a887f628f2c8b3dbf4a"
+    },
+    {
+      "remoteDocumentId": "c10996ba7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "587b73ae7b8c11f1b1eacb449d41f0c3__Unit 1 You and Me 基础词汇默写.docx",
+      "originDocumentId": "587b73ae7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "healthy_copy",
+      "sha256": "4b17a00fa721f45f933df8403418ea487be661e4c6045f62a3f257c2c958aac0"
+    },
+    {
+      "remoteDocumentId": "c11361c27c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "587f569a7b8c11f1b1eacb449d41f0c3__Unit 2 We’re Family 基础词汇默写.docx",
+      "originDocumentId": "587f569a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "healthy_copy",
+      "sha256": "cd1f306cd5f202abb471c496d43e34d29ac7954754e80a76819336dd7e80ea18"
+    },
+    {
+      "remoteDocumentId": "c11dcab87c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5882a4ee7b8c11f1b1eacb449d41f0c3__Unit 2 We’re Family!.pdf",
+      "originDocumentId": "5882a4ee7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "healthy_copy",
+      "sha256": "d9979e18c044f1b92c57421401768b3a03c2eb1eb528c6b9367afcd8c048e591"
+    },
+    {
+      "remoteDocumentId": "c1305a3e7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "588a20987b8c11f1b1eacb449d41f0c3__Unit 3 My School.pdf",
+      "originDocumentId": "588a20987b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "healthy_copy",
+      "sha256": "a8ae4b30176c0013e893ee9f1aaa9bec6b8b5d8535cb710d1860c5cbdbb2e957"
+    },
+    {
+      "remoteDocumentId": "c14434787c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "589131f87b8c11f1b1eacb449d41f0c3__Unit 4 My Favourite Subject 基础词汇默写.docx",
+      "originDocumentId": "589131f87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "healthy_copy",
+      "sha256": "0fd3b296a031c54ef300aa8bb4b9f896a772ea929f39c4d487c479550f506d54"
+    },
+    {
+      "remoteDocumentId": "c14ecfbe7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "5894b0447b8c11f1b1eacb449d41f0c3__Unit 4 My Favourite Subject.pdf",
+      "originDocumentId": "5894b0447b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "healthy_copy",
+      "sha256": "bec1d3d57cfa5de86264304a133090bcb23f698daa10d45bd61bd01193dafcb3"
+    },
+    {
+      "remoteDocumentId": "c15d53a47c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "589bf66a7b8c11f1b1eacb449d41f0c3__Unit 5 Fun Clubs 基础词汇默写.docx",
+      "originDocumentId": "589bf66a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "healthy_copy",
+      "sha256": "fd7f0ac72c8f97383768de617b0a7e64d9cfcfb1bb02902b2c1239d589da6aca"
+    },
+    {
+      "remoteDocumentId": "c1703d347c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "589f54cc7b8c11f1b1eacb449d41f0c3__Unit 5 Fun Clubs.pdf",
+      "originDocumentId": "589f54cc7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "healthy_copy",
+      "sha256": "44824ec61c595924335a299edc4bec007fe05f4d70b2b78a7f561d1a938ef7d1"
+    },
+    {
+      "remoteDocumentId": "c17d53d47c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58a63b707b8c11f1b1eacb449d41f0c3__Unit 6 A Day in the Life 基础词汇默写.docx",
+      "originDocumentId": "58a63b707b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "healthy_copy",
+      "sha256": "5a0151556804ff2918ff9671cb07334b3c89b69613bed31640bb128e2eb36b55"
+    },
+    {
+      "remoteDocumentId": "c1869a3e7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58a941947b8c11f1b1eacb449d41f0c3__Unit 6 A Day in the Life.pdf",
+      "originDocumentId": "58a941947b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "healthy_copy",
+      "sha256": "dab287af4223baaa5742f49ecb786ed57d1c70bc3a22fcb7ac61217d6ee0544b"
+    },
+    {
+      "remoteDocumentId": "c194b77c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58b1721a7b8c11f1b1eacb449d41f0c3__Unit 7 Happy Birthday 基础词汇默写.docx",
+      "originDocumentId": "58b1721a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "healthy_copy",
+      "sha256": "41138d19cd182497b2d0a443151dcfd322921ce3c4cdfd665e1f1b9c028b4bb5"
+    },
+    {
+      "remoteDocumentId": "c1aa46aa7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58b56ce47b8c11f1b1eacb449d41f0c3__Unit 7 Happy Birthday!.pdf",
+      "originDocumentId": "58b56ce47b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "healthy_copy",
+      "sha256": "25b151cae5e4af3fdf656a83b2bafd940faa6831376b7060df3f346bbb252b61"
+    },
+    {
+      "remoteDocumentId": "c1b8b26c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58bd6ea87b8c11f1b1eacb449d41f0c3__Unit+1+默写手册.docx",
+      "originDocumentId": "58bd6ea87b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "healthy_copy",
+      "sha256": "4e0fcaaac5c93c7d847d310abeee8b4900b81af472c86067c7cc4b1ac0317af7"
+    },
+    {
+      "remoteDocumentId": "c1c314007c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58c1987a7b8c11f1b1eacb449d41f0c3__Unit+2+默写手册.docx",
+      "originDocumentId": "58c1987a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "healthy_copy",
+      "sha256": "30e2dbdbd771d58c69942c457ca5830c51918fe59f335076258f944dfc2c1249"
+    },
+    {
+      "remoteDocumentId": "c1cc89f47c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58c4aa6a7b8c11f1b1eacb449d41f0c3__Unit+3+My+School 基础词汇默写.docx",
+      "originDocumentId": "58c4aa6a7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "healthy_copy",
+      "sha256": "0bb0e584c3a899c1143c00ce3e8b3e904a66ae3bf68c5b85eea45e852ee64c97"
+    },
+    {
+      "remoteDocumentId": "c1d7ec547c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58c8c42e7b8c11f1b1eacb449d41f0c3__Unit+3+默写手册.docx",
+      "originDocumentId": "58c8c42e7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "healthy_copy",
+      "sha256": "0b56b2dfcd32d09a80b122881de3e0674a4015da2c9e967e1f87fadc8bca1ebd"
+    },
+    {
+      "remoteDocumentId": "c1e0c0547c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58cbcd687b8c11f1b1eacb449d41f0c3__Unit+4+默写手册.docx",
+      "originDocumentId": "58cbcd687b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "healthy_copy",
+      "sha256": "17e3a1ace7ecfa4ffadbbd63912f548ba8d1f9e3e67f3f677739c2dbfd4ee179"
+    },
+    {
+      "remoteDocumentId": "c1ea21bc7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58ceaa747b8c11f1b1eacb449d41f0c3__Unit+5+默写手册.docx",
+      "originDocumentId": "58ceaa747b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "healthy_copy",
+      "sha256": "c8348704adb43458349a357ed9f3d694f9ee98412621ab66adeea40a7d5d1143"
+    },
+    {
+      "remoteDocumentId": "c1f5295e7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58d198107b8c11f1b1eacb449d41f0c3__Unit+6+默写手册.docx",
+      "originDocumentId": "58d198107b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "healthy_copy",
+      "sha256": "de64eecd967306e18dab6b08e435d750bed0b06cb562d232aff03931fb538bd6"
+    },
+    {
+      "remoteDocumentId": "c2035efc7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58d48e627b8c11f1b1eacb449d41f0c3__Unit+7+默写手册.docx",
+      "originDocumentId": "58d48e627b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "healthy_copy",
+      "sha256": "0e586ddd7123af859bd59cddba2c16c2e55315d67a661417ffec505c3db89b3a"
+    },
+    {
+      "remoteDocumentId": "c20cf1387c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58d76fec7b8c11f1b1eacb449d41f0c3__UNIT1 You and Me.pdf",
+      "originDocumentId": "58d76fec7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "healthy_copy",
+      "sha256": "b9b9694426e9169afbcf65f7a0f994f5b6ddf481e5810cf9b9fdfffefe9fe651"
+    },
+    {
+      "remoteDocumentId": "c21aec2a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_1__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "controlled_split",
+      "sha256": "dafcadde5422d90d82237809a2ac93e18bdc5bb656ff38acb636e779cc8c54ac"
+    },
+    {
+      "remoteDocumentId": "c2296d2c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_2__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "controlled_split",
+      "sha256": "a88e607848feb0bcf40f0e018e88624e6e3cd64417ea3d7608e1f59b4016cbfa"
+    },
+    {
+      "remoteDocumentId": "c23dd6fe7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_3__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "controlled_split",
+      "sha256": "cb200d1a5ccb7ca88dbccf4822494b67f25ed8b933635ca61375b4388f27658f"
+    },
+    {
+      "remoteDocumentId": "c24ca94a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_4__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "controlled_split",
+      "sha256": "222c019e1ea30b666c52e3b83598fdf4cd830375d769ec7c71ac4978c58b7611"
+    },
+    {
+      "remoteDocumentId": "c259cc1a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_5__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "controlled_split",
+      "sha256": "fdef4d4a02361536a24077c117c2ce5ef58a442cdb031d65d7d526a2c452fef8"
+    },
+    {
+      "remoteDocumentId": "c26862b67c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_6__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "controlled_split",
+      "sha256": "90e86718f844478bb7658ad974dab058edc0ee3c35c72d32919f464de213a01a"
+    },
+    {
+      "remoteDocumentId": "c284307c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_7__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "controlled_split",
+      "sha256": "c4986db9913ca0f67d88ee900519cdcfb7159f66318cb0bfa5418dbdd4c2c3b5"
+    },
+    {
+      "remoteDocumentId": "c293302c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cdffad7079f711f1a93a9523fdaa939b__新七 starter1.pdf",
+      "originDocumentId": "cdffad7079f711f1a93a9523fdaa939b",
+      "unit": "starter_unit_1",
+      "treatment": "healthy_copy",
+      "sha256": "dd0cc5c870a7af694f2a8d8731875c3cb1304f321c0ee0af493ec64946ac45be"
+    },
+    {
+      "remoteDocumentId": "c2a092da7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "ce6cf79a79f711f1a93a9523fdaa939b__新七 unit1.pdf",
+      "originDocumentId": "ce6cf79a79f711f1a93a9523fdaa939b",
+      "unit": "unit_1",
+      "treatment": "healthy_copy",
+      "sha256": "cf6cf33a125a2ea106865d4038f086ad952abc8b25a86078f05ead9e4b8b9856"
+    },
+    {
+      "remoteDocumentId": "c2b7df3a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "ce886a8e79f711f1a93a9523fdaa939b__新七 unit2.pdf",
+      "originDocumentId": "ce886a8e79f711f1a93a9523fdaa939b",
+      "unit": "unit_2",
+      "treatment": "healthy_copy",
+      "sha256": "946bd400c477f131af243d5fe1cd0d2ecafb4a2ef3b211a7a601cca8d1e28124"
+    },
+    {
+      "remoteDocumentId": "c2d85bfc7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "ce98695c79f711f1a93a9523fdaa939b__新七 unit3.pdf",
+      "originDocumentId": "ce98695c79f711f1a93a9523fdaa939b",
+      "unit": "unit_3",
+      "treatment": "healthy_copy",
+      "sha256": "7f5440a48b08e729c2148d698fcc1dc8eb95142abc17ae2107aa1ad39e448bfb"
+    },
+    {
+      "remoteDocumentId": "c2e7fa307c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "ceab9f7c79f711f1a93a9523fdaa939b__新七 unit4.pdf",
+      "originDocumentId": "ceab9f7c79f711f1a93a9523fdaa939b",
+      "unit": "unit_4",
+      "treatment": "healthy_copy",
+      "sha256": "7b29774dfcd06e1b721437298600708fd4400e65e3a8762df9b667661d2df1a2"
+    },
+    {
+      "remoteDocumentId": "c2f60ba27c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cebe6b7079f711f1a93a9523fdaa939b__新七 unit5.pdf",
+      "originDocumentId": "cebe6b7079f711f1a93a9523fdaa939b",
+      "unit": "unit_5",
+      "treatment": "healthy_copy",
+      "sha256": "c54e1c11862a1c4a35adcb35821abe8004c1485f36f12eee90d6546330b80b11"
+    },
+    {
+      "remoteDocumentId": "c30922b47c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "ced920f079f711f1a93a9523fdaa939b__新七 unit6.pdf",
+      "originDocumentId": "ced920f079f711f1a93a9523fdaa939b",
+      "unit": "unit_6",
+      "treatment": "healthy_copy",
+      "sha256": "e38d57eac80aaf639f1c90b8ed24d1d2a1c12b3c82f3f58b001b169367128854"
+    },
+    {
+      "remoteDocumentId": "c31fbc407c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "ceed683079f711f1a93a9523fdaa939b__新七 unit7.pdf",
+      "originDocumentId": "ceed683079f711f1a93a9523fdaa939b",
+      "unit": "unit_7",
+      "treatment": "healthy_copy",
+      "sha256": "92112bd024d76befd0ee3c1b133b12b4e8b104abef8ad502446afc9e7481cccf"
+    },
+    {
+      "remoteDocumentId": "c32f91a67c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cf246d9e79f711f1a93a9523fdaa939b__starter_unit_1__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "unit": "starter_unit_1",
+      "treatment": "controlled_split",
+      "sha256": "c4f9a8b011fc27f591af0418fdb000d8ef29ebfca156c6d2f6aa5bfb387592cb"
+    },
+    {
+      "remoteDocumentId": "c33be0467c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_1__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "unit": "unit_1",
+      "treatment": "controlled_split",
+      "sha256": "59c044eae0ad818062f1bb07e0f434475aca13ef3bac7a464e3a296e08651407"
+    },
+    {
+      "remoteDocumentId": "c350e70c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_2__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "unit": "unit_2",
+      "treatment": "controlled_split",
+      "sha256": "6002c3305aa901706db020b31753671a56e7b2e6374970995a4ed6fae2f316ca"
+    },
+    {
+      "remoteDocumentId": "c35c1c307c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_3__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "unit": "unit_3",
+      "treatment": "controlled_split",
+      "sha256": "2f155a9e4ebabd3ec94f1eea13f5297505fb5815f61e00b8dae5634bbb2d0ee0"
+    },
+    {
+      "remoteDocumentId": "c36492a27c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_4__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "unit": "unit_4",
+      "treatment": "controlled_split",
+      "sha256": "00d2d87674ab6efd8d750c251010ee438d418e3f27e595bc1aa9b0ebc2132b77"
+    },
+    {
+      "remoteDocumentId": "c36c2c927c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_5__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "unit": "unit_5",
+      "treatment": "controlled_split",
+      "sha256": "000df9286787d211bb36f80839420b9a6adc4357641d4ddd9c27fef88c4b45ae"
+    },
+    {
+      "remoteDocumentId": "c3733dfc7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_6__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "unit": "unit_6",
+      "treatment": "controlled_split",
+      "sha256": "8b549f48d1c70506345cb36f9f6f0efb10c70c1750f35743d28106549a37d273"
+    },
+    {
+      "remoteDocumentId": "c3849d2c7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_7__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "unit": "unit_7",
+      "treatment": "controlled_split",
+      "sha256": "719f8ab71a399a734b26435398a4b466cf4b4a57ae764e83a35c7de8f4c6a778"
+    },
+    {
+      "remoteDocumentId": "c38bc3b87c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__starter_unit_1__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "starter_unit_1",
+      "treatment": "controlled_split",
+      "sha256": "19354bd3d57bfac1d388abd4edceb4a1b3efd4d5cb326ae8fc1c2f0fd06a3331"
+    },
+    {
+      "remoteDocumentId": "c398056a7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__starter_unit_2__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "starter_unit_2",
+      "treatment": "controlled_split",
+      "sha256": "2b54ef77723ed07ae223613a67387f0612ef3259263987cb5cf432ad1f627b01"
+    },
+    {
+      "remoteDocumentId": "c3a2d7d87c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__starter_unit_3__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "starter_unit_3",
+      "treatment": "controlled_split",
+      "sha256": "b3adaea9f8e75e421a35ffc298a74fdb41c39198369307357ccfe961f4bdad36"
+    },
+    {
+      "remoteDocumentId": "c3c6a9a67c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_1__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_1",
+      "treatment": "controlled_split",
+      "sha256": "dc7874ed3a0b8cd536840bc15788480b82bc541144872a07240662c9a3a90ffc"
+    },
+    {
+      "remoteDocumentId": "c3d3d7347c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_2__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_2",
+      "treatment": "controlled_split",
+      "sha256": "c065b51b1752c1186ce915105d26172fdd4676262411269b47cfe513c2d8e705"
+    },
+    {
+      "remoteDocumentId": "c3e035107c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_3__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_3",
+      "treatment": "controlled_split",
+      "sha256": "806083f62e616c5de7b4c3f7b10805b08cd2328a169f9b2bba462816be4085fd"
+    },
+    {
+      "remoteDocumentId": "c3ec85c27c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_4__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_4",
+      "treatment": "controlled_split",
+      "sha256": "df9ee6e8a46ebcc7b04fa8f7d0ec58f4a09e16c27d0d5b10def772768990dd96"
+    },
+    {
+      "remoteDocumentId": "c4120cca7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_5__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_5",
+      "treatment": "controlled_split",
+      "sha256": "7174f502a92caae58d2db05fbecb4bd8c316a7b41fff7b65ce8ee336128047b6"
+    },
+    {
+      "remoteDocumentId": "c421dc187c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_6__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_6",
+      "treatment": "controlled_split",
+      "sha256": "4718562cefd399eeec9c02e5afc23c119693b598a3a5bd437478655caae94383"
+    },
+    {
+      "remoteDocumentId": "c42eca5e7c5b11f18a4e879d5b5dcdeb",
+      "remoteDocumentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_7__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "unit": "unit_7",
+      "treatment": "controlled_split",
+      "sha256": "990b0abecf4d346ee3d7a1d87d5ae622879902205e0f7aefb3266e999c760832"
+    }
+  ]
+}

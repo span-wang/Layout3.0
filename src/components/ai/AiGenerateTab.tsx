@@ -3,11 +3,16 @@
  * 支持生成讲义、知识点总结、练习题、试卷初稿和小红书内容
  */
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { Maximize2 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { aiService } from '@/services/AiService';
 import { addAiGenerationRecord } from '@/services/AiGenerationRecordService';
 import { knowledgeBaseService } from '@/services/KnowledgeBaseService';
+import {
+  buildKnowledgeRetrievalQuery,
+  routeRagflowDatasetIds,
+} from '@/services/knowledgeRetrieval';
 import { parseKnowledgeSourcesFromContext } from '@/services/knowledgeSourceAnnotation';
 import { layoutDocumentToMarkdown } from '@/services/layoutDocumentMarkdown';
 import type {
@@ -25,7 +30,10 @@ import {
   LENGTH_LABELS,
 } from '@/types/ai';
 import type { KnowledgeSourceReference } from '@/types/knowledge';
-import { KnowledgeSourceList } from './KnowledgeSourceList';
+import {
+  AiGenerationDialog,
+  type AiGenerationDialogView,
+} from './AiGenerationDialog';
 
 function isXiaohongshuGenerateType(type: GenerateType): boolean {
   return type === 'xiaohongshuTitle' || type === 'xiaohongshuCopy' || type === 'xiaohongshuCover';
@@ -58,37 +66,6 @@ function getFirstUsefulLine(content: string): string {
     });
 
   return line ?? '';
-}
-
-function buildKnowledgeRetrievalQuery(options: {
-  generateType: GenerateType;
-  topic: string;
-  grade: string;
-  subject: string;
-  requirementDescription: string;
-}): string {
-  // 按生成任务补一组检索意图词，避免只搜主题名时把 RAGFlow 召回范围卡得过窄。
-  const generateHint =
-    options.generateType === 'lecture'
-      ? '课堂讲义 核心概念 例题 易错点'
-      : options.generateType === 'summary'
-        ? '知识清单 知识点梳理 定义 公式 易错点'
-        : options.generateType === 'exercise'
-          ? '同步练习 题型 变式训练 答案解析'
-          : options.generateType === 'exam'
-            ? '单元试卷 考点 题型 难度 答案解析'
-            : GENERATE_TYPE_LABELS[options.generateType];
-
-  return [
-    options.subject.trim(),
-    options.grade.trim(),
-    options.topic.trim(),
-    options.requirementDescription.trim(),
-    GENERATE_TYPE_LABELS[options.generateType],
-    generateHint,
-  ]
-    .filter(Boolean)
-    .join(' ');
 }
 
 interface GenerateContext {
@@ -147,6 +124,7 @@ export function AiGenerateTab(): JSX.Element {
   const [outlineKnowledgeContext, setOutlineKnowledgeContext] = useState<string | undefined>();
   const [outlineKnowledgeSources, setOutlineKnowledgeSources] = useState<KnowledgeSourceReference[]>([]);
   const [activeGenerateStep, setActiveGenerateStep] = useState<ActiveGenerateStep>(null);
+  const [generationDialogView, setGenerationDialogView] = useState<AiGenerationDialogView | null>(null);
   const [isStructureTemplateEditorOpen, setIsStructureTemplateEditorOpen] = useState(false);
   const [editingStructureTemplateId, setEditingStructureTemplateId] = useState<string | null>(null);
   const [structureTemplateName, setStructureTemplateName] = useState('');
@@ -155,6 +133,10 @@ export function AiGenerateTab(): JSX.Element {
   const [structureTemplateOutputRules, setStructureTemplateOutputRules] = useState('');
   const [structureTemplateError, setStructureTemplateError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleCloseGenerationDialog = useCallback(() => {
+    setGenerationDialogView(null);
+  }, []);
 
   const handleToggleSemanticRole = (roleId: AiGenerateSemanticRoleId, checked: boolean) => {
     // 勾选顺序统一按预设顺序归一化，避免提示词和界面顺序来回跳动。
@@ -342,7 +324,6 @@ export function AiGenerateTab(): JSX.Element {
     }
 
     const knowledgeQuery = buildKnowledgeRetrievalQuery({
-      generateType,
       topic: context.normalizedTopic,
       grade,
       subject,
@@ -352,12 +333,24 @@ export function AiGenerateTab(): JSX.Element {
     if (selectedRagflowDatasetIds.length === 0) {
       throw new Error('请先在「个人知识库」里至少选择一个 RAGFlow 数据集');
     }
+    if (ragflowDatasets.length === 0) {
+      throw new Error('请先在「个人知识库」里读取数据集，再进行精准知识库检索');
+    }
+
+    const retrievalDatasetIds = routeRagflowDatasetIds({
+      datasets: ragflowDatasets,
+      selectedDatasetIds: selectedRagflowDatasetIds,
+      subject,
+    });
+    if (retrievalDatasetIds.length === 0) {
+      throw new Error(`已选知识库中没有与科目“${subject.trim()}”匹配的数据集，请先调整知识源`);
+    }
 
     const datasetNameMap = new Map(ragflowDatasets.map((dataset) => [dataset.id, dataset.name]));
     // 大纲阶段先锁定一批知识库资料，正文阶段复用它，避免两次检索口径不一致。
     const retrievalResult = await knowledgeBaseService.buildRagflowKnowledgeContext({
       config: ragflowConfig,
-      datasetIds: selectedRagflowDatasetIds,
+      datasetIds: retrievalDatasetIds,
       query: knowledgeQuery,
       datasetNameMap,
       signal,
@@ -439,6 +432,7 @@ export function AiGenerateTab(): JSX.Element {
   };
 
   const runXiaohongshuGenerate = async (context: GenerateContext, config: AiConfigProfile) => {
+    setGenerationDialogView('content');
     const abortController = beginGenerateRequest('content');
     try {
       // 小红书链路保持原有“一次生成结果、用户再插入”的交互，不进入大纲审核流。
@@ -457,6 +451,7 @@ export function AiGenerateTab(): JSX.Element {
   };
 
   const runEducationOutlineGenerate = async (context: GenerateContext, config: AiConfigProfile) => {
+    setGenerationDialogView('outline');
     const abortController = beginGenerateRequest('outline');
     try {
       aiService.configure(config);
@@ -504,6 +499,7 @@ export function AiGenerateTab(): JSX.Element {
       return;
     }
 
+    setGenerationDialogView('content');
     const abortController = beginGenerateRequest('content');
     try {
       aiService.configure(config);
@@ -559,6 +555,7 @@ export function AiGenerateTab(): JSX.Element {
 
       clearGeneratedContent();
       resetOutlineReview();
+      setGenerationDialogView(null);
     } catch (error) {
       setGenerateError(error instanceof Error ? error.message : '插入失败：无法解析 AI 生成内容');
     }
@@ -567,6 +564,7 @@ export function AiGenerateTab(): JSX.Element {
   const handleClear = () => {
     clearGeneratedContent();
     resetOutlineReview();
+    setGenerationDialogView(null);
   };
 
   const handleFillTitleFromResult = () => {
@@ -952,25 +950,18 @@ export function AiGenerateTab(): JSX.Element {
 
       {!isXiaohongshuMode && outlineDraft && (
         <div className="ai-section ai-result-section">
-          <h3 className="ai-section-title">大纲审核</h3>
-          <textarea
-            className="ai-textarea ai-outline-textarea"
-            value={outlineDraft}
-            onChange={(event) => setOutlineDraft(event.target.value)}
-            disabled={isGenerating}
-            rows={10}
-          />
-          <div className="ai-result-actions">
+          <div className="ai-result-entry-header">
+            <div>
+              <h3 className="ai-section-title">大纲审核</h3>
+              <span>{outlineDraft.trim().split(/\r?\n/).filter(Boolean).length} 行 · {outlineDraft.trim().length} 字</span>
+            </div>
             <button
               type="button"
-              className="ai-button ai-button-primary"
-              onClick={handleGenerateContentFromOutline}
-              disabled={isGenerating || !outlineDraft.trim()}
+              className="ai-button ai-button-small ai-result-open-button"
+              onClick={() => setGenerationDialogView('outline')}
             >
-              审核通过，生成正文
-            </button>
-            <button type="button" className="ai-button" onClick={handleGenerate} disabled={isGenerating}>
-              重新生成大纲
+              <Maximize2 size={14} />
+              打开大纲
             </button>
           </div>
         </div>
@@ -978,21 +969,40 @@ export function AiGenerateTab(): JSX.Element {
 
       {generatedContent && (
         <div className="ai-section ai-result-section">
-          <h3 className="ai-section-title">生成结果</h3>
-          <div className="ai-result">
-            <pre className="ai-result-content">{generatedContent}</pre>
-          </div>
-          <KnowledgeSourceList sources={generatedKnowledgeSources} />
-          <div className="ai-result-actions">
-            <button type="button" className="ai-button ai-button-primary" onClick={handleInsertToDocument}>
-              插入当前文档
-            </button>
-            <button type="button" className="ai-button" onClick={handleClear}>
-              清空
+          <div className="ai-result-entry-header">
+            <div>
+              <h3 className="ai-section-title">生成结果</h3>
+              <span>{generatedContent.trim().split(/\r?\n/).filter(Boolean).length} 行 · {generatedContent.trim().length} 字</span>
+            </div>
+            <button
+              type="button"
+              className="ai-button ai-button-small ai-result-open-button"
+              onClick={() => setGenerationDialogView('content')}
+            >
+              <Maximize2 size={14} />
+              查看结果
             </button>
           </div>
         </div>
       )}
+
+      <AiGenerationDialog
+        isOpen={generationDialogView !== null}
+        view={generationDialogView ?? 'outline'}
+        activeStep={activeGenerateStep}
+        isGenerating={isGenerating}
+        error={generateError}
+        outlineDraft={outlineDraft}
+        generatedContent={generatedContent}
+        knowledgeSources={generatedKnowledgeSources}
+        onOutlineChange={setOutlineDraft}
+        onClose={handleCloseGenerationDialog}
+        onStop={handleStopGenerate}
+        onRegenerateOutline={handleGenerate}
+        onGenerateContent={handleGenerateContentFromOutline}
+        onInsertToDocument={handleInsertToDocument}
+        onClear={handleClear}
+      />
     </div>
   );
 }

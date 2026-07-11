@@ -104,6 +104,7 @@ import type { CanvasTextSelectionState } from '@/types/workspace';
 import { createTextFragment, resolveHangingIndentStyle } from '@/engine/document-model/utils';
 import { mergeAdjacentTextRuns } from '@/engine/document-model';
 import { resolveAssetSrc } from '@/utils/filePath';
+import { runCooperativeTask } from '@/utils/cooperativeTask';
 import { ContextMenu, type ContextMenuEntry } from '@/components/common/ContextMenu';
 
 interface CanvasPaneProps {
@@ -580,7 +581,7 @@ function normalizeMeasuredLineBreakOffsets(offsets: number[], textLength: number
   return normalizedOffsets;
 }
 
-function measureTextLineBreakOffsets(root: HTMLElement): number[] {
+function* measureTextLineBreakOffsets(root: HTMLElement): Generator<void, number[], void> {
   const lineBreakOffsets: number[] = [];
   const range = document.createRange();
   let textOffset = 0;
@@ -594,7 +595,7 @@ function measureTextLineBreakOffsets(root: HTMLElement): number[] {
     }
   };
 
-  const visitNode = (node: Node) => {
+  const visitNode = function* (node: Node): Generator<void, void, void> {
     if (node.nodeType === Node.TEXT_NODE) {
       const nodeText = node.textContent?.replace(/\u00A0/g, ' ') ?? '';
 
@@ -618,6 +619,8 @@ function measureTextLineBreakOffsets(root: HTMLElement): number[] {
         }
 
         currentLineEndOffset = nextOffset;
+        // 单个字符测量会触发布局读取；每次 yield 让外层调度器可以按时间片暂停。
+        yield;
       }
 
       textOffset += nodeText.length;
@@ -636,11 +639,15 @@ function measureTextLineBreakOffsets(root: HTMLElement): number[] {
       return;
     }
 
-    Array.from(node.childNodes).forEach((childNode) => visitNode(childNode));
+    for (const childNode of Array.from(node.childNodes)) {
+      yield* visitNode(childNode);
+    }
   };
 
   try {
-    Array.from(root.childNodes).forEach((childNode) => visitNode(childNode));
+    for (const childNode of Array.from(root.childNodes)) {
+      yield* visitNode(childNode);
+    }
   } finally {
     range.detach();
   }
@@ -652,23 +659,35 @@ function measureTextLineBreakOffsets(root: HTMLElement): number[] {
   return normalizeMeasuredLineBreakOffsets(lineBreakOffsets, textOffset);
 }
 
-function measureTextLineBreaksInBlock(blockElement: HTMLElement): MeasuredTextLineBreaks {
+function* measureTextLineBreaksInBlock(
+  blockElement: HTMLElement,
+): Generator<void, MeasuredTextLineBreaks, void> {
   const nextLineBreaks: MeasuredTextLineBreaks = {};
   const textElements = blockElement.querySelectorAll<HTMLElement>('[data-measure-text-node-id]');
 
-  textElements.forEach((element) => {
+  for (const element of Array.from(textElements)) {
     const nodeId = element.dataset.measureTextNodeId;
     if (!nodeId) {
-      return;
+      continue;
     }
 
-    const lineBreakOffsets = measureTextLineBreakOffsets(element);
+    const lineBreakOffsets = yield* measureTextLineBreakOffsets(element);
     if (lineBreakOffsets.length > 0) {
       nextLineBreaks[nodeId] = lineBreakOffsets;
     }
-  });
+  }
 
   return nextLineBreaks;
+}
+
+function* measureBlockElement(
+  element: HTMLElement,
+  signature: string,
+): Generator<void, BlockMeasurementCacheEntry, void> {
+  const rect = element.getBoundingClientRect();
+  const heightPx = Math.max(0, Math.ceil(rect.height));
+  const textLineBreaks = yield* measureTextLineBreaksInBlock(element);
+  return { signature, heightPx, textLineBreaks };
 }
 
 function resolveHeadingDecorationMarkerInset(
@@ -4042,7 +4061,7 @@ function CanvasPaneComponent({
     }
   }, [shouldShowFloatingToolbar]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (
       !onMeasuredBlockHeightsChange &&
       !onMeasuredTextLineBreaksChange &&
@@ -4063,10 +4082,13 @@ function CanvasPaneComponent({
     const nextTextLineBreaks: MeasuredTextLineBreaks = {};
     const nextTextFragmentHeights: MeasuredTextFragmentHeights = {};
     const nextTableRowHeights: MeasuredTableRowHeights = {};
+    const blockById = new Map(documentBlocks.map((block) => [block.id, block]));
+    const blockSignatureById = new Map<string, string>();
 
     documentBlocks.forEach((block) => {
       const signature = buildBlockMeasurementSignature(block, styleSignature);
       const cachedEntry = blockMeasurementCacheRef.current[block.id];
+      blockSignatureById.set(block.id, signature);
 
       if (cachedEntry?.signature === signature) {
         nextCache[block.id] = cachedEntry;
@@ -4075,56 +4097,73 @@ function CanvasPaneComponent({
       }
     });
 
-    if (measurementLayer) {
-      const measuredElements = measurementLayer.querySelectorAll<HTMLElement>('[data-measure-block-id]');
-      measuredElements.forEach((element) => {
+    const measuredElements = measurementLayer
+      ? Array.from(measurementLayer.querySelectorAll<HTMLElement>('[data-measure-block-id]'))
+      : [];
+    const measuredTextFragmentElements = measurementLayer
+      ? Array.from(measurementLayer.querySelectorAll<HTMLElement>('[data-measure-text-fragment-id]'))
+      : [];
+    const measuredTableRowElements = measurementLayer
+      ? Array.from(measurementLayer.querySelectorAll<HTMLTableRowElement>('[data-measure-table-row-id]'))
+      : [];
+
+    function* measurePendingElements(): Generator<void, void, void> {
+      for (const element of measuredElements) {
         const blockId = element.dataset.measureBlockId;
-        if (!blockId) {
-          return;
+        const block = blockId ? blockById.get(blockId) : null;
+        if (!blockId || !block) {
+          continue;
         }
 
-        const block = documentBlocks.find((item) => item.id === blockId);
-        if (!block) {
-          return;
+        const signature = blockSignatureById.get(blockId);
+        if (!signature) {
+          continue;
         }
 
-        const signature = buildBlockMeasurementSignature(block, styleSignature);
-        const rect = element.getBoundingClientRect();
-        const heightPx = Math.max(0, Math.ceil(rect.height));
-        const textLineBreaks = measureTextLineBreaksInBlock(element);
-        nextCache[blockId] = { signature, heightPx, textLineBreaks };
-        nextHeights[blockId] = heightPx;
-        Object.assign(nextTextLineBreaks, textLineBreaks);
-      });
+        if (nextCache[blockId]?.signature === signature) {
+          // 缓存命中后直接沿用高度和换行，不再重复逐字符读取布局。
+          continue;
+        }
 
-      const measuredTextFragmentElements = measurementLayer.querySelectorAll<HTMLElement>('[data-measure-text-fragment-id]');
-      measuredTextFragmentElements.forEach((element) => {
+        const measuredEntry = yield* measureBlockElement(element, signature);
+        nextCache[blockId] = measuredEntry;
+        nextHeights[blockId] = measuredEntry.heightPx;
+        Object.assign(nextTextLineBreaks, measuredEntry.textLineBreaks);
+        // 图片、公式等没有逐字符步骤的块也必须在块与块之间让出主线程。
+        yield;
+      }
+
+      for (const element of measuredTextFragmentElements) {
         const fragmentId = element.dataset.measureTextFragmentId;
         if (!fragmentId) {
-          return;
+          continue;
         }
 
-        // 文本片段高度只给 dom-measure-v1 的运行时分页使用，不写回文档模型。
+        // 文本片段高度只给真实测量分页的运行时片段使用，不写回文档模型。
         nextTextFragmentHeights[fragmentId] = Math.max(0, Math.ceil(element.getBoundingClientRect().height));
-      });
+        yield;
+      }
 
-      const measuredTableRowElements = measurementLayer.querySelectorAll<HTMLTableRowElement>('[data-measure-table-row-id]');
-      measuredTableRowElements.forEach((element) => {
+      for (const element of measuredTableRowElements) {
         const rowId = element.dataset.measureTableRowId;
         if (!rowId) {
-          return;
+          continue;
         }
 
-        // 表格行真实高度只给 dom-measure-v1 的运行时分页使用，不写回文档模型。
+        // 表格行真实高度只进入现有分页测量缓存，不写回文档模型。
         nextTableRowHeights[rowId] = Math.max(0, Math.ceil(element.getBoundingClientRect().height));
-      });
+        yield;
+      }
     }
 
-    blockMeasurementCacheRef.current = nextCache;
-    onMeasuredBlockHeightsChange?.(nextHeights);
-    onMeasuredTextLineBreaksChange?.(nextTextLineBreaks);
-    onMeasuredTextFragmentHeightsChange?.(nextTextFragmentHeights);
-    onMeasuredTableRowHeightsChange?.(nextTableRowHeights);
+    // 整批完成后再发布结果，避免每个时间片都触发 React 渲染和分页重算。
+    return runCooperativeTask(measurePendingElements(), () => {
+      blockMeasurementCacheRef.current = nextCache;
+      onMeasuredBlockHeightsChange?.(nextHeights);
+      onMeasuredTextLineBreaksChange?.(nextTextLineBreaks);
+      onMeasuredTextFragmentHeightsChange?.(nextTextFragmentHeights);
+      onMeasuredTableRowHeightsChange?.(nextTableRowHeights);
+    });
   }, [documentBlocks, documentStyles, onMeasuredBlockHeightsChange, onMeasuredTableRowHeightsChange, onMeasuredTextFragmentHeightsChange, onMeasuredTextLineBreaksChange, resolvedStyleContract, tableRowMeasurementJobs, textFragmentMeasurementJobs]);
 
   useLayoutEffect(() => {

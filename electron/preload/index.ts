@@ -1,4 +1,16 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type {
+  KnowledgeIngestionConfirmMetadataInput,
+  KnowledgeIngestionItem,
+  KnowledgeIngestionItemActionInput,
+  KnowledgeIngestionListRagflowDatasetsInput,
+  KnowledgeIngestionRagflowDatasetOption,
+  KnowledgeIngestionRagflowConfigStatus,
+  KnowledgeIngestionRuntimeStatus,
+  KnowledgeIngestionSaveRagflowConfigInput,
+  KnowledgeIngestionSelectResult,
+  KnowledgeIngestionStartQualityCheckInput,
+} from '../../src/types/knowledgeIngestion';
 
 interface LayoutDirectoryEntry {
   name: string;
@@ -151,6 +163,38 @@ const layoutAPI = {
   clearAiGenerationRecords: (payload: {
     workspaceRootPath: string | null;
   }): Promise<AiGenerationRecordDirectoryResult> => ipcRenderer.invoke('aiRecords:clear', payload),
+  getKnowledgeIngestionStatus: (): Promise<KnowledgeIngestionRuntimeStatus> =>
+    ipcRenderer.invoke('knowledgeIngestion:getStatus'),
+  getKnowledgeIngestionRagflowConfigStatus: (): Promise<KnowledgeIngestionRagflowConfigStatus> =>
+    ipcRenderer.invoke('knowledgeIngestion:getRagflowConfigStatus'),
+  listKnowledgeIngestionRagflowDatasetOptions: (
+    payload: KnowledgeIngestionListRagflowDatasetsInput,
+  ): Promise<KnowledgeIngestionRagflowDatasetOption[]> =>
+    ipcRenderer.invoke('knowledgeIngestion:listRagflowDatasetOptions', payload),
+  saveKnowledgeIngestionRagflowConfig: (
+    payload: KnowledgeIngestionSaveRagflowConfigInput,
+  ): Promise<KnowledgeIngestionRagflowConfigStatus> =>
+    ipcRenderer.invoke('knowledgeIngestion:saveRagflowConfig', payload),
+  listKnowledgeIngestionItems: (): Promise<KnowledgeIngestionItem[]> =>
+    ipcRenderer.invoke('knowledgeIngestion:listItems'),
+  selectKnowledgeIngestionFile: (): Promise<KnowledgeIngestionSelectResult> =>
+    ipcRenderer.invoke('knowledgeIngestion:selectFile'),
+  confirmKnowledgeIngestionMetadata: (
+    payload: KnowledgeIngestionConfirmMetadataInput,
+  ): Promise<KnowledgeIngestionItem> =>
+    ipcRenderer.invoke('knowledgeIngestion:confirmMetadata', payload),
+  cancelKnowledgeIngestionProcessing: (
+    payload: KnowledgeIngestionItemActionInput,
+  ): Promise<KnowledgeIngestionItem> =>
+    ipcRenderer.invoke('knowledgeIngestion:cancelProcessing', payload),
+  retryKnowledgeIngestionProcessing: (
+    payload: KnowledgeIngestionItemActionInput,
+  ): Promise<KnowledgeIngestionItem> =>
+    ipcRenderer.invoke('knowledgeIngestion:retryProcessing', payload),
+  startKnowledgeIngestionQualityCheck: (
+    payload: KnowledgeIngestionStartQualityCheckInput,
+  ): Promise<KnowledgeIngestionItem> =>
+    ipcRenderer.invoke('knowledgeIngestion:startQualityCheck', payload),
 };
 
 contextBridge.exposeInMainWorld('layoutAPI', layoutAPI);

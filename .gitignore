@@ -3,6 +3,7 @@ out
 dist
 release
 .codex/
+.ragflow-work/
 *.log
 .DS_Store
 patch-test.txt

@@ -127,9 +127,9 @@ export function KnowledgeBasePanel(): JSX.Element {
         message:
           result.chunks.length > 0
             ? documentCount > 0
-              ? `已检索到 ${result.chunks.length} 条知识片段，涉及 ${documentCount} 篇文档。`
-              : `已检索到 ${result.chunks.length} 条知识片段。`
-            : '没有检索到匹配片段。',
+              ? `候选 ${result.candidateCount} 条，保留 ${result.chunks.length} 条，涉及 ${documentCount} 篇文档。`
+              : `候选 ${result.candidateCount} 条，保留 ${result.chunks.length} 条。`
+            : `候选 ${result.candidateCount} 条，精准过滤后没有可用片段。`,
       });
     } catch (error) {
       setRetrievalFeedback({
@@ -224,7 +224,7 @@ export function KnowledgeBasePanel(): JSX.Element {
           </label>
 
           <label className="knowledge-field knowledge-field-compact">
-            <span>片段数</span>
+            <span>最终片段</span>
             <input
               className="knowledge-input"
               type="number"
@@ -234,6 +234,22 @@ export function KnowledgeBasePanel(): JSX.Element {
               onChange={(event) =>
                 setRagflowConfigPatch({
                   resultLimit: Number(event.target.value),
+                })
+              }
+            />
+          </label>
+
+          <label className="knowledge-field knowledge-field-compact">
+            <span>精排候选</span>
+            <input
+              className="knowledge-input"
+              type="number"
+              min={1}
+              max={64}
+              value={ragflowConfig.candidateLimit}
+              onChange={(event) =>
+                setRagflowConfigPatch({
+                  candidateLimit: Number(event.target.value),
                 })
               }
             />
@@ -289,13 +305,24 @@ export function KnowledgeBasePanel(): JSX.Element {
             />
           </label>
 
+          <label className="knowledge-field">
+            <span>重排模型</span>
+            <input
+              className="knowledge-input"
+              type="text"
+              value={ragflowConfig.rerankId}
+              onChange={(event) => setRagflowConfigPatch({ rerankId: event.target.value })}
+              placeholder="留空表示关闭 Reranker"
+            />
+          </label>
+
           <label className="knowledge-checkbox-row">
             <input
               type="checkbox"
               checked={ragflowConfig.enableKeyword}
               onChange={(event) => setRagflowConfigPatch({ enableKeyword: event.target.checked })}
             />
-            <span>关键词混合</span>
+            <span>大模型关键词扩写</span>
           </label>
 
           <label className="knowledge-checkbox-row">

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-metadata-governance-v1",
+  "metadataSchema": "layout3_ragflow_v1",
+  "rules": {
+    "keys": "用于检索过滤的字段固定使用小写 snake_case。",
+    "unknown": "无法由数据集、目录、文件名或已有字段可靠判断时写入 unknown，不由大模型猜测。",
+    "quarantine": "零切片或异常解析文档写入 quarantine，只做隔离标记，不删除、不重解析。",
+    "existingMetadata": "原始 meta_fields 完整保存在治理快照和清单中；写回时以受控字段替换自由文本字段。"
+  },
+  "fields": {
+    "metadata_schema": ["layout3_ragflow_v1"],
+    "domain": ["english_education", "accounting_certification"],
+    "subject": ["english", "intermediate_accounting", "financial_management", "economic_law", "unknown"],
+    "unit": ["starter_unit_1", "starter_unit_2", "starter_unit_3", "unit_1", "unit_2", "unit_3", "unit_4", "unit_5", "unit_6", "unit_7", "general", "unknown"],
+    "chapter": "chapter_1 至 chapter_30，或 unknown；跨章资料允许数组。",
+    "content_role": ["textbook", "reference", "knowledge_summary", "vocabulary", "grammar", "writing", "exercise", "answer", "audio", "unknown"],
+    "resource_type": ["pdf", "doc", "docx", "ppt", "pptx", "mp3", "unknown"],
+    "year": "四位年份；无法可靠判断时统一写入数值 0，避免 Elasticsearch 动态映射类型冲突。",
+    "status": ["ready", "quarantine", "unparsed", "parse_failed"],
+    "canonical_id": "<dataset_code>:<ragflow_document_id>",
+    "pair_id": "同一题目/答案或同源资料的确定性 SHA-1 短标识。"
+  }
+}

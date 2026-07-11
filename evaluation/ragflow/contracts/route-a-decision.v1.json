@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-13A-route-a-decision-v1",
+  "generatedAt": "2026-07-10T14:46:20.895Z",
+  "source": {
+    "report": "evaluation/ragflow/contracts/foundation-contract.v1.json",
+    "foundationSha256": "ffc714fdd7748179a26146e76f688e974825133798febfd1ee841dbd344a9d51",
+    "schemaVersion": 1,
+    "taskId": "PH3-13A-foundation-contract-spike-v1",
+    "runId": "cc937dce-30cd-4c4a-a3cb-b264f662c31b",
+    "mode": "isolated-write",
+    "completedAt": "2026-07-10T14:38:47.170Z",
+    "evaluationErrorSummary": null,
+    "foundationErrorPresent": false,
+    "originalCheckCount": 15,
+    "expectedOriginalCheckCount": 15,
+    "originalChecks": [
+      {
+        "id": "dataset.create-isolated",
+        "passed": true
+      },
+      {
+        "id": "document.upload-adversarial-pair",
+        "passed": true
+      },
+      {
+        "id": "document.metadata-patch-roundtrip",
+        "passed": true
+      },
+      {
+        "id": "document.parse-trigger-poll",
+        "passed": true
+      },
+      {
+        "id": "retrieval.document-ids-nonempty",
+        "passed": true
+      },
+      {
+        "id": "retrieval.document-ids-forged-zero-match",
+        "passed": true
+      },
+      {
+        "id": "retrieval.document-ids-before-ranking",
+        "passed": true
+      },
+      {
+        "id": "retrieval.route-a-pending-exact-ids",
+        "passed": true
+      },
+      {
+        "id": "retrieval.route-a-active-exact-ids",
+        "passed": true
+      },
+      {
+        "id": "retrieval.metadata-pending-only",
+        "passed": true
+      },
+      {
+        "id": "retrieval.metadata-active-only",
+        "passed": true
+      },
+      {
+        "id": "retrieval.quality-pending-conjunction",
+        "passed": false
+      },
+      {
+        "id": "retrieval.formal-active-conjunction",
+        "passed": false
+      },
+      {
+        "id": "document.delete-exact-id",
+        "passed": true
+      },
+      {
+        "id": "dataset.cleanup-finally",
+        "passed": true
+      }
+    ],
+    "missingCheckIds": [],
+    "unexpectedCheckIds": [],
+    "duplicateCheckIds": []
+  },
+  "selectedRoute": "sqlite-active-document-ids",
+  "compatible": true,
+  "requiredChecks": {
+    "passed": 11,
+    "total": 11,
+    "items": [
+      {
+        "id": "dataset.create-isolated",
+        "passed": true
+      },
+      {
+        "id": "document.upload-adversarial-pair",
+        "passed": true
+      },
+      {
+        "id": "document.metadata-patch-roundtrip",
+        "passed": true
+      },
+      {
+        "id": "document.parse-trigger-poll",
+        "passed": true
+      },
+      {
+        "id": "retrieval.document-ids-nonempty",
+        "passed": true
+      },
+      {
+        "id": "retrieval.document-ids-forged-zero-match",
+        "passed": true
+      },
+      {
+        "id": "retrieval.document-ids-before-ranking",
+        "passed": true
+      },
+      {
+        "id": "retrieval.route-a-pending-exact-ids",
+        "passed": true
+      },
+      {
+        "id": "retrieval.route-a-active-exact-ids",
+        "passed": true
+      },
+      {
+        "id": "document.delete-exact-id",
+        "passed": true
+      },
+      {
+        "id": "dataset.cleanup-finally",
+        "passed": true
+      }
+    ]
+  },
+  "knownLimitation": {
+    "id": "ragflow-0.25.0-document-ids-status-conjunction-ignored",
+    "ragflowVersion": "0.25.0",
+    "accepted": true,
+    "observedInSource": true,
+    "additionalDefenseObserved": false,
+    "checks": [
+      {
+        "id": "retrieval.quality-pending-conjunction",
+        "passed": false,
+        "observation": "known-limitation-observed",
+        "evidenceValid": true,
+        "evidenceSummary": {
+          "apiCode": 0,
+          "documentIdFilterCount": 2,
+          "returnedDocumentIdCount": 2,
+          "distinctReturnedDocumentIdCount": 2,
+          "chunkCount": 3,
+          "expectedStatus": "pending",
+          "matchesUnrestrictedDocumentSet": true
+        }
+      },
+      {
+        "id": "retrieval.formal-active-conjunction",
+        "passed": false,
+        "observation": "known-limitation-observed",
+        "evidenceValid": true,
+        "evidenceSummary": {
+          "apiCode": 0,
+          "documentIdFilterCount": 2,
+          "returnedDocumentIdCount": 2,
+          "distinctReturnedDocumentIdCount": 2,
+          "chunkCount": 3,
+          "expectedStatus": "active",
+          "matchesUnrestrictedDocumentSet": true
+        }
+      }
+    ],
+    "mitigation": "由 SQLite 生成精确 active document_ids，远端 status 仅用于审计与漂移检查，返回结果再经 SQLite 二次校验。"
+  },
+  "safeguards": {
+    "explicitBaseUrl": true,
+    "explicitApiKey": true,
+    "explicitWriteConfirmation": true,
+    "uniqueDatasetPrefix": true,
+    "datasetCreated": true,
+    "productionDatasetIdsUsed": false,
+    "cleanupAttempted": true,
+    "cleanupSucceeded": true,
+    "absentOnReadback": true,
+    "reportContainsEndpointOrCredential": false,
+    "reportContainsAbsolutePath": false
+  },
+  "failures": []
+}

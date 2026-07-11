@@ -20,7 +20,8 @@ export interface KnowledgeBaseSlice {
   setKnowledgeSourceForGenerate: (source: KnowledgeGenerateSource) => void;
 }
 
-const RAGFLOW_CONFIG_KEY = 'layout3-ragflow-config-v1';
+const RAGFLOW_CONFIG_KEY = 'layout3-ragflow-config-v2';
+const LEGACY_RAGFLOW_CONFIG_KEY = 'layout3-ragflow-config-v1';
 const OPEN_NOTEBOOK_CONFIG_KEY = 'layout3-open-notebook-config-v1';
 const SELECTED_RAGFLOW_DATASET_IDS_KEY = 'layout3-ragflow-selected-datasets-v1';
 const RAGFLOW_GENERATE_ENABLED_KEY = 'layout3-ragflow-generate-enabled-v1';
@@ -63,13 +64,17 @@ function normalizeBoolean(value: unknown, fallbackValue: boolean): boolean {
 }
 
 function normalizeRagflowConfig(config: Partial<RagflowConfig> & { topK?: number }): RagflowConfig {
-  // 兼容旧版本只保存 topK 的配置，并保证召回池不会小于最终返回片段数。
+  // 保证候选池大于最终结果数，召回池再大于候选池，三层参数各自承担明确职责。
   const legacyResultLimit = normalizePositiveInteger(
     config.resultLimit ?? config.topK,
     DEFAULT_RAGFLOW_CONFIG.resultLimit,
   );
-  const recallTopK = Math.max(
+  const candidateLimit = Math.max(
     legacyResultLimit,
+    normalizePositiveIntegerWithMax(config.candidateLimit, DEFAULT_RAGFLOW_CONFIG.candidateLimit, 64),
+  );
+  const recallTopK = Math.max(
+    candidateLimit,
     normalizePositiveIntegerWithMax(config.recallTopK, DEFAULT_RAGFLOW_CONFIG.recallTopK, 200),
   );
 
@@ -80,6 +85,7 @@ function normalizeRagflowConfig(config: Partial<RagflowConfig> & { topK?: number
         : DEFAULT_RAGFLOW_CONFIG.baseUrl,
     apiKey: typeof config.apiKey === 'string' ? config.apiKey : '',
     resultLimit: legacyResultLimit,
+    candidateLimit,
     recallTopK,
     similarityThreshold: normalizeDecimalInRange(
       config.similarityThreshold,
@@ -93,6 +99,7 @@ function normalizeRagflowConfig(config: Partial<RagflowConfig> & { topK?: number
       0,
       1,
     ),
+    rerankId: typeof config.rerankId === 'string' ? config.rerankId.trim() : DEFAULT_RAGFLOW_CONFIG.rerankId,
     enableKeyword: normalizeBoolean(config.enableKeyword, DEFAULT_RAGFLOW_CONFIG.enableKeyword),
     enableHighlight: normalizeBoolean(config.enableHighlight, DEFAULT_RAGFLOW_CONFIG.enableHighlight),
   };
@@ -101,12 +108,23 @@ function normalizeRagflowConfig(config: Partial<RagflowConfig> & { topK?: number
 function loadRagflowConfig(): RagflowConfig {
   try {
     const stored = localStorage.getItem(RAGFLOW_CONFIG_KEY);
-    if (!stored) {
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<RagflowConfig> & { topK?: number };
+      return normalizeRagflowConfig(parsed);
+    }
+
+    const legacyStored = localStorage.getItem(LEGACY_RAGFLOW_CONFIG_KEY);
+    if (!legacyStored) {
       return { ...DEFAULT_RAGFLOW_CONFIG };
     }
 
-    const parsed = JSON.parse(stored) as Partial<RagflowConfig> & { topK?: number };
-    return normalizeRagflowConfig(parsed);
+    const legacyConfig = JSON.parse(legacyStored) as Partial<RagflowConfig>;
+    // V2 只继承连接信息，避免旧版宽召回参数继续污染新的精准检索基线。
+    return normalizeRagflowConfig({
+      ...DEFAULT_RAGFLOW_CONFIG,
+      baseUrl: legacyConfig.baseUrl,
+      apiKey: legacyConfig.apiKey,
+    });
   } catch {
     return { ...DEFAULT_RAGFLOW_CONFIG };
   }

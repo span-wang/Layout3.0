@@ -759,6 +759,78 @@
       "description": "局部分栏快捷入口如果顺手扩成完整快捷键系统、右键菜单、拖拽调整边界、DOCX section 映射或分节系统，会把当前“多个块快速设为双栏/三栏”的小交互扩展成跨 UI、导出和排版的大改。",
       "impactScope": "PH2-19C-local-column-quick-actions-v1、CanvasPane 块多选浮动工具条、documentSlice 局部分栏包装、Document Model、Typesetting Engine、HTML/PDF 导出后续口径",
       "currentHandling": "已完成 `PH2-19C-local-column-quick-actions-v1`：本步只增强现有 `columnSection` 的快捷入口，多选连续顶层块后可直接设为双栏或三栏；DOCX 局部分栏、拖拽边界、右键菜单、完整快捷键系统、对象独立跨栏和分节系统均未纳入。"
+    },
+    {
+      "id": "RISK-096",
+      "date": "2026-07-10",
+      "type": "返工",
+      "description": "此前 `PH2-12-input-click-recovery-v1` 只处理了透明弹层和跨文档交互态残留，但用户仍反馈输入框会偶发长时间无法获得光标，等待很久后才恢复。当前代码中的隐藏分页测量会在同步 `useLayoutEffect` 内逐字符读取布局，而且缓存命中后仍重测全部块；长文档或测量任务反复更新时会形成主线程长任务，使点击、聚焦和键盘事件无法及时处理。",
+      "impactScope": "PH2-12-input-focus-long-task-v2、CanvasPane 隐藏 DOM 测量、分页真实测量缓存、AppShell 测量状态、全局输入框响应、后续分页算法与目录页码",
+      "currentHandling": "已完成 `PH2-12-input-focus-long-task-v2`：缓存命中块现在直接复用高度和视觉换行；未缓存块的逐字符 DOM 真实测量改为 8ms 协作式短批次，旧任务可取消并释放 DOM Range，整批完成后才统一发布分页测量结果。真实桌面复测中 7125 字文档从估算 13 页收敛到真实测量 12 页期间，搜索框约 135ms 内成功获得焦点并输入；真实测量精度与现有分页数据契约保持不变。`smoke:m2` 本轮约 4 分钟未结束且未输出失败，已作为验证缺口保留；Web Worker、画布虚拟化和完整性能体系继续后续单拆。"
+    },
+    {
+      "id": "RISK-097",
+      "date": "2026-07-10",
+      "type": "返工",
+      "description": "当前 RAGFlow 检索并非单纯阈值偏低：英语库 `pagerank=20` 会形成跨库固定排序偏置，应用查询和 `keyword=true` 会双重扩写宽泛词，直连 `/retrieval` 又没有显式启用 Reranker；同时现有元数据过滤会触发当前版本绕过后置相似度阈值。如果只继续手调片段数或阈值，错误内容仍会进入 AI 上下文。另一方面，如果直接在旧库上批量重解析、换 Embedding 或删除索引，会失去基线和回滚能力。",
+      "impactScope": "PH3-12-retrieval-eval-baseline-v1、RAGFlow 英语与会计数据集、KnowledgeBaseService、KnowledgeBasePanel、AiGenerateTab、AI 大纲与正文知识上下文、后续元数据治理和影子库重建",
+      "currentHandling": "已完成第一阶段止血与评测基线：英语库错误 pagerank 已归零，应用已关闭大模型关键词扩写、显式启用 Reranker，并增加应用侧阈值、去重和文档配额；10 条真实困难样例达到正例首位命中率 100%、跨库违规率 0%。当前仍有“库内不存在的 Unit 8 被误召回”缺口，原因是英语文档尚未具备可用 unit 元数据；下一阶段将保留旧库回滚点，先完成受控元数据清洗和影子库治理，再用同一评测集验证无答案拒绝率。"
+    },
+    {
+      "id": "RISK-098",
+      "date": "2026-07-10",
+      "type": "范围调整",
+      "description": "元数据治理如果直接依赖大模型自由生成 UNIT/TYPE，或在没有快照和 dry-run 的情况下批量覆盖 259 份文档，会产生枚举漂移、错误章节、题目/答案混淆和不可回滚风险；反过来，如果要求第一轮就人工逐份拆分所有综合 PDF，又会把文档级元数据治理扩大成完整内容重建。",
+      "impactScope": "PH3-12-metadata-governance-v1、RAGFlow 英语与会计文档 meta_fields、后续 metadata_condition 路由、Unit 8 无答案拒绝、影子库与切片治理",
+      "currentHandling": "已完成受控元数据治理：259 份文档均通过确定性规则生成清单，原始 meta_fields 已保存在不可覆盖的 apply 前快照中；最终 19 份进入人工复核、5 份标记 quarantine，其余字段通过官方 API 显式写回并逐文档核验。真实 metadata_condition 检索已确认 Unit 5 只在受控文档内召回，Unit 8 返回 0。原文、切片、向量和 Embedding 均未修改。"
+    },
+    {
+      "id": "RISK-099",
+      "date": "2026-07-10",
+      "type": "兼容性",
+      "description": "RAGFlow 0.25.0 的 documents 列表接口在 metadata_condition 零匹配时，会把空 document_ids 错误解释为未过滤并返回数据集全量文档；同版本 retrieval 接口有显式零匹配保护，会正确返回 0 个片段。如果后续用 documents 列表总数验收无答案过滤，可能把接口缺陷误判为元数据失效。",
+      "impactScope": "PH3-12-metadata-governance-v1、PH3-12-precise-retrieval-pipeline-v1、RAGFlow documents 列表、retrieval metadata_condition、Unit 8 无答案拒绝验证",
+      "currentHandling": "当前验收以 retrieval 真实结果和治理清单中的受控 documentId 为准，不以 documents 列表零匹配结果为准；独立验证命令会同时检查 Unit 5 候选是否越界和 Unit 8 是否为 0，并继续执行应用侧阈值、去重与同文档配额过滤。后续若升级 RAGFlow，再单独复测 documents 列表零匹配行为。"
+    },
+    {
+      "id": "RISK-100",
+      "date": "2026-07-10",
+      "type": "范围调整",
+      "description": "英语数据清洗若直接覆盖生产库、删除原文件，或把 DOC 转换、全册拆分、OCR、Embedding 对比和会计资料同时推进，会失去可回滚基线并放大返工；同时现有 5 份零切片中有 1 份属于会计库，如果按总数机械处理会违背本步“英语先行、会计延期”的确认边界。",
+      "impactScope": "PH3-12-data-cleaning-shadow-kb-v1、RAGFlow 生产英语库与独立英语影子库、22 份旧 DOC、英语 4 份零切片、跨单元和全册资料、10 条检索评测",
+      "currentHandling": "本地清洗已完成且生产库保持不动：22 份旧 DOC 全部转换为独立 DOCX；8 个可靠来源拆出 56 个受控单元副本；136 MB 零切片练习 PDF 已拆为 Unit 1-7 七份较小 PDF；空占位和 2 份 MP3 已排除。旧教材 Unit 1-9、缺页电子课本及同页混合且无法无歧义拆分的资料均保留原件并隔离，没有伪装为已修复。90 份生产源去向覆盖完整，127 份影子语料哈希核验通过。会计零切片和会计影子库继续延期；生产/影子对照和不自动切换门禁保持不变。"
+    },
+    {
+      "id": "RISK-101",
+      "date": "2026-07-10",
+      "type": "范围调整",
+      "description": "如果继续把现有英语资料通过专用脚本一次性清洗、拆分和上传，而未来新增资料仍从 RAGFlow 后台直接进入，将形成历史迁移与日常新增两条不同链路：新资料会绕过统一登记、版本识别、人工元数据确认、pending 隔离、质量门禁和回滚审计，现有清洗成果也无法沉淀为可持续产品能力。",
+      "impactScope": "PH3-12-data-cleaning-shadow-kb-v1、建议新增的 PH3-13 资料入库中心、历史英语/会计资料迁移、未来单文件/文件夹/清单导入、RAGFlow 正式检索、版本发布与回滚",
+      "currentHandling": "用户已确认新增 `PH3-13` 并先执行 `PH3-13A-foundation-contract-spike-v1`，Layout3 资料入库中心成为唯一受支持入口，由 SQLite 保存资料身份、版本、状态和发布关系，RAGFlow 仅作为可重建检索投影。现有英语影子库 127 份副本继续保持 UNSTART、零切片和冻结，不沿 PH3-12 专用脚本旁路继续处理，后续只在 PH3-13I 中以 legacy_staging 身份登记接管；生产库保持不动。"
+    },
+    {
+      "id": "RISK-102",
+      "date": "2026-07-10",
+      "type": "兼容性",
+      "description": "`better-sqlite3` 属于原生模块，普通 Node 可加载不代表 Electron 32 ABI、electron-vite 外部化构建和后续可分发环境能够加载；如果未先验证就锁定依赖，登记库可能在开发环境可用但在构建或安装后启动失败。",
+      "impactScope": "PH3-13A SQLite PoC、PH3-13B 登记库、Electron 32 主进程构建、PH3-13K 安装升级与恢复",
+      "currentHandling": "阶段 0 SQLite PoC 已通过 Electron ABI 128、electron-vite 外部化和 electron-builder `--dir` 真实加载。PH3-13B 已完成正式 schema、迁移备份、恢复重开、未来版本拒写和数据库级测试；PH3-13C1 现已把正式用户登记库接入应用运行时：首次打开独立资料入库中心时惰性开库并恢复过期任务，失败返回中文不可用状态且不阻断普通编辑，应用退出前可靠关闭。schema V2、接收与重启测试已纳入 `npm run registry:test` 并在 Electron 32 下 12/12 通过，主应用构建和真实工作台往返检查通过。完整 NSIS 安装、升级迁移和安装后备份恢复继续留待 PH3-13K，不能用本轮开发运行时接入代替。"
+    },
+    {
+      "id": "RISK-103",
+      "date": "2026-07-10",
+      "type": "兼容性",
+      "description": "如果当前 RAGFlow 0.25.0 的 retrieval `document_ids` 在排序后才过滤、零匹配回退全量，或不能与 `status=pending/active` 条件稳定组合，新旧版本并存窗口会发生候选挤占或未发布资料泄漏，SQLite 返回后二次白名单无法单独保证发布连续性。",
+      "impactScope": "PH3-13A 隔离合同、PH3-13C 单文件纵切、PH3-13H 正式检索与发布生命周期、PH3-13I 历史迁移",
+      "currentHandling": "PH3-13A 已完成真实隔离复测：原始能力报告 13/15，精确 document_ids 排序前过滤与路线 A 必需项 11/11 通过，两个 document_ids + status 联合限制按真实结果保留。PH3-13B 已把路线 A 三条不变量落为 SQLite 本地代码与测试：只从当前有效发布关系和健康 active 绑定生成精确 dataset/document ID，空集合或映射不完整时本地失败关闭，返回后重新查询当前发布关系并剔除集合外 ID、追加漂移审计。用户已确认 PH3-13C2 只在 Main 专用适配层建立健康 pending 绑定，并使用受保护的专用暂存数据集；现有通用正式检索必须拒绝该数据集，远端 status 继续只用于审计而不是联合门禁。PH3-13C3 已进一步把正式检索保护集合扩展为当前安全配置与 SQLite 中全部 remote_status=pending 数据集的并集；即使配置切换并重启，旧 healthy pending 数据集仍会在 fetch 前被阻断。当前仍不接入生产 active 网关或发布联调，这些归属 PH3-13C4/PH3-13H；document_ids 前置过滤未来失效时降级为物理 staging/live 数据集代次。"
+    },
+    {
+      "id": "RISK-104",
+      "date": "2026-07-11",
+      "type": "返工",
+      "description": "PH3-13C3 主链路首次串联后，最终审查发现若直接按已有绿测收口，仍存在 quality 租约恢复导致 run/job 分裂、执行时只信任工件快照、技术重试沿用旧结果、相同问题无法重跑、配置保存与质量启动竞态、历史 pending 数据集失去正式保护、Renderer 自由文本泄漏，以及旧 worker 在租约接管后覆盖当前 attempt 结果等风险。其中任一问题都可能造成永久锁死、错误隔离或错误进入 pending_publication。",
+      "impactScope": "PH3-13C3-quality-gate-v1、RegistryStore 租约恢复、QualityGateService/Repository、ProcessingRunner、KnowledgeIngestionRuntime、正式 RAGFlow 暂存数据集保护、Renderer 质量报告",
+      "currentHandling": "已完成审查返工闭环：quality 租约恢复由质量仓储同步收口 run/job 且不污染版本健康；execute 重新读取三工件并逐文件核验；同 resultKey 以当前 attempt 更新并留 before/after 审计；重复问题使用唯一 job 输入键且 run 快照保留 semanticInputHash；配置保存与质量启动串行；保护集合覆盖全部历史 pending 数据集；Renderer 使用受控中文副本；结果写入、scope 解析和终态收口绑定 workerId 与有效租约，旧 worker 接管后不可迟到覆盖，休眠跨 lease 时 runner 会先恢复再继续。综合 registry:test 及双 worker/跨租约定向回归通过，未执行真实 RAGFlow 请求。"
     }
   ]
 }

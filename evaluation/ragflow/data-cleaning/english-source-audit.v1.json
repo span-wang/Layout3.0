@@ -1,0 +1,825 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-data-cleaning-shadow-kb-v1",
+  "generatedAt": "2026-07-10T12:03:53.104Z",
+  "productionDatasetId": "31482be079f411f1a93a9523fdaa939b",
+  "productionDatasetCode": "english_grade7_rj_v1",
+  "documentCount": 90,
+  "downloadedFileCount": 89,
+  "emptySourceCount": 1,
+  "legacyDocCount": 22,
+  "zeroChunkCount": 4,
+  "workRoot": "<local-workdir>",
+  "entries": [
+    {
+      "documentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "documentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "sourceSize": 74224507,
+      "sourceChunkCount": 415,
+      "localFile": "originals/d0ca17707b8c11f1b1eacb449d41f0c3__（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "sha256": "f2df92b33da917c7a900ad7999d4115bff8727e0fc73f400b126224127132b1d",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "43cff4027b8c11f1b1eacb449d41f0c3",
+      "documentName": "01 Starter Unit 1-3(词汇与句型)(解析版).docx",
+      "sourceSize": 510336,
+      "sourceChunkCount": 30,
+      "localFile": "originals/43cff4027b8c11f1b1eacb449d41f0c3__01 Starter Unit 1-3(词汇与句型)(解析版).docx",
+      "sha256": "ab28b5874696057734cbd5a27eb6e72eebdc86cb638d68b716d766765d4959b9",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "43d983dc7b8c11f1b1eacb449d41f0c3",
+      "documentName": "02 Unit 1 You and Me(词汇)(解析版).docx",
+      "sourceSize": 428862,
+      "sourceChunkCount": 20,
+      "localFile": "originals/43d983dc7b8c11f1b1eacb449d41f0c3__02 Unit 1 You and Me(词汇)(解析版).docx",
+      "sha256": "92b049d94d87d102ac44ac92d170ad38c5897055e26a08c70677b455d847b9a8",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "43ddec4c7b8c11f1b1eacb449d41f0c3",
+      "documentName": "03 Unit 1 You and Me(语法)(解析版).docx",
+      "sourceSize": 102935,
+      "sourceChunkCount": 18,
+      "localFile": "originals/43ddec4c7b8c11f1b1eacb449d41f0c3__03 Unit 1 You and Me(语法)(解析版).docx",
+      "sha256": "d02c79e9e154df9c965109391504b74f0eb4d6cba8e30acef33b4247d090091b",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "43e1004e7b8c11f1b1eacb449d41f0c3",
+      "documentName": "03-七年级上册英语知识点总结.pdf",
+      "sourceSize": 535823,
+      "sourceChunkCount": 20,
+      "localFile": "originals/43e1004e7b8c11f1b1eacb449d41f0c3__03-七年级上册英语知识点总结.pdf",
+      "sha256": "4f3087cbd042b92c2c50780bdac28e25db4c92f9fd4b9adfd72e16c54cc52adb",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "443918927b8c11f1b1eacb449d41f0c3",
+      "documentName": "04 Unit 2 We're Family(词汇)(解析版).docx",
+      "sourceSize": 247209,
+      "sourceChunkCount": 24,
+      "localFile": "originals/443918927b8c11f1b1eacb449d41f0c3__04 Unit 2 We're Family(词汇)(解析版).docx",
+      "sha256": "09d6ce86f29e5ee3290dc91f3cc79935248349d460e0d8ea7725102bdf78943a",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "443c37ac7b8c11f1b1eacb449d41f0c3",
+      "documentName": "05 Unit 2 We're Family(语法)(解析版).docx",
+      "sourceSize": 239016,
+      "sourceChunkCount": 19,
+      "localFile": "originals/443c37ac7b8c11f1b1eacb449d41f0c3__05 Unit 2 We're Family(语法)(解析版).docx",
+      "sha256": "ea5f6dc1608c910b90d345a6e47f4e13f3378e8fc6a40673096588d872efb5a7",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "443f38267b8c11f1b1eacb449d41f0c3",
+      "documentName": "05-七年级上册英语语法汇总.pdf",
+      "sourceSize": 296067,
+      "sourceChunkCount": 19,
+      "localFile": "originals/443f38267b8c11f1b1eacb449d41f0c3__05-七年级上册英语语法汇总.pdf",
+      "sha256": "f0f7709f80596fbd3c459c0243a6caa34c1a275276d0f67668fa5cc2b59906ee",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "444550f87b8c11f1b1eacb449d41f0c3",
+      "documentName": "06 Units 1- 2 单元主题写作(解析版).docx",
+      "sourceSize": 688218,
+      "sourceChunkCount": 22,
+      "localFile": "originals/444550f87b8c11f1b1eacb449d41f0c3__06 Units 1- 2 单元主题写作(解析版).docx",
+      "sha256": "a27d3a50a95e8111ac25fce0ffc572e1b2b2a2f744615344ff95ed552985aa08",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "44488a5c7b8c11f1b1eacb449d41f0c3",
+      "documentName": "07 Unit 3 My school(词汇)(解析版).docx",
+      "sourceSize": 344586,
+      "sourceChunkCount": 29,
+      "localFile": "originals/44488a5c7b8c11f1b1eacb449d41f0c3__07 Unit 3 My school(词汇)(解析版).docx",
+      "sha256": "f3f3d19c40cfb0049f2555c50a5f005b1938e68db9417585080d1636cc49bb8d",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "444ba52a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "07-人教版七上英语重点短语句型归纳.pdf",
+      "sourceSize": 511379,
+      "sourceChunkCount": 13,
+      "localFile": "originals/444ba52a7b8c11f1b1eacb449d41f0c3__07-人教版七上英语重点短语句型归纳.pdf",
+      "sha256": "e43f33c45743475ee4a488b865e089c82b5873939093aa58544b6413f3f2ce53",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "445355d67b8c11f1b1eacb449d41f0c3",
+      "documentName": "08 Unit 3 My school(语法)(解析版).docx",
+      "sourceSize": 238328,
+      "sourceChunkCount": 19,
+      "localFile": "originals/445355d67b8c11f1b1eacb449d41f0c3__08 Unit 3 My school(语法)(解析版).docx",
+      "sha256": "2054203d87a07a226119e581b11e55b2a7faa905e58f6991ed634b2a449b8b75",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "44566a8c7b8c11f1b1eacb449d41f0c3",
+      "documentName": "09 Unit 3 单元主题写作(解析版).docx",
+      "sourceSize": 453731,
+      "sourceChunkCount": 14,
+      "localFile": "originals/44566a8c7b8c11f1b1eacb449d41f0c3__09 Unit 3 单元主题写作(解析版).docx",
+      "sha256": "00ae8164c7882c65f42783978e161b5032df50bf28e63922a77113b9c33f3185",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "eee275927a0411f1a93a9523fdaa939b",
+      "documentName": "1",
+      "sourceSize": 0,
+      "sourceChunkCount": 0,
+      "localFile": null,
+      "sha256": null,
+      "status": "empty_source"
+    },
+    {
+      "documentId": "4459ec167b8c11f1b1eacb449d41f0c3",
+      "documentName": "12-七上英语重点短语句型归纳.pdf",
+      "sourceSize": 256830,
+      "sourceChunkCount": 16,
+      "localFile": "originals/4459ec167b8c11f1b1eacb449d41f0c3__12-七上英语重点短语句型归纳.pdf",
+      "sha256": "bfc0b6b76420d07a37b43af658eb9300fbfad2ee0ddbecdcdb22145dceeedee4",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "446075227b8c11f1b1eacb449d41f0c3",
+      "documentName": "14 Unit 4 My Favourite Subject(词汇)(解析版) .docx",
+      "sourceSize": 385452,
+      "sourceChunkCount": 30,
+      "localFile": "originals/446075227b8c11f1b1eacb449d41f0c3__14 Unit 4 My Favourite Subject(词汇)(解析版) .docx",
+      "sha256": "e361f6f889e0c2179d5e12cb5712d9d2a5c35f9ecbd7467f2624e84954c855ac",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "4463862c7b8c11f1b1eacb449d41f0c3",
+      "documentName": "15 Unit 4 My Favourite Subject(语法)(解析版).docx",
+      "sourceSize": 102012,
+      "sourceChunkCount": 17,
+      "localFile": "originals/4463862c7b8c11f1b1eacb449d41f0c3__15 Unit 4 My Favourite Subject(语法)(解析版).docx",
+      "sha256": "369fc5f19dd418c54b1f89f362dcfe99393d436113782f72a6bbcd34c012c672",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "446648947b8c11f1b1eacb449d41f0c3",
+      "documentName": "16 Unit 4 单元主题写作(解析版) .docx",
+      "sourceSize": 340004,
+      "sourceChunkCount": 16,
+      "localFile": "originals/446648947b8c11f1b1eacb449d41f0c3__16 Unit 4 单元主题写作(解析版) .docx",
+      "sha256": "19967fbbeee95eea35a6860ccde02211d3adbde9bffcf1c8a497ebdfefe8f32f",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "446a8e367b8c11f1b1eacb449d41f0c3",
+      "documentName": "18.Unit 5 Fun Clubs(词汇)(解析版).docx",
+      "sourceSize": 169879,
+      "sourceChunkCount": 30,
+      "localFile": "originals/446a8e367b8c11f1b1eacb449d41f0c3__18.Unit 5 Fun Clubs(词汇)(解析版).docx",
+      "sha256": "3a5c1686cd3162b4eb377cee4a5916fd41ea87735a497ac5a05105d8f2e93b1d",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "446dfc2e7b8c11f1b1eacb449d41f0c3",
+      "documentName": "19.Unit 5 Fun Clubs(语法)(解析版).docx",
+      "sourceSize": 119774,
+      "sourceChunkCount": 18,
+      "localFile": "originals/446dfc2e7b8c11f1b1eacb449d41f0c3__19.Unit 5 Fun Clubs(语法)(解析版).docx",
+      "sha256": "5d8cfdb41bcfa066ab976b3b92b1453f999a8a5fae4ce42fe5e1ed2c9b2bd232",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "4470d3ea7b8c11f1b1eacb449d41f0c3",
+      "documentName": "20.Unit 5单元主题写作(解析版) .docx",
+      "sourceSize": 239556,
+      "sourceChunkCount": 16,
+      "localFile": "originals/4470d3ea7b8c11f1b1eacb449d41f0c3__20.Unit 5单元主题写作(解析版) .docx",
+      "sha256": "2e1a0b44f944752a6650cd8885cbfce2311230afa9f7cad384b7c8aa6846c7c5",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "d0fde9ec7b8c11f1b1eacb449d41f0c3",
+      "documentName": "2025《教材帮•作文帮》英语七上(人教).pdf",
+      "sourceSize": 51986214,
+      "sourceChunkCount": 15,
+      "localFile": "originals/d0fde9ec7b8c11f1b1eacb449d41f0c3__2025《教材帮•作文帮》英语七上(人教).pdf",
+      "sha256": "f6b1d1bb45a24fa06ac7e7435c99e74286feebc341a6e2386030040327d1897f",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "documentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "sourceSize": 136929764,
+      "sourceChunkCount": 0,
+      "localFile": "originals/5846140c7b8c11f1b1eacb449d41f0c3__2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "sha256": "e590996060ee2dbc82d263d34ec5d86817ed83e66794e8266d29bb2a5e971249",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "4474a7e07b8c11f1b1eacb449d41f0c3",
+      "documentName": "22.Unit 6 A Day in the Life(词汇)(解析版).docx",
+      "sourceSize": 269644,
+      "sourceChunkCount": 29,
+      "localFile": "originals/4474a7e07b8c11f1b1eacb449d41f0c3__22.Unit 6 A Day in the Life(词汇)(解析版).docx",
+      "sha256": "c3d9ab9df77cdb326bcd62aaed35dcbebe80259dbbacfd50ef108976912a959b",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "44780e767b8c11f1b1eacb449d41f0c3",
+      "documentName": "23.Unit 6 A Day in the Life(语法)(解析版).docx",
+      "sourceSize": 106262,
+      "sourceChunkCount": 19,
+      "localFile": "originals/44780e767b8c11f1b1eacb449d41f0c3__23.Unit 6 A Day in the Life(语法)(解析版).docx",
+      "sha256": "32f847205112128b5de962df406090fc65f3be88af4f719fc57ae70e9d1ec033",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "447b33307b8c11f1b1eacb449d41f0c3",
+      "documentName": "24.Unit 6 单元主题写作(解析版).docx",
+      "sourceSize": 845903,
+      "sourceChunkCount": 15,
+      "localFile": "originals/447b33307b8c11f1b1eacb449d41f0c3__24.Unit 6 单元主题写作(解析版).docx",
+      "sha256": "a09784dc0075f5b9e160ae66b46d84e259da5a8b7470e3b988ab6c3ff79c8b50",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "24秋七上知识归纳+习题.pdf",
+      "sourceSize": 15511152,
+      "sourceChunkCount": 91,
+      "localFile": "originals/448f711a7b8c11f1b1eacb449d41f0c3__24秋七上知识归纳+习题.pdf",
+      "sha256": "254b5187a335ac3034dc9e4ef6d174da9597699b935ec1a4ad6f31a0061b4258",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "documentName": "24秋七上知识点梳理 .pdf",
+      "sourceSize": 13328161,
+      "sourceChunkCount": 23,
+      "localFile": "originals/447ecab87b8c11f1b1eacb449d41f0c3__24秋七上知识点梳理 .pdf",
+      "sha256": "ca07233f037cd2cc70303faaed4b84e34993d7ac09eb9f9b23dda954f3c27f95",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "44ae5f447b8c11f1b1eacb449d41f0c3",
+      "documentName": "26.Unit 7 Happy Birthday!(词汇)(解析版).docx",
+      "sourceSize": 271402,
+      "sourceChunkCount": 25,
+      "localFile": "originals/44ae5f447b8c11f1b1eacb449d41f0c3__26.Unit 7 Happy Birthday!(词汇)(解析版).docx",
+      "sha256": "f1c38edef694a75283eda7c62a4414de6e2d02041218f2f6db35044a3b92cd10",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "44b15bf47b8c11f1b1eacb449d41f0c3",
+      "documentName": "27.Unit 7 Happy Birthday!(语法)(解析版).docx",
+      "sourceSize": 106954,
+      "sourceChunkCount": 20,
+      "localFile": "originals/44b15bf47b8c11f1b1eacb449d41f0c3__27.Unit 7 Happy Birthday!(语法)(解析版).docx",
+      "sha256": "75ca8df07151b22c8883f859320a9d084d138dcf725a042c0b433c6afa51883d",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "44b41ace7b8c11f1b1eacb449d41f0c3",
+      "documentName": "28.Unit 7 单元主题写作(解析版).docx",
+      "sourceSize": 330338,
+      "sourceChunkCount": 12,
+      "localFile": "originals/44b41ace7b8c11f1b1eacb449d41f0c3__28.Unit 7 单元主题写作(解析版).docx",
+      "sha256": "850c5d8c0564eebba01b548d9276b18f851ee8b77716002761413e4fcb8f56aa",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "19c2eebe79fa11f1a93a9523fdaa939b",
+      "documentName": "STARTER UNIT 1 答案.doc",
+      "sourceSize": 15360,
+      "sourceChunkCount": 1,
+      "localFile": "originals/19c2eebe79fa11f1a93a9523fdaa939b__STARTER UNIT 1 答案.doc",
+      "sha256": "d9730fc5e11c9deb54bfce2b34b0018e3a8b2a14a1871eea0fd471814b347465",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "19ce543e79fa11f1a93a9523fdaa939b",
+      "documentName": "STARTER UNIT 1.doc",
+      "sourceSize": 29696,
+      "sourceChunkCount": 3,
+      "localFile": "originals/19ce543e79fa11f1a93a9523fdaa939b__STARTER UNIT 1.doc",
+      "sha256": "679084cf7c8efda7d85bfe98a4f1e335507bdd36637a1655eb35f1282ef8a4c1",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "19d8e2dc79fa11f1a93a9523fdaa939b",
+      "documentName": "STARTER UNIT 2 答案.doc",
+      "sourceSize": 15360,
+      "sourceChunkCount": 1,
+      "localFile": "originals/19d8e2dc79fa11f1a93a9523fdaa939b__STARTER UNIT 2 答案.doc",
+      "sha256": "e3a4e91f90c3691edd0195388f347ff092ae2c5ae7c074332edc1530c6be743c",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "19e3142879fa11f1a93a9523fdaa939b",
+      "documentName": "STARTER UNIT 2.doc",
+      "sourceSize": 515635,
+      "sourceChunkCount": 3,
+      "localFile": "originals/19e3142879fa11f1a93a9523fdaa939b__STARTER UNIT 2.doc",
+      "sha256": "2265e8a178fb41235f87557b41dc58a27b4a882cefdde504d42f2dc5041916ec",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "19fe1dd679fa11f1a93a9523fdaa939b",
+      "documentName": "STARTER UNIT 3 答案.doc",
+      "sourceSize": 15360,
+      "sourceChunkCount": 1,
+      "localFile": "originals/19fe1dd679fa11f1a93a9523fdaa939b__STARTER UNIT 3 答案.doc",
+      "sha256": "78aaaf22b38a296d7474ce46f6d45b1d701517fd66687e7b0f18247dee3fda9e",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a0923de79fa11f1a93a9523fdaa939b",
+      "documentName": "STARTER UNIT 3.doc",
+      "sourceSize": 558131,
+      "sourceChunkCount": 3,
+      "localFile": "originals/1a0923de79fa11f1a93a9523fdaa939b__STARTER UNIT 3.doc",
+      "sha256": "c4e519bf73e19877b2dae1791dfeb0555158ff7cdb9354bf82527b7bc87617bf",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "sourceSize": 65913,
+      "sourceChunkCount": 19,
+      "localFile": "originals/5877b70a7b8c11f1b1eacb449d41f0c3__Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "sha256": "76dcb1b0da34dd15cbabc32a602b28916cec00e544b5028bac77db266da4a0d5",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "587b73ae7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 1 You and Me 基础词汇默写.docx",
+      "sourceSize": 33625,
+      "sourceChunkCount": 5,
+      "localFile": "originals/587b73ae7b8c11f1b1eacb449d41f0c3__Unit 1 You and Me 基础词汇默写.docx",
+      "sha256": "4b17a00fa721f45f933df8403418ea487be661e4c6045f62a3f257c2c958aac0",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a13d02279fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 1 答案.doc",
+      "sourceSize": 15872,
+      "sourceChunkCount": 1,
+      "localFile": "originals/1a13d02279fa11f1a93a9523fdaa939b__UNIT 1 答案.doc",
+      "sha256": "a163b2ebffd5ec3c60c1b91091b4ee882f188bb460b95b9dfbc78a0aee8be227",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a1e9f7079fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 1.doc",
+      "sourceSize": 31744,
+      "sourceChunkCount": 4,
+      "localFile": "originals/1a1e9f7079fa11f1a93a9523fdaa939b__UNIT 1.doc",
+      "sha256": "5d64eda8abc17416787646561196671136d78c3ea5715774c136e5e66454bde4",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "587f569a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 2 We’re Family 基础词汇默写.docx",
+      "sourceSize": 30848,
+      "sourceChunkCount": 6,
+      "localFile": "originals/587f569a7b8c11f1b1eacb449d41f0c3__Unit 2 We’re Family 基础词汇默写.docx",
+      "sha256": "cd1f306cd5f202abb471c496d43e34d29ac7954754e80a76819336dd7e80ea18",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "5882a4ee7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 2 We’re Family!.pdf",
+      "sourceSize": 479453,
+      "sourceChunkCount": 19,
+      "localFile": "originals/5882a4ee7b8c11f1b1eacb449d41f0c3__Unit 2 We’re Family!.pdf",
+      "sha256": "d9979e18c044f1b92c57421401768b3a03c2eb1eb528c6b9367afcd8c048e591",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a285b5079fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 2 答案.doc",
+      "sourceSize": 16896,
+      "sourceChunkCount": 1,
+      "localFile": "originals/1a285b5079fa11f1a93a9523fdaa939b__UNIT 2 答案.doc",
+      "sha256": "ca5e0bfe14ed898b5659ccf0c2502abb4cf98bc8fd3d6108a3578c545dedf1ef",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a337ca679fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 2.doc",
+      "sourceSize": 37888,
+      "sourceChunkCount": 4,
+      "localFile": "originals/1a337ca679fa11f1a93a9523fdaa939b__UNIT 2.doc",
+      "sha256": "9f5e2203eb3ef72d6104ad009c6d9fd32ef9f7919d452bb2490b3e55ce2dbac1",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "588a20987b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 3 My School.pdf",
+      "sourceSize": 323389,
+      "sourceChunkCount": 16,
+      "localFile": "originals/588a20987b8c11f1b1eacb449d41f0c3__Unit 3 My School.pdf",
+      "sha256": "a8ae4b30176c0013e893ee9f1aaa9bec6b8b5d8535cb710d1860c5cbdbb2e957",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a3d1dce79fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 3 答案.doc",
+      "sourceSize": 15360,
+      "sourceChunkCount": 1,
+      "localFile": "originals/1a3d1dce79fa11f1a93a9523fdaa939b__UNIT 3 答案.doc",
+      "sha256": "f370aef813e334e2eab0978f4ea7c2ed80f6d7878c07f751bd31bcd38ade3954",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a46e3a479fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 3.doc",
+      "sourceSize": 26624,
+      "sourceChunkCount": 3,
+      "localFile": "originals/1a46e3a479fa11f1a93a9523fdaa939b__UNIT 3.doc",
+      "sha256": "4866c42c8bf4e5667ae272ac0909726defe871606bcee1ab8a59df9c5c9d09c0",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "589131f87b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 4 My Favourite Subject 基础词汇默写.docx",
+      "sourceSize": 560713,
+      "sourceChunkCount": 4,
+      "localFile": "originals/589131f87b8c11f1b1eacb449d41f0c3__Unit 4 My Favourite Subject 基础词汇默写.docx",
+      "sha256": "0fd3b296a031c54ef300aa8bb4b9f896a772ea929f39c4d487c479550f506d54",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "5894b0447b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 4 My Favourite Subject.pdf",
+      "sourceSize": 335429,
+      "sourceChunkCount": 15,
+      "localFile": "originals/5894b0447b8c11f1b1eacb449d41f0c3__Unit 4 My Favourite Subject.pdf",
+      "sha256": "bec1d3d57cfa5de86264304a133090bcb23f698daa10d45bd61bd01193dafcb3",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a5092aa79fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 4 答案.doc",
+      "sourceSize": 15360,
+      "sourceChunkCount": 1,
+      "localFile": "originals/1a5092aa79fa11f1a93a9523fdaa939b__UNIT 4 答案.doc",
+      "sha256": "846af4465913c49399e2d0990496d7bcd56aa566bfc150130170d1e63aba0b4a",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a5aa6a079fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 4.doc",
+      "sourceSize": 535603,
+      "sourceChunkCount": 3,
+      "localFile": "originals/1a5aa6a079fa11f1a93a9523fdaa939b__UNIT 4.doc",
+      "sha256": "a4f898f7606e0e887403803e78396c1943c3e3f625d3c06adf2db32cf710a4d3",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "589bf66a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 5 Fun Clubs 基础词汇默写.docx",
+      "sourceSize": 331815,
+      "sourceChunkCount": 4,
+      "localFile": "originals/589bf66a7b8c11f1b1eacb449d41f0c3__Unit 5 Fun Clubs 基础词汇默写.docx",
+      "sha256": "fd7f0ac72c8f97383768de617b0a7e64d9cfcfb1bb02902b2c1239d589da6aca",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "589f54cc7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 5 Fun Clubs.pdf",
+      "sourceSize": 312291,
+      "sourceChunkCount": 12,
+      "localFile": "originals/589f54cc7b8c11f1b1eacb449d41f0c3__Unit 5 Fun Clubs.pdf",
+      "sha256": "44824ec61c595924335a299edc4bec007fe05f4d70b2b78a7f561d1a938ef7d1",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a66c2dc79fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 5 答案.doc",
+      "sourceSize": 14848,
+      "sourceChunkCount": 1,
+      "localFile": "originals/1a66c2dc79fa11f1a93a9523fdaa939b__UNIT 5 答案.doc",
+      "sha256": "170e8296aa6927400d75aeecfdb859b989a276856c596cbea9f6aa116cc4bbea",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a7045b479fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 5.doc",
+      "sourceSize": 322611,
+      "sourceChunkCount": 3,
+      "localFile": "originals/1a7045b479fa11f1a93a9523fdaa939b__UNIT 5.doc",
+      "sha256": "762979adcf543277a4199c5aa92b122d3fccd96a1ec8a239c00b9341975e3919",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58a63b707b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 6 A Day in the Life 基础词汇默写.docx",
+      "sourceSize": 95082,
+      "sourceChunkCount": 4,
+      "localFile": "originals/58a63b707b8c11f1b1eacb449d41f0c3__Unit 6 A Day in the Life 基础词汇默写.docx",
+      "sha256": "5a0151556804ff2918ff9671cb07334b3c89b69613bed31640bb128e2eb36b55",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58a941947b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 6 A Day in the Life.pdf",
+      "sourceSize": 358970,
+      "sourceChunkCount": 19,
+      "localFile": "originals/58a941947b8c11f1b1eacb449d41f0c3__Unit 6 A Day in the Life.pdf",
+      "sha256": "dab287af4223baaa5742f49ecb786ed57d1c70bc3a22fcb7ac61217d6ee0544b",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a7b497879fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 6 答案.doc",
+      "sourceSize": 14848,
+      "sourceChunkCount": 1,
+      "localFile": "originals/1a7b497879fa11f1a93a9523fdaa939b__UNIT 6 答案.doc",
+      "sha256": "4715d963c59fbff06711104077e097378a126d931eccd2163c4b03776d29183b",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a86f05c79fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 6.doc",
+      "sourceSize": 94208,
+      "sourceChunkCount": 3,
+      "localFile": "originals/1a86f05c79fa11f1a93a9523fdaa939b__UNIT 6.doc",
+      "sha256": "4d295fc2c7c3f08e4607372709b2ed7653e8c847e4504ec54f00dc6a4c712a29",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58b1721a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 7 Happy Birthday 基础词汇默写.docx",
+      "sourceSize": 542166,
+      "sourceChunkCount": 4,
+      "localFile": "originals/58b1721a7b8c11f1b1eacb449d41f0c3__Unit 7 Happy Birthday 基础词汇默写.docx",
+      "sha256": "41138d19cd182497b2d0a443151dcfd322921ce3c4cdfd665e1f1b9c028b4bb5",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58b56ce47b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit 7 Happy Birthday!.pdf",
+      "sourceSize": 401465,
+      "sourceChunkCount": 17,
+      "localFile": "originals/58b56ce47b8c11f1b1eacb449d41f0c3__Unit 7 Happy Birthday!.pdf",
+      "sha256": "25b151cae5e4af3fdf656a83b2bafd940faa6831376b7060df3f346bbb252b61",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a92f26279fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 7 答案.doc",
+      "sourceSize": 15360,
+      "sourceChunkCount": 1,
+      "localFile": "originals/1a92f26279fa11f1a93a9523fdaa939b__UNIT 7 答案.doc",
+      "sha256": "924945a5cf8ba718f7cc48d15b9257098f317285361a86271162fbfc959ebc1d",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1a9d0fe079fa11f1a93a9523fdaa939b",
+      "documentName": "UNIT 7.doc",
+      "sourceSize": 513587,
+      "sourceChunkCount": 2,
+      "localFile": "originals/1a9d0fe079fa11f1a93a9523fdaa939b__UNIT 7.doc",
+      "sha256": "1603bf6d7d84799a831a91c100377175512742b84bd8f121c306ca89dc2dacee",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58bd6ea87b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit+1+默写手册.docx",
+      "sourceSize": 46547,
+      "sourceChunkCount": 6,
+      "localFile": "originals/58bd6ea87b8c11f1b1eacb449d41f0c3__Unit+1+默写手册.docx",
+      "sha256": "4e0fcaaac5c93c7d847d310abeee8b4900b81af472c86067c7cc4b1ac0317af7",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58c1987a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit+2+默写手册.docx",
+      "sourceSize": 46746,
+      "sourceChunkCount": 6,
+      "localFile": "originals/58c1987a7b8c11f1b1eacb449d41f0c3__Unit+2+默写手册.docx",
+      "sha256": "30e2dbdbd771d58c69942c457ca5830c51918fe59f335076258f944dfc2c1249",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58c4aa6a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit+3+My+School 基础词汇默写.docx",
+      "sourceSize": 28712,
+      "sourceChunkCount": 4,
+      "localFile": "originals/58c4aa6a7b8c11f1b1eacb449d41f0c3__Unit+3+My+School 基础词汇默写.docx",
+      "sha256": "0bb0e584c3a899c1143c00ce3e8b3e904a66ae3bf68c5b85eea45e852ee64c97",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58c8c42e7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit+3+默写手册.docx",
+      "sourceSize": 47918,
+      "sourceChunkCount": 6,
+      "localFile": "originals/58c8c42e7b8c11f1b1eacb449d41f0c3__Unit+3+默写手册.docx",
+      "sha256": "0b56b2dfcd32d09a80b122881de3e0674a4015da2c9e967e1f87fadc8bca1ebd",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58cbcd687b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit+4+默写手册.docx",
+      "sourceSize": 47524,
+      "sourceChunkCount": 6,
+      "localFile": "originals/58cbcd687b8c11f1b1eacb449d41f0c3__Unit+4+默写手册.docx",
+      "sha256": "17e3a1ace7ecfa4ffadbbd63912f548ba8d1f9e3e67f3f677739c2dbfd4ee179",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58ceaa747b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit+5+默写手册.docx",
+      "sourceSize": 53673,
+      "sourceChunkCount": 8,
+      "localFile": "originals/58ceaa747b8c11f1b1eacb449d41f0c3__Unit+5+默写手册.docx",
+      "sha256": "c8348704adb43458349a357ed9f3d694f9ee98412621ab66adeea40a7d5d1143",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58d198107b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit+6+默写手册.docx",
+      "sourceSize": 47113,
+      "sourceChunkCount": 6,
+      "localFile": "originals/58d198107b8c11f1b1eacb449d41f0c3__Unit+6+默写手册.docx",
+      "sha256": "de64eecd967306e18dab6b08e435d750bed0b06cb562d232aff03931fb538bd6",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58d48e627b8c11f1b1eacb449d41f0c3",
+      "documentName": "Unit+7+默写手册.docx",
+      "sourceSize": 47272,
+      "sourceChunkCount": 6,
+      "localFile": "originals/58d48e627b8c11f1b1eacb449d41f0c3__Unit+7+默写手册.docx",
+      "sha256": "0e586ddd7123af859bd59cddba2c16c2e55315d67a661417ffec505c3db89b3a",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58d76fec7b8c11f1b1eacb449d41f0c3",
+      "documentName": "UNIT1 You and Me.pdf",
+      "sourceSize": 217145,
+      "sourceChunkCount": 10,
+      "localFile": "originals/58d76fec7b8c11f1b1eacb449d41f0c3__UNIT1 You and Me.pdf",
+      "sha256": "b9b9694426e9169afbcf65f7a0f994f5b6ddf481e5810cf9b9fdfffefe9fe651",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "a0e83e6a79f711f1a93a9523fdaa939b",
+      "documentName": "人教版七年级（上）英语电子课本（2024年新版）.pdf",
+      "sourceSize": 72601581,
+      "sourceChunkCount": 69,
+      "localFile": "originals/a0e83e6a79f711f1a93a9523fdaa939b__人教版七年级（上）英语电子课本（2024年新版）.pdf",
+      "sha256": "17035487816820045bf8f5df59c171ca140990ce3e82d0be13d4ed018b245781",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "documentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "sourceSize": 1042642,
+      "sourceChunkCount": 183,
+      "localFile": "originals/58dd3cce7b8c11f1b1eacb449d41f0c3__人教版七年级英语上册核心知识归纳98页.docx",
+      "sha256": "f71c368d301b6045fa2da73ad0a63db9fe5804ae6e249c85e5f3d6ca0d6d3f0b",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1abcd24e79fa11f1a93a9523fdaa939b",
+      "documentName": "单元音.mp3",
+      "sourceSize": 5704352,
+      "sourceChunkCount": 0,
+      "localFile": "originals/1abcd24e79fa11f1a93a9523fdaa939b__单元音.mp3",
+      "sha256": "de9df7a039101622496e540aefeb37c59d51e96f58ac75e918c4492ea919e24e",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1aa8172879fa11f1a93a9523fdaa939b",
+      "documentName": "常见的字母组合发音规律.mp3",
+      "sourceSize": 7603558,
+      "sourceChunkCount": 0,
+      "localFile": "originals/1aa8172879fa11f1a93a9523fdaa939b__常见的字母组合发音规律.mp3",
+      "sha256": "1c886eb4ea3fa79a8dc01dca5497fee014e4c775d0604d9707ffa08de03346cc",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "cdffad7079f711f1a93a9523fdaa939b",
+      "documentName": "新七 starter1.pdf",
+      "sourceSize": 262875,
+      "sourceChunkCount": 1,
+      "localFile": "originals/cdffad7079f711f1a93a9523fdaa939b__新七 starter1.pdf",
+      "sha256": "dd0cc5c870a7af694f2a8d8731875c3cb1304f321c0ee0af493ec64946ac45be",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "ce5dac7279f711f1a93a9523fdaa939b",
+      "documentName": "新七 starter2-3.pdf",
+      "sourceSize": 250014,
+      "sourceChunkCount": 1,
+      "localFile": "originals/ce5dac7279f711f1a93a9523fdaa939b__新七 starter2-3.pdf",
+      "sha256": "9188a5257bb4c58290ec495235306899217216e0a1641341b9f86a608e3fa192",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "ce6cf79a79f711f1a93a9523fdaa939b",
+      "documentName": "新七 unit1.pdf",
+      "sourceSize": 7091130,
+      "sourceChunkCount": 3,
+      "localFile": "originals/ce6cf79a79f711f1a93a9523fdaa939b__新七 unit1.pdf",
+      "sha256": "cf6cf33a125a2ea106865d4038f086ad952abc8b25a86078f05ead9e4b8b9856",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "ce886a8e79f711f1a93a9523fdaa939b",
+      "documentName": "新七 unit2.pdf",
+      "sourceSize": 420701,
+      "sourceChunkCount": 2,
+      "localFile": "originals/ce886a8e79f711f1a93a9523fdaa939b__新七 unit2.pdf",
+      "sha256": "946bd400c477f131af243d5fe1cd0d2ecafb4a2ef3b211a7a601cca8d1e28124",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "ce98695c79f711f1a93a9523fdaa939b",
+      "documentName": "新七 unit3.pdf",
+      "sourceSize": 641524,
+      "sourceChunkCount": 1,
+      "localFile": "originals/ce98695c79f711f1a93a9523fdaa939b__新七 unit3.pdf",
+      "sha256": "7f5440a48b08e729c2148d698fcc1dc8eb95142abc17ae2107aa1ad39e448bfb",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "ceab9f7c79f711f1a93a9523fdaa939b",
+      "documentName": "新七 unit4.pdf",
+      "sourceSize": 589048,
+      "sourceChunkCount": 2,
+      "localFile": "originals/ceab9f7c79f711f1a93a9523fdaa939b__新七 unit4.pdf",
+      "sha256": "7b29774dfcd06e1b721437298600708fd4400e65e3a8762df9b667661d2df1a2",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "cebe6b7079f711f1a93a9523fdaa939b",
+      "documentName": "新七 unit5.pdf",
+      "sourceSize": 470409,
+      "sourceChunkCount": 2,
+      "localFile": "originals/cebe6b7079f711f1a93a9523fdaa939b__新七 unit5.pdf",
+      "sha256": "c54e1c11862a1c4a35adcb35821abe8004c1485f36f12eee90d6546330b80b11",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "ced920f079f711f1a93a9523fdaa939b",
+      "documentName": "新七 unit6.pdf",
+      "sourceSize": 525970,
+      "sourceChunkCount": 1,
+      "localFile": "originals/ced920f079f711f1a93a9523fdaa939b__新七 unit6.pdf",
+      "sha256": "e38d57eac80aaf639f1c90b8ed24d1d2a1c12b3c82f3f58b001b169367128854",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "ceed683079f711f1a93a9523fdaa939b",
+      "documentName": "新七 unit7.pdf",
+      "sourceSize": 642562,
+      "sourceChunkCount": 1,
+      "localFile": "originals/ceed683079f711f1a93a9523fdaa939b__新七 unit7.pdf",
+      "sha256": "92112bd024d76befd0ee3c1b133b12b4e8b104abef8ad502446afc9e7481cccf",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "cefdd4ae79f711f1a93a9523fdaa939b",
+      "documentName": "新七上 单词详解  内容复杂版.pdf",
+      "sourceSize": 12407092,
+      "sourceChunkCount": 8,
+      "localFile": "originals/cefdd4ae79f711f1a93a9523fdaa939b__新七上 单词详解  内容复杂版.pdf",
+      "sha256": "9024f2d01a9ae24c2ee4ace843baf44c90a8e19b9ed00f17f3f3335901526f6f",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "documentName": "新七上 单词详解  内容清爽版.pdf",
+      "sourceSize": 10862876,
+      "sourceChunkCount": 11,
+      "localFile": "originals/cf246d9e79f711f1a93a9523fdaa939b__新七上 单词详解  内容清爽版.pdf",
+      "sha256": "e7dbacf830c967528f2377762b74474648d9e61dbdf0f8acdba7b0c6ad958b12",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1acdffec79fa11f1a93a9523fdaa939b",
+      "documentName": "第一部分　国际音标知识汇总 答案.doc",
+      "sourceSize": 189440,
+      "sourceChunkCount": 1,
+      "localFile": "originals/1acdffec79fa11f1a93a9523fdaa939b__第一部分　国际音标知识汇总 答案.doc",
+      "sha256": "11f1d76ea0dc1aa079aa7f026cb4f246bd12d761a9a23cf511a99161bd29e6ec",
+      "status": "downloaded"
+    },
+    {
+      "documentId": "1ad9380879fa11f1a93a9523fdaa939b",
+      "documentName": "第一部分　国际音标知识汇总.doc",
+      "sourceSize": 266240,
+      "sourceChunkCount": 11,
+      "localFile": "originals/1ad9380879fa11f1a93a9523fdaa939b__第一部分　国际音标知识汇总.doc",
+      "sha256": "4a021e79f46be1302e2454214ffcb3ebf15c4e29a34237489586f940708d8484",
+      "status": "downloaded"
+    }
+  ]
+}

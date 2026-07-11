@@ -5,6 +5,7 @@ import { createStyleSlice } from '@/store/slices/styleSlice';
 import { createUiSlice } from '@/store/slices/uiSlice';
 import { createAiSlice } from '@/store/slices/aiSlice';
 import { createKnowledgeBaseSlice } from '@/store/slices/knowledgeBaseSlice';
+import { createKnowledgeIngestionSlice } from '@/store/slices/knowledgeIngestionSlice';
 import type { AppStore } from '@/store/types';
 
 export const useAppStore = create<AppStore>()(
@@ -13,6 +14,7 @@ export const useAppStore = create<AppStore>()(
     ...createStyleSlice(...args),
     ...createUiSlice(...args),
     ...createKnowledgeBaseSlice(args[0]),
+    ...createKnowledgeIngestionSlice(...args),
     ...createAiSlice(args[0], args[1]),
   })),
 );

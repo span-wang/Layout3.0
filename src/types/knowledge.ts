@@ -35,13 +35,17 @@ export interface RagflowConfig {
   apiKey: string;
   /** 最终返回给用户和 AI 的片段数 */
   resultLimit: number;
+  /** Reranker 精排后返回给应用做最终过滤的候选数 */
+  candidateLimit: number;
   /** 向量召回池大小 */
   recallTopK: number;
   /** 混合检索最低相似度阈值 */
   similarityThreshold: number;
   /** 向量分数权重，剩余权重由关键词分数承担 */
   vectorSimilarityWeight: number;
-  /** 是否启用关键词召回 */
+  /** RAGFlow 中显式启用的重排模型；留空表示不启用 */
+  rerankId: string;
+  /** 是否让聊天模型继续扩写检索关键词 */
   enableKeyword: boolean;
   /** 是否让 RAGFlow 返回高亮摘要 */
   enableHighlight: boolean;
@@ -125,17 +129,23 @@ export interface RagflowRetrievalResult {
   documentAggregates: RagflowDocumentAggregate[];
   /** 原始返回总条数 */
   total: number;
+  /** RAGFlow 本次实际返回给应用的候选数 */
+  candidateCount: number;
+  /** 应用侧精度门禁淘汰的候选数 */
+  rejectedCount: number;
 }
 
 export const DEFAULT_RAGFLOW_CONFIG: RagflowConfig = {
   baseUrl: 'http://127.0.0.1:9380',
   apiKey: '',
   resultLimit: 6,
+  candidateLimit: 24,
   recallTopK: 64,
-  similarityThreshold: 0.2,
-  vectorSimilarityWeight: 0.3,
-  enableKeyword: true,
-  enableHighlight: true,
+  similarityThreshold: 0.3,
+  vectorSimilarityWeight: 0.75,
+  rerankId: 'Pro/BAAI/bge-reranker-v2-m3___OpenAI-API@OpenAI-API-Compatible',
+  enableKeyword: false,
+  enableHighlight: false,
 };
 
 export const DEFAULT_OPEN_NOTEBOOK_CONFIG: OpenNotebookConfig = {

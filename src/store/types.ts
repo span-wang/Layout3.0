@@ -64,8 +64,9 @@ import type {
 } from '@/types/workspace';
 import type { AiSlice } from '@/store/slices/aiSlice';
 import type { KnowledgeBaseSlice } from '@/store/slices/knowledgeBaseSlice';
+import type { KnowledgeIngestionSlice } from '@/store/slices/knowledgeIngestionSlice';
 
-export type AppStore = DocumentSlice & UISlice & StyleSlice & KnowledgeBaseSlice & AiSlice;
+export type AppStore = DocumentSlice & UISlice & StyleSlice & KnowledgeBaseSlice & KnowledgeIngestionSlice & AiSlice;
 
 export interface DocumentHistorySnapshot {
   layoutDocument: LayoutDocument;

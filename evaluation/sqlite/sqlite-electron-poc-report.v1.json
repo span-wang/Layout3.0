@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "taskId": "PH3-13A-foundation-contract-spike-v1",
+  "status": "passed",
+  "runtime": {
+    "electron": "32.3.3",
+    "node": "20.18.1",
+    "modules": "128",
+    "betterSqlite3": "12.11.1",
+    "sqlite": "3.53.2"
+  },
+  "settings": {
+    "foreignKeys": 1,
+    "journalMode": "wal",
+    "busyTimeoutMs": 5000
+  },
+  "checks": {
+    "electron32Runtime": true,
+    "electronAbi128": true,
+    "contractEnvironmentGuard": true,
+    "packagedApplication": true,
+    "nativeModuleLoaded": true,
+    "nativeModuleUnpacked": true,
+    "electronViteExternalized": true,
+    "schemaMigrationApplied": true,
+    "explicitTransactionCommitted": true,
+    "explicitTransactionRolledBack": true,
+    "foreignKeyEnforced": true,
+    "closedAndReopened": true,
+    "backupCreated": true,
+    "backupRestored": true,
+    "temporaryDirectoryCleaned": true
+  }
+}

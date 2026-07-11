@@ -1,0 +1,193 @@
+{
+  "generatedAt": "2026-07-10T11:10:37.976Z",
+  "configuration": {
+    "resultLimit": 6,
+    "candidateLimit": 24,
+    "recallTopK": 64,
+    "similarityThreshold": 0.3,
+    "vectorSimilarityWeight": 0.75,
+    "rerankId": "Pro/BAAI/bge-reranker-v2-m3___OpenAI-API@OpenAI-API-Compatible",
+    "keywordExpansion": false
+  },
+  "metrics": {
+    "casePassRate": 0.9,
+    "positiveHitRate": 1,
+    "meanReciprocalRank": 1,
+    "forbiddenDatasetViolationRate": 0,
+    "noAnswerRejectionRate": 0.6667
+  },
+  "cases": [
+    {
+      "id": "EN-U05-GRAMMAR-001",
+      "passed": true,
+      "routedDatasets": [
+        "七年级上册英语（人教版）"
+      ],
+      "candidateCount": 24,
+      "finalCount": 6,
+      "firstRelevantRank": 1,
+      "forbiddenHitCount": 0,
+      "documents": [
+        "19.Unit 5 Fun Clubs(语法)(解析版).docx",
+        "24秋七上知识归纳+习题.pdf",
+        "Unit 5 Fun Clubs.pdf",
+        "Unit 5 Fun Clubs.pdf",
+        "人教版七年级（上）英语电子课本（2024年新版）.pdf",
+        "19.Unit 5 Fun Clubs(语法)(解析版).docx"
+      ]
+    },
+    {
+      "id": "EN-U02-VOCAB-001",
+      "passed": true,
+      "routedDatasets": [
+        "七年级上册英语（人教版）"
+      ],
+      "candidateCount": 24,
+      "finalCount": 6,
+      "firstRelevantRank": 1,
+      "forbiddenHitCount": 0,
+      "documents": [
+        "04 Unit 2 We're Family(词汇)(解析版).docx",
+        "Unit 2 We’re Family!.pdf",
+        "05 Unit 2 We're Family(语法)(解析版).docx",
+        "04 Unit 2 We're Family(词汇)(解析版).docx",
+        "UNIT 2.doc",
+        "Unit 2 We’re Family 基础词汇默写.docx"
+      ]
+    },
+    {
+      "id": "EN-U04-WRITING-001",
+      "passed": true,
+      "routedDatasets": [
+        "七年级上册英语（人教版）"
+      ],
+      "candidateCount": 24,
+      "finalCount": 6,
+      "firstRelevantRank": 1,
+      "forbiddenHitCount": 0,
+      "documents": [
+        "16 Unit 4 单元主题写作(解析版) .docx",
+        "16 Unit 4 单元主题写作(解析版) .docx",
+        "人教版七年级英语上册核心知识归纳98页.docx",
+        "07-人教版七上英语重点短语句型归纳.pdf",
+        "新七 unit4.pdf",
+        "15 Unit 4 My Favourite Subject(语法)(解析版).docx"
+      ]
+    },
+    {
+      "id": "EN-STARTER-SENTENCE-001",
+      "passed": true,
+      "routedDatasets": [
+        "七年级上册英语（人教版）"
+      ],
+      "candidateCount": 24,
+      "finalCount": 6,
+      "firstRelevantRank": 1,
+      "forbiddenHitCount": 0,
+      "documents": [
+        "07-人教版七上英语重点短语句型归纳.pdf",
+        "01 Starter Unit 1-3(词汇与句型)(解析版).docx",
+        "新七 starter1.pdf",
+        "人教版七年级英语上册核心知识归纳98页.docx",
+        "人教版七年级英语上册核心知识归纳98页.docx",
+        "12-七上英语重点短语句型归纳.pdf"
+      ]
+    },
+    {
+      "id": "ACC-FM-FOUNDATION-001",
+      "passed": true,
+      "routedDatasets": [
+        "中级会计"
+      ],
+      "candidateCount": 24,
+      "finalCount": 6,
+      "firstRelevantRank": 1,
+      "forbiddenHitCount": 0,
+      "documents": [
+        "知识点/2026中级《三色笔记与真题演练》-财管.pdf",
+        "知识点/2026年中级会计《财管》恒重考点锁分提前背诵（题点合一）.pdf",
+        "知识点/26年-《打好基础》-中级-财务管理.pdf",
+        "题库/2026年《中级财务管理》4月月考.pdf",
+        "知识点/26年-《打好基础》-中级-财务管理.pdf",
+        "知识点/2026年中级会计《财管》恒重考点锁分提前背诵（题点合一）.pdf"
+      ]
+    },
+    {
+      "id": "ACC-LAW-CONTRACT-001",
+      "passed": true,
+      "routedDatasets": [
+        "中级会计"
+      ],
+      "candidateCount": 24,
+      "finalCount": 6,
+      "firstRelevantRank": 1,
+      "forbiddenHitCount": 0,
+      "documents": [
+        "知识点/2026中级《三色笔记与真题演练》-经 济法.pdf",
+        "题库/26年-《只做好题》-中级-经济法-题目册-上传.pdf",
+        "题库/26年-《只做好题》-中级-经济法-答案册-上传.pdf",
+        "题库/26年-《只做好题》-中级-经济法-题目册-上传.pdf",
+        "知识点/2026年中级经济法30个考点+配套习题.pdf",
+        "知识点/磨耳朵（10）（11）第五章 合同法律制度.pdf"
+      ]
+    },
+    {
+      "id": "ACC-PRACTICE-INCOME-001",
+      "passed": true,
+      "routedDatasets": [
+        "中级会计"
+      ],
+      "candidateCount": 24,
+      "finalCount": 6,
+      "firstRelevantRank": 1,
+      "forbiddenHitCount": 0,
+      "documents": [
+        "知识点/2026年中级会计实务30个考点+配套习题.pdf",
+        "知识点/2026《中级会计实务》166个分录大全.pdf",
+        "知识点/2026中级《三色笔记与真题演练》-会 计.pdf",
+        "知识点/2026年中级会计《实务》恒重考点锁分提前背诵（题点合一）.pdf",
+        "知识点/26中级刘阳六大难章节超强总结（完整版）.pdf",
+        "知识点/00前言(PDF笔记版).pdf"
+      ]
+    },
+    {
+      "id": "NO-ANSWER-PHYSICS-001",
+      "passed": true,
+      "routedDatasets": [],
+      "candidateCount": 0,
+      "finalCount": 0,
+      "firstRelevantRank": null,
+      "forbiddenHitCount": 0,
+      "documents": []
+    },
+    {
+      "id": "NO-ANSWER-HISTORY-001",
+      "passed": true,
+      "routedDatasets": [],
+      "candidateCount": 0,
+      "finalCount": 0,
+      "firstRelevantRank": null,
+      "forbiddenHitCount": 0,
+      "documents": []
+    },
+    {
+      "id": "NO-ANSWER-EN-U08-001",
+      "passed": false,
+      "routedDatasets": [
+        "七年级上册英语（人教版）"
+      ],
+      "candidateCount": 24,
+      "finalCount": 6,
+      "firstRelevantRank": null,
+      "forbiddenHitCount": 0,
+      "documents": [
+        "07-人教版七上英语重点短语句型归纳.pdf",
+        "03-七年级上册英语知识点总结.pdf",
+        "24秋七上知识归纳+习题.pdf",
+        "人教版七年级英语上册核心知识归纳98页.docx",
+        "人教版七年级英语上册核心知识归纳98页.docx",
+        "（已压缩）2025《教材帮》英语七上(人教).pdf"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-data-cleaning-shadow-kb-v1",
+  "createdAt": "2026-07-10T12:34:15.351Z",
+  "productionDatasetId": "31482be079f411f1a93a9523fdaa939b",
+  "productionDatasetName": "七年级上册英语（人教版）",
+  "shadowDatasetId": "a987b3d27c5b11f18a4e879d5b5dcdeb",
+  "shadowDatasetName": "七年级上册英语（人教版）-清洗影子-V1",
+  "productionUntouched": true,
+  "comparableFields": [
+    "chunk_method",
+    "embedding_model",
+    "pagerank",
+    "similarity_threshold",
+    "vector_similarity_weight"
+  ],
+  "parserConfigComparedFields": [
+    "auto_keywords",
+    "auto_questions",
+    "chunk_token_num",
+    "delimiter",
+    "graphrag",
+    "html4excel",
+    "layout_recognize",
+    "parent_child",
+    "raptor",
+    "topn_tags"
+  ],
+  "parserConfigIgnoredInternalFields": [
+    "built_in_metadata",
+    "children_delimiter",
+    "enable_children",
+    "enable_metadata",
+    "image_context_size",
+    "image_table_context_window",
+    "llm_id",
+    "metadata",
+    "mineru_formula_enable",
+    "mineru_lang",
+    "mineru_parse_method",
+    "mineru_table_enable",
+    "overlapped_percent",
+    "table_context_size",
+    "toc_extraction"
+  ],
+  "parameterDifferences": [],
+  "configuration": {
+    "chunk_method": "book",
+    "embedding_model": "gemini-embedding-2-preview___OpenAI-API@OpenAI-API-Compatible",
+    "pagerank": 0,
+    "similarity_threshold": 0.2,
+    "vector_similarity_weight": 0.3,
+    "parser_config": {
+      "auto_keywords": 5,
+      "auto_questions": 2,
+      "chunk_token_num": 512,
+      "delimiter": "\n",
+      "graphrag": {
+        "entity_types": [
+          "organization",
+          "person",
+          "geo",
+          "event",
+          "category"
+        ],
+        "method": "light",
+        "use_graphrag": true
+      },
+      "html4excel": false,
+      "layout_recognize": "paddleocr-from-env-1@PaddleOCR",
+      "parent_child": {
+        "children_delimiter": "\n",
+        "use_parent_child": false
+      },
+      "raptor": {
+        "ext": {
+          "scope": "file"
+        },
+        "max_cluster": 64,
+        "max_token": 256,
+        "prompt": "Please summarize the following paragraphs. Be careful with the numbers, do not make things up. Paragraphs as following:\n      {cluster_content}\nThe above is the content you need to summarize.",
+        "random_seed": 0,
+        "threshold": 0.1,
+        "use_raptor": true
+      },
+      "topn_tags": 3
+    }
+  }
+}

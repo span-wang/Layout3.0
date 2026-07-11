@@ -15,6 +15,7 @@ import {
   Images,
   ListTree,
   LocateFixed,
+  Database,
   RefreshCw,
   Search,
   Type,
@@ -51,6 +52,7 @@ const leftPanelRailItems: Array<{
   { tab: '搜索', icon: Search, description: '内容搜索' },
   { tab: '资源', icon: Images, description: '资源素材' },
   { tab: '个人知识库', icon: BookOpenText, description: '个人知识库' },
+  { tab: '资料入库', icon: Database, description: '资料入库中心' },
   { tab: 'AI生成记录', icon: History, description: 'AI生成记录' },
 ];
 

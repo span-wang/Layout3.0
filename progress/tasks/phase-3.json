@@ -75,6 +75,49 @@
       },
       "knownIssues": [
         {
+          "id": "PH3-01-ai-generation-dialog-v1",
+          "date": "2026-07-10",
+          "status": "已修复",
+          "summary": "用户反馈右侧 AI 面板中的生成内容展示区域过小，尤其长大纲难以查看和审核。本步将大纲审核与最终正文预览改为共用的大型弹窗，同时保留右侧面板中的再次打开入口。",
+          "confirmedOn": "2026-07-10",
+          "completedOn": "2026-07-10",
+          "resolution": "已完成 `PH3-01-ai-generation-dialog-v1`：1) 新增大纲与正文共用的宽屏生成内容弹窗；2) 教育大纲和小红书/教育正文开始生成时会自动打开对应视图；3) 大纲弹窗支持长内容编辑与滚动，正文弹窗支持长内容阅读和来源展示；4) 生成阶段可停止，完成阶段保留审核、重新生成、插入、清空和关闭操作；5) 右侧窄栏改为行数、字数与再次打开入口；6) 支持关闭按钮、Esc、遮罩关闭和焦点返回；7) 未修改 AI 请求、提示词、生成记录、文档插入、分页与导出链路。",
+          "inScope": [
+            "为 AI 生成 Tab 新增大纲与正文共用的大型内容弹窗，宽高随桌面窗口自适应，正文区域独立滚动。",
+            "教育内容生成大纲时自动打开弹窗并流式展示，大纲在弹窗内可直接编辑。",
+            "审核通过后让同一弹窗切换到正文生成与预览，正文生成过程继续流式显示。",
+            "弹窗底部固定保留当前阶段需要的操作：停止生成、重新生成大纲、审核通过生成正文、插入当前文档、清空和关闭。",
+            "右侧窄栏不再承担长内容阅读，只保留大纲或正文的状态摘要与再次打开入口。",
+            "补齐关闭按钮、Esc、遮罩关闭、基础焦点管理和中文无障碍标签；关闭弹窗不取消生成，也不清空内容。",
+            "完成后执行 `npm run typecheck`、`npm run build`、真实 Electron 桌面交互检查、`npm run progress:build` 与 `npm run progress:check`。"
+          ],
+          "outOfScope": [
+            "不修改 AI Provider、请求 IPC、提示词、知识库检索、流式响应协议或生成记录格式。",
+            "不新增大纲树形解析、节点拖拽、章节折叠、局部重生成、版本历史或大纲持久化。",
+            "不修改 Markdown 解析、插入文档、撤销历史、分页算法、画布渲染或导出链路。",
+            "不把优化 Tab、检查 Tab、分页 Tab 或文章结构模板编辑器同步改成弹窗。",
+            "不调整右侧面板整体宽度，也不重做 AI 面板导航和生成设置表单。"
+          ],
+          "deferredTo": [
+            "大纲树形编辑、章节拖拽、局部重生成与审核版本保存：后续归属 AI 体验增强任务。",
+            "优化结果对比、检查结果批量处理等更大结果工作台：后续分别归属对应 AI Tab 增强任务。",
+            "生成内容复制、新建文档、追加文末等结果动作补齐：后续归属 `PH3-07` M4 链路验收增强。"
+          ],
+          "verification": [
+            "用户已回复“确定”，确认按大型弹窗承载大纲审核和正文预览的方案执行。",
+            "本步边界明确不改变生成内容数据契约、插入文档逻辑与分页算法，避免影响现有排版主链路。",
+            "`src/components/ai/AiGenerationDialog.tsx` 已新增专用弹窗组件，统一处理大纲/正文视图、生成状态、操作区、Esc、遮罩关闭与焦点恢复。",
+            "`src/components/ai/AiGenerateTab.tsx` 已接入大纲、教育正文和小红书正文三个自动打开点，并把右侧内联长内容替换为紧凑再次打开入口。",
+            "`src/styles.css` 已新增随窗口自适应的宽屏弹窗、独立内容滚动和固定底部操作区样式。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功，Electron main、preload 与 renderer 生产包均完成构建。",
+            "`git diff --check` 成功。",
+            "真实 Electron 桌面验证通过：在 1346 x 893 窗口中恢复 5027 字、109 行正文，弹窗内容可连续滚动，底部“插入当前文档 / 清空 / 关闭”始终固定且无重叠。",
+            "真实 Electron 桌面验证通过：点击“生成大纲”后弹窗自动打开并显示停止操作；停止后大纲恢复可编辑状态，80 行临时大纲可编辑、可滚动，底部审核与重新生成操作无重叠。",
+            "真实 Electron 桌面验证通过：Esc 可关闭弹窗并把焦点返回右侧“打开大纲 / 查看结果”入口，关闭后内容仍可再次打开；验证用主题、大纲和恢复结果均已清理。"
+          ]
+        },
+        {
           "id": "PH3-01-ai-custom-structure-template-v1",
           "date": "2026-07-09",
           "status": "已修复",
@@ -789,6 +832,9 @@
       ],
       "status": "进行中",
       "acceptance": "左侧新增“个人知识库”菜单与面板，可配置并测试 RAGFlow 与 Open Notebook 连接；RAGFlow 可列出数据集并检索知识片段；AI 生成可结合知识库片段生成知识清单、教辅讲义、同步练习和单元试卷草稿。",
+      "planReferences": [
+        "RAGFLOW_input完整开发方案.md"
+      ],
       "owner": "AI 与知识库组",
       "dependsOn": [
         "PH3-01",
@@ -797,44 +843,437 @@
       ],
       "startedOn": "2026-07-07",
       "executionBoundary": {
-        "id": "PH3-12-ragflow-open-notebook-real-integration-closeout-v1",
+        "id": "PH3-12-data-cleaning-shadow-kb-v1",
         "confirmed": true,
-        "statusLabel": "进行中：个人知识库真实联调收尾 V1",
-        "confirmedOn": "2026-07-08",
-        "startedOn": "2026-07-08",
-        "summary": "本步已开始执行 `PH3-12-ragflow-open-notebook-real-integration-closeout-v1`：1) 当前本机 `Open Notebook` API 已返回 `{\"message\":\"Open Notebook API is running\"}`，说明探活主链路可用；2) 当前本机 `RAGFlow` 服务地址与知识源模式已从 Electron 本地存储中确认仍指向真实服务，其中 `knowledgeSourceForGenerate` 为 `ragflow`，`baseUrl` 为 `http://127.0.0.1:9380`；3) 但用当前本机保存的 `RAGFlow API Key` 访问 `datasets` 与 `retrieval` 时，真实接口分别返回 `401 Unauthorized` 与 `code: 109 / Authentication error: API key is invalid!`，说明当前阻塞点已从“服务没启动”转为“认证凭证失效”；4) 本轮已补齐 `KnowledgeBaseService` 的 RAGFlow 认证失败中文诊断与定向测试，让知识库面板和 AI 生成在遇到无效密钥时给出明确提示；5) `PH3-12` 先继续保持 `进行中`，待用户更新有效 RAGFlow 密钥后，再继续完成数据集读取、检索测试和 AI 生成端到端闭环验收。",
+        "statusLabel": "进行中：英语影子工件已冻结并待 PH3-13I 接管",
+        "confirmedOn": "2026-07-10",
+        "startedOn": "2026-07-10",
+        "summary": "用户已确认按 `PH3-12-data-cleaning-shadow-kb-v1` 推进：只处理英语资料，保留生产库和原文件不动；将 22 份旧 DOC 转换为 DOCX，对跨单元和全册资料生成受控单元副本，处置英语库 4 份零切片文件，创建独立英语影子知识库并重新解析；随后以“生产英语 + 同一生产会计”和“影子英语 + 同一生产会计”运行现有 10 条评测，达标前不切换。现有 5 份零切片中属于会计库的 1 份明确延期。",
         "inScope": [
-          "用当前本机真实服务联调 `RAGFlow`：验证服务地址、API Key、数据集读取、数据集勾选、检索测试和结果展示是否真正可用。",
-          "验证 AI 生成页在 `关闭 / RAGFlow` 两种来源模式下的实际行为，重点确认已选数据集、检索上下文拼接、来源标注和生成请求链路是否能跑通。",
-          "用当前本机真实服务联调 `Open Notebook`：验证 `Web 地址 / API 地址` 探活与入口提示是否符合当前产品口径。",
-          "如果联调中暴露 RAGFlow / Open Notebook 的真实接口差异、返回字段兼容、错误提示文案、状态持久化或最小交互缺陷，只修本步直接挡住验收的最小问题。",
-          "为本步补充必要的定向验证，并在满足验收后把 `PH3-12` 从 `进行中` 收口为 `已完成`。",
-          "完成后执行 `npm run progress:build`、`npm run progress:check`、相关定向测试、`npm run typecheck` 与 `npm run build`。"
+          "通过 RAGFlow 官方 API 下载或复制英语生产库 90 份原始资料到本地清洗工作区，记录源文档 ID、文件名、校验和、原切片数、处理动作和清洗产物，不在仓库提交大体积二进制文件。",
+          "使用本机 Microsoft Word 将英语库 22 份旧 `.doc` 转换为不覆盖原文件的 `.docx` 副本，并校验副本可打开、正文非空和数量完整。",
+          "只依据明确目录、标题或页码边界，将跨单元和全册资料拆成 `starter_unit_1` 至 `unit_7` 的受控单元副本；无法可靠确定边界的资料进入人工复核，不使用大模型猜测。",
+          "处置英语库 4 份零切片文件：空占位文件和 2 份音频不进入文本影子库；136 MB 练习 PDF 尝试修复并按单元拆分，仍无法稳定解析时保持隔离。",
+          "创建独立英语影子知识库，沿用生产英语库的解析器、Embedding 与检索参数，上传健康单元文件、DOCX 转换副本和受控拆分副本后重新解析。",
+          "扩展现有评测命令，以生产组合“生产英语 + 生产会计”和影子组合“影子英语 + 同一生产会计”运行同一 10 条评测并输出可追溯对照结果。",
+          "影子库达标门槛为 10 条全部通过、7 条正例全部命中、3 条无答案全部拒答、跨库违规为 0、MRR 不低于生产组合，且纳入影子库的文本文件零切片数为 0。",
+          "完成每个可独立验收节点后同步任务状态、风险与日志，并执行定向测试、`npm run typecheck`、`npm run build`、`npm run progress:build` 与 `npm run progress:check`。"
         ],
         "outOfScope": [
-          "不扩展新的知识源，不恢复 `ima`，也不引入新的 Provider 适配。",
-          "不把 `Open Notebook` 扩成正式检索源，不新增其知识片段读取、混合召回或生成上下文拼接。",
-          "不做知识库上传、自动切片、知识图谱、双源混排、完整引用系统或文末参考文献。",
-          "不重做 AI 提示词体系、记录系统或知识库面板整体布局，只处理本步真实联调必需缺口。"
+          "不删除、替换、移动或重新解析生产英语库中的原始文档，不修改其现有 chunk、向量和 Embedding。",
+          "不处理会计资料拆分、会计影子库，也不处理 5 份零切片中属于会计库的 `教材/（已压缩）26中级财管.pdf`。",
+          "不比较新的 Embedding、Reranker、GraphRAG、RAPTOR 或切片算法，不把数据清洗扩成模型选型实验。",
+          "不把无法可靠确定边界的综合资料强行拆分或自动赋值，不把隔离文件伪装成已修复。",
+          "即使影子库评测达标，本步也不修改应用默认数据集、不替换生产库、不删除影子库，切换必须再次确认。",
+          "不修改文档模型、分页算法、导出、AI Provider 或 Open Notebook；知识库输出仍沿用现有结构化导入和分页链路。"
         ],
         "deferredTo": [
-          "如果后续需要让 `Open Notebook` 参与正式检索或生成上下文，另拆新的个人知识库增强任务。",
-          "如果后续需要继续扩展知识库上传、切片治理、双源混排或正文引用，再单独归属 `PH3-12` 后续增强子步。",
-          "如果本轮只是暴露更深层外部环境问题，环境排障结论继续归属风险跟踪，不在本步顺手扩面。"
+          "会计资料拆分、会计零切片修复和会计影子知识库归属下一小步 `PH3-12-accounting-data-cleaning-shadow-kb-v1`。",
+          "Gemini 与 bge-m3、不同 Reranker 和教材/练习差异化切片策略对比归属后续索引实验任务。",
+          "应用生产数据集切换、旧库退役和回滚窗口归属影子库达标后的独立切换任务，必须再次由用户确认。",
+          "长期评测扩容、反馈闭环和上线门禁归属 `PH3-12-retrieval-observability-v1`。"
         ],
         "verification": [
-          "用户已回复“确定”，确认当前按 `PH3-12-ragflow-open-notebook-real-integration-closeout-v1` 推进。",
-          "本机 `docker-ragflow-gpu-1` 与 `open_notebook-open_notebook-1` 当前均在运行，已具备从“代码骨架”转入“真实联调收尾”的环境条件。",
-          "`http://127.0.0.1:9380`、`http://127.0.0.1:8502` 与 `http://127.0.0.1:5055` 已返回真实 HTTP 响应，说明关键端口当前可达。",
-          "Electron 本地存储已确认当前知识源模式为 `ragflow`，且 `RAGFlow` 的 `baseUrl` 仍为 `http://127.0.0.1:9380`。",
-          "`http://127.0.0.1:5055` 真实返回 `{\"message\":\"Open Notebook API is running\"}`，说明 `Open Notebook` API 探活链路可用。",
-          "使用当前本机保存的 `RAGFlow API Key` 访问 `datasets` 时，真实接口返回 `401 Unauthorized`；访问 `retrieval` 时，真实接口返回 `code: 109 / Authentication error: API key is invalid!`。",
-          "`src/services/KnowledgeBaseService.ts` 已新增 RAGFlow 认证失败中文归一化逻辑，遇到无效密钥时会明确提示检查或重新生成 API Key。",
-          "`src/services/KnowledgeBaseService.test.ts` 已新增 3 条定向回归，覆盖 `401`、`invalid key` 和非认证类错误。",
-          "定向回归通过：`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\KnowledgeBaseService.test.ts`。",
-          "`npm run typecheck` 成功。",
-          "`npm run build` 成功。"
-        ]
+          "独立英语影子库已实际创建并上传 127/127 份清洗副本，元数据逐份核验通过；在发现统一入库方案新增边界后已停止，当前 127 份均为 UNSTART、切片总数 0，尚未启动解析或评测。",
+          "英语清洗语料已完成：90 份生产源全部获得纳入、受控拆分、通用或排除去向；影子候选 127 份，受控单元副本 56 份、转换 DOCX 22 份，零字节、旧 DOC 和音频均为 0。",
+          "原 136 MB 零切片练习 PDF 已按可视化单元封面拆成 Unit 1-7 七份 6-8 页副本；旧教材 Unit 1-9、缺页电子课本和无法无歧义拆分资料已保留原件并隔离。",
+          "127 份影子语料逐文件大小和 SHA-256 校验全部通过；90 份源覆盖缺失 0，生产原文件与生产数据集未修改。",
+          "英语旧 DOC 转换已完成 22/22：全部输出独立 DOCX，Word 二次打开正文非空，失败 0 份；22 份源 DOC 的 SHA-256 与下载审计完全一致。",
+          "英语生产库只读下载与审计已完成：90 条记录全部对齐，89 份非空文件完成远端大小和 SHA-256 校验，唯一未下载对象为远端 0 字节占位文件。",
+          "审计结果再次确认旧 `.doc` 22 份、英语零切片 4 份，89 份本地文件哈希均唯一；生产数据集未发生上传、删除、重解析或参数修改。",
+          "用户已回复“确定”，确认按英语资料清洗、独立影子知识库和 10 条生产/影子对照评测方案执行。",
+          "现有快照确认英语库共 90 份文档，其中旧 `.doc` 22 份；5 份零切片中英语 4 份、会计 1 份。",
+          "用户确认的“会计库拆分和影子库放到下一小步”已落实为本步只处置英语 4 份零切片，会计 1 份延期。",
+          "用户已确认完整精准检索四阶段方案，第一阶段已完成并把 Unit 8 无答案失败明确归因到 unit 元数据缺失。",
+          "当前英语库 90 份文档没有可用 unit 元数据；会计库 168/169 份文档只有 subject/type，且现有字段值需要规范化。",
+          "当前 5 份零切片文档、22 份旧 DOC 解析缺陷和 3 份会计切片计数差异已登记，但本步先隔离与报告，不修改原始解析。",
+          "开工前将执行 `npm run progress:build` 与 `npm run progress:check`，确保展示层与结构化真相源一致。",
+          "已通过官方 API 快照并治理 259 份文档；所有远端 meta_fields 已与受控清单逐文档核验一致。",
+          "dry-run 最终识别 19 份人工复核文档和 5 份 quarantine 文档，均保留原文、原切片和回滚快照。",
+          "metadata_condition 真实检索验证通过：unit_5 候选 24、应用侧最终 6，且候选全部来自 9 份 Unit 5 受控文档；unit_8 候选和最终结果均为 0。",
+          "元数据规则定向测试 4 条全部通过，`npm run typecheck` 成功。"
+        ],
+      "currentStepNote": "用户已于 2026-07-10 确认启动 `PH3-13A-foundation-contract-spike-v1`。独立英语影子库的 127 份副本继续保持 UNSTART、切片总数 0 和外部写入冻结，不再沿 `PH3-12` 专用脚本旁路继续解析或评测；后续仅在 `PH3-13I` 中以 legacy_staging 身份登记接管。生产库仍未修改。"
+      },
+      "parallelExecutionBoundaries": [
+        {
+          "id": "PH3-12-ragflow-input-lifecycle-design-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：RAGFLOW_input 统一资料入库完整开发方案 V1",
+          "confirmedOn": "2026-07-10",
+          "completedOn": "2026-07-10",
+          "summary": "已完成 `RAGFLOW_input完整开发方案.md`：将产品方向从英语资料一次性清洗纠偏为“历史资料与未来新增资料共用资料入库中心、SQLite 登记库、持久任务队列、暂存索引、质量门禁、逻辑原子发布、回滚与持续运营”的长期标准流水线；明确 `.layout`、SQLite 和 RAGFlow 各自的真相范围，现有审计、DOCX 转换和受控单元拆分产物作为历史迁移工件复用，不继续形成旁路。本步只交付设计和进度同步，未修改应用代码或 RAGFlow 生产资料。",
+          "inScope": [
+            "定义单文件、文件夹、CSV/Excel 清单和历史迁移从资料登记开始共用同一状态机与应用服务。",
+            "定义 SQLite 资料身份、版本、来源、元数据证据、处理任务、质量结果、RAGFlow 映射、发布代次和审计模型。",
+            "定义待识别、待确认、处理中、质量检查、待发布、已发布、已隔离、已替代和已归档状态及合法转移。",
+            "定义转换、OCR、ASR、逻辑拆分、版本化解析模板、pending 暂存索引、快速冒烟和完整回归门禁。",
+            "定义正式检索的精确 active document IDs 排序前门禁与 SQLite 返回后二次校验，以及跨系统逻辑原子发布、补偿、回滚和蓝绿切换。",
+            "定义历史英语和会计资料统一迁移、中文资料入库中心、持续运营指标、测试分层、实施阶段和总体验收标准。"
+          ],
+          "outOfScope": [
+            "不修改 React、TypeScript、Electron、IPC、检索或 RAGFlow 客户端运行时代码。",
+            "不安装 SQLite、CSV/Excel、OCR、ASR 或其他依赖。",
+            "不启动当前已上传且冻结的英语影子库解析、对照评测、生产数据集切换或删除。",
+            "不修改 RAGFlow 生产文档、切片、Embedding、元数据或当前发布关系。",
+            "不把任何实施子任务或 `PH3-12` 顶层任务提前标记为已完成。"
+          ],
+          "deferredTo": [
+            "完整资料入库中心和资料生命周期治理建议在用户确认后新增顶层任务 `PH3-13` 分阶段实施。",
+            "首个代码子步建议为 `PH3-13A-foundation-contract-spike-v1`，只验证 Electron 32 SQLite ABI/构建能力与隔离 RAGFlow API 合同。",
+            "AI 正式消费 active 资料的完整验收关联 `PH3-01 / PH3-07`。",
+            "批量性能、安装包原生模块、管理员说明和发布收口分别关联 `PH4-03 / PH4-04 / PH4-05 / PH4-06`。"
+          ],
+          "verification": [
+            "方案独立写入 `RAGFLOW_input完整开发方案.md`，覆盖完整生命周期、总体架构、三类真相源、状态机和 SQLite 数据模型。",
+            "方案覆盖唯一入库入口、去重与版本、元数据优先级、处理模板、pending 暂存索引、质量门禁、发布回滚和持续运营。",
+            "方案明确现有英语审计、22 份 DOCX 转换、受控单元拆分及已上传未解析的冻结影子文档只作为历史资料迁移工件复用，不再成为未来新增资料的旁路。",
+            "方案给出阶段 0 至阶段 10 的实施任务、独立验收、工期估算、里程碑、总体验收和首个待确认子步。",
+            "独立架构评审已修正五项关键缺口：document_ids 必须在排序前过滤、多教材版次采用发布分支并存、回滚补齐成对状态转换、legacy ready 先迁移并暗读验证、pending 冒烟使用隔离质量通道。",
+            "本步只更新方案文档和结构化进度源，没有修改应用运行时代码或 RAGFlow 生产数据。"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "PH3-13",
+      "sequence": "13",
+      "order": 130,
+      "title": "资料入库中心与资料生命周期治理",
+      "priority": "P2",
+      "moduleIds": [
+        "knowledge-ingestion",
+        "ai-service",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M4",
+        "M3",
+        "GA"
+      ],
+      "status": "进行中",
+      "acceptance": "按 `RAGFLOW_input完整开发方案.md` 完成统一登记、版本与去重、元数据人工确认、持久处理、pending 质量门禁、精确 ID 排序前门禁与 SQLite 返回后二次校验、发布回滚、历史迁移和长期运营；阶段 0 必须先通过 Electron 32 SQLite 与隔离 RAGFlow 合同验证。",
+      "planReferences": [
+        "RAGFLOW_input完整开发方案.md"
+      ],
+      "owner": "资料入库与知识库组",
+      "dependsOn": [
+        "PH3-12"
+      ],
+      "startedOn": "2026-07-10",
+      "completedExecutionBoundaries": [
+        {
+        "id": "PH3-13A-foundation-contract-spike-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：基础合同探针与路线 A 机器判定",
+        "confirmedOn": "2026-07-10",
+        "startedOn": "2026-07-10",
+        "completedOn": "2026-07-10",
+        "summary": "已完成两个最高风险前提的真实验证：`better-sqlite3` 在 Electron 32 开发构建和最小目录包中可加载并通过事务、迁移与备份恢复合同；RAGFlow 0.25.0 的精确 document_ids 排序前过滤、pending/active 两条路线 A 精确 ID 通道、失败关闭和清理合同通过。原始能力报告保留两个 document_ids + status 联合限制，路线 A 决策以 SQLite 精确 ID 前置门禁和返回后二次校验完成机器冻结。本步未建设正式资料入库功能。",
+        "inScope": [
+          "将 `RAGFLOW_input完整开发方案.md` 登记为 PH3-13 专项基线，新增 PH3-13 任务卡与 knowledge-ingestion 模块。",
+          "安装并验证 Electron 32 可用的 SQLite 驱动，在临时目录完成建库、迁移、显式事务、关闭重开、备份和恢复检查。",
+          "验证 `npm run typecheck`、Electron 主进程构建以及 Electron 32 运行时真实加载原生 SQLite 模块，不能只用普通 Node 进程代替。",
+          "创建并最终清理带唯一前缀的一次性隔离 RAGFlow 数据集，以小型对抗样例验证上传、解析触发与轮询、metadata PATCH 与回读、document_ids 非空与零匹配、排序前过滤、pending/active 通道隔离和删除合同。",
+          "输出最小 SQLite schema、状态枚举、RAGFlow metadata 字段、错误分类、脱敏合同报告和 document_ids/物理数据集代次技术决策。",
+          "完成定向测试、类型检查、构建和结构化进度生成校验；所有新增代码使用中文注释解释关键安全边界。"
+        ],
+        "outOfScope": [
+          "不建设正式资料入库中心 UI，不实现完整登记仓储、状态机、任务队列、outbox 或发布编排器。",
+          "不修改 RAGFlow 生产数据集、生产文档、切片、Embedding、元数据或当前应用默认检索数据集。",
+          "不解析、评测、发布或删除现有 127 份已冻结英语影子文档。",
+          "不迁移英语或会计历史资料，不增加文件夹、CSV/Excel、OCR、ASR 或批量导入能力。",
+          "不修改 `.layout`、LayoutDocument、分页算法、画布、导出或模板系统。",
+          "不把阶段 0 探针提前扩展成正式 RAGFlow 客户端、资料详情页或长期后台服务。"
+        ],
+        "deferredTo": [
+          "正式 SQLite 迁移、仓储、多发布分支状态机、审计和持久任务队列归属 `PH3-13B-registry-state-machine-v1`。",
+          "单文件接收、人工元数据、DOCX/PDF 基础处理、pending 索引、质量、发布与回滚纵切归属 `PH3-13C-single-file-vertical-slice-v1`。",
+          "文件夹/清单批量导入、去重、元数据工作台、全格式处理和完整质量评测依次归属 `PH3-13D` 至 `PH3-13G`。",
+          "生产级检索网关、outbox、版本替代、归档和删除保护归属 `PH3-13H-publication-lifecycle-v1`。",
+          "127 份冻结英语影子文档与英语/会计历史资料统一接管归属 `PH3-13I-legacy-migration-v1`。",
+          "如果 document_ids 不能可靠在排序前过滤，物理 staging/live 数据集代次方案必须先更新风险与开发方案并再次确认，不能以后置白名单代替。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认按完整开发计划启动 `PH3-13A-foundation-contract-spike-v1`。",
+          "用户确认阶段 0 可以安装 SQLite PoC 依赖，并可创建、验证和清理一次性隔离 RAGFlow 测试数据集，但不得对生产数据集写入。",
+          "当前 127 份英语影子文档继续保持 UNSTART、切片总数 0 和外部写入冻结，只允许后续由 PH3-13I 登记接管。",
+          "阶段 0 任一强制合同未通过时，PH3-13A 继续保持进行中并在风险区记录结果，不提前进入 PH3-13B。",
+          "开始改代码前先执行 `npm run progress:build` 与 `npm run progress:check`。",
+          "SQLite Electron PoC 已通过：Electron 32.3.3 / ABI 128 / better-sqlite3 12.11.1 在 electron-builder `--dir` 目录包中真实加载，原生模块位于 app.asar.unpacked。",
+          "SQLite 临时库已验证 foreign_keys=1、WAL、busy_timeout=5000、schema_migrations、显式事务提交与回滚、关闭重开、备份恢复和临时目录清理，15 项检查全部通过。",
+          "`npm run sqlite:poc`、`npm run typecheck`、`npm run build` 和 `git diff --check` 已通过。",
+          "RAGFlow 隔离合同已按强化后的 15 项清单真实重跑：13 项通过，document_ids 非空、伪造 ID 失败关闭、排序前过滤、pending/active 精确 ID 独立通道、metadata-only 诊断、文档删除和数据集清理均通过。",
+          "RAGFlow 0.25.0 的 `document_ids + status=pending` 与 `document_ids + status=active` 两个联合通道均失败，实际返回两种状态，证明 metadata_condition 在 document_ids 非空时被忽略。",
+          "隔离数据集已在 finally 中删除，并通过数据集列表回读确认不存在；报告确认 productionDatasetIdsUsed=false，生产和现有 127 份影子文档均未写入。",
+          "路线 A 机器判定 `compatible=true`，必需检查 11/11 通过；决策同时校验源报告身份、SHA-256、唯一隔离前缀、显式写入守卫、清理尝试、清理成功和删除后回读。",
+          "RAGFlow 合同本地安全、请求构造和决策测试 18 条全部通过，脱敏报告不包含 API Key、服务地址或本机绝对路径。",
+          "`docs/PH3-13A-基础合同探针结论.md` 与 `RAGFLOW_input完整开发方案.md` 已冻结路线 A 正式合同，物理 staging/live 数据集代次保留为 document_ids 前置过滤失效时的降级方案。",
+          "最终交叉验证已通过：仓库 130 条测试全部成功，`npm run build` 与 `npm run sqlite:poc` 均通过，SQLite PoC 仍为 15/15。",
+          "`npm run progress:build` 与 `npm run progress:check` 已通过；用于内存注入配置的临时 Local Storage 副本和启动器已删除。",
+          "用户已再次回复“确定”，确认采用路线 A：正式网关只使用 SQLite 当前有效发布关系生成的精确 active document_ids 做 RAGFlow 排序前限定，远端 status 在 0.25.0 中不作为联合过滤安全门禁，返回后继续按 SQLite 二次校验。",
+          "本次确认只授权修订开发方案、阶段 0 合同和验证报告并完成 PH3-13A，不授权提前开始 PH3-13B 登记库与状态机开发。",
+          "`PH3-13A-foundation-contract-spike-v1` 已达到完成标准；顶层 `PH3-13` 继续保持进行中，下一代码子步 `PH3-13B` 必须另行确认。"
+        ],
+        "currentStepNote": "`PH3-13A` 已完成并冻结路线 A。当前不开始 `PH3-13B`；下一步需先制定其本步纳入、本步明确不纳入和后续归属边界，再由用户单独确认。"
+        },
+        {
+        "id": "PH3-13B-registry-state-machine-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：登记库与状态机 V1",
+        "confirmedOn": "2026-07-10",
+        "startedOn": "2026-07-10",
+        "completedOn": "2026-07-11",
+        "summary": "已完成 PH3-13B：Electron Main 专用正式 SQLite 登记库现已具备迁移前在线备份、schema_migrations、完整性与未来版本拒写；materials、material_versions、publication_branches、material_publications、ragflow_bindings、audit_events、processing_jobs 七张核心表和数据库约束已落地。资料/版本仓储、三维状态机、不可覆盖审计、普通分支单活、教材分支并存、法规有效期防重叠、同分支替代、成对回滚、唯一发布保护、持久任务租约/重试/取消/启动恢复，以及路线 A 精确 ID 生成、空集合失败关闭和返回后二次校验均已实现。本步没有连接 RAGFlow、创建正式用户数据库、建设 UI/IPC 或迁移任何资料。",
+        "inScope": [
+          "建立正式 `registry.sqlite` 打开、关闭、PRAGMA、迁移前备份、schema_migrations 和完整性检查能力；数据库只允许 Electron Main 或测试进程持有。",
+          "实现 materials、material_versions、publication_branches、material_publications、ragflow_bindings、audit_events 与 processing_jobs 的最小正式 schema、约束、索引和类型。",
+          "实现资料、版本和发布分支仓储；同 canonical + branch 的普通开放发布关系只能有一个，教材版次或课程年份分支可并存，法规有效区间不得歧义重叠。",
+          "实现 workflow_status、processing_health、index_publication_status 三维状态与显式合法转移；所有业务状态变化必须在同一事务追加不可覆盖审计事件。",
+          "实现同分支发布替代与成对回滚事务，禁止在没有另一有效发布关系时把唯一已发布版本直接隔离。",
+          "实现 processing_jobs 持久队列骨架，包括 queued/running/succeeded/failed/cancel_requested/cancelled、租约、心跳、重试时间、取消和启动恢复。",
+          "将路线 A 固化为本地可测试约束：正式 RAGFlow ID 只能来自 SQLite 当前有效发布关系；允许集合为空时本地失败关闭；返回 ID 必须再次按同一发布关系校验。",
+          "补齐数据库级定向测试、类型检查、主应用构建和进度一致性校验；新增关键代码使用中文注释说明事务与安全边界。"
+        ],
+        "outOfScope": [
+          "不建设资料入库中心 UI，不新增 Renderer/Preload IPC，不在应用启动时自动创建或迁移用户正式数据库。",
+          "不接收、复制、哈希、转换、OCR、ASR、解析、上传或质检任何文件。",
+          "不调用 RAGFlow API，不写入生产或影子数据集，不切换现有知识库检索链路和默认数据集。",
+          "不解析、评测、发布、删除或登记接管现有 127 份冻结英语影子文档，也不迁移英语或会计生产资料。",
+          "不实现 outbox 远端补偿器、完整发布编排器、质量运行服务、批量导入、元数据工作台或管理员诊断页。",
+          "不修改 `.layout`、LayoutDocument、分页算法、画布、导出、模板和现有 AI 生成流程。",
+          "不执行完整 NSIS 安装器升级迁移验收；该项继续保留到 PH3-13K。"
+        ],
+        "deferredTo": [
+          "单文件接收、人工元数据、DOCX/PDF 基础处理、pending 索引、快速质量、发布与回滚纵切归属 `PH3-13C-single-file-vertical-slice-v1`。",
+          "文件夹/CSV/Excel 批量导入、去重、元数据确认、全格式处理和完整质量评测依次归属 `PH3-13D` 至 `PH3-13G`。",
+          "生产级检索网关、outbox、RAGFlow 状态同步、完整发布补偿、归档和硬删除保护归属 `PH3-13H-publication-lifecycle-v1`。",
+          "127 份冻结英语影子文档及英语/会计历史资料统一登记接管归属 `PH3-13I-legacy-migration-v1`。",
+          "安装包升级迁移、备份恢复、帮助、性能和 E2E 收口归属 `PH3-13K-release-hardening-v1`。"
+        ],
+        "verification": [
+          "用户已于 2026-07-10 回复“确定”，确认按上述边界启动 `PH3-13B-registry-state-machine-v1`。",
+          "开工前 `npm run progress:build` 与 `npm run progress:check` 已通过。",
+          "`npm run registry:test` 在 Electron 32 / ABI 128 下通过 8/8 项数据库级测试。",
+          "仓库既有 `*.test.ts` 130/130 通过，失败 0；`npm run build` 与 `git diff --check` 通过。",
+          "验收过程没有发起 RAGFlow 网络请求，没有修改生产或影子数据集；127 份英语影子文档继续保持冻结。"
+        ],
+        "currentStepNote": "`PH3-13B-registry-state-machine-v1` 已达到完成标准，后续由 PH3-13C 分检查点接入真实应用运行链路。"
+        },
+        {
+          "id": "PH3-13C1-single-file-intake-metadata-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：单文件接收与人工元数据 V1",
+          "confirmedOn": "2026-07-11",
+          "startedOn": "2026-07-11",
+          "completedOn": "2026-07-11",
+          "summary": "已完成正式用户库惰性运行时、单文件 DOCX/PDF 受管接收、完全重复幂等、人工元数据证据与状态审计，并在确认后排入 extraction 任务；本步没有连接 RAGFlow。",
+          "inScope": [
+            "完成单文件安全校验、流式 SHA-256、不可变受管复制、接收/来源登记和完全重复幂等。",
+            "完成受控 IPC、人工元数据确认、审计和 extraction 任务排队。",
+            "提供独立中文资料入库工作台，Renderer 不获得数据库、受管路径或任意文件路径。"
+          ],
+          "outOfScope": [
+            "不执行 DOCX/PDF 正文抽取、RAGFlow pending 索引、质量、发布或回滚。",
+            "不处理生产资料、127 份冻结英语影子文档、LayoutDocument 或分页链路。"
+          ],
+          "deferredTo": [
+            "基础处理与精确 pending 索引归属 `PH3-13C2`，质量归属 `PH3-13C3`，发布回滚归属 `PH3-13C4`。"
+          ],
+          "verification": [
+            "`npm run registry:test` 在 Electron 32 / ABI 128 下通过 12/12。",
+            "仓库既有测试、类型检查、构建、真实界面往返和进度校验均通过。",
+            "验收没有发起 RAGFlow 请求，生产、影子和冻结资料未变化。"
+          ],
+          "currentStepNote": "C1 已达到完成标准，后续由 C2 接续已排队的 extraction 任务。"
+        },
+        {
+        "id": "PH3-13C2-basic-processing-pending-index-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：DOCX/PDF 基础处理与精确 pending 索引 V1",
+        "confirmedOn": "2026-07-11",
+        "startedOn": "2026-07-11",
+        "completedOn": "2026-07-11",
+        "summary": "已完成 PH3-13C 的第二个最小验收点：接续 C1 已排队的 extraction 任务，完成 DOCX/文本 PDF 基础正文抽取、受管处理工件、校验清单、诚实来源定位、独立 worker、持久 ProcessingRunner、Main 专用 RAGFlow 适配、确定性上传对账、metadata 回读、解析轮询和精确 pending 绑定。成功终态只进入 quality_check/healthy/pending，不建立发布关系，不开放 pending 检索，也不切换现有正式检索链路；本次验收未执行真实 RAGFlow 写入。",
+        "inScope": [
+          "新增 schema V3 `processing_artifacts` 与最小索引，记录正文、定位图和清单工件的相对路径、媒体类型、大小、SHA-256、来源哈希、处理 profile、工具版本和 lineage；大正文不写入 SQLite。",
+          "使用成熟解析库在受控 worker 中完成 DOCX 与文本 PDF 基础抽取；DOCX 保留标题路径、段落/表格序号和显式分页提示，PDF 保留 1-based 原始页码与页内文字定位；工件使用临时文件、原子改名和回读校验。",
+          "实现只领取 C2 允许阶段的持久任务 runner，将 `extraction -> upload -> parse_wait` 幂等衔接；支持租约、心跳、指数退避、取消、重启恢复和可靠停机，不在 Renderer 或 Main 同步长任务中执行正文抽取。",
+          "新增 Main 专用 RAGFlow 配置与客户端：使用 `safeStorage` 加密保存入库 API Key，Renderer 只能读取是否已配置；用户明确指定一个专用暂存数据集和索引代次，入库 IPC 不接受任意远端 URL、document ID 或 dataset ID。",
+          "使用包含 version_id/source_hash 的确定性远端文件名；上传或网络结果不明时先全分页精确对账，0 份才上传、1 份接管继续、同名多份失败关闭，禁止盲目重复上传。",
+          "远端文档先登记为不健康 pending 绑定，再 PATCH `layout3_ingestion_v1` 元数据并逐字段回读；只有远端 `run=DONE`、`chunk_count>0`、metadata 和 document ID 全部核验通过后才把绑定标为健康 pending。",
+          "C2 成功终态固定为 `workflow_status=quality_check`、`processing_health=healthy`、`index_publication_status=pending`；不得创建 material_publications，不得写 active/superseded，也不得把 pending status 当作精确过滤安全门。",
+          "资料入库中文工作台增加处理阶段、三维状态、错误原因、配置状态、取消和受控重试；Main 同时保护暂存数据集，阻止现有通用正式检索请求访问该数据集，但不切换正式检索实现。",
+          "补齐抽取、工件、runner、fake RAGFlow、崩溃对账、状态/IPC 和受保护数据集门禁测试；关键事务、路径、凭据、幂等与失败关闭分支使用中文注释。"
+        ],
+        "outOfScope": [
+          "不实现扫描 PDF、OCR、`.doc`、PPTX、XLSX、图片、音频、ASR、复杂逻辑文档拆分或完整格式/profile 路由；无可提取正文的扫描 PDF 返回明确中文处理错误。",
+          "不伪造 DOCX 物理页码；没有 Word/LibreOffice 渲染证据时只保存结构定位和显式分页提示。",
+          "不实现文件夹、CSV/Excel、批量导入、近似重复、自动版本合并、LLM 元数据建议或批量性能优化。",
+          "不实现 C3 的 quality_run、pending 质量检索、冒烟问题和正式通道零泄漏双检，也不把 Renderer 暴露为可长期调用的 pending 检索旁路。",
+          "不执行 C4 的发布、版本替代和回滚；不实现 PH3-13H 的生产级 active 检索网关、outbox、完整远端补偿、归档、硬删除或漂移治理。",
+          "不写入 RAGFlow 生产数据集、既有 PH3-12 影子数据集或当前 127 份冻结英语影子文档，不迁移英语或会计历史资料。",
+          "不修改 `.layout`、LayoutDocument、Markdown 导入、语义块、分页算法、画布、导出、模板和现有 AI 生成流程；入库状态变化不得触发分页重算。",
+          "第一次真实 RAGFlow 写入验收不随本次开工自动执行；必须先展示明确的专用暂存数据集身份并再次获得用户确认。"
+        ],
+        "deferredTo": [
+          "快速质量门禁、`quality_run_id` 到精确 pending document IDs 的解析、候选检索和正式通道零泄漏双检归属 `PH3-13C3-quality-gate-v1`。",
+          "发布、同分支版本替代和回滚最小闭环归属 `PH3-13C4-publication-rollback-v1`；只有 C1-C4 全部验收后 PH3-13C 才可完成。",
+          "文件夹/CSV/Excel、批量与去重归属 `PH3-13D`，完整元数据建议工作台归属 `PH3-13E`。",
+          "DOC、扫描 PDF/OCR、PPTX/XLSX、音频/ASR、复杂拆分和完整 profile 路由，以及 DOCX 渲染页码归属 `PH3-13F-processing-profiles-v1`。",
+          "完整质量评测归属 `PH3-13G`；生产检索网关、outbox 和完整生命周期归属 `PH3-13H`；冻结影子与历史迁移归属 `PH3-13I`；安装升级与 E2E 硬化归属 `PH3-13K`。"
+        ],
+        "verification": [
+          "用户已于 2026-07-11 回复“确定”，确认按提出的 `PH3-13C2-basic-processing-pending-index-v1` 边界推进。",
+          "开始代码前必须先执行 `npm run progress:build` 与 `npm run progress:check`，确认展示层与结构化真相源一致。",
+          "一个含标题、段落和表格的 DOCX 与一个至少两页的文本 PDF 必须生成非空正文、manifest、locator map 和可回读 SHA-256；原件、工件和数据库 lineage 一致。",
+          "DOCX 定位必须能回到标题路径与段落/表格序号，PDF 定位必须能回到 1-based 原始页码；空正文或扫描 PDF 不得伪装成功。",
+          "任务在抽取、远端上传后未绑定、已绑定未解析和解析轮询中断等检查点重启时不得重复工件或盲目重复上传；取消保留登记、原件、工件和审计。",
+          "fake RAGFlow 必须覆盖上传返回异常、metadata 回读不一致、401/403、429/5xx、超时、未知状态、DONE 零切片、同名多份和成功 DONE 非零切片；错误按稳定类别失败关闭。",
+          "成功后 SQLite 只能存在健康 pending binding，版本进入 quality_check/healthy/pending，material_publications 数量仍为 0，正式 active scope 仍失败关闭。",
+          "Renderer 不获得数据库、受管路径、任意远端 ID、任意 URL、Node 或明文密钥；受保护暂存数据集不得被现有通用正式检索请求访问。",
+          "开工前 `npm run progress:build` 与 `npm run progress:check` 已通过。",
+          "C2 队列编排前置已通过：runner 可按允许阶段领取，当前任务完成与下一阶段排队在同一事务提交，人工重试会清理旧租约/错误并追加审计；`npm run registry:test` 13/13 通过。",
+          "C2 Main 安全配置与保护门禁已通过：API Key 只以 safeStorage 密文落盘且不回传 Renderer；暂存数据集命中或检索体无法核验时在 fetch 前失败关闭，其他 AI Provider 保持放行；定向测试 9/9 与 `npm run typecheck` 通过。",
+          "C2 本地基础处理与工件层已通过：schema V3 建立 `processing_artifacts` 与远端解析证据列；DOCX 保存标题路径、段落/表格序号和显式分页提示但不伪造物理页码，文本 PDF 保存 1-based 页码与页内定位；三工件原子发布、SHA-256 回读、lineage、幂等复用和崩溃接管定向测试 4/4 与 `npm run typecheck` 通过。",
+          "C2 RAGFlow 独立适配层已通过：客户端执行流式文件上传、文档全分页精确对账、metadata PATCH/逐字段回读、解析触发与轮询；pending 服务把 upload 与 parse_wait 拆成可跨实例恢复的持久阶段，上传结果不明先对账、不盲传，同名多份、认证、限流、服务端、网络、超时、未知状态和 DONE 零切片均稳定失败关闭；定向测试 26/26 通过。",
+          "C2 pending binding 与 metadata 仓储已通过：不健康 pending 创建、唯一恢复、多份/漂移失败关闭、健康证据、版本三维状态和 parse_wait job 原子收口均已落地；publication 存在时整笔回滚，满尝试/取消租约恢复同步版本失败，版本错误仅保存安全中文摘要；完整 `layout3_ingestion_v1` metadata 定向测试 9/9、`npm run registry:test` 15/15 通过。",
+          "C2 受控抽取 worker 已通过：DOCX/PDF 纯抽取在独立 `worker_threads` 线程执行，Main 只保留来源校验、SQLite、SHA-256、工件原子发布与回读；AbortSignal 会等待 worker 真正退出，源码 tsx worker 与构建产物 `out/main/extractor-worker.js` 两种路径均 5/5 通过，electron-vite 双入口构建成功。",
+          "C2 ProcessingRunner 与 Runtime 已通过：正式运行时主动执行 extraction→upload→parse_wait，按白名单单并发领取、心跳续租、周期恢复旧租约、确定性指数退避、用户取消和计划停机释放；parse_wait 通过仓储原子进入 quality_check/healthy/pending。before-quit 先异步等待 runner/worker 停止再关 SQLite，重复关闭与并发初始化测试通过；runner 定向 5/5、综合登记套件 70/70 与构建通过。",
+          "C2 中文生命周期 DTO/IPC/UI 已通过：Renderer 只获得当前阶段、工作流/处理健康/索引发布三维状态、安全中文错误、切片数、自动退避提示与取消/重试能力，不获得 job/dataset/document/path/租约；动作 IPC 只接受 itemId。1360×900 Renderer 检查确认配置条、三项统计和工作台无横向溢出，返回排版工作台后画布与右侧面板仍可见；DTO/动作综合测试纳入 70/70 套件。",
+          "C2 最终登记验收通过：`npm run registry:test` 64 个顶层测试、73 个总测试全部通过，包含不健康 pending 绑定阻止配置身份切换以及同身份更新 API Key 的新增回归。",
+          "仓库 `src/` 与 `scripts/` 全量测试 128/128、`npm run ragflow:contract:test` 18/18、`npm run ragflow:metadata:test` 4/4、构建后独立抽取 worker 5/5 全部通过；`npm run typecheck`、`npm run build`、`git diff --check` 与生产依赖高危审计通过，漏洞 0。",
+          "完成记录写入后已执行 `npm run progress:build` 与 `npm run progress:check`，展示文档与结构化真相源保持一致。",
+          "`npm run registry:test` 在 Electron 32 / ABI 128 下通过 12/12：保留 PH3-13B 8 项回归，并新增 DOCX/PDF 接收、重复幂等、人工确认/重启恢复、非法文件无半成品、IPC 载荷和运行时故障隔离 4 项 C1 测试。",
+          "仓库既有 `*.test.ts` 130/130 通过；`npm run typecheck`、`npm run build` 与 `git diff --check` 通过。",
+          "真实 Electron 1360×900 工作台已检查：资料入库入口、统计、列表、元数据表单和确认按钮完整可见，返回排版工作台后编辑、画布和右侧面板正常恢复。",
+          "验收只使用临时自动测试夹具和本机既有开发登记记录，没有通过 UI 选择用户文件，没有发起 RAGFlow 请求；生产/影子数据集及 127 份冻结英语资料未变化。",
+          "真实远端 smoke 只有在用户再次确认明确的专用暂存数据集后执行；生产数据集、既有影子数据集和 127 份冻结英语资料必须保持不变。"
+        ],
+        "currentStepNote": "`PH3-13C2-basic-processing-pending-index-v1` 已达到完成标准。顶层 `PH3-13` 仍为进行中，下一最小验收点 `PH3-13C3-quality-gate-v1` 必须先形成方案并取得用户确认后才能开始；第一次真实 RAGFlow 写入仍需针对明确暂存数据集再次确认。"
+        }
+      ],
+      "executionBoundary": {
+        "id": "PH3-13C3-quality-gate-v1",
+        "confirmed": true,
+        "statusLabel": "进行中：快速质量门禁 V1",
+        "confirmedOn": "2026-07-11",
+        "startedOn": "2026-07-11",
+        "summary": "用户已确认 PH3-13C 的第三个最小验收点：接续 C2 的 quality_check/healthy/pending 单文件版本，持久化快速质量运行与逐项证据，使用 Main 根据短期有效 quality_run_id 解析出的精确 pending document IDs 执行候选检索，并以 SQLite active scope 排除和正式请求对暂存数据集的请求前阻断形成诚实的本地零泄漏证明。V1 使用人工填写的 3～5 条冒烟问题和正文证据，不接入 LLM；全部阻断项通过后只进入 pending_publication，不执行发布。",
+        "inScope": [
+          "新增 schema V4 `quality_runs` 与 `quality_results`，持久保存运行状态、版本与健康 pending binding 快照、3～5 条问题、正文证据摘要与哈希、检查阈值、实际结果、来源定位、过期时间和总体结论。",
+          "只有 `workflow_status=quality_check`、`processing_health=healthy`、`index_publication_status=pending` 且存在唯一健康 pending binding 的单文件版本可以启动质量运行；Renderer 只提交 itemId、问题和正文证据，不能提交 run、dataset、document 或任意远端 URL。",
+          "V1 采用人工填写 3～5 条资料内冒烟问题并为每题粘贴正文证据；Main 必须在已核验 extracted_text 工件中验证证据唯一命中，并映射到 DOCX 标题/段落/表格或 PDF 1-based 页码定位。",
+          "复用持久 `processing_jobs` 的 quality 阶段，由 runner 委托独立质量服务执行；支持租约、心跳、恢复、取消、短期运行过期和远端瞬态错误退避，运行结束后 quality_run_id 立即失效。",
+          "扩展 Main 专用 RAGFlow 客户端的精确检索合同：请求必须同时携带受控非空 dataset_ids 与 document_ids，不发送 status 联合条件；空集合、过期运行、身份漂移或映射不完整时在 fetch 前失败关闭。",
+          "RAGFlow 返回后必须再次与该 quality_run_id 当前仍有效的 SQLite pending scope 求交；集合外结果丢弃、记录合同异常并阻断通过，candidate 结果不进入 AI 生成、正式缓存、正式指标或普通用户检索。",
+          "执行 C3 可证明的快速阻断项：人工元数据完整、正文与三类工件可回读、健康 pending binding、chunk_count 大于 0、未进入 material_publications/active scope、3～5 条问题的目标资料全部进入 Top 10，以及至少一条命中可回到来源定位。",
+          "正式通道零泄漏只做诚实的 V1 本地证明：目标 pending document ID 不在 SQLite active scope；active scope 为空时本地记录零命中且 networkIssued=false；现有正式请求访问暂存数据集继续在 fetch 前被阻断。报告必须明确这不是 PH3-13H 的生产 active 远端同题检索。",
+          "质量通过、quality job 成功、quality run 结论落库、审计追加和版本 `quality_check -> pending_publication` 必须同一事务提交，并保持 `processing_health=healthy`、`index_publication_status=pending`；普通状态接口不得绕过已通过质量运行。明确资料质量阻断进入 quarantined，运行性失败或取消不得进入待发布。",
+          "资料入库中文工作台增加问题与证据录入、运行进度、逐项结果、总体结论、阻断原因和来源定位；运行中的 quality job/quality run 同时阻止 RAGFlow 地址、暂存数据集或索引代次切换。",
+          "补齐 schema/仓储/事务门禁、quality_run_id 解析、fake RAGFlow 精确检索、集合外返回、过期/漂移、取消/恢复、DTO/IPC 和中文 UI 测试；关键安全边界使用中文注释。"
+        ],
+        "outOfScope": [
+          "不接入 LLM 自动生成冒烟问题；AI 只可在后续 PH3-13E/G 作为人工可编辑的候选生成器，不能直接决定质量结论。",
+          "不执行 C4 的发布、同分支版本替代和回滚，不 PATCH active，不创建 material_publications，也不切换现有正式检索链路。",
+          "不建设 PH3-13H 的生产级 active 检索网关、outbox、完整远端补偿、归档、硬删除、漂移治理或真实生产 active 同题网络双检。",
+          "不实现 PH3-13G 的批量完整质量回归、生产基线对比、MRR、无答案拒绝率和跨库指标体系，也不提前实现 PH3-13F 的 OCR/ASR/复杂格式与完整 profile。",
+          "不实现文件夹、CSV/Excel、批量导入、近似重复、自动版本合并或批量性能优化。",
+          "不创建、删除、修改或写入 RAGFlow 数据集；未再次展示并确认明确暂存数据集身份前，不执行真实上传、解析、候选检索或远端 smoke。",
+          "不处理 RAGFlow 生产数据集、既有 PH3-12 影子数据集、127 份冻结英语影子文档或英语/会计历史迁移。",
+          "不修改 `.layout`、LayoutDocument、Markdown 导入、语义块、分页算法、画布、导出、模板和既有 AI 生成流程；质量状态变化不得触发分页重算。"
+        ],
+        "deferredTo": [
+          "发布、同分支版本替代和回滚最小闭环归属 `PH3-13C4-publication-rollback-v1`；只有 C1-C4 全部验收后 PH3-13C 才可完成。",
+          "文件夹/CSV/Excel、批量与去重归属 `PH3-13D`，LLM 元数据与冒烟问题候选工作台归属 `PH3-13E`。",
+          "OCR/ASR、复杂格式、复杂拆分和完整 profile 路由归属 `PH3-13F-processing-profiles-v1`；完整质量评测、生产基线和批量回归归属 `PH3-13G-quality-evaluation-v1`。",
+          "真正的生产 active 精确 ID 网关、远端正式同题零泄漏验证、outbox 和完整生命周期归属 `PH3-13H-publication-lifecycle-v1`。",
+          "冻结影子与历史迁移归属 `PH3-13I-legacy-migration-v1`；安装升级、恢复和 E2E 硬化归属 `PH3-13K-release-hardening-v1`。"
+        ],
+        "verification": [
+          "用户已于 2026-07-11 回复“确定”，确认按提出的 `PH3-13C3-quality-gate-v1` 边界推进。",
+          "代码开始前先执行 `npm run progress:build` 与 `npm run progress:check`，确认展示层与结构化真相源一致。",
+          "C3 人工问题与正文证据前置已通过：新增纯 Main 证据准备器，强制 3～5 条问题、问题去重、证据长度与唯一命中、source_hash 一致，并把 DOCX 证据映射到标题/段落/表格、把 PDF 证据映射到 1-based 原始页码；定向测试 3/3 通过。",
+          "C3 精确 pending 候选检索层已通过：RAGFlow 客户端强制非空去重 dataset_ids/document_ids、固定 Top 10 且不发送 status/metadata 联合条件；QualityRetrievalService 在请求前后两次解析有效 scope，空集合/过期/漂移在 fetch 前失败关闭，集合外结果先记录合同异常再阻断；相关定向测试 35/35 通过。",
+          "C3 Schema V4 与质量运行事务层已通过：新增 quality_runs/quality_results，原子创建 quality job/run 并固定版本、唯一健康 pending binding、问题证据、三工件、profile/config/input 与必需结果键；通过、阻断、技术失败退避、取消和过期均持久收口，普通状态接口不能绕过有效 passed run 直接进入 pending_publication。质量仓储 8/8、综合 registry:test 105/105 与 typecheck 通过。",
+          "C3 质量执行端到端串联已通过：QualityGateService 经 ProcessingRunner 执行每题 Top 10 与预期证据命中，持久记录元数据/工件/pending binding/正式通道本地零泄漏等阻断项，并接通 runtime、IPC、preload、安全 DTO 与中文问题表单/质量报告；通过只进入 pending_publication，零结果与 scope 外返回均原子隔离。综合 registry:test 108/108 通过。",
+          "C3 排队质量任务取消审计已统一：IntakeStore 不再直接 SQL 修改 quality_runs，而是由 QualityGateRepository.cancelRun 在同一事务收口 processing job、quality run 与两类不可变审计；取消后保持 quality_check/healthy/pending 且无 publication。综合 registry:test 109/109 与 typecheck 通过。",
+          "C3 Runtime/DTO/配置锁集成已通过：真实 runtime.startQualityCheck 基于已核验三工件创建 queued run/job；运行中的质量任务阻止 RAGFlow 地址、数据集或索引代次漂移但允许同身份轮换密钥；Renderer DTO 不包含 run/job/binding/dataset/document ID、受管路径或底层技术错误，终态 failed/expired 不再暴露取消动作。质量服务与取消路径均按 job_id 精确绑定 run。综合 registry:test 110/110 与 typecheck 通过。",
+          "C3 quality 租约重启恢复已加固：RegistryStore 对取消请求、满尝试或过期、可重排队三类 quality 租约分别交由质量仓储同步收口或保留同一运行；quality run/job 不再分裂，quality_check/healthy/pending 版本健康不被基础处理失败逻辑污染；新增 3 个重启回归全部通过。",
+          "C3 执行证据与重试语义已加固：execute 会重新读取三工件登记并逐文件核验类型、SHA-256、sourceHash、profile 和工具版本，删除、篡改或漂移在远端请求前阻断；同一 run 的 resultKey 以当前 attempt 原行更新并追加 before/after 审计；重复问题的新运行使用唯一 job 输入键，同时在 run 快照保留确定性 semanticInputHash。综合 registry:test 122/122 与 typecheck 通过。",
+          "C3 Runtime 远端身份与 Renderer 结果边界已加固：saveRagflowConfig 与 startQualityCheck 共用串行临界区，避免旧配置快照竞态；正式保护集合合并当前配置与 SQLite 全部历史 pending 数据集，配置切换并重启后仍在网络前阻断；Renderer 质量结果不再信任技术错误或 evidence 自由文本。intake 定向测试 12/12 与 typecheck 通过。",
+          "C3 quality 租约 fencing 已加固：结果写入、检索 scope 解析和通过/阻断收口均绑定当前 workerId 与未过期租约；旧 worker 在租约过期或新 worker 接管后不能覆盖当前 attempt。系统休眠或事件循环停顿跨过租约时，runner 不再二次失败并永久停止，而是返回后由下一轮恢复旧租约。双 worker 接管与跨租约恢复定向测试通过。",
+          "仅满足 quality_check/healthy/pending 且具有唯一健康 pending binding 的版本可创建运行；运行、问题、结果、定位证据和结论在应用重启后可回读。",
+          "无效、结束、过期、空集合、状态不符或映射不完整的 quality_run_id 必须在 fetch 前失败关闭；Renderer 无法注入 dataset/document ID。",
+          "每份资料必须有 3～5 条问题与正文证据，证据在已核验正文中唯一命中；目标资料每题进入候选 Top 10，至少一条候选片段可映射来源定位。",
+          "候选返回中的任何 scope 外 document ID 都必须被排除、审计并阻断；candidate 结果不能流入 AI、正式缓存或正式指标。",
+          "本地正式门禁证明必须同时确认目标 pending ID 不在 active scope、空 active scope 不发网络请求，以及正式请求访问暂存数据集在 fetch 前被阻断；报告不得宣称 PH3-13H 已完成。",
+          "通过路径必须原子完成 quality job、quality run、审计和 pending_publication 状态；确定性阻断不得放行，运行性失败或取消也不得进入待发布。",
+          "fake RAGFlow 覆盖成功、零结果、集合外返回、401/403、429/5xx、超时、过期运行和状态漂移；完成 `npm run registry:test`、仓库全量测试、`npm run ragflow:contract:test`、`npm run ragflow:metadata:test`、`npm run typecheck`、`npm run build`、`git diff --check`、生产依赖高危审计及进度一致性校验。",
+          "本步开工与自动验收不执行真实 RAGFlow 上传、解析、候选检索或生产 smoke；生产、影子和 127 份冻结英语资料保持不变。"
+        ],
+        "currentStepNote": "`PH3-13C3-quality-gate-v1` 已完成主链路、取消审计与 Runtime 集成，并补齐 quality 租约重启恢复、执行时三工件磁盘复核、当前 attempt 结果更新、相同问题重跑、配置保存与质量启动串行、历史 pending 数据集跨配置/重启保护、Renderer 质量结果自由文本零泄漏，以及 workerId + 有效租约 fencing 与跨租约 runner 自恢复。综合 registry:test 122/122、intake 定向测试 12/12、双 worker/跨租约定向测试与 typecheck 已通过。下一步执行 src/scripts 全量测试、RAGFlow 合同/元数据测试、构建、差异检查、生产依赖审计和中文工作台验收；第一次真实 RAGFlow 请求仍未获单独确认，不执行远端 smoke。"
+      }
+    },
+    {
+      "id": "PH3-13C2A",
+      "sequence": "13C2A",
+      "order": 131,
+      "title": "暂存数据集自动获取与选择",
+      "priority": "P2",
+      "moduleIds": [
+        "knowledge-ingestion",
+        "ai-service",
+        "ui-components"
+      ],
+      "milestoneIds": [
+        "M4",
+        "M3"
+      ],
+      "status": "已完成",
+      "acceptance": "资料入库中心不再要求手填暂存数据集 ID；用户填写 RAGFlow 地址与 API Key 后可由 Main 拉取数据集列表并按名称选择，保存的仍是经过 Main 校验的专用暂存数据集 ID。",
+      "planReferences": [
+        "RAGFLOW_input完整开发方案.md"
+      ],
+      "owner": "资料入库与知识库组",
+      "dependsOn": [
+        "PH3-13"
+      ],
+      "startedOn": "2026-07-11",
+      "executionBoundary": {
+        "id": "PH3-13C2A-staging-dataset-auto-select-v1",
+        "confirmed": true,
+        "statusLabel": "已完成：暂存数据集自动获取与选择 V1",
+        "confirmedOn": "2026-07-11",
+        "startedOn": "2026-07-11",
+        "completedOn": "2026-07-11",
+        "summary": "用户确认资料入库中心的暂存数据集 ID 改为自动获取并选择。本步由 Electron Main 使用当前 RAGFlow 地址和 API Key 读取数据集候选，Renderer 只展示名称和受控选择结果；保存时继续由 Main 保存并保护选中的专用暂存数据集身份。",
+        "inScope": [
+          "新增 Main 专用数据集列表读取能力，校验 RAGFlow 分页和候选数据结构，并将认证、网络和合同错误归一为稳定中文提示。",
+          "首次配置允许用户提交当前填写的地址和 API Key 仅用于本次候选读取；已有配置在 API Key 留空时只使用 Main 安全存储中的已有密钥。",
+          "将资料入库连接设置中的自由 ID 输入框替换为“获取数据集”动作和按数据集名称展示的选择控件；候选为空、读取失败和已选数据集失效均给出中文状态。",
+          "保存时继续由 Main 校验和持久化选中的数据集 ID，并保留未完成远端任务时禁止切换身份、暂存数据集正式检索保护和 API Key 不回传 Renderer 的既有边界。",
+          "补齐 RAGFlow 客户端、IPC、配置仓储/运行时和工作台定向测试；新增关键安全与分页分支的中文注释。"
+        ],
+        "outOfScope": [
+          "不创建、删除、修改或写入任何 RAGFlow 数据集，不执行真实 RAGFlow 上传、解析、检索或生产 smoke。",
+          "不改变 C2 已完成的抽取、工件、pending binding、处理 runner、取消重试、质量、发布回滚或正式检索网关逻辑。",
+          "不实现数据集搜索、分页加载、自动创建暂存数据集、多选、批量导入或数据集权限管理。",
+          "不修改 `.layout`、LayoutDocument、分页算法、画布、导出、模板、既有 AI 生成或生产/影子/冻结英语资料。"
+        ],
+        "deferredTo": [
+          "数据集创建、权限治理、分页搜索和自动识别专用暂存数据集归属后续资料入库运维能力，不在本步扩展。",
+          "pending 质量门禁归属 `PH3-13C3-quality-gate-v1`，发布回滚归属 `PH3-13C4-publication-rollback-v1`，生产级生命周期治理归属 `PH3-13H-publication-lifecycle-v1`。"
+        ],
+        "verification": [
+          "用户已回复“确定”，确认按自动获取并选择暂存数据集的方案推进。",
+          "读取候选必须覆盖多页、重复 ID、非法数据、认证失败与网络错误，且不得将 API Key 持久化或回传 Renderer。",
+          "工作台不再出现可编辑的暂存数据集 ID 文本输入；用户可获取候选并选择名称，保存后状态与受保护数据集门禁一致。",
+          "`npm run registry:test` 65 个顶层测试、74 个总测试通过，覆盖候选分页、重复 ID 失败关闭、已保存密钥回退和首次配置密钥读取。",
+          "`npm run typecheck`、`npm run build`、`git diff --check`、`npm run progress:build` 和 `npm run progress:check` 通过。",
+          "验收未发起真实 RAGFlow 上传、解析、检索或生产 smoke，生产、影子和冻结英语资料未变化。"
+        ],
+        "currentStepNote": "`PH3-13C2A-staging-dataset-auto-select-v1` 已完成。候选读取使用 RAGFlow 0.25 支持且稳定的 create_time 排序；重启 Main 与 preload 后可正常获取数据集。"
       }
     }
   ]

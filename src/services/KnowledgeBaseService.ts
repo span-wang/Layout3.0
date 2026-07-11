@@ -10,6 +10,7 @@ import {
   throwIfMainProcessTransportError,
   throwNormalizedMainProcessInvokeError,
 } from './mainProcessRequestError';
+import { refineRagflowChunks } from './knowledgeRetrieval';
 
 interface MainProcessRequestResult {
   ok: boolean;
@@ -81,23 +82,46 @@ interface RagflowRetrievalChunkItem {
   positions?: string[];
 }
 
-interface RagflowRetrievalDocumentAggregateItem {
-  document_id?: string;
-  documentId?: string;
-  doc_id?: string;
-  docId?: string;
-  document_name?: string;
-  documentName?: string;
-  doc_name?: string;
-  docName?: string;
-  count?: number;
-}
-
 interface RagflowRetrievalPayload {
   chunks?: RagflowRetrievalChunkItem[];
-  doc_aggs?: RagflowRetrievalDocumentAggregateItem[];
-  docAggs?: RagflowRetrievalDocumentAggregateItem[];
   total?: number;
+}
+
+export interface RagflowRetrievalRequestBody {
+  dataset_ids: string[];
+  question: string;
+  page: number;
+  page_size: number;
+  top_k: number;
+  similarity_threshold: number;
+  vector_similarity_weight: number;
+  keyword: boolean;
+  highlight: boolean;
+  use_kg: false;
+  toc_enhance: false;
+  rerank_id?: string;
+}
+
+export function buildRagflowRetrievalRequestBody(params: {
+  config: RagflowConfig;
+  datasetIds: string[];
+  query: string;
+}): RagflowRetrievalRequestBody {
+  const rerankId = params.config.rerankId.trim();
+  return {
+    dataset_ids: params.datasetIds,
+    question: params.query.trim(),
+    page: 1,
+    page_size: params.config.candidateLimit,
+    top_k: Math.max(params.config.candidateLimit, params.config.recallTopK),
+    similarity_threshold: params.config.similarityThreshold,
+    vector_similarity_weight: params.config.vectorSimilarityWeight,
+    keyword: params.config.enableKeyword,
+    highlight: params.config.enableHighlight,
+    use_kg: false,
+    toc_enhance: false,
+    ...(rerankId ? { rerank_id: rerankId } : {}),
+  };
 }
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -339,20 +363,22 @@ function mapRagflowChunk(
   };
 }
 
-function mapRagflowDocumentAggregate(item: RagflowRetrievalDocumentAggregateItem): RagflowDocumentAggregate | null {
-  const documentId = pickFirstString(item.documentId, item.document_id, item.docId, item.doc_id);
-  const documentName = pickFirstString(item.documentName, item.document_name, item.docName, item.doc_name);
-  const count = pickFirstNumber(item.count);
+function buildFilteredDocumentAggregates(chunks: RagflowChunk[]): RagflowDocumentAggregate[] {
+  const aggregates = new Map<string, RagflowDocumentAggregate>();
+  for (const chunk of chunks) {
+    const existingAggregate = aggregates.get(chunk.documentId);
+    if (existingAggregate) {
+      existingAggregate.count += 1;
+      continue;
+    }
 
-  if (!documentId || !documentName || typeof count !== 'number') {
-    return null;
+    aggregates.set(chunk.documentId, {
+      documentId: chunk.documentId,
+      documentName: chunk.documentName?.trim() || chunk.documentId,
+      count: 1,
+    });
   }
-
-  return {
-    documentId,
-    documentName,
-    count,
-  };
+  return Array.from(aggregates.values());
 }
 
 function buildChunkSourceLabel(chunk: RagflowChunk, datasetNameMap: Map<string, string>): string {
@@ -444,22 +470,12 @@ export class KnowledgeBaseService {
     const response = await requestThroughMainProcess(endpoint, {
       method: 'POST',
       headers: buildRagflowHeaders(params.config),
-      body: JSON.stringify({
-        dataset_ids: params.datasetIds,
-        question: params.query.trim(),
-        page: 1,
-        page_size: params.config.resultLimit,
-        top_k: Math.max(params.config.resultLimit, params.config.recallTopK),
-        similarity_threshold: params.config.similarityThreshold,
-        vector_similarity_weight: params.config.vectorSimilarityWeight,
-        keyword: params.config.enableKeyword,
-        highlight: params.config.enableHighlight,
-      }),
+      body: JSON.stringify(buildRagflowRetrievalRequestBody(params)),
       signal: params.signal,
     });
     const data = parseRagflowApiPayload<RagflowRetrievalPayload>(endpoint, response);
     const rawChunks = Array.isArray(data?.chunks) ? data.chunks : [];
-    const chunks = rawChunks
+    const mappedChunks = rawChunks
       .map((item, index) =>
         mapRagflowChunk(item, {
           fallbackDatasetId: params.datasetIds.length === 1 ? params.datasetIds[0] : undefined,
@@ -467,19 +483,16 @@ export class KnowledgeBaseService {
         }),
       )
       .filter((item): item is RagflowChunk => item !== null);
-    const documentAggregateItems = Array.isArray(data?.docAggs)
-      ? data.docAggs
-      : Array.isArray(data?.doc_aggs)
-        ? data.doc_aggs
-        : [];
-    const documentAggregates = documentAggregateItems
-      .map((item) => mapRagflowDocumentAggregate(item))
-      .filter((item): item is RagflowDocumentAggregate => item !== null);
+    const refinementResult = refineRagflowChunks(mappedChunks, params.config);
+    const chunks = refinementResult.chunks;
+    const documentAggregates = buildFilteredDocumentAggregates(chunks);
 
     return {
       chunks,
       documentAggregates,
       total: typeof data?.total === 'number' ? data.total : chunks.length,
+      candidateCount: mappedChunks.length,
+      rejectedCount: mappedChunks.length - chunks.length,
     };
   }
 

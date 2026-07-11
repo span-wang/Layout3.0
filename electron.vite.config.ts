@@ -8,7 +8,18 @@ export default defineConfig({
   main: {
     build: {
       lib: {
-        entry: resolvePath('./electron/main/index.ts'),
+        // 抽取 worker 必须作为独立 Node/SSR 入口随安装包输出，不能依赖运行时携带 TypeScript。
+        entry: {
+          index: resolvePath('./electron/main/index.ts'),
+          'extractor-worker': resolvePath(
+            './electron/main/knowledge-ingestion/processing/extractor-worker.ts',
+          ),
+        },
+      },
+      rollupOptions: {
+        output: {
+          entryFileNames: '[name].js',
+        },
       },
     },
     plugins: [externalizeDepsPlugin()],

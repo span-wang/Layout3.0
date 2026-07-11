@@ -1,0 +1,2274 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-data-cleaning-shadow-kb-v1",
+  "generatedAt": "2026-07-10T12:29:12.829340+00:00",
+  "documentCount": 127,
+  "controlledSplitCount": 56,
+  "convertedDocxCount": 22,
+  "generalCopyCount": 1,
+  "generalUnitCount": 3,
+  "zeroSizeCount": 0,
+  "legacyDocCount": 0,
+  "audioCount": 0,
+  "entries": [
+    {
+      "file": "19c2eebe79fa11f1a93a9523fdaa939b__STARTER UNIT 1 答案.docx",
+      "documentName": "19c2eebe79fa11f1a93a9523fdaa939b__STARTER UNIT 1 答案.docx",
+      "originDocumentId": "19c2eebe79fa11f1a93a9523fdaa939b",
+      "originDocumentName": "STARTER UNIT 1 答案.doc",
+      "unit": "starter_unit_1",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:e50a6205e3743645",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 18042,
+      "sha256": "86197c5be2b06007d2bd7bdf5e918b6cb2ec747047c77c43943006ff8edb87e4"
+    },
+    {
+      "file": "19ce543e79fa11f1a93a9523fdaa939b__STARTER UNIT 1.docx",
+      "documentName": "19ce543e79fa11f1a93a9523fdaa939b__STARTER UNIT 1.docx",
+      "originDocumentId": "19ce543e79fa11f1a93a9523fdaa939b",
+      "originDocumentName": "STARTER UNIT 1.doc",
+      "unit": "starter_unit_1",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:e50a6205e3743645",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 20384,
+      "sha256": "374735176d4ad2e3540b81e6262f0ec7692f2fb3fc907e976059cf85e0fdbfa7"
+    },
+    {
+      "file": "19d8e2dc79fa11f1a93a9523fdaa939b__STARTER UNIT 2 答案.docx",
+      "documentName": "19d8e2dc79fa11f1a93a9523fdaa939b__STARTER UNIT 2 答案.docx",
+      "originDocumentId": "19d8e2dc79fa11f1a93a9523fdaa939b",
+      "originDocumentName": "STARTER UNIT 2 答案.doc",
+      "unit": "starter_unit_2",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0d646eae0309fd5e",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 17701,
+      "sha256": "6e011d38417ee9b0e0945a8638a20b14bde1a2991916ffa866f802cde129b565"
+    },
+    {
+      "file": "19e3142879fa11f1a93a9523fdaa939b__STARTER UNIT 2.docx",
+      "documentName": "19e3142879fa11f1a93a9523fdaa939b__STARTER UNIT 2.docx",
+      "originDocumentId": "19e3142879fa11f1a93a9523fdaa939b",
+      "originDocumentName": "STARTER UNIT 2.doc",
+      "unit": "starter_unit_2",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0d646eae0309fd5e",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 516545,
+      "sha256": "062d29b04a417e7422b114af3f0155931ee03f46f65c6cdba4e68173407f5410"
+    },
+    {
+      "file": "19fe1dd679fa11f1a93a9523fdaa939b__STARTER UNIT 3 答案.docx",
+      "documentName": "19fe1dd679fa11f1a93a9523fdaa939b__STARTER UNIT 3 答案.docx",
+      "originDocumentId": "19fe1dd679fa11f1a93a9523fdaa939b",
+      "originDocumentName": "STARTER UNIT 3 答案.doc",
+      "unit": "starter_unit_3",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:07f3972e1bb0b3a3",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 17629,
+      "sha256": "31850ba0941cad5d3051b2cb7e17615ff395cf6fc8f7d0b652a7ccc95d6cfd49"
+    },
+    {
+      "file": "1a0923de79fa11f1a93a9523fdaa939b__STARTER UNIT 3.docx",
+      "documentName": "1a0923de79fa11f1a93a9523fdaa939b__STARTER UNIT 3.docx",
+      "originDocumentId": "1a0923de79fa11f1a93a9523fdaa939b",
+      "originDocumentName": "STARTER UNIT 3.doc",
+      "unit": "starter_unit_3",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:07f3972e1bb0b3a3",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 574382,
+      "sha256": "e9b6af159f9070c991c37a52bbbcb1a3692a882490d71eb95c9d7f2f2a39b064"
+    },
+    {
+      "file": "1a13d02279fa11f1a93a9523fdaa939b__UNIT 1 答案.docx",
+      "documentName": "1a13d02279fa11f1a93a9523fdaa939b__UNIT 1 答案.docx",
+      "originDocumentId": "1a13d02279fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 1 答案.doc",
+      "unit": "unit_1",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:7cfe47c0de96304e",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 17768,
+      "sha256": "c9d9a64f3be1d68d9837080b7349873ab7afd6f6ec2b5c02c1f6421a83edbdb4"
+    },
+    {
+      "file": "1a1e9f7079fa11f1a93a9523fdaa939b__UNIT 1.docx",
+      "documentName": "1a1e9f7079fa11f1a93a9523fdaa939b__UNIT 1.docx",
+      "originDocumentId": "1a1e9f7079fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 1.doc",
+      "unit": "unit_1",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:7cfe47c0de96304e",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 20745,
+      "sha256": "660561733eb0c43622e62b531d9909498b300c635ab475291002499b5279dd34"
+    },
+    {
+      "file": "1a285b5079fa11f1a93a9523fdaa939b__UNIT 2 答案.docx",
+      "documentName": "1a285b5079fa11f1a93a9523fdaa939b__UNIT 2 答案.docx",
+      "originDocumentId": "1a285b5079fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 2 答案.doc",
+      "unit": "unit_2",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:d46a198d933b6a82",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 17896,
+      "sha256": "d2888b3ce75fc75200529f79ab055ea28966042c588a759ca180bd14a4889653"
+    },
+    {
+      "file": "1a337ca679fa11f1a93a9523fdaa939b__UNIT 2.docx",
+      "documentName": "1a337ca679fa11f1a93a9523fdaa939b__UNIT 2.docx",
+      "originDocumentId": "1a337ca679fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 2.doc",
+      "unit": "unit_2",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:d46a198d933b6a82",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 21562,
+      "sha256": "879c2d2c7b6b4fbd708d6cb8d94e93d1d8a2bc3034c87fddf3268b190f563051"
+    },
+    {
+      "file": "1a3d1dce79fa11f1a93a9523fdaa939b__UNIT 3 答案.docx",
+      "documentName": "1a3d1dce79fa11f1a93a9523fdaa939b__UNIT 3 答案.docx",
+      "originDocumentId": "1a3d1dce79fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 3 答案.doc",
+      "unit": "unit_3",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:fadf9b4e8ee065b9",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 17569,
+      "sha256": "51ae226fda7f12b2b113e0c035c514df92c3bebdcca5d56dc27ef79940a40b95"
+    },
+    {
+      "file": "1a46e3a479fa11f1a93a9523fdaa939b__UNIT 3.docx",
+      "documentName": "1a46e3a479fa11f1a93a9523fdaa939b__UNIT 3.docx",
+      "originDocumentId": "1a46e3a479fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 3.doc",
+      "unit": "unit_3",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:fadf9b4e8ee065b9",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 19607,
+      "sha256": "cc075418c3767a889f4d67337ce76925eb416c5263d89158b287aa660a7fc539"
+    },
+    {
+      "file": "1a5092aa79fa11f1a93a9523fdaa939b__UNIT 4 答案.docx",
+      "documentName": "1a5092aa79fa11f1a93a9523fdaa939b__UNIT 4 答案.docx",
+      "originDocumentId": "1a5092aa79fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 4 答案.doc",
+      "unit": "unit_4",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:99fcd00516d084a0",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 17559,
+      "sha256": "f9b7201b2167e509c2f734507d900bb4a444112c88442580a27a75a2a7030579"
+    },
+    {
+      "file": "1a5aa6a079fa11f1a93a9523fdaa939b__UNIT 4.docx",
+      "documentName": "1a5aa6a079fa11f1a93a9523fdaa939b__UNIT 4.docx",
+      "originDocumentId": "1a5aa6a079fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 4.doc",
+      "unit": "unit_4",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:99fcd00516d084a0",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 547479,
+      "sha256": "a5290538be6a9034cf001fa6a6a3b26e15015c96f9717b8c1fe8b302489ab867"
+    },
+    {
+      "file": "1a66c2dc79fa11f1a93a9523fdaa939b__UNIT 5 答案.docx",
+      "documentName": "1a66c2dc79fa11f1a93a9523fdaa939b__UNIT 5 答案.docx",
+      "originDocumentId": "1a66c2dc79fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 5 答案.doc",
+      "unit": "unit_5",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:5d21477d4e98eb92",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 17388,
+      "sha256": "d5b503902d7dc8ab18d9e87691636f2da4574346549cdc1181615f55f76e2483"
+    },
+    {
+      "file": "1a7045b479fa11f1a93a9523fdaa939b__UNIT 5.docx",
+      "documentName": "1a7045b479fa11f1a93a9523fdaa939b__UNIT 5.docx",
+      "originDocumentId": "1a7045b479fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 5.doc",
+      "unit": "unit_5",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:5d21477d4e98eb92",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 320083,
+      "sha256": "06ea4bf828e00895a0968a9bb3b517f9cce10b000439b75c6b1c0e1a0735b4e0"
+    },
+    {
+      "file": "1a7b497879fa11f1a93a9523fdaa939b__UNIT 6 答案.docx",
+      "documentName": "1a7b497879fa11f1a93a9523fdaa939b__UNIT 6 答案.docx",
+      "originDocumentId": "1a7b497879fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 6 答案.doc",
+      "unit": "unit_6",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:6fe44cd22e818b7b",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 17506,
+      "sha256": "e19fdfb022c337dbdecb18f2baec0179821d2f1035726ebce3299d6b29cba36b"
+    },
+    {
+      "file": "1a86f05c79fa11f1a93a9523fdaa939b__UNIT 6.docx",
+      "documentName": "1a86f05c79fa11f1a93a9523fdaa939b__UNIT 6.docx",
+      "originDocumentId": "1a86f05c79fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 6.doc",
+      "unit": "unit_6",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:6fe44cd22e818b7b",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 87822,
+      "sha256": "80bf997093fbdabc2017d9924d85c37ad8a5239804b1839f487a5fc4daddbe17"
+    },
+    {
+      "file": "1a92f26279fa11f1a93a9523fdaa939b__UNIT 7 答案.docx",
+      "documentName": "1a92f26279fa11f1a93a9523fdaa939b__UNIT 7 答案.docx",
+      "originDocumentId": "1a92f26279fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 7 答案.doc",
+      "unit": "unit_7",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:1f5ea2432f700a97",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 17470,
+      "sha256": "b14b5abaa70d411f04e33cebb87a3cd0d3c7cecbd1fac4199ad0713357c7f230"
+    },
+    {
+      "file": "1a9d0fe079fa11f1a93a9523fdaa939b__UNIT 7.docx",
+      "documentName": "1a9d0fe079fa11f1a93a9523fdaa939b__UNIT 7.docx",
+      "originDocumentId": "1a9d0fe079fa11f1a93a9523fdaa939b",
+      "originDocumentName": "UNIT 7.doc",
+      "unit": "unit_7",
+      "contentRole": "exercise",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:1f5ea2432f700a97",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 529054,
+      "sha256": "c30153fffa8189d7d415a0d72caef807bc785ce0d254aea5a94c1c94ab6928d1"
+    },
+    {
+      "file": "1acdffec79fa11f1a93a9523fdaa939b__第一部分　国际音标知识汇总 答案.docx",
+      "documentName": "1acdffec79fa11f1a93a9523fdaa939b__第一部分　国际音标知识汇总 答案.docx",
+      "originDocumentId": "1acdffec79fa11f1a93a9523fdaa939b",
+      "originDocumentName": "第一部分　国际音标知识汇总 答案.doc",
+      "unit": "general",
+      "contentRole": "answer",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:d278d3acd3581f3f",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 189664,
+      "sha256": "c4cd6ab912e8d51e4676e83c1b4663c2e947dbe36957a4114f0f47c893a6035d"
+    },
+    {
+      "file": "1ad9380879fa11f1a93a9523fdaa939b__第一部分　国际音标知识汇总.docx",
+      "documentName": "1ad9380879fa11f1a93a9523fdaa939b__第一部分　国际音标知识汇总.docx",
+      "originDocumentId": "1ad9380879fa11f1a93a9523fdaa939b",
+      "originDocumentName": "第一部分　国际音标知识汇总.doc",
+      "unit": "general",
+      "contentRole": "audio",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:d278d3acd3581f3f",
+      "treatment": "converted_docx",
+      "pageRanges": null,
+      "size": 122166,
+      "sha256": "9da05439a85a57759d52acc407fcf0dc94ceaed40f008785c555b7ca4847ae96"
+    },
+    {
+      "file": "43d983dc7b8c11f1b1eacb449d41f0c3__02 Unit 1 You and Me(词汇)(解析版).docx",
+      "documentName": "43d983dc7b8c11f1b1eacb449d41f0c3__02 Unit 1 You and Me(词汇)(解析版).docx",
+      "originDocumentId": "43d983dc7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "02 Unit 1 You and Me(词汇)(解析版).docx",
+      "unit": "unit_1",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:475f3cf9b92ba813",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 428862,
+      "sha256": "92b049d94d87d102ac44ac92d170ad38c5897055e26a08c70677b455d847b9a8"
+    },
+    {
+      "file": "43ddec4c7b8c11f1b1eacb449d41f0c3__03 Unit 1 You and Me(语法)(解析版).docx",
+      "documentName": "43ddec4c7b8c11f1b1eacb449d41f0c3__03 Unit 1 You and Me(语法)(解析版).docx",
+      "originDocumentId": "43ddec4c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "03 Unit 1 You and Me(语法)(解析版).docx",
+      "unit": "unit_1",
+      "contentRole": "grammar",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:f7dd8a635e30d151",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 102935,
+      "sha256": "d02c79e9e154df9c965109391504b74f0eb4d6cba8e30acef33b4247d090091b"
+    },
+    {
+      "file": "443918927b8c11f1b1eacb449d41f0c3__04 Unit 2 We're Family(词汇)(解析版).docx",
+      "documentName": "443918927b8c11f1b1eacb449d41f0c3__04 Unit 2 We're Family(词汇)(解析版).docx",
+      "originDocumentId": "443918927b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "04 Unit 2 We're Family(词汇)(解析版).docx",
+      "unit": "unit_2",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:6e0211c735fbae71",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 247209,
+      "sha256": "09d6ce86f29e5ee3290dc91f3cc79935248349d460e0d8ea7725102bdf78943a"
+    },
+    {
+      "file": "443c37ac7b8c11f1b1eacb449d41f0c3__05 Unit 2 We're Family(语法)(解析版).docx",
+      "documentName": "443c37ac7b8c11f1b1eacb449d41f0c3__05 Unit 2 We're Family(语法)(解析版).docx",
+      "originDocumentId": "443c37ac7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "05 Unit 2 We're Family(语法)(解析版).docx",
+      "unit": "unit_2",
+      "contentRole": "grammar",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:c2a1e22e70d9e66d",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 239016,
+      "sha256": "ea5f6dc1608c910b90d345a6e47f4e13f3378e8fc6a40673096588d872efb5a7"
+    },
+    {
+      "file": "443f38267b8c11f1b1eacb449d41f0c3__05-七年级上册英语语法汇总.pdf",
+      "documentName": "443f38267b8c11f1b1eacb449d41f0c3__05-七年级上册英语语法汇总.pdf",
+      "originDocumentId": "443f38267b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "05-七年级上册英语语法汇总.pdf",
+      "unit": "general",
+      "contentRole": "grammar",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:362ee3c9d5c3fe76",
+      "treatment": "general_copy",
+      "pageRanges": null,
+      "size": 296067,
+      "sha256": "f0f7709f80596fbd3c459c0243a6caa34c1a275276d0f67668fa5cc2b59906ee"
+    },
+    {
+      "file": "444550f87b8c11f1b1eacb449d41f0c3__unit_1__writing.pdf",
+      "documentName": "444550f87b8c11f1b1eacb449d41f0c3__unit_1__writing.pdf",
+      "originDocumentId": "444550f87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "06 Units 1- 2 单元主题写作(解析版).docx",
+      "unit": "unit_1",
+      "contentRole": "writing",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:da93a6e429088713",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "size": 418437,
+      "sha256": "f40b04c212f8a4f815c12871cfdbcc2f3256f009c46e495c1ffe895ca9b38087"
+    },
+    {
+      "file": "444550f87b8c11f1b1eacb449d41f0c3__unit_2__writing.pdf",
+      "documentName": "444550f87b8c11f1b1eacb449d41f0c3__unit_2__writing.pdf",
+      "originDocumentId": "444550f87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "06 Units 1- 2 单元主题写作(解析版).docx",
+      "unit": "unit_2",
+      "contentRole": "writing",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:da93a6e429088713",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          5,
+          20
+        ]
+      ],
+      "size": 873371,
+      "sha256": "260a48edea47657739e5566fff47c3595a465a4b564d98d2e09837037f3d5b4b"
+    },
+    {
+      "file": "44488a5c7b8c11f1b1eacb449d41f0c3__07 Unit 3 My school(词汇)(解析版).docx",
+      "documentName": "44488a5c7b8c11f1b1eacb449d41f0c3__07 Unit 3 My school(词汇)(解析版).docx",
+      "originDocumentId": "44488a5c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "07 Unit 3 My school(词汇)(解析版).docx",
+      "unit": "unit_3",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:f09268728913ef5d",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 344586,
+      "sha256": "f3f3d19c40cfb0049f2555c50a5f005b1938e68db9417585080d1636cc49bb8d"
+    },
+    {
+      "file": "445355d67b8c11f1b1eacb449d41f0c3__08 Unit 3 My school(语法)(解析版).docx",
+      "documentName": "445355d67b8c11f1b1eacb449d41f0c3__08 Unit 3 My school(语法)(解析版).docx",
+      "originDocumentId": "445355d67b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "08 Unit 3 My school(语法)(解析版).docx",
+      "unit": "unit_3",
+      "contentRole": "grammar",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:2837aa9035f6dabb",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 238328,
+      "sha256": "2054203d87a07a226119e581b11e55b2a7faa905e58f6991ed634b2a449b8b75"
+    },
+    {
+      "file": "44566a8c7b8c11f1b1eacb449d41f0c3__09 Unit 3 单元主题写作(解析版).docx",
+      "documentName": "44566a8c7b8c11f1b1eacb449d41f0c3__09 Unit 3 单元主题写作(解析版).docx",
+      "originDocumentId": "44566a8c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "09 Unit 3 单元主题写作(解析版).docx",
+      "unit": "unit_3",
+      "contentRole": "writing",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:aeb954a616a867fb",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 453731,
+      "sha256": "00ae8164c7882c65f42783978e161b5032df50bf28e63922a77113b9c33f3185"
+    },
+    {
+      "file": "446075227b8c11f1b1eacb449d41f0c3__14 Unit 4 My Favourite Subject(词汇)(解析版).docx",
+      "documentName": "446075227b8c11f1b1eacb449d41f0c3__14 Unit 4 My Favourite Subject(词汇)(解析版).docx",
+      "originDocumentId": "446075227b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "14 Unit 4 My Favourite Subject(词汇)(解析版) .docx",
+      "unit": "unit_4",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:dc3f6ba8b7b7913c",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 385452,
+      "sha256": "e361f6f889e0c2179d5e12cb5712d9d2a5c35f9ecbd7467f2624e84954c855ac"
+    },
+    {
+      "file": "4463862c7b8c11f1b1eacb449d41f0c3__15 Unit 4 My Favourite Subject(语法)(解析版).docx",
+      "documentName": "4463862c7b8c11f1b1eacb449d41f0c3__15 Unit 4 My Favourite Subject(语法)(解析版).docx",
+      "originDocumentId": "4463862c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "15 Unit 4 My Favourite Subject(语法)(解析版).docx",
+      "unit": "unit_4",
+      "contentRole": "grammar",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:19dca8904a439110",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 102012,
+      "sha256": "369fc5f19dd418c54b1f89f362dcfe99393d436113782f72a6bbcd34c012c672"
+    },
+    {
+      "file": "446648947b8c11f1b1eacb449d41f0c3__16 Unit 4 单元主题写作(解析版).docx",
+      "documentName": "446648947b8c11f1b1eacb449d41f0c3__16 Unit 4 单元主题写作(解析版).docx",
+      "originDocumentId": "446648947b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "16 Unit 4 单元主题写作(解析版) .docx",
+      "unit": "unit_4",
+      "contentRole": "writing",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:6154e246aceecec9",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 340004,
+      "sha256": "19967fbbeee95eea35a6860ccde02211d3adbde9bffcf1c8a497ebdfefe8f32f"
+    },
+    {
+      "file": "446a8e367b8c11f1b1eacb449d41f0c3__18.Unit 5 Fun Clubs(词汇)(解析版).docx",
+      "documentName": "446a8e367b8c11f1b1eacb449d41f0c3__18.Unit 5 Fun Clubs(词汇)(解析版).docx",
+      "originDocumentId": "446a8e367b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "18.Unit 5 Fun Clubs(词汇)(解析版).docx",
+      "unit": "unit_5",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0e763815e242ea66",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 169879,
+      "sha256": "3a5c1686cd3162b4eb377cee4a5916fd41ea87735a497ac5a05105d8f2e93b1d"
+    },
+    {
+      "file": "446dfc2e7b8c11f1b1eacb449d41f0c3__19.Unit 5 Fun Clubs(语法)(解析版).docx",
+      "documentName": "446dfc2e7b8c11f1b1eacb449d41f0c3__19.Unit 5 Fun Clubs(语法)(解析版).docx",
+      "originDocumentId": "446dfc2e7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "19.Unit 5 Fun Clubs(语法)(解析版).docx",
+      "unit": "unit_5",
+      "contentRole": "grammar",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:d54da946ad157025",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 119774,
+      "sha256": "5d8cfdb41bcfa066ab976b3b92b1453f999a8a5fae4ce42fe5e1ed2c9b2bd232"
+    },
+    {
+      "file": "4470d3ea7b8c11f1b1eacb449d41f0c3__20.Unit 5单元主题写作(解析版).docx",
+      "documentName": "4470d3ea7b8c11f1b1eacb449d41f0c3__20.Unit 5单元主题写作(解析版).docx",
+      "originDocumentId": "4470d3ea7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "20.Unit 5单元主题写作(解析版) .docx",
+      "unit": "unit_5",
+      "contentRole": "writing",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:c2a568bac3885fc5",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 239556,
+      "sha256": "2e1a0b44f944752a6650cd8885cbfce2311230afa9f7cad384b7c8aa6846c7c5"
+    },
+    {
+      "file": "4474a7e07b8c11f1b1eacb449d41f0c3__22.Unit 6 A Day in the Life(词汇)(解析版).docx",
+      "documentName": "4474a7e07b8c11f1b1eacb449d41f0c3__22.Unit 6 A Day in the Life(词汇)(解析版).docx",
+      "originDocumentId": "4474a7e07b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "22.Unit 6 A Day in the Life(词汇)(解析版).docx",
+      "unit": "unit_6",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:149058e92f6c12c9",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 269644,
+      "sha256": "c3d9ab9df77cdb326bcd62aaed35dcbebe80259dbbacfd50ef108976912a959b"
+    },
+    {
+      "file": "44780e767b8c11f1b1eacb449d41f0c3__23.Unit 6 A Day in the Life(语法)(解析版).docx",
+      "documentName": "44780e767b8c11f1b1eacb449d41f0c3__23.Unit 6 A Day in the Life(语法)(解析版).docx",
+      "originDocumentId": "44780e767b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "23.Unit 6 A Day in the Life(语法)(解析版).docx",
+      "unit": "unit_6",
+      "contentRole": "grammar",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:1e7cc0447b17710b",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 106262,
+      "sha256": "32f847205112128b5de962df406090fc65f3be88af4f719fc57ae70e9d1ec033"
+    },
+    {
+      "file": "447b33307b8c11f1b1eacb449d41f0c3__24.Unit 6 单元主题写作(解析版).docx",
+      "documentName": "447b33307b8c11f1b1eacb449d41f0c3__24.Unit 6 单元主题写作(解析版).docx",
+      "originDocumentId": "447b33307b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24.Unit 6 单元主题写作(解析版).docx",
+      "unit": "unit_6",
+      "contentRole": "writing",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:8ae5cd3a0de3f1ef",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 845903,
+      "sha256": "a09784dc0075f5b9e160ae66b46d84e259da5a8b7470e3b988ab6c3ff79c8b50"
+    },
+    {
+      "file": "447ecab87b8c11f1b1eacb449d41f0c3__unit_1__knowledge_summary.pdf",
+      "documentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_1__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识点梳理 .pdf",
+      "unit": "unit_1",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:e7797c8283a72174",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          1,
+          2
+        ]
+      ],
+      "size": 1480914,
+      "sha256": "78063301c0526e7ead9efc95ae92867544c3232bd687a05154bcaccee4b2e006"
+    },
+    {
+      "file": "447ecab87b8c11f1b1eacb449d41f0c3__unit_2__knowledge_summary.pdf",
+      "documentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_2__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识点梳理 .pdf",
+      "unit": "unit_2",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:e7797c8283a72174",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          3,
+          5
+        ]
+      ],
+      "size": 1897679,
+      "sha256": "129f481c3f02ab865506f00ef1aa25eadd66b0852c5f410acd15e3814e5057ed"
+    },
+    {
+      "file": "447ecab87b8c11f1b1eacb449d41f0c3__unit_3__knowledge_summary.pdf",
+      "documentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_3__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识点梳理 .pdf",
+      "unit": "unit_3",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:e7797c8283a72174",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          6,
+          8
+        ]
+      ],
+      "size": 2130659,
+      "sha256": "110ee781e129579e5dba9ab4a5b7cc84f8e8dc70ce85ba4c6c76144c200c99d0"
+    },
+    {
+      "file": "447ecab87b8c11f1b1eacb449d41f0c3__unit_4__knowledge_summary.pdf",
+      "documentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_4__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识点梳理 .pdf",
+      "unit": "unit_4",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:e7797c8283a72174",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          9,
+          11
+        ]
+      ],
+      "size": 2189866,
+      "sha256": "763435a3e6bd39c2e073f9e8db1e9d98e1f686a57e0391027ff3606119b27e02"
+    },
+    {
+      "file": "447ecab87b8c11f1b1eacb449d41f0c3__unit_5__knowledge_summary.pdf",
+      "documentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_5__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识点梳理 .pdf",
+      "unit": "unit_5",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:e7797c8283a72174",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          12,
+          13
+        ]
+      ],
+      "size": 1273132,
+      "sha256": "9a44b5cdb09fe44690430a4e221335b8d466731b96422b5fee5746a9f3cd585e"
+    },
+    {
+      "file": "447ecab87b8c11f1b1eacb449d41f0c3__unit_6__knowledge_summary.pdf",
+      "documentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_6__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识点梳理 .pdf",
+      "unit": "unit_6",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:e7797c8283a72174",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          14,
+          15
+        ]
+      ],
+      "size": 1450909,
+      "sha256": "6baa3ebcc761c82071eac7177ff5355a26fbabbcdda2cb814f179e6668877bf3"
+    },
+    {
+      "file": "447ecab87b8c11f1b1eacb449d41f0c3__unit_7__knowledge_summary.pdf",
+      "documentName": "447ecab87b8c11f1b1eacb449d41f0c3__unit_7__knowledge_summary.pdf",
+      "originDocumentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识点梳理 .pdf",
+      "unit": "unit_7",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:e7797c8283a72174",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          16,
+          19
+        ]
+      ],
+      "size": 3197681,
+      "sha256": "45bc08c863dedc0d656eb7b12c780d1d658d6234ec8475d3f3f6157dccc0c08e"
+    },
+    {
+      "file": "448f711a7b8c11f1b1eacb449d41f0c3__unit_1__exercise.pdf",
+      "documentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_1__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识归纳+习题.pdf",
+      "unit": "unit_1",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:70241e99beb30c3a",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          3,
+          18
+        ],
+        [
+          115,
+          120
+        ]
+      ],
+      "size": 2419854,
+      "sha256": "46f28b0b210be3099a1b2036a9aaa4a1f2a9b21cc3335b42e4f3e1b26bdfb8b7"
+    },
+    {
+      "file": "448f711a7b8c11f1b1eacb449d41f0c3__unit_2__exercise.pdf",
+      "documentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_2__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识归纳+习题.pdf",
+      "unit": "unit_2",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:70241e99beb30c3a",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          19,
+          38
+        ],
+        [
+          121,
+          127
+        ]
+      ],
+      "size": 3244452,
+      "sha256": "bf4726f04b3d753c34d244f1da09d5a5431a14bc3dafdfc2608ddf1efa9e9285"
+    },
+    {
+      "file": "448f711a7b8c11f1b1eacb449d41f0c3__unit_3__exercise.pdf",
+      "documentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_3__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识归纳+习题.pdf",
+      "unit": "unit_3",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:70241e99beb30c3a",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          39,
+          54
+        ],
+        [
+          128,
+          133
+        ]
+      ],
+      "size": 2383543,
+      "sha256": "7a58e39b530a2c3cc362d1382cc8fed59ca0b1d7e700920d44410c5c442880cb"
+    },
+    {
+      "file": "448f711a7b8c11f1b1eacb449d41f0c3__unit_4__exercise.pdf",
+      "documentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_4__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识归纳+习题.pdf",
+      "unit": "unit_4",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:70241e99beb30c3a",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          55,
+          70
+        ],
+        [
+          134,
+          139
+        ]
+      ],
+      "size": 2070100,
+      "sha256": "1383882168398d2c6bf33871e2104cb380464fbeb6179758793110370f8e0a9c"
+    },
+    {
+      "file": "448f711a7b8c11f1b1eacb449d41f0c3__unit_5__exercise.pdf",
+      "documentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_5__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识归纳+习题.pdf",
+      "unit": "unit_5",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:70241e99beb30c3a",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          71,
+          83
+        ],
+        [
+          140,
+          144
+        ]
+      ],
+      "size": 2058608,
+      "sha256": "a03cce1681f6c190ae1388393250477ff4b6a62f00862308bded6a87c3594de2"
+    },
+    {
+      "file": "448f711a7b8c11f1b1eacb449d41f0c3__unit_6__exercise.pdf",
+      "documentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_6__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识归纳+习题.pdf",
+      "unit": "unit_6",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:70241e99beb30c3a",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          84,
+          98
+        ],
+        [
+          145,
+          149
+        ]
+      ],
+      "size": 2056760,
+      "sha256": "b094d0c3f836d2b061476169f41a9688e6f5d7204988a48634d31cb63e769822"
+    },
+    {
+      "file": "448f711a7b8c11f1b1eacb449d41f0c3__unit_7__exercise.pdf",
+      "documentName": "448f711a7b8c11f1b1eacb449d41f0c3__unit_7__exercise.pdf",
+      "originDocumentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "24秋七上知识归纳+习题.pdf",
+      "unit": "unit_7",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2024,
+      "pairId": "english_grade7_rj_v1:pair:70241e99beb30c3a",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          99,
+          114
+        ],
+        [
+          150,
+          155
+        ]
+      ],
+      "size": 1868613,
+      "sha256": "9dc1eea079d55798c889b8e5b71097653956a6ff915ef11d1d6fe020c3b91f06"
+    },
+    {
+      "file": "44ae5f447b8c11f1b1eacb449d41f0c3__26.Unit 7 Happy Birthday!(词汇)(解析版).docx",
+      "documentName": "44ae5f447b8c11f1b1eacb449d41f0c3__26.Unit 7 Happy Birthday!(词汇)(解析版).docx",
+      "originDocumentId": "44ae5f447b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "26.Unit 7 Happy Birthday!(词汇)(解析版).docx",
+      "unit": "unit_7",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:f33081e9226589d1",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 271402,
+      "sha256": "f1c38edef694a75283eda7c62a4414de6e2d02041218f2f6db35044a3b92cd10"
+    },
+    {
+      "file": "44b15bf47b8c11f1b1eacb449d41f0c3__27.Unit 7 Happy Birthday!(语法)(解析版).docx",
+      "documentName": "44b15bf47b8c11f1b1eacb449d41f0c3__27.Unit 7 Happy Birthday!(语法)(解析版).docx",
+      "originDocumentId": "44b15bf47b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "27.Unit 7 Happy Birthday!(语法)(解析版).docx",
+      "unit": "unit_7",
+      "contentRole": "grammar",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:29a7fb1ec1e48b27",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 106954,
+      "sha256": "75ca8df07151b22c8883f859320a9d084d138dcf725a042c0b433c6afa51883d"
+    },
+    {
+      "file": "44b41ace7b8c11f1b1eacb449d41f0c3__28.Unit 7 单元主题写作(解析版).docx",
+      "documentName": "44b41ace7b8c11f1b1eacb449d41f0c3__28.Unit 7 单元主题写作(解析版).docx",
+      "originDocumentId": "44b41ace7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "28.Unit 7 单元主题写作(解析版).docx",
+      "unit": "unit_7",
+      "contentRole": "writing",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:7523aead54f6ac95",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 330338,
+      "sha256": "850c5d8c0564eebba01b548d9276b18f851ee8b77716002761413e4fcb8f56aa"
+    },
+    {
+      "file": "5846140c7b8c11f1b1eacb449d41f0c3__unit_1__exercise.pdf",
+      "documentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_1__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "unit": "unit_1",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2026,
+      "pairId": "english_grade7_rj_v1:pair:4cfe8ed17d5a3819",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          12,
+          17
+        ]
+      ],
+      "size": 12491681,
+      "sha256": "a3cc81a1cf43cb2a8fce52b3c63fc483e678e5fc00c6c2a4014ffa5f1116b3f1"
+    },
+    {
+      "file": "5846140c7b8c11f1b1eacb449d41f0c3__unit_2__exercise.pdf",
+      "documentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_2__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "unit": "unit_2",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2026,
+      "pairId": "english_grade7_rj_v1:pair:4cfe8ed17d5a3819",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          18,
+          23
+        ]
+      ],
+      "size": 12536456,
+      "sha256": "2b4590f1ac14ad77f88e239975239ca4ea9ada0d9383521244d8d4ed7f1c261a"
+    },
+    {
+      "file": "5846140c7b8c11f1b1eacb449d41f0c3__unit_3__exercise.pdf",
+      "documentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_3__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "unit": "unit_3",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2026,
+      "pairId": "english_grade7_rj_v1:pair:4cfe8ed17d5a3819",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          24,
+          29
+        ]
+      ],
+      "size": 12418082,
+      "sha256": "2caa1758baf92aacb2ec201a37d0f6e3a2afbae62b2ef8d249c9b66f42a732b9"
+    },
+    {
+      "file": "5846140c7b8c11f1b1eacb449d41f0c3__unit_4__exercise.pdf",
+      "documentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_4__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "unit": "unit_4",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2026,
+      "pairId": "english_grade7_rj_v1:pair:4cfe8ed17d5a3819",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          30,
+          35
+        ]
+      ],
+      "size": 12999560,
+      "sha256": "f6120c3961df7edd7c8b36fbf0d2a4314e8ad4b1a37634a1bd0dbe40136ef353"
+    },
+    {
+      "file": "5846140c7b8c11f1b1eacb449d41f0c3__unit_5__exercise.pdf",
+      "documentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_5__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "unit": "unit_5",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2026,
+      "pairId": "english_grade7_rj_v1:pair:4cfe8ed17d5a3819",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          36,
+          43
+        ]
+      ],
+      "size": 17421372,
+      "sha256": "7efdf99f7fbcbfb32712f21da89e825fa101307ac306e9e54298f7196537e925"
+    },
+    {
+      "file": "5846140c7b8c11f1b1eacb449d41f0c3__unit_6__exercise.pdf",
+      "documentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_6__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "unit": "unit_6",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2026,
+      "pairId": "english_grade7_rj_v1:pair:4cfe8ed17d5a3819",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          44,
+          50
+        ]
+      ],
+      "size": 15436086,
+      "sha256": "cad2e7daec7b608a3abb9e8da11472f845e7cc79714cdf013960cbeda482f4f4"
+    },
+    {
+      "file": "5846140c7b8c11f1b1eacb449d41f0c3__unit_7__exercise.pdf",
+      "documentName": "5846140c7b8c11f1b1eacb449d41f0c3__unit_7__exercise.pdf",
+      "originDocumentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "unit": "unit_7",
+      "contentRole": "exercise",
+      "resourceType": "pdf",
+      "year": 2026,
+      "pairId": "english_grade7_rj_v1:pair:4cfe8ed17d5a3819",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          51,
+          57
+        ]
+      ],
+      "size": 15549876,
+      "sha256": "5c4323f7bc8a5c0786cfd866f27cdf92911effdc516782656431aed79c9c85d2"
+    },
+    {
+      "file": "5877b70a7b8c11f1b1eacb449d41f0c3__starter_unit_1__vocabulary.pdf",
+      "documentName": "5877b70a7b8c11f1b1eacb449d41f0c3__starter_unit_1__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "unit": "starter_unit_1",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:84b54360d8e02328",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          12,
+          12
+        ]
+      ],
+      "size": 300602,
+      "sha256": "401c307f2e0f56efa6ee62ce37031cbd6727afdf3f4d9cd7d10fb86f942830d5"
+    },
+    {
+      "file": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_1__vocabulary.pdf",
+      "documentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_1__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "unit": "unit_1",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:84b54360d8e02328",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          10,
+          11
+        ]
+      ],
+      "size": 306574,
+      "sha256": "da3240af1e1f5ddcd5f93456a4d33d30e9f1f1bd9a07ea316f35e40b34610a3f"
+    },
+    {
+      "file": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_2__vocabulary.pdf",
+      "documentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_2__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "unit": "unit_2",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:84b54360d8e02328",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          9,
+          9
+        ]
+      ],
+      "size": 301535,
+      "sha256": "7fc03fa52440d1561f835cebad71392d82cda5e23c2abe6b0279119306a1537e"
+    },
+    {
+      "file": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_3__vocabulary.pdf",
+      "documentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_3__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "unit": "unit_3",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:84b54360d8e02328",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          7,
+          8
+        ]
+      ],
+      "size": 306016,
+      "sha256": "a0d31e8d22041279cd895799d3c38a7000e71c06d7bbb688921dc0461b0d9c3c"
+    },
+    {
+      "file": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_4__vocabulary.pdf",
+      "documentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_4__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "unit": "unit_4",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:84b54360d8e02328",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          6,
+          6
+        ]
+      ],
+      "size": 301394,
+      "sha256": "be73f5371fabbb635384ed111b2a739e83d86b2e3a59b9bc65f2929660a7c89c"
+    },
+    {
+      "file": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_5__vocabulary.pdf",
+      "documentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_5__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "unit": "unit_5",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:84b54360d8e02328",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          4,
+          5
+        ]
+      ],
+      "size": 306679,
+      "sha256": "7c688296a46adf87982608ddb82309bdd4ea165b13384c308d51af77cd1fb1e3"
+    },
+    {
+      "file": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_6__vocabulary.pdf",
+      "documentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_6__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "unit": "unit_6",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:84b54360d8e02328",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          2,
+          3
+        ]
+      ],
+      "size": 338916,
+      "sha256": "a7a7e6fac356c2dabfaf98783fd459d35138534bb3f331b95852c47045d087c4"
+    },
+    {
+      "file": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_7__vocabulary.pdf",
+      "documentName": "5877b70a7b8c11f1b1eacb449d41f0c3__unit_7__vocabulary.pdf",
+      "originDocumentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "unit": "unit_7",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:84b54360d8e02328",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          1,
+          1
+        ]
+      ],
+      "size": 301567,
+      "sha256": "5f07b909eaeab52232cb548f84310535aee215f4c1889a887f628f2c8b3dbf4a"
+    },
+    {
+      "file": "587b73ae7b8c11f1b1eacb449d41f0c3__Unit 1 You and Me 基础词汇默写.docx",
+      "documentName": "587b73ae7b8c11f1b1eacb449d41f0c3__Unit 1 You and Me 基础词汇默写.docx",
+      "originDocumentId": "587b73ae7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 1 You and Me 基础词汇默写.docx",
+      "unit": "unit_1",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:ee06ba3e3979b70f",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 33625,
+      "sha256": "4b17a00fa721f45f933df8403418ea487be661e4c6045f62a3f257c2c958aac0"
+    },
+    {
+      "file": "587f569a7b8c11f1b1eacb449d41f0c3__Unit 2 We’re Family 基础词汇默写.docx",
+      "documentName": "587f569a7b8c11f1b1eacb449d41f0c3__Unit 2 We’re Family 基础词汇默写.docx",
+      "originDocumentId": "587f569a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 2 We’re Family 基础词汇默写.docx",
+      "unit": "unit_2",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:c9d677afb0ac1a43",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 30848,
+      "sha256": "cd1f306cd5f202abb471c496d43e34d29ac7954754e80a76819336dd7e80ea18"
+    },
+    {
+      "file": "5882a4ee7b8c11f1b1eacb449d41f0c3__Unit 2 We’re Family!.pdf",
+      "documentName": "5882a4ee7b8c11f1b1eacb449d41f0c3__Unit 2 We’re Family!.pdf",
+      "originDocumentId": "5882a4ee7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 2 We’re Family!.pdf",
+      "unit": "unit_2",
+      "contentRole": "reference",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:bf272f1422e7bd4f",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 479453,
+      "sha256": "d9979e18c044f1b92c57421401768b3a03c2eb1eb528c6b9367afcd8c048e591"
+    },
+    {
+      "file": "588a20987b8c11f1b1eacb449d41f0c3__Unit 3 My School.pdf",
+      "documentName": "588a20987b8c11f1b1eacb449d41f0c3__Unit 3 My School.pdf",
+      "originDocumentId": "588a20987b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 3 My School.pdf",
+      "unit": "unit_3",
+      "contentRole": "reference",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:ee0caadbf174da08",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 323389,
+      "sha256": "a8ae4b30176c0013e893ee9f1aaa9bec6b8b5d8535cb710d1860c5cbdbb2e957"
+    },
+    {
+      "file": "589131f87b8c11f1b1eacb449d41f0c3__Unit 4 My Favourite Subject 基础词汇默写.docx",
+      "documentName": "589131f87b8c11f1b1eacb449d41f0c3__Unit 4 My Favourite Subject 基础词汇默写.docx",
+      "originDocumentId": "589131f87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 4 My Favourite Subject 基础词汇默写.docx",
+      "unit": "unit_4",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:a31bea7410997c58",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 560713,
+      "sha256": "0fd3b296a031c54ef300aa8bb4b9f896a772ea929f39c4d487c479550f506d54"
+    },
+    {
+      "file": "5894b0447b8c11f1b1eacb449d41f0c3__Unit 4 My Favourite Subject.pdf",
+      "documentName": "5894b0447b8c11f1b1eacb449d41f0c3__Unit 4 My Favourite Subject.pdf",
+      "originDocumentId": "5894b0447b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 4 My Favourite Subject.pdf",
+      "unit": "unit_4",
+      "contentRole": "reference",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:e5ec5c6a5178c769",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 335429,
+      "sha256": "bec1d3d57cfa5de86264304a133090bcb23f698daa10d45bd61bd01193dafcb3"
+    },
+    {
+      "file": "589bf66a7b8c11f1b1eacb449d41f0c3__Unit 5 Fun Clubs 基础词汇默写.docx",
+      "documentName": "589bf66a7b8c11f1b1eacb449d41f0c3__Unit 5 Fun Clubs 基础词汇默写.docx",
+      "originDocumentId": "589bf66a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 5 Fun Clubs 基础词汇默写.docx",
+      "unit": "unit_5",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:567cc30bf1a130e1",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 331815,
+      "sha256": "fd7f0ac72c8f97383768de617b0a7e64d9cfcfb1bb02902b2c1239d589da6aca"
+    },
+    {
+      "file": "589f54cc7b8c11f1b1eacb449d41f0c3__Unit 5 Fun Clubs.pdf",
+      "documentName": "589f54cc7b8c11f1b1eacb449d41f0c3__Unit 5 Fun Clubs.pdf",
+      "originDocumentId": "589f54cc7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 5 Fun Clubs.pdf",
+      "unit": "unit_5",
+      "contentRole": "reference",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:978c69912e1e9884",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 312291,
+      "sha256": "44824ec61c595924335a299edc4bec007fe05f4d70b2b78a7f561d1a938ef7d1"
+    },
+    {
+      "file": "58a63b707b8c11f1b1eacb449d41f0c3__Unit 6 A Day in the Life 基础词汇默写.docx",
+      "documentName": "58a63b707b8c11f1b1eacb449d41f0c3__Unit 6 A Day in the Life 基础词汇默写.docx",
+      "originDocumentId": "58a63b707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 6 A Day in the Life 基础词汇默写.docx",
+      "unit": "unit_6",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:83aeda73a90a03ae",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 95082,
+      "sha256": "5a0151556804ff2918ff9671cb07334b3c89b69613bed31640bb128e2eb36b55"
+    },
+    {
+      "file": "58a941947b8c11f1b1eacb449d41f0c3__Unit 6 A Day in the Life.pdf",
+      "documentName": "58a941947b8c11f1b1eacb449d41f0c3__Unit 6 A Day in the Life.pdf",
+      "originDocumentId": "58a941947b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 6 A Day in the Life.pdf",
+      "unit": "unit_6",
+      "contentRole": "reference",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:16507acd76bb28f9",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 358970,
+      "sha256": "dab287af4223baaa5742f49ecb786ed57d1c70bc3a22fcb7ac61217d6ee0544b"
+    },
+    {
+      "file": "58b1721a7b8c11f1b1eacb449d41f0c3__Unit 7 Happy Birthday 基础词汇默写.docx",
+      "documentName": "58b1721a7b8c11f1b1eacb449d41f0c3__Unit 7 Happy Birthday 基础词汇默写.docx",
+      "originDocumentId": "58b1721a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 7 Happy Birthday 基础词汇默写.docx",
+      "unit": "unit_7",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:ecc09405a2e75e89",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 542166,
+      "sha256": "41138d19cd182497b2d0a443151dcfd322921ce3c4cdfd665e1f1b9c028b4bb5"
+    },
+    {
+      "file": "58b56ce47b8c11f1b1eacb449d41f0c3__Unit 7 Happy Birthday!.pdf",
+      "documentName": "58b56ce47b8c11f1b1eacb449d41f0c3__Unit 7 Happy Birthday!.pdf",
+      "originDocumentId": "58b56ce47b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit 7 Happy Birthday!.pdf",
+      "unit": "unit_7",
+      "contentRole": "reference",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:17aceb2c6851274b",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 401465,
+      "sha256": "25b151cae5e4af3fdf656a83b2bafd940faa6831376b7060df3f346bbb252b61"
+    },
+    {
+      "file": "58bd6ea87b8c11f1b1eacb449d41f0c3__Unit+1+默写手册.docx",
+      "documentName": "58bd6ea87b8c11f1b1eacb449d41f0c3__Unit+1+默写手册.docx",
+      "originDocumentId": "58bd6ea87b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit+1+默写手册.docx",
+      "unit": "unit_1",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:8eafdda29c6fbd6f",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 46547,
+      "sha256": "4e0fcaaac5c93c7d847d310abeee8b4900b81af472c86067c7cc4b1ac0317af7"
+    },
+    {
+      "file": "58c1987a7b8c11f1b1eacb449d41f0c3__Unit+2+默写手册.docx",
+      "documentName": "58c1987a7b8c11f1b1eacb449d41f0c3__Unit+2+默写手册.docx",
+      "originDocumentId": "58c1987a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit+2+默写手册.docx",
+      "unit": "unit_2",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:8fe9ca914ddfe3ae",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 46746,
+      "sha256": "30e2dbdbd771d58c69942c457ca5830c51918fe59f335076258f944dfc2c1249"
+    },
+    {
+      "file": "58c4aa6a7b8c11f1b1eacb449d41f0c3__Unit+3+My+School 基础词汇默写.docx",
+      "documentName": "58c4aa6a7b8c11f1b1eacb449d41f0c3__Unit+3+My+School 基础词汇默写.docx",
+      "originDocumentId": "58c4aa6a7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit+3+My+School 基础词汇默写.docx",
+      "unit": "unit_3",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:fa4ddfaa8ac49993",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 28712,
+      "sha256": "0bb0e584c3a899c1143c00ce3e8b3e904a66ae3bf68c5b85eea45e852ee64c97"
+    },
+    {
+      "file": "58c8c42e7b8c11f1b1eacb449d41f0c3__Unit+3+默写手册.docx",
+      "documentName": "58c8c42e7b8c11f1b1eacb449d41f0c3__Unit+3+默写手册.docx",
+      "originDocumentId": "58c8c42e7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit+3+默写手册.docx",
+      "unit": "unit_3",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:888d7bec50eb8a12",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 47918,
+      "sha256": "0b56b2dfcd32d09a80b122881de3e0674a4015da2c9e967e1f87fadc8bca1ebd"
+    },
+    {
+      "file": "58cbcd687b8c11f1b1eacb449d41f0c3__Unit+4+默写手册.docx",
+      "documentName": "58cbcd687b8c11f1b1eacb449d41f0c3__Unit+4+默写手册.docx",
+      "originDocumentId": "58cbcd687b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit+4+默写手册.docx",
+      "unit": "unit_4",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:49d4b639d256f27e",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 47524,
+      "sha256": "17e3a1ace7ecfa4ffadbbd63912f548ba8d1f9e3e67f3f677739c2dbfd4ee179"
+    },
+    {
+      "file": "58ceaa747b8c11f1b1eacb449d41f0c3__Unit+5+默写手册.docx",
+      "documentName": "58ceaa747b8c11f1b1eacb449d41f0c3__Unit+5+默写手册.docx",
+      "originDocumentId": "58ceaa747b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit+5+默写手册.docx",
+      "unit": "unit_5",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:23d3d6be31b7a394",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 53673,
+      "sha256": "c8348704adb43458349a357ed9f3d694f9ee98412621ab66adeea40a7d5d1143"
+    },
+    {
+      "file": "58d198107b8c11f1b1eacb449d41f0c3__Unit+6+默写手册.docx",
+      "documentName": "58d198107b8c11f1b1eacb449d41f0c3__Unit+6+默写手册.docx",
+      "originDocumentId": "58d198107b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit+6+默写手册.docx",
+      "unit": "unit_6",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:51aed107b677ab47",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 47113,
+      "sha256": "de64eecd967306e18dab6b08e435d750bed0b06cb562d232aff03931fb538bd6"
+    },
+    {
+      "file": "58d48e627b8c11f1b1eacb449d41f0c3__Unit+7+默写手册.docx",
+      "documentName": "58d48e627b8c11f1b1eacb449d41f0c3__Unit+7+默写手册.docx",
+      "originDocumentId": "58d48e627b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "Unit+7+默写手册.docx",
+      "unit": "unit_7",
+      "contentRole": "vocabulary",
+      "resourceType": "docx",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:114a18f25acbecc5",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 47272,
+      "sha256": "0e586ddd7123af859bd59cddba2c16c2e55315d67a661417ffec505c3db89b3a"
+    },
+    {
+      "file": "58d76fec7b8c11f1b1eacb449d41f0c3__UNIT1 You and Me.pdf",
+      "documentName": "58d76fec7b8c11f1b1eacb449d41f0c3__UNIT1 You and Me.pdf",
+      "originDocumentId": "58d76fec7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "UNIT1 You and Me.pdf",
+      "unit": "unit_1",
+      "contentRole": "reference",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:4a316d056b14681e",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 217145,
+      "sha256": "b9b9694426e9169afbcf65f7a0f994f5b6ddf481e5810cf9b9fdfffefe9fe651"
+    },
+    {
+      "file": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_1__knowledge_summary.pdf",
+      "documentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_1__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "unit": "unit_1",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0b8b2046af92f07b",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          20,
+          30
+        ]
+      ],
+      "size": 751461,
+      "sha256": "dafcadde5422d90d82237809a2ac93e18bdc5bb656ff38acb636e779cc8c54ac"
+    },
+    {
+      "file": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_2__knowledge_summary.pdf",
+      "documentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_2__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "unit": "unit_2",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0b8b2046af92f07b",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          31,
+          40
+        ]
+      ],
+      "size": 695887,
+      "sha256": "a88e607848feb0bcf40f0e018e88624e6e3cd64417ea3d7608e1f59b4016cbfa"
+    },
+    {
+      "file": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_3__knowledge_summary.pdf",
+      "documentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_3__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "unit": "unit_3",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0b8b2046af92f07b",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          41,
+          50
+        ]
+      ],
+      "size": 703927,
+      "sha256": "cb200d1a5ccb7ca88dbccf4822494b67f25ed8b933635ca61375b4388f27658f"
+    },
+    {
+      "file": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_4__knowledge_summary.pdf",
+      "documentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_4__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "unit": "unit_4",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0b8b2046af92f07b",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          51,
+          62
+        ]
+      ],
+      "size": 726317,
+      "sha256": "222c019e1ea30b666c52e3b83598fdf4cd830375d769ec7c71ac4978c58b7611"
+    },
+    {
+      "file": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_5__knowledge_summary.pdf",
+      "documentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_5__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "unit": "unit_5",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0b8b2046af92f07b",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          63,
+          72
+        ]
+      ],
+      "size": 724328,
+      "sha256": "fdef4d4a02361536a24077c117c2ce5ef58a442cdb031d65d7d526a2c452fef8"
+    },
+    {
+      "file": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_6__knowledge_summary.pdf",
+      "documentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_6__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "unit": "unit_6",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0b8b2046af92f07b",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          73,
+          84
+        ]
+      ],
+      "size": 710733,
+      "sha256": "90e86718f844478bb7658ad974dab058edc0ee3c35c72d32919f464de213a01a"
+    },
+    {
+      "file": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_7__knowledge_summary.pdf",
+      "documentName": "58dd3cce7b8c11f1b1eacb449d41f0c3__unit_7__knowledge_summary.pdf",
+      "originDocumentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "unit": "unit_7",
+      "contentRole": "knowledge_summary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0b8b2046af92f07b",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          85,
+          98
+        ]
+      ],
+      "size": 718848,
+      "sha256": "c4986db9913ca0f67d88ee900519cdcfb7159f66318cb0bfa5418dbdd4c2c3b5"
+    },
+    {
+      "file": "cdffad7079f711f1a93a9523fdaa939b__新七 starter1.pdf",
+      "documentName": "cdffad7079f711f1a93a9523fdaa939b__新七 starter1.pdf",
+      "originDocumentId": "cdffad7079f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七 starter1.pdf",
+      "unit": "starter_unit_1",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:1d71ce1c5752e280",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 262875,
+      "sha256": "dd0cc5c870a7af694f2a8d8731875c3cb1304f321c0ee0af493ec64946ac45be"
+    },
+    {
+      "file": "ce6cf79a79f711f1a93a9523fdaa939b__新七 unit1.pdf",
+      "documentName": "ce6cf79a79f711f1a93a9523fdaa939b__新七 unit1.pdf",
+      "originDocumentId": "ce6cf79a79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七 unit1.pdf",
+      "unit": "unit_1",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:0935013052b667d7",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 7091130,
+      "sha256": "cf6cf33a125a2ea106865d4038f086ad952abc8b25a86078f05ead9e4b8b9856"
+    },
+    {
+      "file": "ce886a8e79f711f1a93a9523fdaa939b__新七 unit2.pdf",
+      "documentName": "ce886a8e79f711f1a93a9523fdaa939b__新七 unit2.pdf",
+      "originDocumentId": "ce886a8e79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七 unit2.pdf",
+      "unit": "unit_2",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:e4bdffc8bba088dd",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 420701,
+      "sha256": "946bd400c477f131af243d5fe1cd0d2ecafb4a2ef3b211a7a601cca8d1e28124"
+    },
+    {
+      "file": "ce98695c79f711f1a93a9523fdaa939b__新七 unit3.pdf",
+      "documentName": "ce98695c79f711f1a93a9523fdaa939b__新七 unit3.pdf",
+      "originDocumentId": "ce98695c79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七 unit3.pdf",
+      "unit": "unit_3",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:79c54ecebb0238d9",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 641524,
+      "sha256": "7f5440a48b08e729c2148d698fcc1dc8eb95142abc17ae2107aa1ad39e448bfb"
+    },
+    {
+      "file": "ceab9f7c79f711f1a93a9523fdaa939b__新七 unit4.pdf",
+      "documentName": "ceab9f7c79f711f1a93a9523fdaa939b__新七 unit4.pdf",
+      "originDocumentId": "ceab9f7c79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七 unit4.pdf",
+      "unit": "unit_4",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:7b736725383edd0f",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 589048,
+      "sha256": "7b29774dfcd06e1b721437298600708fd4400e65e3a8762df9b667661d2df1a2"
+    },
+    {
+      "file": "cebe6b7079f711f1a93a9523fdaa939b__新七 unit5.pdf",
+      "documentName": "cebe6b7079f711f1a93a9523fdaa939b__新七 unit5.pdf",
+      "originDocumentId": "cebe6b7079f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七 unit5.pdf",
+      "unit": "unit_5",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:f810de3a02701d27",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 470409,
+      "sha256": "c54e1c11862a1c4a35adcb35821abe8004c1485f36f12eee90d6546330b80b11"
+    },
+    {
+      "file": "ced920f079f711f1a93a9523fdaa939b__新七 unit6.pdf",
+      "documentName": "ced920f079f711f1a93a9523fdaa939b__新七 unit6.pdf",
+      "originDocumentId": "ced920f079f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七 unit6.pdf",
+      "unit": "unit_6",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:ef198798eaf36bd8",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 525970,
+      "sha256": "e38d57eac80aaf639f1c90b8ed24d1d2a1c12b3c82f3f58b001b169367128854"
+    },
+    {
+      "file": "ceed683079f711f1a93a9523fdaa939b__新七 unit7.pdf",
+      "documentName": "ceed683079f711f1a93a9523fdaa939b__新七 unit7.pdf",
+      "originDocumentId": "ceed683079f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七 unit7.pdf",
+      "unit": "unit_7",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:9123529c1db85acd",
+      "treatment": "healthy_copy",
+      "pageRanges": null,
+      "size": 642562,
+      "sha256": "92112bd024d76befd0ee3c1b133b12b4e8b104abef8ad502446afc9e7481cccf"
+    },
+    {
+      "file": "cf246d9e79f711f1a93a9523fdaa939b__starter_unit_1__vocabulary.pdf",
+      "documentName": "cf246d9e79f711f1a93a9523fdaa939b__starter_unit_1__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七上 单词详解  内容清爽版.pdf",
+      "unit": "starter_unit_1",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:59d29e64612980a2",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          1,
+          1
+        ]
+      ],
+      "size": 249864,
+      "sha256": "c4f9a8b011fc27f591af0418fdb000d8ef29ebfca156c6d2f6aa5bfb387592cb"
+    },
+    {
+      "file": "cf246d9e79f711f1a93a9523fdaa939b__unit_1__vocabulary.pdf",
+      "documentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_1__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七上 单词详解  内容清爽版.pdf",
+      "unit": "unit_1",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:59d29e64612980a2",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          3,
+          4
+        ]
+      ],
+      "size": 7089626,
+      "sha256": "59c044eae0ad818062f1bb07e0f434475aca13ef3bac7a464e3a296e08651407"
+    },
+    {
+      "file": "cf246d9e79f711f1a93a9523fdaa939b__unit_2__vocabulary.pdf",
+      "documentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_2__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七上 单词详解  内容清爽版.pdf",
+      "unit": "unit_2",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:59d29e64612980a2",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          5,
+          6
+        ]
+      ],
+      "size": 394383,
+      "sha256": "6002c3305aa901706db020b31753671a56e7b2e6374970995a4ed6fae2f316ca"
+    },
+    {
+      "file": "cf246d9e79f711f1a93a9523fdaa939b__unit_3__vocabulary.pdf",
+      "documentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_3__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七上 单词详解  内容清爽版.pdf",
+      "unit": "unit_3",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:59d29e64612980a2",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          7,
+          8
+        ]
+      ],
+      "size": 641327,
+      "sha256": "2f155a9e4ebabd3ec94f1eea13f5297505fb5815f61e00b8dae5634bbb2d0ee0"
+    },
+    {
+      "file": "cf246d9e79f711f1a93a9523fdaa939b__unit_4__vocabulary.pdf",
+      "documentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_4__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七上 单词详解  内容清爽版.pdf",
+      "unit": "unit_4",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:59d29e64612980a2",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          9,
+          10
+        ]
+      ],
+      "size": 569512,
+      "sha256": "00d2d87674ab6efd8d750c251010ee438d418e3f27e595bc1aa9b0ebc2132b77"
+    },
+    {
+      "file": "cf246d9e79f711f1a93a9523fdaa939b__unit_5__vocabulary.pdf",
+      "documentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_5__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七上 单词详解  内容清爽版.pdf",
+      "unit": "unit_5",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:59d29e64612980a2",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          11,
+          12
+        ]
+      ],
+      "size": 442188,
+      "sha256": "000df9286787d211bb36f80839420b9a6adc4357641d4ddd9c27fef88c4b45ae"
+    },
+    {
+      "file": "cf246d9e79f711f1a93a9523fdaa939b__unit_6__vocabulary.pdf",
+      "documentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_6__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七上 单词详解  内容清爽版.pdf",
+      "unit": "unit_6",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:59d29e64612980a2",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          13,
+          14
+        ]
+      ],
+      "size": 491924,
+      "sha256": "8b549f48d1c70506345cb36f9f6f0efb10c70c1750f35743d28106549a37d273"
+    },
+    {
+      "file": "cf246d9e79f711f1a93a9523fdaa939b__unit_7__vocabulary.pdf",
+      "documentName": "cf246d9e79f711f1a93a9523fdaa939b__unit_7__vocabulary.pdf",
+      "originDocumentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "originDocumentName": "新七上 单词详解  内容清爽版.pdf",
+      "unit": "unit_7",
+      "contentRole": "vocabulary",
+      "resourceType": "pdf",
+      "year": 0,
+      "pairId": "english_grade7_rj_v1:pair:59d29e64612980a2",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          15,
+          16
+        ]
+      ],
+      "size": 623719,
+      "sha256": "719f8ab71a399a734b26435398a4b466cf4b4a57ae764e83a35c7de8f4c6a778"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__starter_unit_1__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__starter_unit_1__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "starter_unit_1",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          13,
+          27
+        ]
+      ],
+      "size": 4493628,
+      "sha256": "19354bd3d57bfac1d388abd4edceb4a1b3efd4d5cb326ae8fc1c2f0fd06a3331"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__starter_unit_2__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__starter_unit_2__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "starter_unit_2",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          28,
+          42
+        ]
+      ],
+      "size": 4368290,
+      "sha256": "2b54ef77723ed07ae223613a67387f0612ef3259263987cb5cf432ad1f627b01"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__starter_unit_3__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__starter_unit_3__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "starter_unit_3",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          43,
+          54
+        ]
+      ],
+      "size": 3401363,
+      "sha256": "b3adaea9f8e75e421a35ffc298a74fdb41c39198369307357ccfe961f4bdad36"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_1__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_1__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "unit_1",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          55,
+          77
+        ]
+      ],
+      "size": 7128977,
+      "sha256": "dc7874ed3a0b8cd536840bc15788480b82bc541144872a07240662c9a3a90ffc"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_2__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_2__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "unit_2",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          78,
+          101
+        ]
+      ],
+      "size": 7394642,
+      "sha256": "c065b51b1752c1186ce915105d26172fdd4676262411269b47cfe513c2d8e705"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_3__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_3__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "unit_3",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          102,
+          128
+        ]
+      ],
+      "size": 8118006,
+      "sha256": "806083f62e616c5de7b4c3f7b10805b08cd2328a169f9b2bba462816be4085fd"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_4__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_4__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "unit_4",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          129,
+          157
+        ]
+      ],
+      "size": 8978312,
+      "sha256": "df9ee6e8a46ebcc7b04fa8f7d0ec58f4a09e16c27d0d5b10def772768990dd96"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_5__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_5__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "unit_5",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          158,
+          182
+        ]
+      ],
+      "size": 7680111,
+      "sha256": "7174f502a92caae58d2db05fbecb4bd8c316a7b41fff7b65ce8ee336128047b6"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_6__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_6__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "unit_6",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          183,
+          208
+        ]
+      ],
+      "size": 7891215,
+      "sha256": "4718562cefd399eeec9c02e5afc23c119693b598a3a5bd437478655caae94383"
+    },
+    {
+      "file": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_7__textbook.pdf",
+      "documentName": "d0ca17707b8c11f1b1eacb449d41f0c3__unit_7__textbook.pdf",
+      "originDocumentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "originDocumentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "unit": "unit_7",
+      "contentRole": "textbook",
+      "resourceType": "pdf",
+      "year": 2025,
+      "pairId": "english_grade7_rj_v1:pair:34f921c39a403d57",
+      "treatment": "controlled_split",
+      "pageRanges": [
+        [
+          209,
+          244
+        ]
+      ],
+      "size": 10934287,
+      "sha256": "990b0abecf4d346ee3d7a1d87d5ae622879902205e0f7aefb3266e999c760832"
+    }
+  ],
+  "excludedSources": [
+    {
+      "documentId": "eee275927a0411f1a93a9523fdaa939b",
+      "reason": "远端 0 字节占位文件。"
+    },
+    {
+      "documentId": "1abcd24e79fa11f1a93a9523fdaa939b",
+      "reason": "MP3 音频不进入文本影子库。"
+    },
+    {
+      "documentId": "1aa8172879fa11f1a93a9523fdaa939b",
+      "reason": "MP3 音频不进入文本影子库。"
+    },
+    {
+      "documentId": "43e1004e7b8c11f1b1eacb449d41f0c3",
+      "reason": "实际为旧教材 Unit 1-9，含不应存在的 Unit 8/9。"
+    },
+    {
+      "documentId": "43cff4027b8c11f1b1eacb449d41f0c3",
+      "reason": "Starter Unit 1-3 内容按资料类型交错排列，无法按连续页无歧义拆分。"
+    },
+    {
+      "documentId": "444ba52a7b8c11f1b1eacb449d41f0c3",
+      "reason": "多个单元标题与内容在同页混合，且与 12-七上英语重点短语句型归纳重复。"
+    },
+    {
+      "documentId": "4459ec167b8c11f1b1eacb449d41f0c3",
+      "reason": "多个单元标题与内容在同页混合，已有其他受控资料覆盖。"
+    },
+    {
+      "documentId": "d0fde9ec7b8c11f1b1eacb449d41f0c3",
+      "reason": "图片型作文资料的生产 OCR 只识别到目录级单元命中，边界不足以可靠拆分。"
+    },
+    {
+      "documentId": "a0e83e6a79f711f1a93a9523fdaa939b",
+      "reason": "电子课本 PDF 存在缺页/页序不连续，不能作为完整全册源强拆。"
+    },
+    {
+      "documentId": "ce5dac7279f711f1a93a9523fdaa939b",
+      "reason": "Starter Unit 2-3 共用单页，无法按页级无损拆分。"
+    },
+    {
+      "documentId": "cefdd4ae79f711f1a93a9523fdaa939b",
+      "reason": "图片型单词详解仅部分单元 OCR 边界可确认，无法形成完整受控序列。"
+    }
+  ]
+}

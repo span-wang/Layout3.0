@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-metadata-governance-v1",
+  "generatedAt": "2026-07-10T11:36:27.795Z",
+  "documentCount": 259,
+  "changedCount": 258,
+  "reviewCount": 19,
+  "requiredFieldCoverage": {
+    "metadata_schema": 1,
+    "domain": 1,
+    "subject": 1,
+    "unit": 1,
+    "content_role": 1,
+    "resource_type": 1,
+    "status": 1,
+    "canonical_id": 1,
+    "pair_id": 1
+  },
+  "subjectDistribution": {
+    "english": 90,
+    "financial_management": 40,
+    "intermediate_accounting": 87,
+    "economic_law": 42
+  },
+  "unitDistribution": {
+    "unknown": 187,
+    "starter_unit_1": 4,
+    "starter_unit_2": 4,
+    "starter_unit_3": 4,
+    "unit_1": 9,
+    "unit_2": 9,
+    "unit_3": 9,
+    "unit_4": 9,
+    "unit_5": 9,
+    "unit_6": 9,
+    "unit_7": 10
+  },
+  "contentRoleDistribution": {
+    "textbook": 13,
+    "vocabulary": 25,
+    "grammar": 8,
+    "knowledge_summary": 83,
+    "writing": 6,
+    "unknown": 1,
+    "exercise": 81,
+    "answer": 32,
+    "reference": 7,
+    "audio": 3
+  },
+  "statusDistribution": {
+    "ready": 254,
+    "quarantine": 5
+  },
+  "reviewQueue": [
+    {
+      "documentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "documentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "43e1004e7b8c11f1b1eacb449d41f0c3",
+      "documentName": "03-七年级上册英语知识点总结.pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "443f38267b8c11f1b1eacb449d41f0c3",
+      "documentName": "05-七年级上册英语语法汇总.pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "444ba52a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "07-人教版七上英语重点短语句型归纳.pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "eee275927a0411f1a93a9523fdaa939b",
+      "documentName": "1",
+      "reasons": [
+        "unit_unknown",
+        "content_role_unknown",
+        "status_quarantine"
+      ]
+    },
+    {
+      "documentId": "4459ec167b8c11f1b1eacb449d41f0c3",
+      "documentName": "12-七上英语重点短语句型归纳.pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "d0fde9ec7b8c11f1b1eacb449d41f0c3",
+      "documentName": "2025《教材帮•作文帮》英语七上(人教).pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "documentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "reasons": [
+        "unit_unknown",
+        "status_quarantine"
+      ]
+    },
+    {
+      "documentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "24秋七上知识归纳+习题.pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "documentName": "24秋七上知识点梳理 .pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "a0e83e6a79f711f1a93a9523fdaa939b",
+      "documentName": "人教版七年级（上）英语电子课本（2024年新版）.pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "documentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "1abcd24e79fa11f1a93a9523fdaa939b",
+      "documentName": "单元音.mp3",
+      "reasons": [
+        "unit_unknown",
+        "status_quarantine"
+      ]
+    },
+    {
+      "documentId": "1aa8172879fa11f1a93a9523fdaa939b",
+      "documentName": "常见的字母组合发音规律.mp3",
+      "reasons": [
+        "unit_unknown",
+        "status_quarantine"
+      ]
+    },
+    {
+      "documentId": "cefdd4ae79f711f1a93a9523fdaa939b",
+      "documentName": "新七上 单词详解  内容复杂版.pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "documentName": "新七上 单词详解  内容清爽版.pdf",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "1acdffec79fa11f1a93a9523fdaa939b",
+      "documentName": "第一部分　国际音标知识汇总 答案.doc",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "1ad9380879fa11f1a93a9523fdaa939b",
+      "documentName": "第一部分　国际音标知识汇总.doc",
+      "reasons": [
+        "unit_unknown"
+      ]
+    },
+    {
+      "documentId": "024ed7e47abc11f1aa4beddb18563f99",
+      "documentName": "教材/（已压缩）26中级财管.pdf",
+      "reasons": [
+        "status_quarantine"
+      ]
+    }
+  ]
+}

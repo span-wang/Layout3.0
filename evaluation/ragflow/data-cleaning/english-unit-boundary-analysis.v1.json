@@ -1,0 +1,1156 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-data-cleaning-shadow-kb-v1",
+  "generatedAt": "2026-07-10T12:11:28.091354+00:00",
+  "candidateCount": 17,
+  "analyzedCount": 17,
+  "failedCount": 0,
+  "documents": [
+    {
+      "documentId": "43cff4027b8c11f1b1eacb449d41f0c3",
+      "documentName": "01 Starter Unit 1-3(词汇与句型)(解析版).docx",
+      "sourceSha256": "ab28b5874696057734cbd5a27eb6e72eebdc86cb638d68b716d766765d4959b9",
+      "analysisFileSha256": "d90fe2b37bb8b89ed16796d21b0fa11e702bc8f697adea92ea906e3c13b17b8f",
+      "pageCount": 25,
+      "textPageCount": 25,
+      "unitOccurrences": {
+        "starter_unit_1": [
+          {
+            "page": 1,
+            "preview": "有 限公司 2024-2025 学年上学期七年级英语知识点复习与巩固(人教版 2024) Starter Unit 1-3（词汇） 必备知识清单 Starter Unit 1 Hello! 1.英语 26 个字母。 Aa, Bb, Cc, Dd, Ee, Ff, Gg, Hh，Ii, Gg, Kk, Ll,"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "page": 2,
+            "preview": "class.让我们去上课吧。 It's time for class.是该上课的时间了。 Starter Unit 2 Keep tidy! 1. 互 动 对 话 1)---What do you have in your schoolbage? 你的书包里有什么？ --- I have a book. 有"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "page": 3,
+            "preview": "me is I'm = I am he's = he is she's = she is Starter Unit 3 Welcome! 1.必备短语 on the farm 在农场里 in the yard 在院子里 apple trees 苹果树 let me count 让我数数"
+          }
+        ],
+        "unit_1": [
+          {
+            "page": 1,
+            "preview": "24-2025 学年上学期七年级英语知识点复习与巩固(人教版 2024) Starter Unit 1-3（词汇） 必备知识清单 Starter Unit 1 Hello! 1.英语 26 个字母。 Aa, Bb, Cc, Dd, Ee, Ff, Gg, Hh，Ii, Gg, Kk, Ll,"
+          }
+        ],
+        "unit_2": [
+          {
+            "page": 2,
+            "preview": "们去上课吧。 It's time for class.是该上课的时间了。 Starter Unit 2 Keep tidy! 1. 互 动 对 话 1)---What do you have in your schoolbage? 你的书包里有什么？ --- I have a book. 有一"
+          }
+        ],
+        "unit_3": [
+          {
+            "page": 3,
+            "preview": "m = I am he's = he is she's = she is Starter Unit 3 Welcome! 1.必备短语 on the farm 在农场里 in the yard 在院子里 apple trees 苹果树 let me count 让我数数"
+          }
+        ],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "43e1004e7b8c11f1b1eacb449d41f0c3",
+      "documentName": "03-七年级上册英语知识点总结.pdf",
+      "sourceSha256": "4f3087cbd042b92c2c50780bdac28e25db4c92f9fd4b9adfd72e16c54cc52adb",
+      "analysisFileSha256": "4f3087cbd042b92c2c50780bdac28e25db4c92f9fd4b9adfd72e16c54cc52adb",
+      "pageCount": 17,
+      "textPageCount": 17,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [
+          {
+            "page": 1,
+            "preview": "七年级上册英语知识点总结 Unit 1 This is me! 短语归纳： look after\\take care of 照顾 on the first day 在第一天 Class 1, Grade 7 7 年级 1 班 pl"
+          }
+        ],
+        "unit_2": [
+          {
+            "page": 3,
+            "preview": "Unit 2 Let's play sports! 短语归纳： play sports 做运动 many times a day 一天许多次 play football/tennis 踢足球/打网球 ta"
+          }
+        ],
+        "unit_3": [
+          {
+            "page": 5,
+            "preview": "Unit 3 Welcome to our school! 短语归纳： on foot 步行 far away from 远离 a few 一些, 少量 learn about 学得, 获知 would "
+          }
+        ],
+        "unit_4": [
+          {
+            "page": 7,
+            "preview": "Unit 4 My day 短语归纳： Wake sb up 叫醒某人 go out 出去, 熄灭 have breakfast/lunch/dinner 吃早中晚饭 have fun 玩的开心 get "
+          }
+        ],
+        "unit_5": [
+          {
+            "page": 7,
+            "preview": "ometimes, seldom, never. 对频率副词提问要用 how often Unit5 更多小学初中资料联系微信：93943383 小学初中同步课程联系微信：93943383"
+          }
+        ],
+        "unit_6": [
+          {
+            "page": 9,
+            "preview": "Unit 6 一.短语归纳： 1.John's birthday dinner 约翰的生日晚餐 2.think about 思考、考虑 3.next week 下周 4.how about 怎么样 5.s"
+          }
+        ],
+        "unit_7": [
+          {
+            "page": 11,
+            "preview": "Unit 7 1.短语归纳： ① how much 多少钱 ② seven dollars 七美元 ③ white bag 白色的包 ④ clothes store 服装店 ⑤at very good p"
+          }
+        ]
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "443f38267b8c11f1b1eacb449d41f0c3",
+      "documentName": "05-七年级上册英语语法汇总.pdf",
+      "sourceSha256": "f0f7709f80596fbd3c459c0243a6caa34c1a275276d0f67668fa5cc2b59906ee",
+      "analysisFileSha256": "f0f7709f80596fbd3c459c0243a6caa34c1a275276d0f67668fa5cc2b59906ee",
+      "pageCount": 13,
+      "textPageCount": 13,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "444550f87b8c11f1b1eacb449d41f0c3",
+      "documentName": "06 Units 1- 2 单元主题写作(解析版).docx",
+      "sourceSha256": "a27d3a50a95e8111ac25fce0ffc572e1b2b2a2f744615344ff95ed552985aa08",
+      "analysisFileSha256": "f27cc4c2e588724e9a19eb7b9e2e61979081b980bcf175757de32634b8753e6d",
+      "pageCount": 20,
+      "textPageCount": 20,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [
+          {
+            "page": 3,
+            "preview": "学科网（ 北京） 股份有 限公司 学科网（ 北京） 股份有 限公司 核心知识回顾 Unit 1 You and Me 单元主题:本单元写作情境属于“人与自我”主题范畴中的“生活与学习”,涉及子主题“自我认识”。 主要内容:向他人介绍自己的个人信息以及爱好和活动等。 写作要求:能正确使用句型介绍自己的信息;"
+          }
+        ],
+        "unit_2": [
+          {
+            "page": 5,
+            "preview": " and 将两个句子变成复合句,增加句式 多样性。 ③将句式变为原因状语从句,升级句型。 Unit 2 We're Family! 单元主题:本单元写作情境属于“人与社会”主题范畴中的“人际沟通”,涉及子主题“和谐的家庭生活”。 主要内容:向他人介绍自己的家庭成员,以及他们的爱好和活动等。 写作要求:能正确使用句型介"
+          }
+        ],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "444ba52a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "07-人教版七上英语重点短语句型归纳.pdf",
+      "sourceSha256": "e43f33c45743475ee4a488b865e089c82b5873939093aa58544b6413f3f2ce53",
+      "analysisFileSha256": "e43f33c45743475ee4a488b865e089c82b5873939093aa58544b6413f3f2ce53",
+      "pageCount": 12,
+      "textPageCount": 12,
+      "unitOccurrences": {
+        "starter_unit_1": [
+          {
+            "page": 2,
+            "preview": "第 1 页 共 11 页 微信公众号：瑾言教育资料库 Starter Unit 1 Hello! 重点短语 1. starter unit 过渡单元 2. sit down 坐下 3. make up 编造 4. each other 互相；彼此 5. start a c"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "page": 2,
+            "preview": "bell. 哦，铃声响了。 8. Let's go to class. 让我们去上课吧。 Starter Unit 2 Keep Tidy! 重点短语 1. keep tidy 保持整洁 2. talk about 谈论 3. wake up 醒来 4. get up 起床 5. fly a kite 放风"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "page": 3,
+            "preview": "第 2 页 共 11 页 微信公众号：瑾言教育资料库 Starter Unit 3 Welcome! 重点短语 1. tomato plants 番茄秧 2. apple trees 苹果树 3. in the yard 在院子里 4. in the sun 在阳光下 5"
+          }
+        ],
+        "unit_1": [
+          {
+            "page": 2,
+            "preview": "第 1 页 共 11 页 微信公众号：瑾言教育资料库 Starter Unit 1 Hello! 重点短语 1. starter unit 过渡单元 2. sit down 坐下 3. make up 编造 4. each other 互相；彼此 5. start a co"
+          },
+          {
+            "page": 3,
+            "preview": "else can you see on the farm? 你在农场里还能看到其他什么？ Unit 1 You and Me Section A How do we get to know each other? 重点短语 1. make friends 交朋友 2. get to know 认识；了解 3. e"
+          }
+        ],
+        "unit_2": [
+          {
+            "page": 2,
+            "preview": "铃声响了。 8. Let's go to class. 让我们去上课吧。 Starter Unit 2 Keep Tidy! 重点短语 1. keep tidy 保持整洁 2. talk about 谈论 3. wake up 醒来 4. get up 起床 5. fly a kite 放风筝"
+          },
+          {
+            "page": 5,
+            "preview": " brother and my friends. 我每个周末都和我的哥哥和朋友们打篮球。 Unit 2 We're Family! Section A What is your family like? 重点短语 1. think of 认为；想到 2. a family photo 一张全家福 3. come in"
+          }
+        ],
+        "unit_3": [
+          {
+            "page": 3,
+            "preview": "第 2 页 共 11 页 微信公众号：瑾言教育资料库 Starter Unit 3 Welcome! 重点短语 1. tomato plants 番茄秧 2. apple trees 苹果树 3. in the yard 在院子里 4. in the sun 在阳光下 5."
+          },
+          {
+            "page": 6,
+            "preview": "e's a bit quiet but very smart. 她有点儿安静，但很聪明。 Unit 3 My School Section A What is your school like? 重点短语 1. dining hall 餐厅 2. in front of 在……前面 3. across from"
+          }
+        ],
+        "unit_4": [
+          {
+            "page": 8,
+            "preview": "第 7 页 共 11 页 Unit 4 My Favourite Subject Section A Why do you like this subject? 重点短语 1. good with 灵巧的；善于应付……的 2. help sb with sth 帮助某人"
+          }
+        ],
+        "unit_5": [
+          {
+            "page": 9,
+            "preview": "nt to be a singer in the future. 未来我想成为一名歌手。 Unit 5 Fun Clubs Section A How do you choose a school club? 重点短语 1. play Chinese chess 下中国象棋 2. musical instrum"
+          }
+        ],
+        "unit_6": [
+          {
+            "page": 10,
+            "preview": "上书籍。 7. Can you take good photos? 你会拍好看的照片吗？ Unit 6 A Day in the Life Section A How do you spend your school day? 重点短语 1. make use of 使用……；利用…… 2. take a shower 淋浴 "
+          }
+        ],
+        "unit_7": [
+          {
+            "page": 11,
+            "preview": " and finish at 2:15. 下午的课程 12:30 开始，2:15 结束。 Unit 7 Happy Birthday! Section A How do we celebrate birthdays? 重点短语 1. shopping list 购物清单 2. every year 每年 3. buy s"
+          }
+        ]
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "4459ec167b8c11f1b1eacb449d41f0c3",
+      "documentName": "12-七上英语重点短语句型归纳.pdf",
+      "sourceSha256": "bfc0b6b76420d07a37b43af658eb9300fbfad2ee0ddbecdcdb22145dceeedee4",
+      "analysisFileSha256": "bfc0b6b76420d07a37b43af658eb9300fbfad2ee0ddbecdcdb22145dceeedee4",
+      "pageCount": 11,
+      "textPageCount": 11,
+      "unitOccurrences": {
+        "starter_unit_1": [
+          {
+            "page": 1,
+            "preview": "人教】七上英语：重点短语&句型归纳 第 1 页 共 11 页 微信公众号：瑾言教育资料库 Starter Unit 1 Hello! 重点短语 1. starter unit 过渡单元 2. sit down 坐下 3. make up 编造 4. each other 互相；彼此 5. start a c"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "page": 1,
+            "preview": "bell. 哦，铃声响了。 8. Let's go to class. 让我们去上课吧。 Starter Unit 2 Keep Tidy! 重点短语 1. keep tidy 保持整洁 2. talk about 谈论 3. wake up 醒来 4. get up 起床 5. fly a kite 放风"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "page": 2,
+            "preview": "人教】七上英语：重点短语&句型归纳 第 2 页 共 11 页 微信公众号：瑾言教育资料库 Starter Unit 3 Welcome! 重点短语 1. tomato plants 番茄秧 2. apple trees 苹果树 3. in the yard 在院子里 4. in the sun 在阳光下 5"
+          }
+        ],
+        "unit_1": [
+          {
+            "page": 1,
+            "preview": "重点短语&句型归纳 第 1 页 共 11 页 微信公众号：瑾言教育资料库 Starter Unit 1 Hello! 重点短语 1. starter unit 过渡单元 2. sit down 坐下 3. make up 编造 4. each other 互相；彼此 5. start a co"
+          },
+          {
+            "page": 2,
+            "preview": "else can you see on the farm? 你在农场里还能看到其他什么？ Unit 1 You and Me Section A How do we get to know each other? 重点短语 1. make friends 交朋友 2. get to know 认识；了解 3. e"
+          }
+        ],
+        "unit_2": [
+          {
+            "page": 1,
+            "preview": "铃声响了。 8. Let's go to class. 让我们去上课吧。 Starter Unit 2 Keep Tidy! 重点短语 1. keep tidy 保持整洁 2. talk about 谈论 3. wake up 醒来 4. get up 起床 5. fly a kite 放风筝"
+          },
+          {
+            "page": 4,
+            "preview": " brother and my friends. 我每个周末都和我的哥哥和朋友们打篮球。 Unit 2 We're Family! Section A What is your family like? 重点短语 1. think of 认为；想到 2. a family photo 一张全家福 3. come in"
+          }
+        ],
+        "unit_3": [
+          {
+            "page": 2,
+            "preview": "重点短语&句型归纳 第 2 页 共 11 页 微信公众号：瑾言教育资料库 Starter Unit 3 Welcome! 重点短语 1. tomato plants 番茄秧 2. apple trees 苹果树 3. in the yard 在院子里 4. in the sun 在阳光下 5."
+          },
+          {
+            "page": 5,
+            "preview": "e's a bit quiet but very smart. 她有点儿安静，但很聪明。 Unit 3 My School Section A What is your school like? 重点短语 1. dining hall 餐厅 2. in front of 在……前面 3. across from"
+          }
+        ],
+        "unit_4": [
+          {
+            "page": 7,
+            "preview": "人教】七上英语：重点短语&句型归纳 第 7 页 共 11 页 微信公众号：瑾言教育资料库 Unit 4 My Favourite Subject Section A Why do you like this subject? 重点短语 1. good with 灵巧的；善于应付……的 2. help sb with sth 帮助某人"
+          }
+        ],
+        "unit_5": [
+          {
+            "page": 8,
+            "preview": "nt to be a singer in the future. 未来我想成为一名歌手。 Unit 5 Fun Clubs Section A How do you choose a school club? 重点短语 1. play Chinese chess 下中国象棋 2. musical instrum"
+          }
+        ],
+        "unit_6": [
+          {
+            "page": 9,
+            "preview": "上书籍。 7. Can you take good photos? 你会拍好看的照片吗？ Unit 6 A Day in the Life Section A How do you spend your school day? 重点短语 1. make use of 使用……；利用…… 2. take a shower 淋浴 "
+          }
+        ],
+        "unit_7": [
+          {
+            "page": 10,
+            "preview": " and finish at 2:15. 下午的课程 12:30 开始，2:15 结束。 Unit 7 Happy Birthday! Section A How do we celebrate birthdays? 重点短语 1. shopping list 购物清单 2. every year 每年 3. buy s"
+          }
+        ]
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "documentName": "24秋七上知识点梳理 .pdf",
+      "sourceSha256": "ca07233f037cd2cc70303faaed4b84e34993d7ac09eb9f9b23dda954f3c27f95",
+      "analysisFileSha256": "ca07233f037cd2cc70303faaed4b84e34993d7ac09eb9f9b23dda954f3c27f95",
+      "pageCount": 19,
+      "textPageCount": 0,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "24秋七上知识归纳+习题.pdf",
+      "sourceSha256": "254b5187a335ac3034dc9e4ef6d174da9597699b935ec1a4ad6f31a0061b4258",
+      "analysisFileSha256": "254b5187a335ac3034dc9e4ef6d174da9597699b935ec1a4ad6f31a0061b4258",
+      "pageCount": 155,
+      "textPageCount": 155,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [
+          {
+            "page": 3,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 1 - Unit 1 You and Me Section A 1. make (made, made) (v.) “ ” (P19) (1). make sb. sth. = make sth. for sb. “ … …” ( "
+          },
+          {
+            "page": 7,
+            "preview": "- 5 - Unit 1 You and Me Section B 1. need (v.) “ ” (P24) (1 ). need sb./ sth. “ / ” e.g. I need a book. “ ” (2). need "
+          },
+          {
+            "page": 10,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 8 - Unit 1 You and Me *be * / be (1) be : am, is, are · She is Kate Green. You are my good friend. (2) I am = I'm / "
+          },
+          {
+            "page": 12,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 10 - ——Unit 1 You and Me 1. 交朋友 2. 认识，了解 3. 相互 4. 全名 5. 来自 6. 班主任 7. 我的错 8. 在相同的班级 9. 非常喜欢 10. 学生们的帖子 11. 想要做某事 12. 说一些"
+          },
+          {
+            "page": 14,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 12 - ——Unit 1 You and Me 一，单词的适当形式填空。 1. I want to make (friend) with my new classmates. 2. Teng Fei takes his (sister)"
+          },
+          {
+            "page": 16,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 14 - ——Unit 1 You and Me 一，按要求完成句子。 1．--你是杰克吗？ --是的，我是。 / 不，我不是。 -- Jack? --Yes, . / No, . 2 ．--她是玛丽吗？ --是的，她是。/ 不，她不是。"
+          },
+          {
+            "page": 18,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 16 - ——Unit 1 You and Me Here are two pictures. A man (男人) and a boy are in the first picture. Who are they?The man is "
+          },
+          {
+            "page": 115,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 113 - ——Unit 1 You and Me 1. 交朋友 make friends 2. 认识，了解 get to know 3. 相互 each other 4. 全名 full name 5. 来自 be from/come f"
+          },
+          {
+            "page": 117,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 115 - ——Unit 1 You and Me 一，单词的适当形式填空。 1. I want to make friends (friend) with my new classmates. 2. Teng Fei takes his "
+          },
+          {
+            "page": 119,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 117 - ——Unit 1 You and Me 一，按要求完成句子。 1．--你是杰克吗？ --是的，我是。 / 不，我不是。 -- Are you Jack? --Yes, I am . / No, __I'm not__. 2 ．-"
+          },
+          {
+            "page": 120,
+            "preview": "s Jack. What's her name? Her name's Cindy. ——Unit 1 You and Me Here are two pictures. A man (男人) and a boy are in the first picture. Who are they?The man is "
+          }
+        ],
+        "unit_2": [
+          {
+            "page": 19,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 17 - Unit 2 We're Family Section A 1. mean (v.) “ ” (P27) (1). mean to do sth. “ / ” e.g. Sorry. I don't mean to hurt y"
+          },
+          {
+            "page": 25,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 23 - Unit 2 We're Family Section B 1. here be “ … …” (P32 1b) here be ( be be ) e.g. Here is a photo of my family. “ ” "
+          },
+          {
+            "page": 27,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 25 - Unit 2 We're Family * have “ ” ( have ) I have a nice bag. Do you have a nice bag? * do , do Yes, I do . No, I don"
+          },
+          {
+            "page": 31,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 29 - ——Unit 2 We're Family 1. 像…一样 2. 乒乓球拍 3. 一起打乒乓球 4. 每一天 5. 钓鱼竿 6. 花大量的时间钓鱼 7. 弹得真的好 8. 许多活动 9. 戴帽子 10. 真的滑稽 11. 使我们大笑"
+          },
+          {
+            "page": 33,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 31 - ——Unit 2 We're Family 1. I (have) a sister. 2. What does “go hiking” (meaning)? 3. She (have) a baseball. 4. Tim lov"
+          },
+          {
+            "page": 35,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 33 - ——Unit 2 We're Family help ask play go like know sound do spell watch have find think let thank get fly see say meet"
+          },
+          {
+            "page": 37,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 35 - ——Unit 2 We're Family Students in Shanghai Weiyu Middle School like sports. Let's meet four students from Class 4, J"
+          },
+          {
+            "page": 121,
+            "preview": "baseball C . a dog D. A ，B and C 答案： CBBDD ——Unit 2 We're Family Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记"
+          },
+          {
+            "page": 123,
+            "preview": "copy - copies 8 . do - does have - has - - ——Unit 2 We're Family 1. I have (have) a sister. 2. What does “go hiking” mean (meaning)? 3. She has (have) a baseba"
+          },
+          {
+            "page": 125,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 120- 123 - ——Unit 2 We're Family help helps like likes___ ask asks___ know___knows___ play pays sound_sounds___ go goes do does"
+          },
+          {
+            "page": 127,
+            "preview": "部分提问) Who does your brother ask for money? ——Unit 2 We're Family Students in Shanghai Weiyu Middle School like sports. Let's meet four students from Class 4, J"
+          }
+        ],
+        "unit_3": [
+          {
+            "page": 39,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 37 - Unit 3 My School Section A 1. another (P37 2a) another (adj.) (pron.) adj. 1. another + 2. another + + = + more"
+          },
+          {
+            "page": 41,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 39 - Unit 3 My School Section B 1. different (adj.) “ ” (P40 1b) differently ad. (1). be different from …… (2 ) . di"
+          },
+          {
+            "page": 45,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 43 - Unit 3 My School * * there be 1. in front of in the front of in front of “ … ” : There is a tall tree in front "
+          },
+          {
+            "page": 48,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 46 - ——Unit 3 My School . ( ) 1. There are some pictures the wall. 2. There are eight windows the wall. 3. There are s"
+          },
+          {
+            "page": 49,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 47 - ——Unit 3 My School 1. This idea (sound) good. 2. Mary is an (interest) and she is (interest) in English a lot. 3."
+          },
+          {
+            "page": 52,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 50 - ——Unit 3 My School be 1. There a teacher in the front of the classroom. 2. There some food on the plate. 3. there"
+          },
+          {
+            "page": 54,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 52 - ——Unit 3 My School My uncle is an English teacher at Chengdu No.7 Middle School. He loves his 1 as a teacher. He "
+          },
+          {
+            "page": 128,
+            "preview": "an C. Zinedine Zidan D. Steve Nash 1-3 BCB ——Unit 3 My School . ( ) 1. There are some pictures on the wall. 2. There are eight windows in the wall. 3. There"
+          },
+          {
+            "page": 129,
+            "preview": ". This book is Mike's. Whose book is this? ——Unit 3 My School 1. This idea sounds (sound) good. 2. Mary is an __interesting_ (interest) and she is _interest"
+          },
+          {
+            "page": 131,
+            "preview": "tudy in Beijing? (否定回答) No , she doesn't . ——Unit 3 My School be Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记"
+          },
+          {
+            "page": 133,
+            "preview": "幅图片。 There are three pictures on the wall. ——Unit 3 My School My uncle is an English teacher at Chengdu No.7 Middle School. He loves his 1 as a teacher. He "
+          }
+        ],
+        "unit_4": [
+          {
+            "page": 55,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 53 - Unit 4 My Favorite Subject Section A 1. boring (adj.) “ ” (P44 1c) -ed ,bored “ ” -ing ,boring “ ” ( ) His speech makes e"
+          },
+          {
+            "page": 59,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 57 - Unit 4 My Favorite Subject Section B 1. French (adj.) “ ” (P48 1b) (n.) “ ” Frenchman ( pl. Frenchmen) 2. future (n.) “ ”"
+          },
+          {
+            "page": 61,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 59 - Unit 4 My Favorite Subject * and, but because * I. and 并列关系 和，又，及 It's healthy for the mind and the body. She is of mediu"
+          },
+          {
+            "page": 63,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 61 - ——Unit 4 My Favorite Subject . 1. 学校学科 2. Ella 最喜欢的学科 3. 上生物课 4. 中国历史 5. 学习关于 6. 对…有好处 7. 擅长于 8. 善于应付 9. 看着 10. 在过去 11. 努力学"
+          },
+          {
+            "page": 66,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 64 - ——Unit 4 My Favorite Subject 1. Doing much homework isn't (relax) for me. 2. They feel to do sports every day. 3. This is r"
+          },
+          {
+            "page": 68,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 66 - ——Unit 4 My Favorite Subject ( ) 1.We have politics Tuesday. A. on B. in C. at D. / ( ) 2. Music sounds very . A. bored B. "
+          },
+          {
+            "page": 70,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 68 - ——Unit 4 My Favorite Subject 阅读理解 Tom is an English boy. Now he is in Beijing with his parents and his two sisters. Every m"
+          },
+          {
+            "page": 134,
+            "preview": "s 4. with 5. for 6. their 7. clean 8. also ——Unit 4 My Favorite Subject . 1. 学校学科 school subjects 2. Ella 最喜欢的学科 Ella'sfavorite subject 3. 上生物课 have biology (class) 4"
+          },
+          {
+            "page": 135,
+            "preview": "o 1:00, and after that__ we have__Chinese. ——Unit 4 My Favorite Subject Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记"
+          },
+          {
+            "page": 137,
+            "preview": "6. Let's go to the Disney World on Friday. ——Unit 4 My Favorite Subject ( B ) 1.We have politics Tuesday. A. on B. in C. at D. / ( C ) 2. Music sounds very . A. bored"
+          },
+          {
+            "page": 138,
+            "preview": "eet you on Friday , but I am really busy . ——Unit 4 My Favorite Subject Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记"
+          }
+        ],
+        "unit_5": [
+          {
+            "page": 71,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 69 - Unit 5 Fun Clubs Section A 1. join (v.) “ ” (P51) (1). join+ ( ) e . g . join the army/ the Party/ the club / /"
+          },
+          {
+            "page": 75,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 73 - Unit 5 Fun Clubs Section B 1. act (n.) “ ” (P56 1a) (v.) “( ) ( ) ( ) ” actor n. actress n. activity n. 2. home"
+          },
+          {
+            "page": 78,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 76 - Unit 5 Fun Clubs * can *play + / / 情态动词 用法 例句 否定式 一般疑问句和回答 can 表示能力，意 为“能，会” She can swim fast, but I can't. ca"
+          },
+          {
+            "page": 79,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 77 - ——Unit 5 Fun Clubs 1. 一个学校俱乐部 2. 下中国象棋 3. 有感情地朗读 4. 一些好消息 5. 演奏乐器 6. 唱歌唱得好 7. 打鼓 8. 放学后 9. 跑得快 10. 音乐俱乐部 11. 运动俱乐"
+          },
+          {
+            "page": 80,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 78 - ——Unit 5 Fun Clubs 1. She (not can) (join) the swimming club. 2. Mary (can) (is) a dancer in the future. 3. Can y"
+          },
+          {
+            "page": 81,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 79 - ——Unit 5 Fun Clubs ( ) 1. Matt can play chess, but he can't play drums. A. the; the B. /; the C. /;/ D. the; / ( "
+          },
+          {
+            "page": 83,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 81 - ——Unit 5 Fun Clubs I have a good friend. His name is Lin Tao. He is a boy from Beijing. He likes 1 . He 2 in thei"
+          },
+          {
+            "page": 140,
+            "preview": "ia英语笔记 有方法讲高效 重能力拓思维 - 138 - 答案： 1-5 BABDC ——Unit 5 Fun Clubs 1. 一个学校俱乐部 a school club 2. 下中国象棋 play Chinese chess 3. 有感情地朗读 read with feeling 4. 一些好消息 some"
+          },
+          {
+            "page": 141,
+            "preview": " __fall in love with 20. 照相 take photos __ ——Unit 5 Fun Clubs 1. She can't (not can) join (join) the swimming club. 2. Mary can (can) be (is) a dancer in th"
+          },
+          {
+            "page": 142,
+            "preview": "tos (photo) of beautiful view in the park. ——Unit 5 Fun Clubs 1-6 BBCCCD ( ) 1. Matt can play chess, but he can't play drums. A. the; the B. /; the C. /;/ D"
+          },
+          {
+            "page": 144,
+            "preview": "划线部分提问） What club does Tom want to__ join? ——Unit 5 Fun Clubs I have a good friend. His name is Lin Tao. He is a boy from Beijing. He likes 1 . He 2 in thei"
+          }
+        ],
+        "unit_6": [
+          {
+            "page": 84,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 82 - Unit 6 A Day in the Life Section A 1. use (n.) & (v.) “ ” (P59) make good use of ... = put ... into good use “ ” 2. get"
+          },
+          {
+            "page": 86,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 84 - Unit 6 A Day in the Life Section B 1. daily (adj.) “ ” (P64) in our daily life = in our everyday life “ ” 2. live (v.) "
+          },
+          {
+            "page": 90,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 88 - Unit 6 A Day in the Life * * * ( ). o'clock 6 6 o'clock / six o'clock 8 : 8 o clock / eight o'clock ( ). (1) + 6 3 0 = "
+          },
+          {
+            "page": 93,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 91 - ——Unit 6 A Day in the Life 1. 好好使用… 2. 洗澡 3. 穿好衣服 4. 刷牙 5. 值日 6. 起床 7. 做作业 8. 去睡觉 9. 早起 10. 待在学校 11. 早点睡觉 12. 学校日常规 13. 一"
+          },
+          {
+            "page": 94,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 92 - ——Unit 6 A Day in the Life 1. Jim brushes his (tooth) every morning. 2. After getting up, I always get (dress) by myself."
+          },
+          {
+            "page": 96,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 94 - ——Unit 6 A Day in the Life ( )1. ---What time do you often go to school? --- At about . A. a half past seven B. quarter t"
+          },
+          {
+            "page": 98,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 96 - ——Unit 6 A Day in the Life In my family, there are my parents, my grandparents, my brother and I. We are a happy 1 . My f"
+          },
+          {
+            "page": 145,
+            "preview": "D. e-mail address 答案： 1-5 ADDBC 6-10 BADCD ——Unit 6 A Day in the Life 1. 好好使用… make good use of 2. 洗澡 take a shower 3. 穿好衣服 get dressed 4. 刷牙 brush (one's) teeth 5."
+          },
+          {
+            "page": 146,
+            "preview": "_listen to 20. 是做某事的时间了 it's time to do __ ——Unit 6 A Day in the Life 1. Jim brushes his teeth (tooth) every morning. 2. After getting up, I always get __dressed (d"
+          },
+          {
+            "page": 147,
+            "preview": " today. 11. I live in a big city in China. ——Unit 6 A Day in the Life Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记"
+          },
+          {
+            "page": 149,
+            "preview": "me is it now? (改为同义句) What's the time now? ——Unit 6 A Day in the Life In my family, there are my parents, my grandparents, my brother and I. We are a Lia英语笔记 Lia英语笔"
+          }
+        ],
+        "unit_7": [
+          {
+            "page": 99,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 97 - Unit 7 Happy Birthday Section A 1. celebrate (v.) “ ” (P67) celebration celebrate birthdays “ ” 2. give (v.) “ ” (P6"
+          },
+          {
+            "page": 102,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 100 - Unit 7 Happy Birthday Section B 1. meaningful (adj.) “ ” (P72) meaningless (adj.) “ ” ( ) It's to give your old clot"
+          },
+          {
+            "page": 105,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 103 - Unit 7 Happy Birthday * * * 其主要形式： (1) 从第一至第十九： one— first two— second three— third four-fourth five— fifth six— six"
+          },
+          {
+            "page": 109,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 107 - ——Unit 7 Happy Birthday 1. 一个惊喜派对 2. 问价格 3. 购物清单 4. 一双鞋 5. 长寿 6. 我们自己的生日 7. 例如 8. 许愿 9. 在那一天 10. …的象征 11. 是一个好主意 12. 吹"
+          },
+          {
+            "page": 110,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 108 - ——Unit 7 Happy Birthday 1. How much (be) the sweater and the hat? 2. (12) and (20) is thirty-two. 3. She always (celeb"
+          },
+          {
+            "page": 112,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 110 - ——Unit 7 Happy Birthday 1. -How much the iPhone 6? -It's 60 . A. is; dollar B. is; dollars C. are; dollar D. are; doll"
+          },
+          {
+            "page": 114,
+            "preview": "Lia英语笔记 有方法讲高效 重能力拓思维 - 112 - ——Unit 7 Happy Birthday I am Mary. I 1 like white. I have lots of white clothes. But my sister, Emma 2 . Her favorite "
+          },
+          {
+            "page": 150,
+            "preview": "4. because 5. need 6. old 7. early 8. also ——Unit 7 Happy Birthday 1. 一个惊喜派对 a surprise party 2. 问价格 how much Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia"
+          },
+          {
+            "page": 151,
+            "preview": "28 日 __on 28th July 20. 所有的礼物 all gifts __ ——Unit 7 Happy Birthday Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记"
+          },
+          {
+            "page": 153,
+            "preview": " 7. Red is a symbol of good luck in China. ——Unit 7 Happy Birthday ABDACD 1. How much the iPhone 15? A. is B. do C. are D. does 2. -How much are your new ? -They"
+          },
+          {
+            "page": 154,
+            "preview": "分提问) How much milk is there in the fridge? ——Unit 7 Happy Birthday Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记 Lia英语笔记"
+          }
+        ]
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "documentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "sourceSha256": "e590996060ee2dbc82d263d34ec5d86817ed83e66794e8266d29bb2a5e971249",
+      "analysisFileSha256": "e590996060ee2dbc82d263d34ec5d86817ed83e66794e8266d29bb2a5e971249",
+      "pageCount": 60,
+      "textPageCount": 0,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "sourceSha256": "76dcb1b0da34dd15cbabc32a602b28916cec00e544b5028bac77db266da4a0d5",
+      "analysisFileSha256": "f2c86670ba5bdbe09fd65dacdc051ebffc941cf8d8c22132e564aefe3c162e86",
+      "pageCount": 14,
+      "textPageCount": 14,
+      "unitOccurrences": {
+        "starter_unit_1": [
+          {
+            "page": 12,
+            "preview": "brother and my friends. 我每个周末都和我的哥哥和朋友们打篮 球。 STARTER UNIT 1 Hello! 一．词形变换 1. greet →greeting (名词) 2. spell →spelling (名词) 3. goodbye→bye (同义词) 二．重点短语 1. s"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "page": 13,
+            "preview": "8.Let's go to class. 让我们去上课吧。 STARTER UNIT 2 Keep Tidy! 一．词形变换 1. bottle →bottles (复数形式) 2. eraser →erasers (复数形式) 3. key →keys (复数形式) 4. t"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "page": 13,
+            "preview": " put your things? 你把你的东西放在哪里了？ 微信公众号：瑾言教育资料库 STARTER UNIT 3 Welcome! 一．词形变换 1. carrot →carrots (复数形式) 2. goose →geese (复数形式) 3. this →that (对应词) 4. those "
+          }
+        ],
+        "unit_1": [
+          {
+            "page": 10,
+            "preview": " a little quiet but very smart. 她有点儿安静，但很聪明。 UNIT 1 You and Me SECTION A How do we get to know each other? 一．词形变换 1. full →empty （反义词） 2. classmate →classmat"
+          },
+          {
+            "page": 12,
+            "preview": "and my friends. 我每个周末都和我的哥哥和朋友们打篮 球。 STARTER UNIT 1 Hello! 一．词形变换 1. greet →greeting (名词) 2. spell →spelling (名词) 3. goodbye→bye (同义词) 二．重点短语 1. st"
+          }
+        ],
+        "unit_2": [
+          {
+            "page": 9,
+            "preview": " school similar to yours？ 彼得的学校跟你的学校有什么相似之处？ UNIT 2 We're Family! SECTION A What is your family like? 一．词形变换 1. mean →meaning （名词） 2.husband →husbands （复数形式） 3"
+          },
+          {
+            "page": 13,
+            "preview": "8.Let's go to class. 让我们去上课吧。 STARTER UNIT 2 Keep Tidy! 一．词形变换 1. bottle →bottles (复数形式) 2. eraser →erasers (复数形式) 3. key →keys (复数形式) 4. th"
+          }
+        ],
+        "unit_3": [
+          {
+            "page": 7,
+            "preview": "nt to be a singer in the future. 未来我想成为一名歌手。 UNIT 3 My School SECTION A What is your school like? 一．词形变换 1. front →back （ 反义词） 2. building →build （动词） 3. of"
+          },
+          {
+            "page": 13,
+            "preview": "r things? 你把你的东西放在哪里了？ 微信公众号：瑾言教育资料库 STARTER UNIT 3 Welcome! 一．词形变换 1. carrot →carrots (复数形式) 2. goose →geese (复数形式) 3. this →that (对应词) 4. those →"
+          }
+        ],
+        "unit_4": [
+          {
+            "page": 6,
+            "preview": "'t find many good books to read. 我找不到很多好书去读。 UNIT 4 My Favourite Subject SECTION A Why do you like this subject? 一．词形变换 1. use →useful （形容词）→ useless （反义词） 2. bore →bo"
+          }
+        ],
+        "unit_5": [
+          {
+            "page": 4,
+            "preview": "and finish at 2: 15. 下午的课程 12:30 开始，2:15 结束。 UNIT 5 Fun Clubs SECTION A How do you choose a school club? 一．词形变换 1. feel→feeling （名词） 2. much→more （比较级）→ mos"
+          }
+        ],
+        "unit_6": [
+          {
+            "page": 2,
+            "preview": " 下次，我也想做一些不同的事情。 8. Any good ideas？ 有什么好主意吗？ UNIT 6 A Day in the Life SECTION A How do you spend your school day? 一．词形变换 1. tooth →teeth （复数形式） 2. have →has （第三人称单数"
+          }
+        ],
+        "unit_7": [
+          {
+            "page": 1,
+            "preview": "重点词汇，短语，句子归纳 UNIT 7 Happy Birthday! SECTION A How do we celebrate birthdays? 一．词形变换 1. two →second （序数词） 2. five →fifth （序数词） 3. "
+          }
+        ]
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "documentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "sourceSha256": "f71c368d301b6045fa2da73ad0a63db9fe5804ae6e249c85e5f3d6ca0d6d3f0b",
+      "analysisFileSha256": "00ff21b6e88a31203b76de843d33f1637ade65d6839bbdd170c5eb20cf57fe9d",
+      "pageCount": 98,
+      "textPageCount": 98,
+      "unitOccurrences": {
+        "starter_unit_1": [
+          {
+            "page": 1,
+            "preview": "第 1 页 共 98 页 人教版七年级 英语 上册知识点总结 Starter Unit1 -3 Starter Unit1【重点单词】 1.unit n. 单元 2.starter unit 过渡单元 3.section n. 部分；地区 4.greet v. 招呼；问候 5."
+          },
+          {
+            "page": 3,
+            "preview": "第 3 页 共 98 页 Starter Unit1 1. Good morning.早上好。 2. May I have your name?我可以知道你的名字吗？ 3. Good morning. My name is Emma Mill"
+          },
+          {
+            "page": 4,
+            "preview": "。 13.Do you like my uncle's farm?你喜欢我叔叔的农场吗？ Starter Unit1 语法点 1 表达“向他人问好”的句式 一、见面打招呼 句式 1-Hello./Hi.-Hello./Hi.——你好。/嗨。——你好。/嗨。 2-Good morning/afternoon"
+          },
+          {
+            "page": 8,
+            "preview": "些花儿很漂亮。 Section A How do you greet people? 1．Starter Unit 1 过渡第一单元（教材第 1 页） unit［可数名词］单元 ★☆☆ 表示名称时首字母大写， 其后接基数词， 常用来表示课本里每个单元，Unit1 表示“第一单元”。starter unit "
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "page": 1,
+            "preview": ".....是....的时候了 例句：It's time for dinner.该吃饭了。 Starter Unit2【重点单词】 1.bottle n. 瓶子 2.eraser n. 橡皮 3.key n. 钥匙；关键 4.thing n. 东西；事情 5.need v. & n. 需要 6.you're"
+          },
+          {
+            "page": 3,
+            "preview": " bell.哦，上课铃响了。 11. Let's go to class.我们去上课吧。 Starter Unit2 1.Mum, I can't find my new cap.妈妈，我找不到我的新帽子了。 2.What colour is it?它是什么颜色的？It's red.它是红色的。 3.—I"
+          },
+          {
+            "page": 5,
+            "preview": "第 5 页 共 98 页 Starter Unit2 语法点 1 颜色的表达 1.问句“What color + be +主语（被询问的物品）？”。 （1）句子的主语是单数时，be 动词用 is，其答语为“It's + 表示颜色的形容词.”。"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "page": 2,
+            "preview": "ait a minute 等一下 Wait a minute, Lucy.等一下，露西。 Starter Unit3【重点单词】 1.fun n. 乐趣；快乐 adj. 有趣的；使人快乐的 2.yard n. 院子；园圃 3.carrot n. 胡萝卜 4.goose n. (pl. geese) 鹅 5"
+          },
+          {
+            "page": 3,
+            "preview": "k you, Emma!哦，谢谢你，埃玛! 16.You're welcome.别客气。 Starter Unit3 1.Look! This is my uncle's farm.看!这是我叔叔的农场。 2.It's a big farm. The grass is so green.它是一个大农场。草"
+          },
+          {
+            "page": 6,
+            "preview": "用在表示方位或西洋乐器名称的名词之前 I like playing the piano. Starter Unit3 语法点 询问物品的句式 一．What's this ? 这个是什么？ 1.句子结构分析 该句型用于提问某物是什么， 是由特殊疑问词what 加一般疑问句构成的特殊疑问句。what's 是 "
+          }
+        ],
+        "unit_1": [
+          {
+            "page": 1,
+            "preview": "第 1 页 共 98 页 人教版七年级 英语 上册知识点总结 Starter Unit1 -3 Starter Unit1【重点单词】 1.unit n. 单元 2.starter unit 过渡单元 3.section n. 部分；地区 4.greet v. 招呼；问候 5.s"
+          },
+          {
+            "page": 3,
+            "preview": "第 3 页 共 98 页 Starter Unit1 1. Good morning.早上好。 2. May I have your name?我可以知道你的名字吗？ 3. Good morning. My name is Emma Mille"
+          },
+          {
+            "page": 4,
+            "preview": "you like my uncle's farm?你喜欢我叔叔的农场吗？ Starter Unit1 语法点 1 表达“向他人问好”的句式 一、见面打招呼 句式 1-Hello./Hi.-Hello./Hi.——你好。/嗨。——你好。/嗨。 2-Good morning/afternoon/"
+          },
+          {
+            "page": 8,
+            "preview": "Section A How do you greet people? 1．Starter Unit 1 过渡第一单元（教材第 1 页） unit［可数名词］单元 ★☆☆ 表示名称时首字母大写， 其后接基数词， 常用来表示课本里每个单元，Unit1 表示“第一单元”。starter unit 表"
+          },
+          {
+            "page": 20,
+            "preview": "se? Bob: Yes. O-R-A-N-G-E. Cindy: Thank you. Unit1 You and Me 【重点单词】 1.make friends 交朋友 2.get to know 认识；了解 3.each adj. & pron. 每个；各自 4.other pron. 另外的人(或物)"
+          }
+        ],
+        "unit_2": [
+          {
+            "page": 1,
+            "preview": "..的时候了 例句：It's time for dinner.该吃饭了。 Starter Unit2【重点单词】 1.bottle n. 瓶子 2.eraser n. 橡皮 3.key n. 钥匙；关键 4.thing n. 东西；事情 5.need v. & n. 需要 6.you're"
+          },
+          {
+            "page": 3,
+            "preview": "上课铃响了。 11. Let's go to class.我们去上课吧。 Starter Unit2 1.Mum, I can't find my new cap.妈妈，我找不到我的新帽子了。 2.What colour is it?它是什么颜色的？It's red.它是红色的。 3.—Is"
+          },
+          {
+            "page": 5,
+            "preview": "第 5 页 共 98 页 Starter Unit2 语法点 1 颜色的表达 1.问句“What color + be +主语（被询问的物品）？”。 （1）句子的主语是单数时，be 动词用 is，其答语为“It's + 表示颜色的形容词.”。 "
+          },
+          {
+            "page": 31,
+            "preview": "fun. 贝蒂也喜欢画画 ,因为她觉得画画很有趣。 (because 引导原因状语从句) Unit2 We're Family! 【重点单词】 1.mean v. 意思是；打算 2.husband n. 丈夫 3.bat n. 球棒；球拍 4.ping-pong bat 乒乓球拍 5.play ping-pong "
+          }
+        ],
+        "unit_3": [
+          {
+            "page": 2,
+            "preview": "nute 等一下 Wait a minute, Lucy.等一下，露西。 Starter Unit3【重点单词】 1.fun n. 乐趣；快乐 adj. 有趣的；使人快乐的 2.yard n. 院子；园圃 3.carrot n. 胡萝卜 4.goose n. (pl. geese) 鹅 5"
+          },
+          {
+            "page": 3,
+            "preview": "mma!哦，谢谢你，埃玛! 16.You're welcome.别客气。 Starter Unit3 1.Look! This is my uncle's farm.看!这是我叔叔的农场。 2.It's a big farm. The grass is so green.它是一个大农场。草是"
+          },
+          {
+            "page": 6,
+            "preview": "洋乐器名称的名词之前 I like playing the piano. Starter Unit3 语法点 询问物品的句式 一．What's this ? 这个是什么？ 1.句子结构分析 该句型用于提问某物是什么， 是由特殊疑问词what 加一般疑问句构成的特殊疑问句。what's 是 w"
+          },
+          {
+            "page": 41,
+            "preview": "ly. Please write to me soon. Yours, Li Qiang Unit3 My School 【重点单词】 1.hall n. 礼堂；大厅 2.dining hall 餐厅 3.in front of 在……前面 4.building n. 建筑物；房子 知识点一 词汇与短语"
+          }
+        ],
+        "unit_4": [
+          {
+            "page": 51,
+            "preview": " nice to me. I like my new school very much. Unit4 My Favourite Subject 【重点单词】 1.biology n. 生物学 2.IT abbr. (=information technology) 信息技术 3.geography n. 地理(学) 4.histo"
+          }
+        ],
+        "unit_5": [
+          {
+            "page": 63,
+            "preview": "文中介绍了自己喜欢和不喜欢的学科及原因。文章结尾询问对方的喜好，符合题目要求，内容完整。 Unit5 Fun Clubs 【重点单词】 1.club n. 俱乐部；社团 2.join v. 参加；加入 3.choose v. 选择；挑选 4.drama n. 戏剧；戏剧表演 5.play Chinese ch"
+          }
+        ],
+        "unit_6": [
+          {
+            "page": 73,
+            "preview": "短语使用正确，表明作者有较强的语言运用能力。 4.结尾热情洋溢，符合招聘广告的语言规范。 Unit6 A Day in the Life 【重点单词】 1.make use of 使用……；利用…… 2.shower n. 淋浴；淋浴器 v. 洗淋浴 3.take a shower 淋浴 4.get dressed 穿衣服 "
+          }
+        ],
+        "unit_7": [
+          {
+            "page": 85,
+            "preview": "副词表达日常活动。结尾的 I think...表达了对自己日常活动习惯的看法，语言得体。 Unit7 Happy Birthday 【重点单词】 1.celebrate v. 庆祝；庆贺 2.surprise n. 惊奇；惊讶 v. 使感到意外 3.something pron. 某事；某物 4.sale n. 出售；"
+          }
+        ]
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "a0e83e6a79f711f1a93a9523fdaa939b",
+      "documentName": "人教版七年级（上）英语电子课本（2024年新版）.pdf",
+      "sourceSha256": "17035487816820045bf8f5df59c171ca140990ce3e82d0be13d4ed018b245781",
+      "analysisFileSha256": "17035487816820045bf8f5df59c171ca140990ce3e82d0be13d4ed018b245781",
+      "pageCount": 103,
+      "textPageCount": 0,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "ce5dac7279f711f1a93a9523fdaa939b",
+      "documentName": "新七 starter2-3.pdf",
+      "sourceSha256": "9188a5257bb4c58290ec495235306899217216e0a1641341b9f86a608e3fa192",
+      "analysisFileSha256": "9188a5257bb4c58290ec495235306899217216e0a1641341b9f86a608e3fa192",
+      "pageCount": 1,
+      "textPageCount": 1,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [
+          {
+            "page": 1,
+            "preview": "英语科代表小张 Starter Unit 2 Keep Tidy 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Starter Unit 2 bottle /ˈbɒtl/ n. 瓶子 eraser /ɪ"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "page": 1,
+            "preview": " need /ni:d/ v.&n. 需要 You're welcome 别客气，不用谢 Starter Unit 3 Welcome! 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Starter Unit 3 fun /fʌn/ n. 乐趣；快乐 adj. 有趣的；使人快"
+          }
+        ],
+        "unit_1": [],
+        "unit_2": [
+          {
+            "page": 1,
+            "preview": "英语科代表小张 Starter Unit 2 Keep Tidy 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Starter Unit 2 bottle /ˈbɒtl/ n. 瓶子 eraser /ɪˈ"
+          }
+        ],
+        "unit_3": [
+          {
+            "page": 1,
+            "preview": "i:d/ v.&n. 需要 You're welcome 别客气，不用谢 Starter Unit 3 Welcome! 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Starter Unit 3 fun /fʌn/ n. 乐趣；快乐 adj. 有趣的；使人快乐"
+          }
+        ],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "cefdd4ae79f711f1a93a9523fdaa939b",
+      "documentName": "新七上 单词详解  内容复杂版.pdf",
+      "sourceSha256": "9024f2d01a9ae24c2ee4ace843baf44c90a8e19b9ed00f17f3f3335901526f6f",
+      "analysisFileSha256": "9024f2d01a9ae24c2ee4ace843baf44c90a8e19b9ed00f17f3f3335901526f6f",
+      "pageCount": 7,
+      "textPageCount": 0,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "documentName": "新七上 单词详解  内容清爽版.pdf",
+      "sourceSha256": "e7dbacf830c967528f2377762b74474648d9e61dbdf0f8acdba7b0c6ad958b12",
+      "analysisFileSha256": "e7dbacf830c967528f2377762b74474648d9e61dbdf0f8acdba7b0c6ad958b12",
+      "pageCount": 16,
+      "textPageCount": 14,
+      "unitOccurrences": {
+        "starter_unit_1": [
+          {
+            "page": 1,
+            "preview": "英语科代表小张 Starter Unit 1 Hello! Starter Unit 1 unit /ˈjuːnɪt/ n. 单元 starter /ˈstɑːtə(r)/ unit 过渡单元 section /ˈsekʃ/ n. 部"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "page": 2,
+            "preview": "英语科代表小张 Starter Unit 2 Keep Tidy 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Starter Unit 2 bottle /ˈbɒtl/ n. 瓶子 eraser /ɪ"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "page": 2,
+            "preview": " need /ni:d/ v.&n. 需要 You're welcome 别客气，不用谢 Starter Unit 3 Welcome! 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Starter Unit 3 fun /fʌn/ n. 乐趣；快乐 adj. 有趣的；使人快"
+          }
+        ],
+        "unit_1": [
+          {
+            "page": 1,
+            "preview": "英语科代表小张 Starter Unit 1 Hello! Starter Unit 1 unit /ˈjuːnɪt/ n. 单元 starter /ˈstɑːtə(r)/ unit 过渡单元 section /ˈsekʃ/ n. 部分"
+          }
+        ],
+        "unit_2": [
+          {
+            "page": 2,
+            "preview": "英语科代表小张 Starter Unit 2 Keep Tidy 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Starter Unit 2 bottle /ˈbɒtl/ n. 瓶子 eraser /ɪˈ"
+          },
+          {
+            "page": 5,
+            "preview": "英语科代表小张 UNIT2 Unit 2 mean /miːn/ v. 意思是；打算 husband /ˈhʌz.bənd/ n. 丈夫 bat /bæt/ n. 球棒；球拍 ping-pong bat 乒乓球拍 pl"
+          }
+        ],
+        "unit_3": [
+          {
+            "page": 2,
+            "preview": "i:d/ v.&n. 需要 You're welcome 别客气，不用谢 Starter Unit 3 Welcome! 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Starter Unit 3 fun /fʌn/ n. 乐趣；快乐 adj. 有趣的；使人快乐"
+          },
+          {
+            "page": 7,
+            "preview": "UNIT3 My School 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Unit 3 hall /hɔːl/ n. 礼堂；大厅 dining /ˈdaɪnɪŋ/ hall 餐厅 in"
+          }
+        ],
+        "unit_4": [
+          {
+            "page": 9,
+            "preview": "英语科代表小张 UNIT4 My Favourite Subject 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Unit 4 biology /baɪˈɑːlədʒi/ n.生物学 IT /ˌaɪ ˈtiː/ abbr. "
+          }
+        ],
+        "unit_5": [
+          {
+            "page": 11,
+            "preview": "英语科代表小张 UNIT5 Fun Clubs 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Unit 5 club /klʌb/ n. 俱乐部；社团 join /dʒɔɪn/ v.参加；加入 choos"
+          }
+        ],
+        "unit_6": [
+          {
+            "page": 13,
+            "preview": "英语科代表小张 UNIT6 A Day in the Life 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Unit 6 make use of 使用……;利用…… shower/ˈʃaʊə/ n.淋浴；淋浴器 v. "
+          }
+        ],
+        "unit_7": [
+          {
+            "page": 15,
+            "preview": "英语科代表小张 1 UNIT7 Happy Birthday! 根据《义务教育英语课程标准(2022 年版)》,本词表中的重点词汇用粗体显示 Unit 7 celebrate /ˈselɪbreɪt/ v.庆祝；庆贺 surprise /səˈpra"
+          }
+        ]
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "documentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "sourceSha256": "f2df92b33da917c7a900ad7999d4115bff8727e0fc73f400b126224127132b1d",
+      "analysisFileSha256": "f2df92b33da917c7a900ad7999d4115bff8727e0fc73f400b126224127132b1d",
+      "pageCount": 244,
+      "textPageCount": 0,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    },
+    {
+      "documentId": "d0fde9ec7b8c11f1b1eacb449d41f0c3",
+      "documentName": "2025《教材帮•作文帮》英语七上(人教).pdf",
+      "sourceSha256": "f6b1d1bb45a24fa06ac7e7435c99e74286feebc341a6e2386030040327d1897f",
+      "analysisFileSha256": "f6b1d1bb45a24fa06ac7e7435c99e74286feebc341a6e2386030040327d1897f",
+      "pageCount": 11,
+      "textPageCount": 0,
+      "unitOccurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      },
+      "status": "analyzed",
+      "error": null
+    }
+  ]
+}

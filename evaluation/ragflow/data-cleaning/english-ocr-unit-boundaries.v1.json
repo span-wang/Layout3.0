@@ -1,0 +1,2754 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-data-cleaning-shadow-kb-v1",
+  "generatedAt": "2026-07-10T12:12:56.541Z",
+  "candidateCount": 17,
+  "documents": [
+    {
+      "documentId": "d0ca17707b8c11f1b1eacb449d41f0c3",
+      "documentName": "（已压缩）2025《教材帮》英语七上(人教).pdf",
+      "sourceChunkCount": 415,
+      "returnedChunkCount": 415,
+      "occurrences": {
+        "starter_unit_1": [
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": "## 单元整体教学设计 聚焦单元主题，研读单元语篇，探究主 题意义 Starter Unit1(P001） Starter Unit 2(P017） Starter Unit 3(P031) Unit 1(P043）Unit 2(P067) Unit 3(P091)Unit4(P11"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": "设计 聚焦单元主题，研读单元语篇，探究主 题意义 Starter Unit1(P001） Starter Unit 2(P017） Starter Unit 3(P031) Unit 1(P043）Unit 2(P067) Unit 3(P091)Unit4(P118） Unit 5(P147)Unit6("
+          },
+          {
+            "chunkId": "6c9ff93161aebcf4",
+            "page": 28,
+            "preview": "Bob在上学的路上遇到了好友Jenny，他们会如何展开对话呢？快来扫码写一写吧！ 移训练 Starter Unit 2 Keep Tidy!保持整洁！ ## 单元导读 ## 单元主题层级 <div style=\"text-align: center;\"><html><body><table border=\""
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": "题意义 Starter Unit1(P001） Starter Unit 2(P017） Starter Unit 3(P031) Unit 1(P043）Unit 2(P067) Unit 3(P091)Unit4(P118） Unit 5(P147)Unit6(P172） Unit 7(P198) ##"
+          }
+        ],
+        "unit_1": [
+          {
+            "chunkId": "7df54feab12fc205",
+            "page": 6,
+            "preview": "Starter Unit1Hello! Section A Howdo yougreet people?……002 Section B How do you start a conversation? ……009 单"
+          },
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": "## 单元整体教学设计 聚焦单元主题，研读单元语篇，探究主 题意义 Starter Unit1(P001） Starter Unit 2(P017） Starter Unit 3(P031) Unit 1(P043）Unit 2(P067) Unit 3(P091)Unit4(P11"
+          },
+          {
+            "chunkId": "115c896e6d873b9d",
+            "page": 15,
+            "preview": "好。我叫0 B:。 A：那你叫什么名字？ B:我叫。很高兴见到你。A:。 Starter Unit 1Starter Unit2Starter Unit 3Unit1Unit 2Unit 3Unit 4Unit5Unit6Unit 7语法精练答案 004 上课认真听下课练天星教材帮·初中英语"
+          },
+          {
+            "chunkId": "d51d383f487a4d80",
+            "page": 17,
+            "preview": "，鲍勃！ —Goodmorning，Mary！早上好，玛丽！（吉林中考） Starter Unit 1Starter Unit 2starter Unit 3unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 006C0 上课认真听下课练天星教材帮·初中英语·"
+          },
+          {
+            "chunkId": "f108a864ea618281",
+            "page": 19,
+            "preview": "②可用作复数名词或代词的同位语。作主语的同位语时，谓语动词应用复数形式。 Starter Unit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 008 上课认真听下课练天星教材帮·初中英语·七年级上册·"
+          },
+          {
+            "chunkId": "0ce31edc3324730d",
+            "page": 21,
+            "preview": "很好，谢谢。你呢？海伦：我很好，谢谢。 亚明：哦，铃响了。我们去上课吧。 Starter Unit1StarterUnit2StarterUnit3Unit1Unit2Unit 3Unit4Unit5Unit6Unit 7语法精练答案 010100 上课认真听下课练天星教材帮·初中英语·七"
+          },
+          {
+            "chunkId": "e1904dae81a874df",
+            "page": 23,
+            "preview": "，尽快在词典中找到这些单词。 短的动物西红柿漂亮的棕色湖玻璃房子图片鞋子 Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 012100 上课认真听下课练天星教材帮·初中英"
+          },
+          {
+            "chunkId": "bb9b3e25c4627450",
+            "page": 25,
+            "preview": "anat188××××0760.你可以拨打188××××0760找艾伦。 Starter Unit 1StarterUnit2Starter Unit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "191ba639dc940abb",
+            "page": 27,
+            "preview": "不少于3个回合。 审体裁：对话 审主题：向华与MaryBrown互致问候 Starter Unit 1StarterUnit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案"
+          },
+          {
+            "chunkId": "db946d9ef7b4f9cd",
+            "page": 31,
+            "preview": "5.音乐学生小学生 ## 听并朗读这首诗。 醒醒，小凯特！ 别起得太晚！ Starter Unit 1Starter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案 020 教材帮·初中英语·七年级上册·RJ The "
+          },
+          {
+            "chunkId": "8f1c6c9509d3039e",
+            "page": 33,
+            "preview": "StarterUnit1Starter Unit2Starter Unit 3Unit1Unit2Unit3Unit 4Unit5Unit6Unit 7语法精练答案 022 ## 下课练天星上课认真听教材帮·初中英"
+          },
+          {
+            "chunkId": "c276ba33e8999c68",
+            "page": 35,
+            "preview": " 在我看到了！爸爸，在你的头上！ 爸爸：哦，谢谢你，埃玛！ 埃玛：不用谢。 StarterUnit1Starter Unit2StarterUnitUn1UnitUntUni4UntUnt6Unit法精答案"
+          },
+          {
+            "chunkId": "56d6636703ee9f93",
+            "page": 37,
+            "preview": "猜你写的是什么。 它是一把尺子吗？它们是书吗？ 轮流到前面来玩猜词游戏。 Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 ## 本部分答案 教材问题答案 1a1.on 2"
+          },
+          {
+            "chunkId": "4c731b1f78bdb997",
+            "page": 39,
+            "preview": " in needofsome fresh air.我很想呼吸一点新鲜空气。 StarterUnit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 028 上课认真听下课练天星教材帮·初中英语·七年级上册·"
+          },
+          {
+            "chunkId": "62502c4a19d72e27",
+            "page": 41,
+            "preview": "Starter Unit1Starter Unit2StarterUnitUnit1UnitUnitUnit4Unit5Unit6Unit7语法精练答案 030100 教材帮·初中英语·七年级上册·RJ ## 词句积"
+          },
+          {
+            "chunkId": "dbba05c73765a21c",
+            "page": 45,
+            "preview": "></html></div> ## 2 听单词，把它们放入正确的组别中。 Starter Unit1StarterUnit2Starter Unit 3Unit Unit3Unit4Unit5Unit6语法精练答案 034100 ## 教材帮·初中英语·七年级上册·RJ <div styl"
+          },
+          {
+            "chunkId": "868e77cc528ba6ba",
+            "page": 47,
+            "preview": "ntwhat引导的特殊疑问句 讲（1）what可单独引导特殊疑问句，也可与 StarterUnit1Starter Unit 2Starter Unit3Unit1Unit2Unit3Unit5Unit6Unit7语法精练答案 036 教材帮·初中英语·七年级上册·RJ 名词连用，提问班级"
+          },
+          {
+            "chunkId": "565f64d7c7ba5019",
+            "page": 49,
+            "preview": "是什么颜色的？它是。 ## 2 b 就1a中的图片回答更多的问题。 2b Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "c30a4762d1276fed",
+            "page": 51,
+            "preview": "t's count downfrom10 to1.我们从10倒数到1吧。 Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 040 上课认真听下课练天星教材帮·初中英语·七年"
+          },
+          {
+            "chunkId": "6ef7eac3c40d2be6",
+            "page": 53,
+            "preview": "td></tr></table></body></html></div> Starter Unit 1Starter Unit 2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 教材帮·初中英语·七年级上册·RJ <div sty"
+          },
+          {
+            "chunkId": "9bf6848b2edd55e4",
+            "page": 55,
+            "preview": "## Unit 1 ## You and Me ## 我和你 Big Question: How do we make new friends?如何交新朋友? 佳句背诵：Getting to know each"
+          },
+          {
+            "chunkId": "0b5b018bd2bcfa32",
+            "page": 57,
+            "preview": "td></tr></table></body></html></div> Starter Unit1Starter Unit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 046 教材帮·初中英语·七年级上册·RJ ## 语"
+          },
+          {
+            "chunkId": "b0ab0a00921010ca",
+            "page": 59,
+            "preview": "s、Im、he's和it's的发音。然后分角色表演对话。 谁是我是他是它是 StarterUnit1StarterUnitStarterUnit3Unit1Unit2UnitUnit4Uni5Unt6Unit语法精练答案 048100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "0eb42ee4f23c2f2d",
+            "page": 63,
+            "preview": "in is 8 years old this year.他表弟今年八岁。 Starter Unit1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 052Q9"
+          },
+          {
+            "chunkId": "c377fecfe39a7b2a",
+            "page": 65,
+            "preview": "生的照片板。用方框中的单词给图片贴上标签。对于这两个学生你能了解到什么？ Starter Unit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 054 上课认真听下课练天星教材帮·初中英语·七年级上册·"
+          },
+          {
+            "chunkId": "eead3682e353ed4a",
+            "page": 67,
+            "preview": "·我喜欢。 ·我岁。 ·我最喜欢的食物是。 ·我住在 ·我最喜欢的运动是。 StarterUnit1StarterUni2StarterUnit3Unit1UnitUnit3Unit4Unit5Unit6Unit 语法精练答案 056100 上课认真听下课练天星教材帮·初中英语·七年级上册"
+          },
+          {
+            "chunkId": "65af3167a1b73abf",
+            "page": 69,
+            "preview": " ago”“2hours ago”可推测，本文最可能是在论坛上发布的帖子。 StarterUnit1Starter Unit 2Starter Unit 3Unit1Unit Unit3Unit4Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 ## My page我的页"
+          },
+          {
+            "chunkId": "eb7a4e2a8a308ef3",
+            "page": 71,
+            "preview": "nformation is veryimportant.该信息非常重要。 Starter Unit1Starter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 060100 上课认真听下课练天星教材帮·初中英语·七"
+          },
+          {
+            "chunkId": "bd02ad61dc42a943",
+            "page": 73,
+            "preview": " classmates. A. be B. am C. is D. are StarterUnit1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 062100 上课认真听下课练天星教材帮·初中英语·七年级"
+          },
+          {
+            "chunkId": "deb45a4c1ba0ddaf",
+            "page": 75,
+            "preview": "Are you happy to see （你们的)oldfriends? StarterUnit1Starter Unit2StarterUnit3Unit1Unit 2Unit3Unit4Unit5Unit6Unit7语法精练答案 064 下课练天星上课认真听教材帮·初中英语·七年级上"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "7df54feab12fc205",
+            "page": 6,
+            "preview": "nversation? ……009 单元提升 写作帮：如何用英语问候…… Starter Unit2Keep Tidy! Section A What do you have? Section B Where do you put your things? …… 023 单元提升 写作帮："
+          },
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": "题，研读单元语篇，探究主 题意义 Starter Unit1(P001） Starter Unit 2(P017） Starter Unit 3(P031) Unit 1(P043）Unit 2(P067) Unit 3(P091)Unit4(P118） Unit 5(P147)Unit6("
+          },
+          {
+            "chunkId": "115c896e6d873b9d",
+            "page": 15,
+            "preview": "叫什么名字？ B:我叫。很高兴见到你。A:。 Starter Unit 1Starter Unit2Starter Unit 3Unit1Unit 2Unit 3Unit 4Unit5Unit6Unit 7语法精练答案 004 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## "
+          },
+          {
+            "chunkId": "d51d383f487a4d80",
+            "page": 17,
+            "preview": "ing，Mary！早上好，玛丽！（吉林中考） Starter Unit 1Starter Unit 2starter Unit 3unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 006C0 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 拓类"
+          },
+          {
+            "chunkId": "f108a864ea618281",
+            "page": 19,
+            "preview": "同位语。作主语的同位语时，谓语动词应用复数形式。 Starter Unit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 008 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ We eachha"
+          },
+          {
+            "chunkId": "0ce31edc3324730d",
+            "page": 21,
+            "preview": "我很好，谢谢。 亚明：哦，铃响了。我们去上课吧。 Starter Unit1StarterUnit2StarterUnit3Unit1Unit2Unit 3Unit4Unit5Unit6Unit 7语法精练答案 010100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "e1904dae81a874df",
+            "page": 23,
+            "preview": " 短的动物西红柿漂亮的棕色湖玻璃房子图片鞋子 Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 012100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## "
+          },
+          {
+            "chunkId": "bb9b3e25c4627450",
+            "page": 25,
+            "preview": "60.你可以拨打188××××0760找艾伦。 Starter Unit 1StarterUnit2Starter Unit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "191ba639dc940abb",
+            "page": 27,
+            "preview": "对话 审主题：向华与MaryBrown互致问候 Starter Unit 1StarterUnit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案"
+          },
+          {
+            "chunkId": "6c9ff93161aebcf4",
+            "page": 28,
+            "preview": "上遇到了好友Jenny，他们会如何展开对话呢？快来扫码写一写吧！ 移训练 Starter Unit 2 Keep Tidy!保持整洁！ ## 单元导读 ## 单元主题层级 <div style=\"text-align: center;\"><html><body><table border=\"1"
+          },
+          {
+            "chunkId": "db946d9ef7b4f9cd",
+            "page": 31,
+            "preview": "并朗读这首诗。 醒醒，小凯特！ 别起得太晚！ Starter Unit 1Starter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案 020 教材帮·初中英语·七年级上册·RJ The weather is fi"
+          },
+          {
+            "chunkId": "8f1c6c9509d3039e",
+            "page": 33,
+            "preview": "StarterUnit1Starter Unit2Starter Unit 3Unit1Unit2Unit3Unit 4Unit5Unit6Unit 7语法精练答案 022 ## 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ <d"
+          },
+          {
+            "chunkId": "7e02253eca5ef9d7",
+            "page": 34,
+            "preview": "名词所有格的更多用法见Unit2语法帮。 This is Kangkang's cup.这是康康的杯子。 ThesebooksareJohn's.这些书是约翰的。 9Peter'strousers arered.彼得的裤子"
+          },
+          {
+            "chunkId": "c276ba33e8999c68",
+            "page": 35,
+            "preview": "头上！ 爸爸：哦，谢谢你，埃玛！ 埃玛：不用谢。 StarterUnit1Starter Unit2StarterUnitUn1UnitUntUni4UntUnt6Unit法精答案"
+          },
+          {
+            "chunkId": "56d6636703ee9f93",
+            "page": 37,
+            "preview": "子吗？它们是书吗？ 轮流到前面来玩猜词游戏。 Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 ## 本部分答案 教材问题答案 1a1.on 2.in 3.under 2a"
+          },
+          {
+            "chunkId": "4c731b1f78bdb997",
+            "page": 39,
+            "preview": "me fresh air.我很想呼吸一点新鲜空气。 StarterUnit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 028 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ There's n"
+          },
+          {
+            "chunkId": "62502c4a19d72e27",
+            "page": 41,
+            "preview": "Starter Unit1Starter Unit2StarterUnitUnit1UnitUnitUnit4Unit5Unit6Unit7语法精练答案 030100 教材帮·初中英语·七年级上册·RJ ## 词句积累 <div style="
+          },
+          {
+            "chunkId": "dbba05c73765a21c",
+            "page": 45,
+            "preview": "v> ## 2 听单词，把它们放入正确的组别中。 Starter Unit1StarterUnit2Starter Unit 3Unit Unit3Unit4Unit5Unit6语法精练答案 034100 ## 教材帮·初中英语·七年级上册·RJ <div style=\"text-alig"
+          },
+          {
+            "chunkId": "868e77cc528ba6ba",
+            "page": 47,
+            "preview": "句 讲（1）what可单独引导特殊疑问句，也可与 StarterUnit1Starter Unit 2Starter Unit3Unit1Unit2Unit3Unit5Unit6Unit7语法精练答案 036 教材帮·初中英语·七年级上册·RJ 名词连用，提问班级、颜色、时间等。常见的有： "
+          },
+          {
+            "chunkId": "565f64d7c7ba5019",
+            "page": 49,
+            "preview": "2 b 就1a中的图片回答更多的问题。 2b Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "c30a4762d1276fed",
+            "page": 51,
+            "preview": "from10 to1.我们从10倒数到1吧。 Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 040 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 拓（1）[及物"
+          },
+          {
+            "chunkId": "6ef7eac3c40d2be6",
+            "page": 53,
+            "preview": "e></body></html></div> Starter Unit 1Starter Unit 2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 教材帮·初中英语·七年级上册·RJ <div style=\"text-align"
+          },
+          {
+            "chunkId": "0b5b018bd2bcfa32",
+            "page": 57,
+            "preview": "le></body></html></div> Starter Unit1Starter Unit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 046 教材帮·初中英语·七年级上册·RJ ## 语音知识 ## （一） 前元"
+          },
+          {
+            "chunkId": "b0ab0a00921010ca",
+            "page": 59,
+            "preview": "他是它是 StarterUnit1StarterUnitStarterUnit3Unit1Unit2UnitUnit4Uni5Unt6Unit语法精练答案 048100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 2e Complete the table with what "
+          },
+          {
+            "chunkId": "ac8e6ac5618d006c",
+            "page": 61,
+            "preview": "our is white.（答案不唯一，仅供参考） StarterUnit StarterUnit2StarterUnit3Unit Unit3Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 1Howdowemakenewfriends?如何交新朋友？（教材P19Big"
+          },
+          {
+            "chunkId": "0eb42ee4f23c2f2d",
+            "page": 63,
+            "preview": "s old this year.他表弟今年八岁。 Starter Unit1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 052Q9"
+          },
+          {
+            "chunkId": "c377fecfe39a7b2a",
+            "page": 65,
+            "preview": "词给图片贴上标签。对于这两个学生你能了解到什么？ Starter Unit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 054 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ parrot Be"
+          },
+          {
+            "chunkId": "65af3167a1b73abf",
+            "page": 69,
+            "preview": "ago”可推测，本文最可能是在论坛上发布的帖子。 StarterUnit1Starter Unit 2Starter Unit 3Unit1Unit Unit3Unit4Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 ## My page我的页面 (教材P241b) Po"
+          },
+          {
+            "chunkId": "eb7a4e2a8a308ef3",
+            "page": 71,
+            "preview": " veryimportant.该信息非常重要。 Starter Unit1Starter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 060100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 9Ilov"
+          },
+          {
+            "chunkId": "bd02ad61dc42a943",
+            "page": 73,
+            "preview": " A. be B. am C. is D. are StarterUnit1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 062100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 考向4"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "7df54feab12fc205",
+            "page": 6,
+            "preview": " things? …… 023 单元提升 写作帮：如何描述物品的位置……. StarterUnit3Welcome! SectionB What is funon a farm? 单元提升 写作帮：如何描述庭院或农场……041 Unit 1You and Me Section A How "
+          },
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": "ter Unit1(P001） Starter Unit 2(P017） Starter Unit 3(P031) Unit 1(P043）Unit 2(P067) Unit 3(P091)Unit4(P118） Unit 5(P147)Unit6(P172） Unit 7(P198) ##"
+          },
+          {
+            "chunkId": "115c896e6d873b9d",
+            "page": 15,
+            "preview": "高兴见到你。A:。 Starter Unit 1Starter Unit2Starter Unit 3Unit1Unit 2Unit 3Unit 4Unit5Unit6Unit 7语法精练答案 004 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## Pronunciation "
+          },
+          {
+            "chunkId": "d51d383f487a4d80",
+            "page": 17,
+            "preview": "丽！（吉林中考） Starter Unit 1Starter Unit 2starter Unit 3unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 006C0 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 拓类似的日常用语还有： Good"
+          },
+          {
+            "chunkId": "f108a864ea618281",
+            "page": 19,
+            "preview": "，谓语动词应用复数形式。 Starter Unit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 008 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ We eachhavedifferentp"
+          },
+          {
+            "chunkId": "0ce31edc3324730d",
+            "page": 21,
+            "preview": "，铃响了。我们去上课吧。 Starter Unit1StarterUnit2StarterUnit3Unit1Unit2Unit 3Unit4Unit5Unit6Unit 7语法精练答案 010100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "e1904dae81a874df",
+            "page": 23,
+            "preview": "玻璃房子图片鞋子 Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 012100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 本部分答案 ## Hello"
+          },
+          {
+            "chunkId": "bb9b3e25c4627450",
+            "page": 25,
+            "preview": "××0760找艾伦。 Starter Unit 1StarterUnit2Starter Unit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "191ba639dc940abb",
+            "page": 27,
+            "preview": "yBrown互致问候 Starter Unit 1StarterUnit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案"
+          },
+          {
+            "chunkId": "db946d9ef7b4f9cd",
+            "page": 31,
+            "preview": "特！ 别起得太晚！ Starter Unit 1Starter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案 020 教材帮·初中英语·七年级上册·RJ The weather is fine,So meet me"
+          },
+          {
+            "chunkId": "8f1c6c9509d3039e",
+            "page": 33,
+            "preview": "StarterUnit1Starter Unit2Starter Unit 3Unit1Unit2Unit3Unit 4Unit5Unit6Unit 7语法精练答案 022 ## 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ <div style=\"text"
+          },
+          {
+            "chunkId": "56d6636703ee9f93",
+            "page": 37,
+            "preview": "面来玩猜词游戏。 Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 ## 本部分答案 教材问题答案 1a1.on 2.in 3.under 2a1.B 2.B 3.A 4."
+          },
+          {
+            "chunkId": "4c731b1f78bdb997",
+            "page": 39,
+            "preview": ".我很想呼吸一点新鲜空气。 StarterUnit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 028 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ There's noneedtocry.不"
+          },
+          {
+            "chunkId": "dbba05c73765a21c",
+            "page": 45,
+            "preview": "它们放入正确的组别中。 Starter Unit1StarterUnit2Starter Unit 3Unit Unit3Unit4Unit5Unit6语法精练答案 034100 ## 教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><h"
+          },
+          {
+            "chunkId": "868e77cc528ba6ba",
+            "page": 47,
+            "preview": "导特殊疑问句，也可与 StarterUnit1Starter Unit 2Starter Unit3Unit1Unit2Unit3Unit5Unit6Unit7语法精练答案 036 教材帮·初中英语·七年级上册·RJ 名词连用，提问班级、颜色、时间等。常见的有： <div style=\"t"
+          },
+          {
+            "chunkId": "565f64d7c7ba5019",
+            "page": 49,
+            "preview": "多的问题。 2b Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "c30a4762d1276fed",
+            "page": 51,
+            "preview": "10倒数到1吧。 Starter Unit 1Starter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 040 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 拓（1）[及物动词]计算（或清点）总数 W"
+          },
+          {
+            "chunkId": "6ef7eac3c40d2be6",
+            "page": 53,
+            "preview": "l></div> Starter Unit 1Starter Unit 2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><h"
+          },
+          {
+            "chunkId": "0b5b018bd2bcfa32",
+            "page": 57,
+            "preview": "tml></div> Starter Unit1Starter Unit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 046 教材帮·初中英语·七年级上册·RJ ## 语音知识 ## （一） 前元音/i////e//æ/ 这"
+          },
+          {
+            "chunkId": "b0ab0a00921010ca",
+            "page": 59,
+            "preview": "表演对话。 谁是我是他是它是 StarterUnit1StarterUnitStarterUnit3Unit1Unit2UnitUnit4Uni5Unt6Unit语法精练答案 048100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 2e Complete the table "
+          },
+          {
+            "chunkId": "ac8e6ac5618d006c",
+            "page": 61,
+            "preview": ".（答案不唯一，仅供参考） StarterUnit StarterUnit2StarterUnit3Unit Unit3Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 1Howdowemakenewfriends?如何交新朋友？（教材P19BigQuestion） ##"
+          },
+          {
+            "chunkId": "0eb42ee4f23c2f2d",
+            "page": 63,
+            "preview": "ear.他表弟今年八岁。 Starter Unit1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 052Q9"
+          },
+          {
+            "chunkId": "c377fecfe39a7b2a",
+            "page": 65,
+            "preview": "两个学生你能了解到什么？ Starter Unit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 054 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ parrot Beijing roast "
+          },
+          {
+            "chunkId": "eead3682e353ed4a",
+            "page": 67,
+            "preview": "我住在 ·我最喜欢的运动是。 StarterUnit1StarterUni2StarterUnit3Unit1UnitUnit3Unit4Unit5Unit6Unit 语法精练答案 056100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 2 b Completeyour"
+          },
+          {
+            "chunkId": "65af3167a1b73abf",
+            "page": 69,
+            "preview": "在论坛上发布的帖子。 StarterUnit1Starter Unit 2Starter Unit 3Unit1Unit Unit3Unit4Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 ## My page我的页面 (教材P241b) Point page/peidz"
+          },
+          {
+            "chunkId": "eb7a4e2a8a308ef3",
+            "page": 71,
+            "preview": "t.该信息非常重要。 Starter Unit1Starter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 060100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 9Ilovemusic/sport "
+          },
+          {
+            "chunkId": "bd02ad61dc42a943",
+            "page": 73,
+            "preview": " C. is D. are StarterUnit1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 062100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 考向4系动词be在一般现在时中"
+          },
+          {
+            "chunkId": "deb45a4c1ba0ddaf",
+            "page": 75,
+            "preview": ")oldfriends? StarterUnit1Starter Unit2StarterUnit3Unit1Unit 2Unit3Unit4Unit5Unit6Unit7语法精练答案 064 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ ## 典例3 —Is the girl "
+          },
+          {
+            "chunkId": "e2cddc28f3ff53dc",
+            "page": 77,
+            "preview": "l></div> StarterUnitStarterUn2SteU3Unit1Unit2Unit3Unit4Unit5Unit6nit7语法精练答案 066 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "4614a039c31277ed",
+            "page": 81,
+            "preview": "丽丝的 凯特的弗雷德的 StarterUnit1Starter Unit 2StarterUnit 3Unit1Unit 2Unit 3Unit 4Unit 5Unit6Unit 7语法精练答案 070100 教材帮·初中英语·七年级上册·RJ ### 3 Listenandrepeat.N"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "7df54feab12fc205",
+            "page": 6,
+            "preview": "n、 next to、across from 114 中考帮：完形填空·线索推断法117 Unit 4My Favourite Subject Section A Why do you like this subject? SectionB Whatcan youlearnfromdfferentsubjects? .132 单元"
+          },
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": "3(P031) Unit 1(P043）Unit 2(P067) Unit 3(P091)Unit4(P118） Unit 5(P147)Unit6(P172） Unit 7(P198) ## 深入语篇研读 从what、why、how进行语篇分析，从句子成分剖析长难句，从行文逻辑梳理课文结"
+          },
+          {
+            "chunkId": "115c896e6d873b9d",
+            "page": 15,
+            "preview": "1Starter Unit2Starter Unit 3Unit1Unit 2Unit 3Unit 4Unit5Unit6Unit 7语法精练答案 004 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## Pronunciation Listen to the 26letters"
+          },
+          {
+            "chunkId": "d51d383f487a4d80",
+            "page": 17,
+            "preview": " 1Starter Unit 2starter Unit 3unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 006C0 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 拓类似的日常用语还有： Goodafternoon！下午好！ Good "
+          },
+          {
+            "chunkId": "f108a864ea618281",
+            "page": 19,
+            "preview": " Unit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 008 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ We eachhavedifferentproblems.我们各自有不同的问题。 "
+          },
+          {
+            "chunkId": "0ce31edc3324730d",
+            "page": 21,
+            "preview": "Unit1StarterUnit2StarterUnit3Unit1Unit2Unit 3Unit4Unit5Unit6Unit 7语法精练答案 010100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "e1904dae81a874df",
+            "page": 23,
+            "preview": "1Starter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 012100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 本部分答案 ## Hello! Good morning. 2a1.I"
+          },
+          {
+            "chunkId": "bb9b3e25c4627450",
+            "page": 25,
+            "preview": "nit 1StarterUnit2Starter Unit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "191ba639dc940abb",
+            "page": 27,
+            "preview": "it 1StarterUnit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案"
+          },
+          {
+            "chunkId": "db946d9ef7b4f9cd",
+            "page": 31,
+            "preview": "it 1Starter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案 020 教材帮·初中英语·七年级上册·RJ The weather is fine,So meet me at nine. We can fly"
+          },
+          {
+            "chunkId": "8f1c6c9509d3039e",
+            "page": 33,
+            "preview": "it1Starter Unit2Starter Unit 3Unit1Unit2Unit3Unit 4Unit5Unit6Unit 7语法精练答案 022 ## 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><htm"
+          },
+          {
+            "chunkId": "56d6636703ee9f93",
+            "page": 37,
+            "preview": "1Starter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 ## 本部分答案 教材问题答案 1a1.on 2.in 3.under 2a1.B 2.B 3.A 4.B 2b1.cap blue on the"
+          },
+          {
+            "chunkId": "4c731b1f78bdb997",
+            "page": 39,
+            "preview": "rUnit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 028 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ There's noneedtocry.不要哭了。 ## 典例4（上海市奉贤区实验"
+          },
+          {
+            "chunkId": "62502c4a19d72e27",
+            "page": 41,
+            "preview": "er Unit1Starter Unit2StarterUnitUnit1UnitUnitUnit4Unit5Unit6Unit7语法精练答案 030100 教材帮·初中英语·七年级上册·RJ ## 词句积累 <div style=\"text-align: center;\"><html><"
+          },
+          {
+            "chunkId": "dbba05c73765a21c",
+            "page": 45,
+            "preview": "ter Unit1StarterUnit2Starter Unit 3Unit Unit3Unit4Unit5Unit6语法精练答案 034100 ## 教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><body><tabl"
+          },
+          {
+            "chunkId": "565f64d7c7ba5019",
+            "page": 49,
+            "preview": " 1Starter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "c30a4762d1276fed",
+            "page": 51,
+            "preview": " 1Starter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 040 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 拓（1）[及物动词]计算（或清点）总数 Wecan't countthe star"
+          },
+          {
+            "chunkId": "6ef7eac3c40d2be6",
+            "page": 53,
+            "preview": "t 1Starter Unit 2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><body><table bor"
+          },
+          {
+            "chunkId": "0b5b018bd2bcfa32",
+            "page": 57,
+            "preview": "it1Starter Unit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 046 教材帮·初中英语·七年级上册·RJ ## 语音知识 ## （一） 前元音/i////e//æ/ 这四个音是前元音，发音特点是： ①舌尖抵住"
+          },
+          {
+            "chunkId": "b0ab0a00921010ca",
+            "page": 59,
+            "preview": "terUnit1StarterUnitStarterUnit3Unit1Unit2UnitUnit4Uni5Unt6Unit语法精练答案 048100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 2e Complete the table with what you know "
+          },
+          {
+            "chunkId": "0eb42ee4f23c2f2d",
+            "page": 63,
+            "preview": " Unit1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 052Q9"
+          },
+          {
+            "chunkId": "c377fecfe39a7b2a",
+            "page": 65,
+            "preview": " Unit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 054 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ parrot Beijing roast duck the UK Singapor"
+          },
+          {
+            "chunkId": "eead3682e353ed4a",
+            "page": 67,
+            "preview": "terUnit1StarterUni2StarterUnit3Unit1UnitUnit3Unit4Unit5Unit6Unit 语法精练答案 056100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 2 b Completeyourreply to Paulineor "
+          },
+          {
+            "chunkId": "65af3167a1b73abf",
+            "page": 69,
+            "preview": "t1Starter Unit 2Starter Unit 3Unit1Unit Unit3Unit4Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 ## My page我的页面 (教材P241b) Point page/peidz/n.页面；（书刊或纸张）页 讲（1）指"
+          },
+          {
+            "chunkId": "eb7a4e2a8a308ef3",
+            "page": 71,
+            "preview": "nit1Starter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 060100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 9Ilovemusic/sport too.我也喜欢音乐/运动。（教材P25"
+          },
+          {
+            "chunkId": "bd02ad61dc42a943",
+            "page": 73,
+            "preview": "rUnit1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 062100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 考向4系动词be在一般现在时中的相关句型 <div style=\"te"
+          },
+          {
+            "chunkId": "deb45a4c1ba0ddaf",
+            "page": 75,
+            "preview": "nit1Starter Unit2StarterUnit3Unit1Unit 2Unit3Unit4Unit5Unit6Unit7语法精练答案 064 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ ## 典例3 —Is the girl sister? —Yes.name is "
+          },
+          {
+            "chunkId": "e2cddc28f3ff53dc",
+            "page": 77,
+            "preview": "iv> StarterUnitStarterUn2SteU3Unit1Unit2Unit3Unit4Unit5Unit6nit7语法精练答案 066 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "4614a039c31277ed",
+            "page": 81,
+            "preview": "1Starter Unit 2StarterUnit 3Unit1Unit 2Unit 3Unit 4Unit 5Unit6Unit 7语法精练答案 070100 教材帮·初中英语·七年级上册·RJ ### 3 Listenandrepeat.Noticethe stressedsyllab"
+          },
+          {
+            "chunkId": "b375f01104d54d6c",
+            "page": 83,
+            "preview": "rUnit1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 072100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 2e Bring some photos of things your fa"
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": " 1(P043）Unit 2(P067) Unit 3(P091)Unit4(P118） Unit 5(P147)Unit6(P172） Unit 7(P198) ## 深入语篇研读 从what、why、how进行语篇分析，从句子成分剖析长难句，从行文逻辑梳理课文结构 （P010、P024、"
+          },
+          {
+            "chunkId": "16c4b539237c68ea",
+            "page": 8,
+            "preview": "Unit5Fun Clubs SectionA Howdo you choose a school club? 149 SectionB Whatcan you learn ina schoolclub? 157 单元"
+          },
+          {
+            "chunkId": "115c896e6d873b9d",
+            "page": 15,
+            "preview": "er Unit2Starter Unit 3Unit1Unit 2Unit 3Unit 4Unit5Unit6Unit 7语法精练答案 004 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## Pronunciation Listen to the 26letters. Fin"
+          },
+          {
+            "chunkId": "d51d383f487a4d80",
+            "page": 17,
+            "preview": "rter Unit 2starter Unit 3unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 006C0 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 拓类似的日常用语还有： Goodafternoon！下午好！ Good eveni"
+          },
+          {
+            "chunkId": "f108a864ea618281",
+            "page": 19,
+            "preview": "1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 008 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ We eachhavedifferentproblems.我们各自有不同的问题。 Point"
+          },
+          {
+            "chunkId": "0ce31edc3324730d",
+            "page": 21,
+            "preview": "StarterUnit2StarterUnit3Unit1Unit2Unit 3Unit4Unit5Unit6Unit 7语法精练答案 010100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "e1904dae81a874df",
+            "page": 23,
+            "preview": "ter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 012100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 本部分答案 ## Hello! Good morning. 2a1.I'm fi"
+          },
+          {
+            "chunkId": "bb9b3e25c4627450",
+            "page": 25,
+            "preview": "StarterUnit2Starter Unit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "191ba639dc940abb",
+            "page": 27,
+            "preview": "tarterUnit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案"
+          },
+          {
+            "chunkId": "db946d9ef7b4f9cd",
+            "page": 31,
+            "preview": "tarter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案 020 教材帮·初中英语·七年级上册·RJ The weather is fine,So meet me at nine. We can fly myki"
+          },
+          {
+            "chunkId": "8f1c6c9509d3039e",
+            "page": 33,
+            "preview": "rter Unit2Starter Unit 3Unit1Unit2Unit3Unit 4Unit5Unit6Unit 7语法精练答案 022 ## 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><bo"
+          },
+          {
+            "chunkId": "56d6636703ee9f93",
+            "page": 37,
+            "preview": "ter Unit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 ## 本部分答案 教材问题答案 1a1.on 2.in 3.under 2a1.B 2.B 3.A 4.B 2b1.cap blue on the desk"
+          },
+          {
+            "chunkId": "4c731b1f78bdb997",
+            "page": 39,
+            "preview": "1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 028 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ There's noneedtocry.不要哭了。 ## 典例4（上海市奉贤区实验中学期末改"
+          },
+          {
+            "chunkId": "62502c4a19d72e27",
+            "page": 41,
+            "preview": "it1Starter Unit2StarterUnitUnit1UnitUnitUnit4Unit5Unit6Unit7语法精练答案 030100 教材帮·初中英语·七年级上册·RJ ## 词句积累 <div style=\"text-align: center;\"><html><body>"
+          },
+          {
+            "chunkId": "dbba05c73765a21c",
+            "page": 45,
+            "preview": "nit1StarterUnit2Starter Unit 3Unit Unit3Unit4Unit5Unit6语法精练答案 034100 ## 教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><body><table bor"
+          },
+          {
+            "chunkId": "868e77cc528ba6ba",
+            "page": 47,
+            "preview": "it1Starter Unit 2Starter Unit3Unit1Unit2Unit3Unit5Unit6Unit7语法精练答案 036 教材帮·初中英语·七年级上册·RJ 名词连用，提问班级、颜色、时间等。常见的有： <div style=\"text-align: center;\">"
+          },
+          {
+            "chunkId": "565f64d7c7ba5019",
+            "page": 49,
+            "preview": "rter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "c30a4762d1276fed",
+            "page": 51,
+            "preview": "rter Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 040 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 拓（1）[及物动词]计算（或清点）总数 Wecan't countthe stars in "
+          },
+          {
+            "chunkId": "6ef7eac3c40d2be6",
+            "page": 53,
+            "preview": "arter Unit 2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><body><table border=\""
+          },
+          {
+            "chunkId": "0b5b018bd2bcfa32",
+            "page": 57,
+            "preview": "arter Unit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 046 教材帮·初中英语·七年级上册·RJ ## 语音知识 ## （一） 前元音/i////e//æ/ 这四个音是前元音，发音特点是： ①舌尖抵住下齿；②舌"
+          },
+          {
+            "chunkId": "ac8e6ac5618d006c",
+            "page": 61,
+            "preview": "tarterUnit StarterUnit2StarterUnit3Unit Unit3Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 1Howdowemakenewfriends?如何交新朋友？（教材P19BigQuestion） ## Point1makefrie"
+          },
+          {
+            "chunkId": "0eb42ee4f23c2f2d",
+            "page": 63,
+            "preview": "1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 052Q9"
+          },
+          {
+            "chunkId": "c377fecfe39a7b2a",
+            "page": 65,
+            "preview": "1StarterUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 054 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ parrot Beijing roast duck the UK Singapore gui"
+          },
+          {
+            "chunkId": "eead3682e353ed4a",
+            "page": 67,
+            "preview": "it1StarterUni2StarterUnit3Unit1UnitUnit3Unit4Unit5Unit6Unit 语法精练答案 056100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 2 b Completeyourreply to Paulineor Peter"
+          },
+          {
+            "chunkId": "65af3167a1b73abf",
+            "page": 69,
+            "preview": "rter Unit 2Starter Unit 3Unit1Unit Unit3Unit4Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 ## My page我的页面 (教材P241b) Point page/peidz/n.页面；（书刊或纸张）页 讲（1）指计算机的页"
+          },
+          {
+            "chunkId": "eb7a4e2a8a308ef3",
+            "page": 71,
+            "preview": "tarter Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 060100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 9Ilovemusic/sport too.我也喜欢音乐/运动。（教材P252b) P"
+          },
+          {
+            "chunkId": "bd02ad61dc42a943",
+            "page": 73,
+            "preview": "1StarterUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 062100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 考向4系动词be在一般现在时中的相关句型 <div style=\"text-al"
+          },
+          {
+            "chunkId": "deb45a4c1ba0ddaf",
+            "page": 75,
+            "preview": "tarter Unit2StarterUnit3Unit1Unit 2Unit3Unit4Unit5Unit6Unit7语法精练答案 064 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ ## 典例3 —Is the girl sister? —Yes.name is Linda"
+          },
+          {
+            "chunkId": "e2cddc28f3ff53dc",
+            "page": 77,
+            "preview": "tarterUnitStarterUn2SteU3Unit1Unit2Unit3Unit4Unit5Unit6nit7语法精练答案 066 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "4614a039c31277ed",
+            "page": 81,
+            "preview": "er Unit 2StarterUnit 3Unit1Unit 2Unit 3Unit 4Unit 5Unit6Unit 7语法精练答案 070100 教材帮·初中英语·七年级上册·RJ ### 3 Listenandrepeat.Noticethe stressedsyllables 1."
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": " 2(P067) Unit 3(P091)Unit4(P118） Unit 5(P147)Unit6(P172） Unit 7(P198) ## 深入语篇研读 从what、why、how进行语篇分析，从句子成分剖析长难句，从行文逻辑梳理课文结构 （P010、P024、P037、P054、P"
+          },
+          {
+            "chunkId": "16c4b539237c68ea",
+            "page": 8,
+            "preview": "写作帮：如何写社团或俱乐部的招募海报或申请信 169 中考帮：阅读理解·细节理解法171 Unit6A Day in the Life SectionA Howdoyouspend yourschoolday? 174 Section B Howdifferentarepeople'sdailyroutines? …184"
+          },
+          {
+            "chunkId": "115c896e6d873b9d",
+            "page": 15,
+            "preview": "it2Starter Unit 3Unit1Unit 2Unit 3Unit 4Unit5Unit6Unit 7语法精练答案 004 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## Pronunciation Listen to the 26letters. Find the"
+          },
+          {
+            "chunkId": "d51d383f487a4d80",
+            "page": 17,
+            "preview": "Unit 2starter Unit 3unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 006C0 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 拓类似的日常用语还有： Goodafternoon！下午好！ Good evening！晚上"
+          },
+          {
+            "chunkId": "f108a864ea618281",
+            "page": 19,
+            "preview": "terUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 008 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ We eachhavedifferentproblems.我们各自有不同的问题。 Point3othe"
+          },
+          {
+            "chunkId": "0ce31edc3324730d",
+            "page": 21,
+            "preview": "erUnit2StarterUnit3Unit1Unit2Unit 3Unit4Unit5Unit6Unit 7语法精练答案 010100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "e1904dae81a874df",
+            "page": 23,
+            "preview": "nit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 012100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 本部分答案 ## Hello! Good morning. 2a1.I'm fine,th"
+          },
+          {
+            "chunkId": "bb9b3e25c4627450",
+            "page": 25,
+            "preview": "erUnit2Starter Unit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "191ba639dc940abb",
+            "page": 27,
+            "preview": "rUnit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案"
+          },
+          {
+            "chunkId": "db946d9ef7b4f9cd",
+            "page": 31,
+            "preview": "r Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案 020 教材帮·初中英语·七年级上册·RJ The weather is fine,So meet me at nine. We can fly mykite,An"
+          },
+          {
+            "chunkId": "8f1c6c9509d3039e",
+            "page": 33,
+            "preview": "Unit2Starter Unit 3Unit1Unit2Unit3Unit 4Unit5Unit6Unit 7语法精练答案 022 ## 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><body><t"
+          },
+          {
+            "chunkId": "56d6636703ee9f93",
+            "page": 37,
+            "preview": "nit 2Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 ## 本部分答案 教材问题答案 1a1.on 2.in 3.under 2a1.B 2.B 3.A 4.B 2b1.cap blue on the desk 2.pe"
+          },
+          {
+            "chunkId": "4c731b1f78bdb997",
+            "page": 39,
+            "preview": "terUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 028 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ There's noneedtocry.不要哭了。 ## 典例4（上海市奉贤区实验中学期末改编）Ali"
+          },
+          {
+            "chunkId": "62502c4a19d72e27",
+            "page": 41,
+            "preview": "arter Unit2StarterUnitUnit1UnitUnitUnit4Unit5Unit6Unit7语法精练答案 030100 教材帮·初中英语·七年级上册·RJ ## 词句积累 <div style=\"text-align: center;\"><html><body><tabl"
+          },
+          {
+            "chunkId": "dbba05c73765a21c",
+            "page": 45,
+            "preview": "tarterUnit2Starter Unit 3Unit Unit3Unit4Unit5Unit6语法精练答案 034100 ## 教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><body><table border=\""
+          },
+          {
+            "chunkId": "868e77cc528ba6ba",
+            "page": 47,
+            "preview": "arter Unit 2Starter Unit3Unit1Unit2Unit3Unit5Unit6Unit7语法精练答案 036 教材帮·初中英语·七年级上册·RJ 名词连用，提问班级、颜色、时间等。常见的有： <div style=\"text-align: center;\"><html"
+          },
+          {
+            "chunkId": "565f64d7c7ba5019",
+            "page": 49,
+            "preview": "Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "c30a4762d1276fed",
+            "page": 51,
+            "preview": "Unit 2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 040 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 拓（1）[及物动词]计算（或清点）总数 Wecan't countthe stars in the s"
+          },
+          {
+            "chunkId": "6ef7eac3c40d2be6",
+            "page": 53,
+            "preview": " Unit 2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><body><table border=\"1\"><t"
+          },
+          {
+            "chunkId": "0b5b018bd2bcfa32",
+            "page": 57,
+            "preview": " Unit2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 046 教材帮·初中英语·七年级上册·RJ ## 语音知识 ## （一） 前元音/i////e//æ/ 这四个音是前元音，发音特点是： ①舌尖抵住下齿；②舌前部抬起；"
+          },
+          {
+            "chunkId": "ac8e6ac5618d006c",
+            "page": 61,
+            "preview": "rUnit StarterUnit2StarterUnit3Unit Unit3Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 1Howdowemakenewfriends?如何交新朋友？（教材P19BigQuestion） ## Point1makefriends交朋"
+          },
+          {
+            "chunkId": "0eb42ee4f23c2f2d",
+            "page": 63,
+            "preview": "terUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 052Q9"
+          },
+          {
+            "chunkId": "c377fecfe39a7b2a",
+            "page": 65,
+            "preview": "terUnit2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 054 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ parrot Beijing roast duck the UK Singapore guitar t"
+          },
+          {
+            "chunkId": "eead3682e353ed4a",
+            "page": 67,
+            "preview": "arterUni2StarterUnit3Unit1UnitUnit3Unit4Unit5Unit6Unit 语法精练答案 056100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 2 b Completeyourreply to Paulineor Peter to m"
+          },
+          {
+            "chunkId": "65af3167a1b73abf",
+            "page": 69,
+            "preview": "Unit 2Starter Unit 3Unit1Unit Unit3Unit4Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 ## My page我的页面 (教材P241b) Point page/peidz/n.页面；（书刊或纸张）页 讲（1）指计算机的页面、版面。"
+          },
+          {
+            "chunkId": "eb7a4e2a8a308ef3",
+            "page": 71,
+            "preview": "r Unit2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 060100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 9Ilovemusic/sport too.我也喜欢音乐/运动。（教材P252b) Pointl"
+          },
+          {
+            "chunkId": "bd02ad61dc42a943",
+            "page": 73,
+            "preview": "terUnit2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 062100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 考向4系动词be在一般现在时中的相关句型 <div style=\"text-align: "
+          },
+          {
+            "chunkId": "deb45a4c1ba0ddaf",
+            "page": 75,
+            "preview": "r Unit2StarterUnit3Unit1Unit 2Unit3Unit4Unit5Unit6Unit7语法精练答案 064 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ ## 典例3 —Is the girl sister? —Yes.name is Linda. A. "
+          },
+          {
+            "chunkId": "e2cddc28f3ff53dc",
+            "page": 77,
+            "preview": "rUnitStarterUn2SteU3Unit1Unit2Unit3Unit4Unit5Unit6nit7语法精练答案 066 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "4614a039c31277ed",
+            "page": 81,
+            "preview": "t 2StarterUnit 3Unit1Unit 2Unit 3Unit 4Unit 5Unit6Unit 7语法精练答案 070100 教材帮·初中英语·七年级上册·RJ ### 3 Listenandrepeat.Noticethe stressedsyllables 1..funn"
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "28cc8c111fa4d975",
+            "page": 7,
+            "preview": "t 3(P091)Unit4(P118） Unit 5(P147)Unit6(P172） Unit 7(P198) ## 深入语篇研读 从what、why、how进行语篇分析，从句子成分剖析长难句，从行文逻辑梳理课文结构 （P010、P024、P037、P054、P078、P103、P133"
+          },
+          {
+            "chunkId": "16c4b539237c68ea",
+            "page": 8,
+            "preview": "hattime和when引导的特殊疑问句 …193 中考帮：阅读理解·数字推断法…197 Unit7Happy Birthday! SectionA Howdo we celebratebirthdays?……200 SectionB Howdoyoumakeyourbirthday meaningful?211 单"
+          },
+          {
+            "chunkId": "115c896e6d873b9d",
+            "page": 15,
+            "preview": "arter Unit 3Unit1Unit 2Unit 3Unit 4Unit5Unit6Unit 7语法精练答案 004 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## Pronunciation Listen to the 26letters. Find them on t"
+          },
+          {
+            "chunkId": "d51d383f487a4d80",
+            "page": 17,
+            "preview": "2starter Unit 3unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 006C0 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 拓类似的日常用语还有： Goodafternoon！下午好！ Good evening！晚上好！ Go"
+          },
+          {
+            "chunkId": "f108a864ea618281",
+            "page": 19,
+            "preview": "it2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 008 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ We eachhavedifferentproblems.我们各自有不同的问题。 Point3other/'Ao"
+          },
+          {
+            "chunkId": "0ce31edc3324730d",
+            "page": 21,
+            "preview": "t2StarterUnit3Unit1Unit2Unit 3Unit4Unit5Unit6Unit 7语法精练答案 010100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ"
+          },
+          {
+            "chunkId": "e1904dae81a874df",
+            "page": 23,
+            "preview": "Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 012100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 本部分答案 ## Hello! Good morning. 2a1.I'm fine,thank y"
+          },
+          {
+            "chunkId": "bb9b3e25c4627450",
+            "page": 25,
+            "preview": "t2Starter Unit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "191ba639dc940abb",
+            "page": 27,
+            "preview": "2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案"
+          },
+          {
+            "chunkId": "db946d9ef7b4f9cd",
+            "page": 31,
+            "preview": "t2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit 7语法精练答案 020 教材帮·初中英语·七年级上册·RJ The weather is fine,So meet me at nine. We can fly mykite,Andride "
+          },
+          {
+            "chunkId": "8f1c6c9509d3039e",
+            "page": 33,
+            "preview": "Starter Unit 3Unit1Unit2Unit3Unit 4Unit5Unit6Unit 7语法精练答案 022 ## 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><body><table b"
+          },
+          {
+            "chunkId": "56d6636703ee9f93",
+            "page": 37,
+            "preview": "Starter Unit 3Unit1Unit2Unit 3Unit4Unit5Unit6Unit7语法精练答案 ## 本部分答案 教材问题答案 1a1.on 2.in 3.under 2a1.B 2.B 3.A 4.B 2b1.cap blue on the desk 2.pens bl"
+          },
+          {
+            "chunkId": "4c731b1f78bdb997",
+            "page": 39,
+            "preview": "it2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 028 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ There's noneedtocry.不要哭了。 ## 典例4（上海市奉贤区实验中学期末改编）Alice is"
+          },
+          {
+            "chunkId": "62502c4a19d72e27",
+            "page": 41,
+            "preview": " Unit2StarterUnitUnit1UnitUnitUnit4Unit5Unit6Unit7语法精练答案 030100 教材帮·初中英语·七年级上册·RJ ## 词句积累 <div style=\"text-align: center;\"><html><body><table bor"
+          },
+          {
+            "chunkId": "868e77cc528ba6ba",
+            "page": 47,
+            "preview": " Unit 2Starter Unit3Unit1Unit2Unit3Unit5Unit6Unit7语法精练答案 036 教材帮·初中英语·七年级上册·RJ 名词连用，提问班级、颜色、时间等。常见的有： <div style=\"text-align: center;\"><html><bod"
+          },
+          {
+            "chunkId": "565f64d7c7ba5019",
+            "page": 49,
+            "preview": "2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案"
+          },
+          {
+            "chunkId": "c30a4762d1276fed",
+            "page": 51,
+            "preview": "2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 040 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 拓（1）[及物动词]计算（或清点）总数 Wecan't countthe stars in the sky.我们"
+          },
+          {
+            "chunkId": "6ef7eac3c40d2be6",
+            "page": 53,
+            "preview": " 2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 教材帮·初中英语·七年级上册·RJ <div style=\"text-align: center;\"><html><body><table border=\"1\"><tr><td"
+          },
+          {
+            "chunkId": "0b5b018bd2bcfa32",
+            "page": 57,
+            "preview": "2Starter Unit 3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 046 教材帮·初中英语·七年级上册·RJ ## 语音知识 ## （一） 前元音/i////e//æ/ 这四个音是前元音，发音特点是： ①舌尖抵住下齿；②舌前部抬起；③双唇成扁"
+          },
+          {
+            "chunkId": "ac8e6ac5618d006c",
+            "page": 61,
+            "preview": " StarterUnit2StarterUnit3Unit Unit3Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 1Howdowemakenewfriends?如何交新朋友？（教材P19BigQuestion） ## Point1makefriends交朋友 讲ma"
+          },
+          {
+            "chunkId": "0eb42ee4f23c2f2d",
+            "page": 63,
+            "preview": "it2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 052Q9"
+          },
+          {
+            "chunkId": "c377fecfe39a7b2a",
+            "page": 65,
+            "preview": "it2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 054 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ parrot Beijing roast duck the UK Singapore guitar tennis"
+          },
+          {
+            "chunkId": "65af3167a1b73abf",
+            "page": 69,
+            "preview": "2Starter Unit 3Unit1Unit Unit3Unit4Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 ## My page我的页面 (教材P241b) Point page/peidz/n.页面；（书刊或纸张）页 讲（1）指计算机的页面、版面。 Pres"
+          },
+          {
+            "chunkId": "eb7a4e2a8a308ef3",
+            "page": 71,
+            "preview": "t2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 060100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 9Ilovemusic/sport too.我也喜欢音乐/运动。（教材P252b) Pointlove v"
+          },
+          {
+            "chunkId": "bd02ad61dc42a943",
+            "page": 73,
+            "preview": "it2StarterUnit3Unit Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 062100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 考向4系动词be在一般现在时中的相关句型 <div style=\"text-align: cente"
+          },
+          {
+            "chunkId": "deb45a4c1ba0ddaf",
+            "page": 75,
+            "preview": "t2StarterUnit3Unit1Unit 2Unit3Unit4Unit5Unit6Unit7语法精练答案 064 下课练天星上课认真听教材帮·初中英语·七年级上册·RJ ## 典例3 —Is the girl sister? —Yes.name is Linda. A. you;S"
+          },
+          {
+            "chunkId": "4614a039c31277ed",
+            "page": 81,
+            "preview": "arterUnit 3Unit1Unit 2Unit 3Unit 4Unit 5Unit6Unit 7语法精练答案 070100 教材帮·初中英语·七年级上册·RJ ### 3 Listenandrepeat.Noticethe stressedsyllables 1..funny moth"
+          },
+          {
+            "chunkId": "b375f01104d54d6c",
+            "page": 83,
+            "preview": "it2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 072100 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ 2e Bring some photos of things your family members ha"
+          },
+          {
+            "chunkId": "cd912851d59aaa85",
+            "page": 85,
+            "preview": "it2StarterUnit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 ## 教材帮·知识详解 1What does family mean to you? 家庭对你来说意味着什么？（教材P27Big Question） Pointmean/mi:"
+          },
+          {
+            "chunkId": "093517d9fb2473d3",
+            "page": 87,
+            "preview": "t2Starter Unit3Unit1Unit2Unit3Unit4Unit5Unit6Unit7语法精练答案 076 上课认真听下课练天星教材帮·初中英语·七年级上册·RJ ## 6 Familymember家庭成员（教材P302b) Pointmember/'membə(r）/n.成"
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "43cff4027b8c11f1b1eacb449d41f0c3",
+      "documentName": "01 Starter Unit 1-3(词汇与句型)(解析版).docx",
+      "sourceChunkCount": 30,
+      "returnedChunkCount": 30,
+      "occurrences": {
+        "starter_unit_1": [
+          {
+            "chunkId": "5016b5c33b408e8d",
+            "page": 1,
+            "preview": "2024-2025学年上学期七年级英语知识点复习与巩固(人教版2024)Starter Unit 1-3（词汇）必备知识清单核心知识回顾知识点1.What's your name?你叫什么名字?(教材P2)【句式解构】本句是一个特殊疑问句,其句式结构如下图所示:【要点释义】(1)What'"
+          },
+          {
+            "chunkId": "606a47834f8f751d",
+            "page": 2,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td>Starter Unit 1 Hello! 1.英语26个字母。 Aa, Bb, Cc, Dd, Ee, F"
+          },
+          {
+            "chunkId": "bc39a73fff6d1a6b",
+            "page": 4,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td colspan='2'>连系动词be是表示谓语关系的动词</td></tr><tr><td>在一般现在时中,"
+          },
+          {
+            "chunkId": "07acd40f209b2098",
+            "page": 6,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td>白色(的)</td><td>white</td><td>蓝色(的)</td><td>blue</td></t"
+          },
+          {
+            "chunkId": "cf97d007be41a2ea",
+            "page": 8,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td>farm</td><td>名词</td><td>农场</td></tr><tr><td>farm</td><"
+          },
+          {
+            "chunkId": "b292b0eae8533313",
+            "page": 10,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td>another</td><td>指“不定数量中的”另一个</td></tr><tr><td>the othe"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "chunkId": "606a47834f8f751d",
+            "page": 2,
+            "preview": "class.让我们去上课吧。 It's time for class.是该上课的时间了。 Starter Unit 2 Keep tidy! 1.互动对话 1)---What do you have in your schoolbage? 你的书包里有什么？ --- I have a book. 有一本书。"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "chunkId": "606a47834f8f751d",
+            "page": 2,
+            "preview": "me is I'm = I am he's = he is she's = she is Starter Unit 3 Welcome! 1.必备短语 on the farm在农场里 in the yard在院子里 apple trees苹果树 let me count让我数数 look here看这 lo"
+          }
+        ],
+        "unit_1": [
+          {
+            "chunkId": "5016b5c33b408e8d",
+            "page": 1,
+            "preview": "2024-2025学年上学期七年级英语知识点复习与巩固(人教版2024)Starter Unit 1-3（词汇）必备知识清单核心知识回顾知识点1.What's your name?你叫什么名字?(教材P2)【句式解构】本句是一个特殊疑问句,其句式结构如下图所示:【要点释义】(1)What'"
+          },
+          {
+            "chunkId": "606a47834f8f751d",
+            "page": 2,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td>Starter Unit 1 Hello! 1.英语26个字母。 Aa, Bb, Cc, Dd, Ee, F"
+          },
+          {
+            "chunkId": "bc39a73fff6d1a6b",
+            "page": 4,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td colspan='2'>连系动词be是表示谓语关系的动词</td></tr><tr><td>在一般现在时中,"
+          },
+          {
+            "chunkId": "07acd40f209b2098",
+            "page": 6,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td>白色(的)</td><td>white</td><td>蓝色(的)</td><td>blue</td></t"
+          },
+          {
+            "chunkId": "cf97d007be41a2ea",
+            "page": 8,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td>farm</td><td>名词</td><td>农场</td></tr><tr><td>farm</td><"
+          },
+          {
+            "chunkId": "b292b0eae8533313",
+            "page": 10,
+            "preview": "<table><caption>Table Location: 01 Starter Unit 1-3(词汇与句型)(解析版) > 必备知识清单</caption><tr><td>another</td><td>指“不定数量中的”另一个</td></tr><tr><td>the othe"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "606a47834f8f751d",
+            "page": 2,
+            "preview": "们去上课吧。 It's time for class.是该上课的时间了。 Starter Unit 2 Keep tidy! 1.互动对话 1)---What do you have in your schoolbage? 你的书包里有什么？ --- I have a book. 有一本书。 "
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "606a47834f8f751d",
+            "page": 2,
+            "preview": "m = I am he's = he is she's = she is Starter Unit 3 Welcome! 1.必备短语 on the farm在农场里 in the yard在院子里 apple trees苹果树 let me count让我数数 look here看这 loo"
+          }
+        ],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      }
+    },
+    {
+      "documentId": "43e1004e7b8c11f1b1eacb449d41f0c3",
+      "documentName": "03-七年级上册英语知识点总结.pdf",
+      "sourceChunkCount": 20,
+      "returnedChunkCount": 20,
+      "occurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [
+          {
+            "chunkId": "9578d1c7565983d3",
+            "page": 1,
+            "preview": "# 七年级上册英语知识点总结 ## Unit 1 This is me! ## 短语归纳： look after\\take care of 照顾 Class1,Grade77年级1班 after school 放学后 be good at "
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "1a14d3365a563c9e",
+            "page": 1,
+            "preview": "句: 疑问句+am/is/are +主语+其他?What's your name? ## Unit 2 Let's play sports! ## 短语归纳： play sports 做运动 play football/tennis 踢足球/打网球 after school 放学后 a mem"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "5ff5eb357525c351",
+            "page": 5,
+            "preview": "## Unit 3 Welcome to our school! ## 短语归纳： on foot 步行far away from 远离 a few一些,少量learn about 学得, 获知 would l"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "ae5b81827a44b9fc",
+            "page": 6,
+            "preview": "称，第一人称(2，，1)复数的人称代词为第一人称，第二人称，第三人称(1，2，3) ## Unit 4 My day ## 短语归纳： Wake sb up叫醒某人go out 出去,熄灭 have breakfast/lunch/dinner 吃早中晚饭have fun 玩的开心 get u"
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "e667b0906228dab0",
+            "page": 7,
+            "preview": "ten,sometimes,seldom,never.对频率副词提问要用howoften Unit5 ### 1. 短语归纳： soccerball英式足球playbasketball打篮球 watch TV看电视atennis bat一个网球拍 play sports参加体育运动或比赛on"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "448c1e5c74628e0c",
+            "page": 8,
+            "preview": "good.主语 +系动词 +表语 5.play+the + 乐器，play+球类运动名词 Unit6 ### 一. 短语归纳： 1.John's birthday dinner 约翰的生日晚餐2.thinkabout思考、考虑 3.next week 下周4.how about 怎么样 5."
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "20f51332c5451eec",
+            "page": 11,
+            "preview": "Unit 7 ### 1. 短语归纳： ① how much 多少钱② seven dollars 七美元 ③white bag 白色的包④clothes store 服装店 ③at very good "
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "443f38267b8c11f1b1eacb449d41f0c3",
+      "documentName": "05-七年级上册英语语法汇总.pdf",
+      "sourceChunkCount": 19,
+      "returnedChunkCount": 19,
+      "occurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      }
+    },
+    {
+      "documentId": "444550f87b8c11f1b1eacb449d41f0c3",
+      "documentName": "06 Units 1- 2 单元主题写作(解析版).docx",
+      "sourceChunkCount": 22,
+      "returnedChunkCount": 22,
+      "occurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [
+          {
+            "chunkId": "60d46aa788dbd17d",
+            "page": 3,
+            "preview": "lpful adj.有帮助的29. excellent adj.卓越的，极好的核心知识回顾Unit 1 You and Me单元主题:本单元写作情境属于“人与自我”主题范畴中的“生活与学习”,涉及子主题“自我认识”。主要内容:向他人介绍自己的个人信息以及爱好和活动等。写作要求:能正确使用句型介绍自己的信息;能正确"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "2481d75708466bff",
+            "page": 4,
+            "preview": "歌很优美。The poems are very beautiful.Step 4 润色成篇Unit 2 We're Family!单元主题:本单元写作情境属于“人与社会”主题范畴中的“人际沟通”,涉及子主题“和谐的家庭生活”。主要内容:向他人介绍自己的家庭成员,以及他们的爱好和活动等。写作要求:能正确使用句型介绍自己"
+          }
+        ],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      }
+    },
+    {
+      "documentId": "444ba52a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "07-人教版七上英语重点短语句型归纳.pdf",
+      "sourceChunkCount": 13,
+      "returnedChunkCount": 13,
+      "occurrences": {
+        "starter_unit_1": [
+          {
+            "chunkId": "bfa284fdc6a59bd9",
+            "page": 1,
+            "preview": "<table border=\"1\"><tbody><tr><td colspan=\"2\">Starter Unit 1 Hello !</td></tr><tr><td>重点短语</td><td>你叫什么名字?</td></tr><tr><td>1.starter unit过渡单元</td><td>3. H"
+          }
+        ],
+        "starter_unit_2": [],
+        "starter_unit_3": [
+          {
+            "chunkId": "bfa284fdc6a59bd9",
+            "page": 1,
+            "preview": "<table border=\"1\"><tbody><tr><td colspan=\"2\">Starter Unit 3 Welcome !</td></tr><tr><td>重点短语</td><td>2. What animals does Helen see in the yard?</td></tr><"
+          }
+        ],
+        "unit_1": [
+          {
+            "chunkId": "bfa284fdc6a59bd9",
+            "page": 1,
+            "preview": "order=\"1\"><tbody><tr><td colspan=\"2\">Starter Unit 1 Hello !</td></tr><tr><td>重点短语</td><td>你叫什么名字?</td></tr><tr><td>1.starter unit过渡单元</td><td>3. Ho"
+          },
+          {
+            "chunkId": "ae4b005abf2c102b",
+            "page": 3,
+            "preview": "<div style=\"text-align: center;\">Unit 1 You and Me </div> ## Section A How do we get to know each other? <div style=\"text-align: center;\"><html><"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "9ff67cd891686325",
+            "page": 4,
+            "preview": "other and my friends. 我每个周末都和我的哥哥和朋友们打篮球。 ## Unit 2 We're Family! Section A What is your family like? <div style=\"text-align: center;\"><html><body><table borde"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "bfa284fdc6a59bd9",
+            "page": 1,
+            "preview": "order=\"1\"><tbody><tr><td colspan=\"2\">Starter Unit 3 Welcome !</td></tr><tr><td>重点短语</td><td>2. What animals does Helen see in the yard?</td></tr><t"
+          },
+          {
+            "chunkId": "100a5292287848d1",
+            "page": 6,
+            "preview": "<table border=\"1\"><tbody><tr><td colspan=\"2\">Unit 3 My School</td></tr><tr><td colspan=\"2\">Section A What is your school like?</td></tr><tr><td>重点短语</td><td"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "48c6ec65f5d9a626",
+            "page": 8,
+            "preview": "第6页共11页 ## Unit 4 My Favourite Subject Section A Why do you like this subject? ## 重点短语 1.good with灵巧的；善于应付……的 2.help sb with sth帮助某人做"
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "758121635d463df4",
+            "page": 8,
+            "preview": " to be a singer in the future.未来我想成为一名歌手。 ## Unit 5 Fun Clubs ## Section A How do you choose a school club? <div style=\"text-align: center;\"><html><body><ta"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "c8534b369bdbdc2a",
+            "page": 9,
+            "preview": "。 7. Can you take good photos? 你会拍好看的照片吗? ## Unit 6 A Day in the Life ## Section A How do you spend your school day?"
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "cec06a2f530f3525",
+            "page": 11,
+            "preview": "<table border=\"1\"><tbody><tr><td colspan=\"2\">Unit 7 Happy Birthday! Section A How do we celebrate birthdays?</td></tr><tr><td>重点短语</td><td>5.for example例如</td></"
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "4459ec167b8c11f1b1eacb449d41f0c3",
+      "documentName": "12-七上英语重点短语句型归纳.pdf",
+      "sourceChunkCount": 16,
+      "returnedChunkCount": 16,
+      "occurrences": {
+        "starter_unit_1": [
+          {
+            "chunkId": "834f267b782d74a8",
+            "page": 1,
+            "preview": "<table border=\"1\"><tbody><tr><td colspan=\"2\">Starter Unit 1 Hello !</td></tr><tr><td>重点短语</td><td>你叫什么名字?</td></tr><tr><td>1.starter unit过渡单元</td><td>3. H"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "chunkId": "834f267b782d74a8",
+            "page": 1,
+            "preview": "td><td>让我们去上课吧。</td></tr><tr><td colspan=\"2\">Starter Unit 2 Keep Tidy!</td></tr><tr><td>重点短语</td><td>2. What colour is it?</td></tr><tr><td>1.keep tidy保持整"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "chunkId": "42d81f71b36ccc6d",
+            "page": 2,
+            "preview": "<table border=\"1\"><tbody><tr><td colspan=\"2\">Starter Unit 3 Welcome !</td></tr><tr><td>重点短语</td><td>2. What animals does Helen see in the yard?</td></tr><"
+          }
+        ],
+        "unit_1": [
+          {
+            "chunkId": "834f267b782d74a8",
+            "page": 1,
+            "preview": "order=\"1\"><tbody><tr><td colspan=\"2\">Starter Unit 1 Hello !</td></tr><tr><td>重点短语</td><td>你叫什么名字?</td></tr><tr><td>1.starter unit过渡单元</td><td>3. Ho"
+          },
+          {
+            "chunkId": "c6b60cc901646a1f",
+            "page": 2,
+            "preview": "<div style=\"text-align: center;\">Unit 1 You and Me </div> <div style=\"text-align: center;\">Section A How do we get to know each other?</div> <div"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "834f267b782d74a8",
+            "page": 1,
+            "preview": "我们去上课吧。</td></tr><tr><td colspan=\"2\">Starter Unit 2 Keep Tidy!</td></tr><tr><td>重点短语</td><td>2. What colour is it?</td></tr><tr><td>1.keep tidy保持整洁"
+          },
+          {
+            "chunkId": "f6d3c14f1ef090c1",
+            "page": 4,
+            "preview": "other and my friends. 我每个周末都和我的哥哥和朋友们打篮球。 ## Unit 2 We're Family! Section A What is your family like? <div style=\"text-align: center;\"><html><body><table borde"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "42d81f71b36ccc6d",
+            "page": 2,
+            "preview": "order=\"1\"><tbody><tr><td colspan=\"2\">Starter Unit 3 Welcome !</td></tr><tr><td>重点短语</td><td>2. What animals does Helen see in the yard?</td></tr><t"
+          },
+          {
+            "chunkId": "6086719324c98fa5",
+            "page": 5,
+            "preview": "<table border=\"1\"><tbody><tr><td colspan=\"2\">Unit 3 My School</td></tr><tr><td colspan=\"2\">Section A What is your school like?</td></tr><tr><td>重点短语</td><td"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "b026bdc3e3e7f081",
+            "page": 7,
+            "preview": "第6页共11页 【人教】七上英语：重点短语&句型归纳 ## Unit 4 My Favourite Subject ## Section A Why do you like this subject? <div style=\"text-align: center;\"><html><body><table"
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "c8675bf69b95cade",
+            "page": 8,
+            "preview": "## Unit 5 Fun Clubs ## Section A How do you choose a school club? <div style=\"text-align: center;\"><html><body><ta"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "f562efa399a38013",
+            "page": 9,
+            "preview": "## Unit 6 A Day in the Life ## Section A How do you spend your school day? <div style=\"text-align: center;\"><html><body><t"
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "2f5b7135a7389fc0",
+            "page": 10,
+            "preview": "<table border=\"1\"><tbody><tr><td colspan=\"2\">Unit 7 Happy Birthday! Section A How do we celebrate birthdays?</td></tr><tr><td>重点短语</td><td>5.for example例如</td></"
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "d0fde9ec7b8c11f1b1eacb449d41f0c3",
+      "documentName": "2025《教材帮•作文帮》英语七上(人教).pdf",
+      "sourceChunkCount": 15,
+      "returnedChunkCount": 15,
+      "occurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [
+          {
+            "chunkId": "a1bb430e6414c89a",
+            "page": 3,
+            "preview": "nter;\"><html><body><table border=\"1\"><tr><td>Unit1认识新朋友</td><td>Unit2与家人相处</td><td>Unit3熟悉新校园</td></tr><tr><td colspan=\"2\">Unit4认识所学科目 Unit5了解学校社"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "a1bb430e6414c89a",
+            "page": 3,
+            "preview": "<table border=\"1\"><tr><td>Unit1认识新朋友</td><td>Unit2与家人相处</td><td>Unit3熟悉新校园</td></tr><tr><td colspan=\"2\">Unit4认识所学科目 Unit5了解学校社团 Unit7与家人和朋友一起庆祝生日"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "a1bb430e6414c89a",
+            "page": 3,
+            "preview": "tr><td>Unit1认识新朋友</td><td>Unit2与家人相处</td><td>Unit3熟悉新校园</td></tr><tr><td colspan=\"2\">Unit4认识所学科目 Unit5了解学校社团 Unit7与家人和朋友一起庆祝生日</td><td colspan=\"2"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "a1bb430e6414c89a",
+            "page": 3,
+            "preview": "><td>Unit3熟悉新校园</td></tr><tr><td colspan=\"2\">Unit4认识所学科目 Unit5了解学校社团 Unit7与家人和朋友一起庆祝生日</td><td colspan=\"2\">Unit6养成良好作息习惯</td></tr></table></body>"
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "a1bb430e6414c89a",
+            "page": 3,
+            "preview": "新校园</td></tr><tr><td colspan=\"2\">Unit4认识所学科目 Unit5了解学校社团 Unit7与家人和朋友一起庆祝生日</td><td colspan=\"2\">Unit6养成良好作息习惯</td></tr></table></body></html></div"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "a1bb430e6414c89a",
+            "page": 3,
+            "preview": "了解学校社团 Unit7与家人和朋友一起庆祝生日</td><td colspan=\"2\">Unit6养成良好作息习惯</td></tr></table></body></html></div> 通过分析教材话题和写作任务,并结合各地中考题、期中题和期末题,我们发现,现在的写作情境越来越接近"
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "a1bb430e6414c89a",
+            "page": 3,
+            "preview": "><tr><td colspan=\"2\">Unit4认识所学科目 Unit5了解学校社团 Unit7与家人和朋友一起庆祝生日</td><td colspan=\"2\">Unit6养成良好作息习惯</td></tr></table></body></html></div> 通过分析教材话题和写"
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "5846140c7b8c11f1b1eacb449d41f0c3",
+      "documentName": "2026《初中必刷题•英语》7上(RJ)狂K重点.pdf",
+      "sourceChunkCount": 0,
+      "returnedChunkCount": 0,
+      "occurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      }
+    },
+    {
+      "documentId": "448f711a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "24秋七上知识归纳+习题.pdf",
+      "sourceChunkCount": 91,
+      "returnedChunkCount": 91,
+      "occurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [
+          {
+            "chunkId": "45400cacba43d9b9",
+            "page": 1,
+            "preview": "语及阅读拓展 4配套单元过关检测 VX: Lia英语笔记有方法讲高效重能力拓 ## 目录 Unit1 Unit2SectionA.B重难点详解.SectionA.B重难点详解语法聚焦突破..话题阅读拓展..单元短语及语法过关.语法聚焦突破..1016英语2417 单元短语及语法过关，29 话"
+          },
+          {
+            "chunkId": "939202ce7272e1ef",
+            "page": 3,
+            "preview": "# 人教版新教材——Unit 1 Youand Me # SectionA重难点详解 #### 1. make(made,made 动词(v.)“制造，做，使得”(P19) ## 【用法】 (1). make sb. sth. = make "
+          },
+          {
+            "chunkId": "17eab66db7135755",
+            "page": 5,
+            "preview": "ither C.All All D. Either 答案：B 吾笔记 # 人教版新教材——Unit1 You and Me # SectionB重难点详解"
+          },
+          {
+            "chunkId": "da4eedd630be4775",
+            "page": 9,
+            "preview": " 英语笔记Lia英□ 吾笔记 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材——Unit 1 You andMe 语法焦点 # *be 动词的用法 # 人称代词/物主代词 ## 一 ，be动词的用法 (1)be动词是英语中很重要的一类动词， 在一般现在时中的具体形式有三种，它们分别是：am，is，ar"
+          },
+          {
+            "chunkId": "8c14ee71bfc643a4",
+            "page": 11,
+            "preview": "_（缩写）(第三人称复语 吾笔记 Lia英语笔记有方法讲高效重能力拓 # 人教版新教材—-Unit 1YouandMe Lia英语 # 语法知识导航练习一 常用短语，根据汉语提示翻译下列短语。 1.交朋友 2.认识，了解] 3.相互 4.全名 5.来自 6.班主任 7.我的错[al] 8.在相同的班级 9."
+          },
+          {
+            "chunkId": "e683f867e10568f6",
+            "page": 14,
+            "preview": "）(第三人称复数） 吾笔记13 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材-Unit1Youand dMe # 语法知识导航练习三 ## 一 ，按要求完成句子。 1.--你是杰克吗?--是的，我是不，我不是。 Tack?--yes,./No,Lia英语"
+          },
+          {
+            "chunkId": "471348652ca9c637",
+            "page": 16,
+            "preview": "r name?Cindy. 吾笔记15 Lia英语笔记有方法讲高效重能 # 人教版新教材-Unit 1YouandMe # 单元阅读能力提高 Here are two pictures. A man (男人) and a boy are in the first picture. Who are they?"
+          },
+          {
+            "chunkId": "3709cd6df5f5f844",
+            "page": 113,
+            "preview": " at D.of -112 Lia英语笔记有方法讲高效重能 ## 答案版 # 人教版新教材Unit 1Youand Me Lia英语 # 语法知识导航练习一 常用短语，根据汉语提示，翻译下列短语。 1.交朋友make friends get to know to know"
+          },
+          {
+            "chunkId": "e9c105332a796655",
+            "page": 115,
+            "preview": "friends 吾笔记-114 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材—Unit 1Youand Me # 语法知识导航练习二 1.I want to make friends 记. ## 一 ，单词的适当形式填空。 2. Teng Fei takes his sister's (siste"
+          },
+          {
+            "chunkId": "c8689a97cbb0a950",
+            "page": 118,
+            "preview": "人称复数)英语 吾笔记-116 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材-Unit1Youand Me # 语法知识导航练习三 ## 一 ，按要求完成句子。 1.--你是杰克吗?--是的，不，我不是。 --Are ou Jack?--Yes,_I_am No, 2.--她是玛丽吗是的，她是。"
+          },
+          {
+            "chunkId": "719c5765c5e26111",
+            "page": 119,
+            "preview": "Jack. What's her name?Her name's_ Cindy. ## -Unit1You and Me ## 单元阅读能力提高 Here are two pictures. A man (男人) and a boy are in the first picture. Who are they"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "45400cacba43d9b9",
+            "page": 1,
+            "preview": " 4配套单元过关检测 VX: Lia英语笔记有方法讲高效重能力拓 ## 目录 Unit1 Unit2SectionA.B重难点详解.SectionA.B重难点详解语法聚焦突破..话题阅读拓展..单元短语及语法过关.语法聚焦突破..1016英语2417 单元短语及语法过关，29 话题阅读拓展"
+          },
+          {
+            "chunkId": "120d0097b414bf51",
+            "page": 18,
+            "preview": "D.A，Band C -16 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材——Unit2We'reFamily # Section A 重难点详解 #### 1. mean 动词(v.)）“意思是，意指”(P27) ## 【用法】 (1).mean to do sth.“打算/有意做某事” e.g."
+          },
+          {
+            "chunkId": "80f1214901d9ab52",
+            "page": 30,
+            "preview": "吾笔记-28 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材—Unit2We'reFamily Lia英语 # 语法知识导航练习一 常用短语，根据汉语提示，翻译下列短语。 1.像...一样S 2.乒乓球拍 3．一起打乒乓球 4.每一天 5.钓鱼竿 6.花大量的时间钓鱼 7.弹得真的好"
+          },
+          {
+            "chunkId": "e5fd9cf4e90897aa",
+            "page": 36,
+            "preview": "er for money? -34 Lia英语笔记有方法讲高效重能力 # 人教版新教材—-Unit2We'reFamily # 单元阅读能力提高 ## 阅读理解 Students in Shanghai Neiyu Middle School like sports. Let's meet four stude"
+          },
+          {
+            "chunkId": "d1ebc408101173b2",
+            "page": 121,
+            "preview": " a photo B.a baseball C.adog 答案:CBBDD 人教版新教材-Unit2We'reFamily 答案版版语法知语法知识导航练习一 -119 Lia英语笔记有方法讲高效重能 ## 常用短语，根据汉语提示，翻译下列短语。 1.像..一样be like 2.乒乓球拍ping-pong ba"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "45400cacba43d9b9",
+            "page": 1,
+            "preview": ".语法聚焦突破..1016英语2417 单元短语及语法过关，29 话题阅读拓展...35 Unit3 SectionA.B 重难点详解37 语法聚焦突破.43 单元短语及语法过关.46 话题阅读拓展..52 Unit4 Section A .B 重难点详解.53 语法聚焦突破....59 单"
+          },
+          {
+            "chunkId": "5c703a14afe2df2f",
+            "page": 37,
+            "preview": "dan sh 吾笔记-36 Lia英语笔记 有方法讲高效重能力拓思维 # 人教版新教材——Unit 3 My School # SectionA重难点详解 ### 1. another (P37 2a) another 形容词(adj.)再一，另一，别的，不同的代词(pron.)另 ## 【用法】 <div s"
+          },
+          {
+            "chunkId": "9c0efe4587587037",
+            "page": 41,
+            "preview": "# 人教版新教材——Unit3MySchool ## SectionB 重难点详解 1. different 形容词(adj.)“不同的，有差异的”(P401b) 【变形】differentlyad.不同地 ## 【用法】 (1). b"
+          },
+          {
+            "chunkId": "47cb8a6033d7aad1",
+            "page": 44,
+            "preview": "e.“不用谢” 吾笔记-42 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材——Unit 3MySchool 语法焦点 # *方位介词及短语 *therebe 句型 ## 一 ，表示方位的介词及短语 1. infront of 和 in thefrontof 记 infrontof“表示在...的"
+          },
+          {
+            "chunkId": "b56e5e798a794b6a",
+            "page": 47,
+            "preview": "ng.des.英语 吾笔记-45 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材Unit3 MySchool # 语法知识导航练习一 ### 一. 用正确的介词填空(根据上下文填出最恰当的介词)。 1. There are some pictures the wall. 2. There are "
+          },
+          {
+            "chunkId": "39e7ac1fd63ce7e7",
+            "page": 51,
+            "preview": "#Lia英语笔记 吾笔记-49 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材—Unit 3MySchool ## 语法知识导航练习三 ## 一 ，用be填空: 1. There cher in the front of the classroom. 2.There food on the pla"
+          },
+          {
+            "chunkId": "517b09dfa9c99063",
+            "page": 126,
+            "preview": "dan D.Steve N D. Steve Nash 答案：1-3BCB 人教版新教材材Unit3MySch"
+          },
+          {
+            "chunkId": "6b5cd5c51cdbfb69",
+            "page": 132,
+            "preview": "0墙上有三幅图片。 There are pictures on the wall. ## Unit3MySchool ## 单元阅读能力提高 My uncle is an English teacher at Chengdu No.7 Middle School. He loves his _1__ as"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "45400cacba43d9b9",
+            "page": 1,
+            "preview": ".B 重难点详解37 语法聚焦突破.43 单元短语及语法过关.46 话题阅读拓展..52 Unit4 Section A .B 重难点详解.53 语法聚焦突破....59 单元短语及语法过关..61 话题阅读拓展.68 Unit5 Section A .B 重难点详解..69 语法聚焦突破."
+          },
+          {
+            "chunkId": "b52786f5ddf5f290",
+            "page": 54,
+            "preview": "id 3.7. 吾笔记-52 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材一一Unit 4MyFavoriteSubject # SectionA 重难点详解 1. boring形容词(adj.)“乏味的，无聊的”(P44 1c) 【用法】形容词以-ed结尾的形容人,bored“感到无聊的” 以-ing 结尾的形"
+          },
+          {
+            "chunkId": "9b84add4275fc74c",
+            "page": 58,
+            "preview": " 英语答案：C 吾笔记-56 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材一一Unit 4MyFavoriteSubject ## SectionB 重难点详解 1. French 形容词(adjj.)“法国的；法语的；法国人的”(P48 1b) 名词(n.)“法语” 【变形】Frenchman(复数 pl. F"
+          },
+          {
+            "chunkId": "73a8f29cea1ce27f",
+            "page": 59,
+            "preview": "幸福的生活” 吾笔记-58 Lia英语笔记 有方法讲高效重能力拓思维 # 人教版新教材——Unit 4 MyFavorite Subject 语法焦点 ## *连词 and，but和 because的用法 # *与时间有关的介词 一，连词是一种虚词，它不能独立充当句子成分，只能起连接词与词、短语与短语或句子与句子的作用。连词主要"
+          },
+          {
+            "chunkId": "6596efb19460a5aa",
+            "page": 61,
+            "preview": " night Lia英 吾笔记-60 Lia英语笔记有方法讲高效重能 # 人教版新教材——Unit4MyFavoriteSubject Lia英语"
+          },
+          {
+            "chunkId": "5045a86feca8d087",
+            "page": 63,
+            "preview": "0, ande 吾笔记-63 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材——Unit4MyFavoriteSubject # 语法知识导航练习二"
+          },
+          {
+            "chunkId": "28a547a2be6af615",
+            "page": 66,
+            "preview": "Friday. 吾笔记-65 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材——Unit4MyFavoriteSubject # 语法知识导航练习三 ## 一 ，单项选择。 ()1.We have politics A.on C. at D./ ()2. Music sounds very A. bored B."
+          },
+          {
+            "chunkId": "5fa41fbed44617c7",
+            "page": 68,
+            "preview": " really 吾笔记-67 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材——Unit4MyFavoriteSubject # 单元阅读能力提高 阅读理解 Tom is an English boy. Now he is in Beijing with his parents and his two siste"
+          },
+          {
+            "chunkId": "3a8588da5d6cc315",
+            "page": 133,
+            "preview": " 4.with 5.for 6.their 7.clean 8.also # 人教版新教材Unit 4 MyFavoriteSubject Lia英语 # 答案版语法知识导航练习一 ### 一. 常用短语，语提示，翻译下列短语。 1.学校学科school subjects olsubjec 2.Ella最喜欢的学科Ella's"
+          },
+          {
+            "chunkId": "c77592b726b6bef6",
+            "page": 137,
+            "preview": "you on Friday Ty but_I am really_busy_ 人教版新教材Unit 4 MyFavorite Subject -136 Lia英语笔记有方法讲高效重能力拓思维 # 单元阅读能力提高 阅读理解 Tom is an English boy. Now he is in Beijing with his "
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "45400cacba43d9b9",
+            "page": 1,
+            "preview": "难点详解.53 语法聚焦突破....59 单元短语及语法过关..61 话题阅读拓展.68 Unit5 Section A .B 重难点详解..69 语法聚焦突破...76 单元短语及语法过关. 话题阅读拓展.81 Unit6 Section A.B 重难点详解82 语法聚焦突破......8"
+          },
+          {
+            "chunkId": "7cad89309a79043d",
+            "page": 70,
+            "preview": "ike music. -68 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材——Unit 5FunClubs ## SectionA重难点详解 1. join 动词(v.)“参加，加入，连接，会合”(P51) ## 【用法】 (1).join+组织(指加入某个组织并成为其中的一员) e.g. jo"
+          },
+          {
+            "chunkId": "b83a84d144b64e98",
+            "page": 74,
+            "preview": "ad 答案：答案：B 吾笔记-72 Lia英语笔记有方法讲高效重能力 # 人教版新教材——Unit 5 Fun Clubs Lia英语 ## Section B 重难点详解 1. act 名词(n.)“法令，条例”(P561a) 动词(v.)“(戏)表演，扮演(角色)，演出（戏)；行动，做事” 【变形】acto"
+          },
+          {
+            "chunkId": "fade1083078cbc67",
+            "page": 77,
+            "preview": "吾笔记-75 Lia英语笔记有方法讲高效重能力 # 人教版新教材——Unit 5 FunClubs 1 # *情态动词 can *play +乐器/球类/棋牌 ## 一 ，情态动词有具体的词但没有人称和数的变化。情态动词后必须跟动词原形，[a]句子的谓语。 <div style=\"tex"
+          },
+          {
+            "chunkId": "986424446af4d669",
+            "page": 79,
+            "preview": " 19.爱上 20.照相 吾笔记 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材Unit 5 Fun Clubs # 语法知识导航练习二 ## 一 ，用括号内单词的适当形式填空 1.She (not can)b 2. Mary (can)c 3. Can you join (we)? 4.Ⅰ want"
+          },
+          {
+            "chunkId": "e9d742894dd74274",
+            "page": 80,
+            "preview": "the park. 吾笔记-78 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材Unit 5 Fun Clubs # 语法知识导航练习三 ## 一 ，单项选择。 )1.Matt can play hess, but he can't play drums. A.the; the ey B. /;the"
+          },
+          {
+            "chunkId": "2fe2257cddbd4971",
+            "page": 82,
+            "preview": "吾笔记-80 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材Unit 5 FunClubs # 单元阅读能力提高 # 完形填空 I have a good friend. His name is Lin Tao. He is a boy from Beijing. He like"
+          },
+          {
+            "chunkId": "2d1a0b857fb15897",
+            "page": 139,
+            "preview": "ic. 137 Lia英语笔记有方法讲高效重能 答案：1-5 BABDC # 人教版新教材Unit 5Fun Clubs Lia英语 # 答案版语法知识导航练习一 短语。 1.一个学校俱乐部a school club 2.下中国象棋play Chinese chess 3.有感情地朗读read with fe"
+          },
+          {
+            "chunkId": "2555e87664c874b5",
+            "page": 141,
+            "preview": "oto) of beautiful view in the park. ## 人教版新教材Unit5Fun Clubs ## 语法知识导航练习三 ## 一 ，单项选择。 答案1-6 BBCCCD )1.Matt can play chess, but he can't play drums. A.the; "
+          },
+          {
+            "chunkId": "0589e52e37672679",
+            "page": 143,
+            "preview": "does Tom want Lia英语to__join? # 单元阅读能力提高 # 人教片Unit 5 Fun Clubs 变一般疑问句：Can she _sing 肯定回答Yes，she__can 否定回答No，she _can't 3.His sister can join the swimminq clu"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "45400cacba43d9b9",
+            "page": 1,
+            "preview": "B 重难点详解..69 语法聚焦突破...76 单元短语及语法过关. 话题阅读拓展.81 Unit6 Section A.B 重难点详解82 语法聚焦突破......88 单元短语及语法过关...91 话题阅读拓展...96 Unit7 SectionA.B重难点详解..97 语法聚焦突破."
+          },
+          {
+            "chunkId": "2fe2257cddbd4971",
+            "page": 82,
+            "preview": "-mail address -81 Lia英语笔记有方法讲高效重能力 # 人教版新教材——Unit 6ADayintheLife Lia英语 # SectionA重难点详解 1. use 名词(n.)&动词(v)“利用，使用，应用”(P59) 【用法】make good use of put into gooduse"
+          },
+          {
+            "chunkId": "47d1e43645a3036c",
+            "page": 85,
+            "preview": " from “远离” 吾笔记-83 Lia英语笔记有方法讲高效重能力 # 人教版新教材——Unit 6ADayintheLife Lia英语 # Section B 重难点详解 1. daily 形容词(adj.）“日常的”(P64) 【用法】in our daily life = in our everyday l"
+          },
+          {
+            "chunkId": "bd0277440bfe4bc6",
+            "page": 88,
+            "preview": "“到时间做某事了” 吾笔记-87 Lia英语笔记有方法讲高效重能力维 # 人教版新教材一—Unit 6A DayintheLife语法焦点 Lia英语 ## 时 ## *问时间 *频频率副词 ## 一 ，时间表达法 ## (一) ．整点的表达： 字或文字均可。文字更正式 6点：6o'clock/ sixo'clock "
+          },
+          {
+            "chunkId": "dc2571e5efcdf0ae",
+            "page": 91,
+            "preview": "“我们常去那儿。” 吾笔记-90 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材Unit 6A Day in the Life # 语法知识导航练习一 ## 短语，根据汉语提示，翻译下 1.好好使用...子好使用. 2.洗澡先澡 3.穿好衣服好服 4.刷牙牙 5.值日直 6.起床床 7.做作业t 8.去睡觉 9.早"
+          },
+          {
+            "chunkId": "c22f10cca324b98d",
+            "page": 94,
+            "preview": "in China. 吾笔记-93 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材Unit 6ADayin the Life # 语法知识导航练习三 ## 一 ，单项选择。 )1. ---What time do you oft go to school? --- At about A. a half past "
+          },
+          {
+            "chunkId": "cbffe72936656efc",
+            "page": 144,
+            "preview": "e iladdress 答案： 1-5 ADDBC 6-10 BADCD # 人教版新教材Unit 6 A Day in Day in the Life # 答案版语法知识导航练习一Lia英语笔记 常用短语，根据汉语提示，翻译下列短语。 1.好好使用...make good use of 2."
+          },
+          {
+            "chunkId": "0ef2fc6573acd55f",
+            "page": 148,
+            "preview": "now? (改为同义句) What's__the time now? ## 人教教版新教材Unit6ADay nyinthe Life ## 单元阅读能力提高 ## 短文填空 Tn my famil -147 Lia英语笔记有方法讲高效重能力拓思维 happy_1_. My father "
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "45400cacba43d9b9",
+            "page": 1,
+            "preview": "82 语法聚焦突破......88 单元短语及语法过关...91 话题阅读拓展...96 Unit7 SectionA.B重难点详解..97 语法聚焦突破....103 单元短语及语法过关..107 话题阅读拓展...112 答案版.笔记.113-153 Lia英语笔记有方法讲高效 重能力拓"
+          },
+          {
+            "chunkId": "9bb7ef780caa8ff9",
+            "page": 98,
+            "preview": ".3.7.8. 吾笔记-96 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材——Unit7Happy Birthday ## SectionA重难点详解 1. celebrate 动词(v.)“庆祝，庆贺”(P67) 【变形】celebration庆祝；庆祝活动 celebrate birthdays -庆"
+          },
+          {
+            "chunkId": "c0f037f24c50c2a1",
+            "page": 102,
+            "preview": "# 人教版新教材——Unit7Happy Birthday # SectionB重难点详解 1. meaningful 形容词(adj.)“有意义的，意味深长的”(P72)meaningless 形容词(adj.)“毫无意义的” ## 【例题】 ("
+          },
+          {
+            "chunkId": "3c5f8d2521c126bf",
+            "page": 104,
+            "preview": "英语笔记 答案：B 吾笔记-102 Lia英语笔记有方法讲高效重能力 # 人教版新教材——Unit7Happy Birthday语法焦点 Lia英语 *序数词 问数量和价格日期的表达 ## 一 ，序数词 其主要形式： 至第十九： one first two一second three- third four-fourt"
+          },
+          {
+            "chunkId": "21ef4bdef75dec99",
+            "page": 108,
+            "preview": "rice —It's. 吾笔记-106 Lia英语笔记有方法讲高效重能 # 人教版新教材-Unit7 Happy Birthday Lia英语 # 语法知识导航练习一 ## 常用短语，根据汉语提示，翻译下列短语。 1．一个惊喜派对 2.问价格 3.购物清单 4.一双鞋 5.长寿 6._我们自己的生日 7.例如 8.许愿"
+          },
+          {
+            "chunkId": "d1e6e51aa74d46fa",
+            "page": 110,
+            "preview": "a symbol 吾笔记-109 Lia英语笔记有方法讲高效重能力拓思维 # 人教版新教材Unit7Happy Birthday # 语法知识导航练习三 ## 一 ，单项选择。 1.-How much Phone6?-It's 60 A. is; dollar ollars C. are; dollar D. are"
+          },
+          {
+            "chunkId": "3709cd6df5f5f844",
+            "page": 113,
+            "preview": ") in the fridge? 吾笔记 Lia英语笔记有方法讲高效重能 # 人教版新教材Unit7Happy # 单元阅读能力提高 ## 完形填空 I am Mary.Emma Her favorite color is__3__. Today Emma goes to Mr. Cool"
+          },
+          {
+            "chunkId": "f4614590c4317173",
+            "page": 150,
+            "preview": "e 5. need 6. old 7. early 8.also _ ## 人教版新教材-Unit7Happy irthday ## 答案版语法知识导航练习 常用短语，根据汉语提示，翻译下列短语。 1.一个惊喜派对a surprise party 2.问价格how much -148 Li"
+          },
+          {
+            "chunkId": "dcad4d968e047a0e",
+            "page": 152,
+            "preview": " is a symbol of good luck in China. # 人教版新教材-Unit7Happy Birthday Lia英语 # 语法知识导航练习三 ## 吾 一，单项选择答案：ABDACD 1. How much the iPhone 15? A. is B.do C. are D. does 2."
+          },
+          {
+            "chunkId": "006c7847a4971ba7",
+            "page": 154,
+            "preview": "是问） How many der the table? 可 om much ge? 人教版Unit7Happy appyBirthday 单元阅读能力提高 完形填空 - 152 Lia英语笔记有方法讲高效重能力拓思维 I am Mary.I___1_like white.I have lo"
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "447ecab87b8c11f1b1eacb449d41f0c3",
+      "documentName": "24秋七上知识点梳理 .pdf",
+      "sourceChunkCount": 23,
+      "returnedChunkCount": 23,
+      "occurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [
+          {
+            "chunkId": "10460385c29da992",
+            "page": 1,
+            "preview": "# Unit 1 You and Me ## 基础知识梳理 ★记单词 <div style=\"text-align: center;\"><html><body><table border=\"1\"><tr><td>可数名词</td"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "88b3a2201abad880",
+            "page": 3,
+            "preview": " sister.Her name is Alice.这是我的姐姐。她的名字叫爱丽丝。 # Unit 2 We're Family! ## 基础知识梳理 ## ★记单词 <div style=\"text-align: center;\"><html><body><table border=\"1\"><tr><td>动词</"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "f8d864e4a0cd2f4a",
+            "page": 6,
+            "preview": "today's newspaper今天的报纸 China's cities中国的城市 # Unit 3 My School ## 基础知识梳理 ★记单词名词 <div style=\"text-align: center;\"><html><body><table border=\"1\"><tr><td colspa"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "3fe09d3587216539",
+            "page": 9,
+            "preview": "对表示方位的（短语）介词进行提问时，要用where引导的特殊疑问句。 # Unit 4 My Favourite Subject ## 基础知识梳理 ★记单词名词 <div style=\"text-align: center;\"><html><body><table border=\"1\"><tr><td>后缀</td"
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "224762f30b9c1905",
+            "page": 12,
+            "preview": "以……”，但在英语中，because（因为）与so（所以）不能同时出现在一个句子中。 # Unit 5 Fun Clubs ## 基础知识梳理 ## ★记单词 <div style=\"text-align: center;\"><html><body><table border=\"1\"><tr><td rowsp"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "18af7ff442a4ade0",
+            "page": 14,
+            "preview": "我的英语老师。 》Can that boy be Bill? 那个男孩可能是比尔吗？ # Unit 6 A Day in the Life ## 基础知识梳理 ★记单词合成词 home(家）+work（工作)=homework（家庭作业） house（房子）+work（工作)=housework（家务劳动） week（周)+e"
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "e46bfa4d2f471021",
+            "page": 16,
+            "preview": "ize shoes do you wear?你穿多大码的鞋?一Size37.37号。 # Unit 7 Happy Birthday! 基础知识梳理 ## ★记单词 <div style=\"text-align: center;\"><html><body><table border=\"1\"><tr><td>salen.出"
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "5877b70a7b8c11f1b1eacb449d41f0c3",
+      "documentName": "Starter Units ~Unit7重点词汇，短语，句子归纳（记忆版）.docx",
+      "sourceChunkCount": 19,
+      "returnedChunkCount": 19,
+      "occurrences": {
+        "starter_unit_1": [
+          {
+            "chunkId": "4d9573a4163d67bd",
+            "page": 17,
+            "preview": "y brother and my friends. 我每个周末都和我的哥哥和朋友们打篮球。STARTER UNIT 1 Hello！一．词形变换1. greet →greeting (名词)2. spell →spelling (名词)3. goodbye→bye (同义词)二．重点短语1. starter"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "chunkId": "4d9573a4163d67bd",
+            "page": 17,
+            "preview": "he bell. 哦，铃声响了。8.Let's go to class. 让我们去上课吧。STARTER UNIT 2 Keep Tidy!一．词形变换1. bottle →bottles (复数形式)2. eraser →erasers (复数形式)3. key →keys (复数形式)4. thing "
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "chunkId": "c9b7fe657e1e462c",
+            "page": 18,
+            "preview": "ou put your things? 你把你的东西放在哪里了？微信公众号：瑾言教育资料库STARTER UNIT 3 Welcome！一．词形变换1. carrot →carrots (复数形式)2. goose →geese (复数形式)3. this →that (对应词)4. those →thes"
+          }
+        ],
+        "unit_1": [
+          {
+            "chunkId": "a0895575bf0367f7",
+            "page": 15,
+            "preview": "s a little quiet but very smart. 她有点儿安静，但很聪明。UNIT 1 You and MeSECTION A How do we get to know each other?一．词形变换1. full →empty （反义词）2. classmate →classmates （"
+          },
+          {
+            "chunkId": "4d9573a4163d67bd",
+            "page": 17,
+            "preview": "r and my friends. 我每个周末都和我的哥哥和朋友们打篮球。STARTER UNIT 1 Hello！一．词形变换1. greet →greeting (名词)2. spell →spelling (名词)3. goodbye→bye (同义词)二．重点短语1. starter "
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "7620c446e378f010",
+            "page": 12,
+            "preview": "s school similar to yours？ 彼得的学校跟你的学校有什么相似之处？UNIT 2 We're Family！SECTION A What is your family like?一．词形变换1. mean →meaning （名词）2.husband →husbands （复数形式）3. rea"
+          },
+          {
+            "chunkId": "4d9573a4163d67bd",
+            "page": 17,
+            "preview": " 哦，铃声响了。8.Let's go to class. 让我们去上课吧。STARTER UNIT 2 Keep Tidy!一．词形变换1. bottle →bottles (复数形式)2. eraser →erasers (复数形式)3. key →keys (复数形式)4. thing →"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "8cb367d0945cea6e",
+            "page": 10,
+            "preview": "ant to be a singer in the future. 未来我想成为一名歌手。UNIT 3 My SchoolSECTION A What is your school like?一．词形变换1. front →back （ 反义词）2. building →build （动词）3. office "
+          },
+          {
+            "chunkId": "c9b7fe657e1e462c",
+            "page": 18,
+            "preview": "our things? 你把你的东西放在哪里了？微信公众号：瑾言教育资料库STARTER UNIT 3 Welcome！一．词形变换1. carrot →carrots (复数形式)2. goose →geese (复数形式)3. this →that (对应词)4. those →these"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "e592e74a3d9e3e6e",
+            "page": 8,
+            "preview": "n't find many good books to read. 我找不到很多好书去读。UNIT 4 My Favourite SubjectSECTION A Why do you like this subject?一．词形变换1. use →useful （形容词）→ useless （反义词）"
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "e4f2153201082b7d",
+            "page": 6,
+            "preview": " and finish at 2: 15. 下午的课程 12:30 开始，2:15 结束。UNIT 5 Fun ClubsSECTION A How do you choose a school club?一．词形变换1. feel→feeling （名词）2. much→more （比较级）→ most （最"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "4114985a99a78284",
+            "page": 4,
+            "preview": "t. 下次，我也想做一些不同的事情。8. Any good ideas？ 有什么好主意吗？UNIT 6 A Day in the LifeSECTION A How do you spend your school day?一．词形变换1. tooth →teeth （复数形式）2. have →has （第三人称单数形式）3"
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "088ae4c0997a520d",
+            "page": 1,
+            "preview": "重点词汇，短语，句子归纳UNIT 7 Happy Birthday！SECTION A How do we celebrate birthdays?一．词形变换1. two →second （序数词）2. five →fifth （序数词）3. candl"
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "a0e83e6a79f711f1a93a9523fdaa939b",
+      "documentName": "人教版七年级（上）英语电子课本（2024年新版）.pdf",
+      "sourceChunkCount": 69,
+      "returnedChunkCount": 69,
+      "occurrences": {
+        "starter_unit_1": [
+          {
+            "chunkId": "458ecb336d0ebe96",
+            "page": 1,
+            "preview": "<html><body><table border=\"1\"><tbody><tr><td>Starter Unit 1 Hello! p.1</td><td>Section A How do you greet people? ListeningandS Speaking: :Greet each othe"
+          },
+          {
+            "chunkId": "463617a14078cd4f",
+            "page": 6,
+            "preview": "w do you spell your name? A: B:Goodbye! A: 2 Starter Unit 1 ## Pronunciation #### 1 Listen to the 26letters.Find them on the keyboard.Then practise with a"
+          },
+          {
+            "chunkId": "c99f1e9c38363c34",
+            "page": 8,
+            "preview": "'s go to class. Helen:Goodbye! Yaming:Bye! 4 Starter Unit1 ### 2 a Read the conversations in1bagain.Find theresponses in the box My name is Emma Miller. "
+          },
+          {
+            "chunkId": "4b45181276c2d0f4",
+            "page": 10,
+            "preview": "shoe</td></tr></table></body></html></div> 6 Starter Unit1 ## STARTERUNIT 2Keep Tidy ## SECTION A ## What do you have? ### 1 a Lookat the picture.Matchth"
+          },
+          {
+            "chunkId": "3e962858e3c1f596",
+            "page": 72,
+            "preview": "er Dear *Reading Plus 81 # Listening Scripts Starter Unit1 Hello! Section A, 2b b,c，g，h，j,1,n,q,r,v,x, Section A,2c Conversation 1 Ms Gao:Good morning,cl"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "chunkId": "4b45181276c2d0f4",
+            "page": 10,
+            "preview": ":Whatcolour is it/are they? A:It's/They're 8 Starter Unit2 ## Pronunciation ### 1 Listen and repeat. Pay attention to the sounds <div style=\"text-align: "
+          },
+          {
+            "chunkId": "648b07b61883fd20",
+            "page": 13,
+            "preview": "keep your room tidy. Ella:OK. Sorry, Mum. 10 Starter Unit 2 ## Conversation 2 Dad:I can't find my new glasses.Do you see them, Emma?Emma:What colour are t"
+          },
+          {
+            "chunkId": "1645938363cc9ec8",
+            "page": 16,
+            "preview": "o come to thefrontandplaytheguessing game 12 Starter Unit2 ## STARTERUNIT 3Welcome! SECTION A ## What tis fun in a yard? 1a Lookatthe picture.Matchthepla"
+          },
+          {
+            "chunkId": "e8bc4331e2671d05",
+            "page": 74,
+            "preview": "Starter Unit2 Keep Tidy Section A, 2c and 2d Conversation 1 Teng Fei:Hi Ella!I have a new schoolbag. Ella:Co"
+          },
+          {
+            "chunkId": "5000a210d582d7c3",
+            "page": 96,
+            "preview": "Vocabulary from Primary School 119 Starter Unit 2 keep/ki:p/v.（使）保持；保留p.7tidy/'taidi/adj.整洁的；井井有条的p.7in/In/prep.在……里；表示某事完成或发生的方式p.7schoolbag/'s"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "chunkId": "1645938363cc9ec8",
+            "page": 16,
+            "preview": "They're A:Howmany can you see? B:Ican see 14 Starter Unit3 ## Pronunciation ### 1 Listen and repeat. Pay attention to the sounds <div style=\"text-align: "
+          },
+          {
+            "chunkId": "3b934e2ee1c79edc",
+            "page": 20,
+            "preview": "'s beautiful.Do you like my uncle's farm? 16 Starter Unit3 ## 2 a Readthe textin1bagainandcompletethesentences 1.What animals does Peter's uncle have onh"
+          },
+          {
+            "chunkId": "4731238f32a77be6",
+            "page": 96,
+            "preview": "/h3:(r);hə(r)/pron.她的p.11 nose/nəuz/n.鼻子p.11 Starter Unit3 these/ǒi:z/pron.这些p.13 plant/pla:nt/n.植物v.种植p.13 baby/'beibi/ n.动物幼崽；婴儿p.13 chicken/'tikn/n.鸡；"
+          }
+        ],
+        "unit_1": [
+          {
+            "chunkId": "458ecb336d0ebe96",
+            "page": 1,
+            "preview": "ody><table border=\"1\"><tbody><tr><td>Starter Unit 1 Hello! p.1</td><td>Section A How do you greet people? ListeningandS Speaking: :Greet each other"
+          },
+          {
+            "chunkId": "463617a14078cd4f",
+            "page": 6,
+            "preview": " spell your name? A: B:Goodbye! A: 2 Starter Unit 1 ## Pronunciation #### 1 Listen to the 26letters.Find them on the keyboard.Then practise with a "
+          },
+          {
+            "chunkId": "c99f1e9c38363c34",
+            "page": 8,
+            "preview": " class. Helen:Goodbye! Yaming:Bye! 4 Starter Unit1 ### 2 a Read the conversations in1bagain.Find theresponses in the box My name is Emma Miller. E"
+          },
+          {
+            "chunkId": "4b45181276c2d0f4",
+            "page": 10,
+            "preview": "></tr></table></body></html></div> 6 Starter Unit1 ## STARTERUNIT 2Keep Tidy ## SECTION A ## What do you have? ### 1 a Lookat the picture.Matchthe"
+          },
+          {
+            "chunkId": "e85f1966c163f671",
+            "page": 24,
+            "preview": "e classmates. Try to remember their names 20 UNIT1 ## Pronunciation ## 1 Listen and repeat <div style=\"text-align: center;\"><html><body><table bor"
+          },
+          {
+            "chunkId": "051f02b383a864a8",
+            "page": 25,
+            "preview": " he/she in? Who is his/her class teacher? 22 UNIT1 ## GrammarFocus ### 3 a Read the sentences and circle the verbs.Then writeam,is, or are next to"
+          },
+          {
+            "chunkId": "3e962858e3c1f596",
+            "page": 72,
+            "preview": "*Reading Plus 81 # Listening Scripts Starter Unit1 Hello! Section A, 2b b,c，g，h，j,1,n,q,r,v,x, Section A,2c Conversation 1 Ms Gao:Good morning,cla"
+          },
+          {
+            "chunkId": "cd3a29193523d95f",
+            "page": 85,
+            "preview": "Vocabulary in Each Unit 107 hat/hæt/n.帽子p.32 handsome/'hænsəm/adj.英俊的p.32 knee/ni:/n.膝；膝盖p.32 at night在夜晚p.32 in themidd"
+          },
+          {
+            "chunkId": "9e366b18e1760563",
+            "page": 88,
+            "preview": "Vocabulary in Each Unit 111 ybjieshou@astmoney.com ybjieshaseastmoneycom 112 Vocabulary in Each Unit ## V ocabulary A-Z "
+          },
+          {
+            "chunkId": "1bd1abb324245a3e",
+            "page": 94,
+            "preview": "-Z # Vocabulary from Primary School Starter rUnit1 hello/hə'ləu/interj.你好；喂 how/hau/adv.怎样；如何 do/du:；də/auxv.&v.（第三人称单数 形式does/dAz/）用于构成 否定句和疑问句；做"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "4b45181276c2d0f4",
+            "page": 10,
+            "preview": "body></html></div> 6 Starter Unit1 ## STARTERUNIT 2Keep Tidy ## SECTION A ## What do you have? ### 1 a Lookat the picture.Matchthe things with the"
+          },
+          {
+            "chunkId": "648b07b61883fd20",
+            "page": 13,
+            "preview": "r room tidy. Ella:OK. Sorry, Mum. 10 Starter Unit 2 ## Conversation 2 Dad:I can't find my new glasses.Do you see them, Emma?Emma:What colour are th"
+          },
+          {
+            "chunkId": "1645938363cc9ec8",
+            "page": 16,
+            "preview": "o thefrontandplaytheguessing game 12 Starter Unit2 ## STARTERUNIT 3Welcome! SECTION A ## What tis fun in a yard? 1a Lookatthe picture.Matchtheplan"
+          },
+          {
+            "chunkId": "70b8c24c3b144dda",
+            "page": 30,
+            "preview": "28 UNIT2 ## Pronunciation ## Listen and repeat <div style=\"text-align: center;\"><html><body><table borde"
+          },
+          {
+            "chunkId": "07acce9be495c321",
+            "page": 31,
+            "preview": "f them and the activities your family do. 30 UNIT2 ## Grammar Focus ### 3 a Read the sentences. How do the verb forms change with the subjects? <d"
+          },
+          {
+            "chunkId": "304899f70308ea86",
+            "page": 32,
+            "preview": "hink theysay the same thing to all of us! 32 UNIT2 ### 1 c Readagain.CircleTfor true or F for false 1.Fred is Jackand Sarah's son.T F 2.1Lily'sbro"
+          },
+          {
+            "chunkId": "d788e4bb5888c73b",
+            "page": 34,
+            "preview": "is where life begins and love never ends. 34 UNIT2 ## I n this unit,you will 1.talk about places in school. 2.describe locations using there bestr"
+          },
+          {
+            "chunkId": "e8bc4331e2671d05",
+            "page": 74,
+            "preview": "Starter Unit2 Keep Tidy Section A, 2c and 2d Conversation 1 Teng Fei:Hi Ella!I have a new schoolbag. Ella:Coo"
+          },
+          {
+            "chunkId": "ef0881562eda758a",
+            "page": 84,
+            "preview": "tar/gi'ta:(r)/n.吉他p.24 tennis/'tenis/n.网球p.24Unit2 post/pəust/n.帖子；邮政mean/mi:n/v.意思是；打算p.27 v.邮寄；发布p.24husband/'hazbənd/n.丈夫p.28 even/'i:vn/adv.甚至"
+          },
+          {
+            "chunkId": "5000a210d582d7c3",
+            "page": 96,
+            "preview": "Vocabulary from Primary School 119 Starter Unit 2 keep/ki:p/v.（使）保持；保留p.7tidy/'taidi/adj.整洁的；井井有条的p.7in/In/prep.在……里；表示某事完成或发生的方式p.7schoolbag/'sk"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "1645938363cc9ec8",
+            "page": 16,
+            "preview": "ytheguessing game 12 Starter Unit2 ## STARTERUNIT 3Welcome! SECTION A ## What tis fun in a yard? 1a Lookatthe picture.Matchtheplantsandanimals wit"
+          },
+          {
+            "chunkId": "3b934e2ee1c79edc",
+            "page": 20,
+            "preview": "iful.Do you like my uncle's farm? 16 Starter Unit3 ## 2 a Readthe textin1bagainandcompletethesentences 1.What animals does Peter's uncle have onhi"
+          },
+          {
+            "chunkId": "817ebd6719dcf2b9",
+            "page": 37,
+            "preview": " conversations. Try to use your own words 36 UNIT3 ## Pronunciation ## 1 Listen and repeat <div style=\"text-align: center;\"><html><body><table bor"
+          },
+          {
+            "chunkId": "174f5a1b4e4d4aa0",
+            "page": 39,
+            "preview": "is nexttotheblackboard.Inour classroom, … 38 UNIT3 ## Grammar Focus ### 3 a Read the sentences.Underline the verbs inthere be structure and circle"
+          },
+          {
+            "chunkId": "f1ab55baa7e599fe",
+            "page": 40,
+            "preview": "cious! How about your school? Yours,Peter 40 UNIT3"
+          },
+          {
+            "chunkId": "25afd03d18684ea3",
+            "page": 43,
+            "preview": "A schoolis a place to start our dreams. 42 UNIT3 ## I n this unit,you will 1.talk about school subjects. 2name your favourite subject and explai"
+          },
+          {
+            "chunkId": "85dd4e6be1267452",
+            "page": 67,
+            "preview": "he meaning of your name? 76 *Reading Plus ## Unit3 ## My Floating School Myname is Sadia Khatun.I'm from Bangladesh.It's difficult to walk on some"
+          },
+          {
+            "chunkId": "cd3a29193523d95f",
+            "page": 85,
+            "preview": "32 Oscar/'pskə(r)/奥斯卡p.32 Lucy/'lu:si/露西p.32 Unit3 hall/hə:l/n.礼堂；大厅p.36 dining/'dainm/hall餐厅p.36 in front of在……前面p.36 building/bild/n.建筑物；房子p.36 "
+          },
+          {
+            "chunkId": "4731238f32a77be6",
+            "page": 96,
+            "preview": "hə(r)/pron.她的p.11 nose/nəuz/n.鼻子p.11 Starter Unit3 these/ǒi:z/pron.这些p.13 plant/pla:nt/n.植物v.种植p.13 baby/'beibi/ n.动物幼崽；婴儿p.13 chicken/'tikn/n.鸡；鸡"
+          },
+          {
+            "chunkId": "f3e1cbc3cb2b56a4",
+            "page": 99,
+            "preview": "py/'hæpi/adj.快乐的p.33 help/help/ νv.&n.帮助p.33 Unit3 front/frant/n.前面p.36 between/bi'twi:n/prep.在……之间p.36 library/labrəri/n.图书馆p.36 computer/kəm'pju"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "f59a14cc6fe450b1",
+            "page": 47,
+            "preview": "46 UNIT4 ## Grammar Focus ### 3 a Read the sentences.Complete the statements with and,but, or because Ih"
+          },
+          {
+            "chunkId": "ded2ff3b53df5737",
+            "page": 48,
+            "preview": "and want to be a scientist in the future. 48 UNIT4 ## 1 c Readagain and complete the table <div style=\"text-align: center;\"><html><body><table bor"
+          },
+          {
+            "chunkId": "9956c2cbdaa6e059",
+            "page": 69,
+            "preview": "he floating school have? *Reading Plus 77 ## Unit 4 ## ShowChoir Work as a teamto put on a big show at the end ofthe term.It's a great way to make "
+          },
+          {
+            "chunkId": "e8bc4331e2671d05",
+            "page": 74,
+            "preview": "en't. We put our things in the desk drawers. Unit4 My Favourite Subject SectionA,1b and1c Conversation1 Fu Xing:Hi,Ella.Are you OK? Ella:Hi,Fu Xing.Not really. Today "
+          },
+          {
+            "chunkId": "f3e1cbc3cb2b56a4",
+            "page": 99,
+            "preview": "el/v.告诉p.41 interesting/intrestin/ad.有趣的p.41 Unit4 subject/'sAbdzkt/n.学科；科目p.43"
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "fd959730d7c9c3ed",
+            "page": 50,
+            "preview": "rsation betweena clubleader and a student 52 UNIT5 ## Pronunciation ) ## 1 Listen and repeat <div style=\"text-align: center;\"><html><body><table b"
+          },
+          {
+            "chunkId": "38a3677f78ce26c3",
+            "page": 53,
+            "preview": "? B:Yes,Ican./No,Ican't.Howaboutyou? A:I. 54 UNIT5 ## 1 c Read again and complete the table below <div style=\"text-align: center;\"><html><body><ta"
+          },
+          {
+            "chunkId": "29a80ee2c03761cb",
+            "page": 55,
+            "preview": "</div> Our interests make us interesting. 58 UNIT5 ## GrammarFocus ## 3 a Complete the questions with what, what time, or when <div style=\"text-al"
+          },
+          {
+            "chunkId": "137dfc81e3fb3167",
+            "page": 71,
+            "preview": "# Alice's Vlog: My Drama Club ## Unit 5 Hello!Myname is Alice.Welcome tomydramaclub! This is Mr Ford, our drama teacher.Mr Ford is very"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "582c7abb3934ff71",
+            "page": 59,
+            "preview": "To plan time is to save time. 66 UNIT6 ## I n this unit,you will 1.talk about people's birthdays. 2.express dates in English. 3learn t"
+          },
+          {
+            "chunkId": "137dfc81e3fb3167",
+            "page": 71,
+            "preview": "o join a drama club?Why? *Reading Plus 79 ## Unit6 ## Wenwen'smother,China ## Colin'sfather,UK My mother is a nurse in a hospital. When she works "
+          },
+          {
+            "chunkId": "b334fe8e887b5a7b",
+            "page": 76,
+            "preview": "e.Let's go to class! Listening Scripts 87 ## Unit6ADay intheLife SectionA,1b,1c, and1d ## Conversation1 Mum:Peter! Get up! You're late! Peter:What time is it? "
+          },
+          {
+            "chunkId": "3ea9b4259f8ac8d7",
+            "page": 86,
+            "preview": "p.56 White/wartt/怀特p.56 Jenny /'dzeni/珍妮p.56 Unit 6 make use of使用……；利用……p.59 shower/au(r)/n.淋浴；淋浴器 v.洗淋浴p.60 take a shower 淋浴p.60 get dressed穿衣服p.6"
+          },
+          {
+            "chunkId": "20f38c3244645cc7",
+            "page": 100,
+            "preview": ".48Unit s sing /s/v.唱歌p.53swim/swim/v.游泳p.54 Unit6 o'clock/'klk/ adv.(表示整点）……点钟p.60dress/dres/v.穿衣服n.连衣裙p.60breakfast/'brekfəst/n.早餐p.60before/bi'"
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "0f04ed223761cb8f",
+            "page": 61,
+            "preview": "en line upfrom the youngest to the oldest 68 UNIT7 ## Pronunciation ## Listen and repeat <div style=\"text-align: center;\"><html><body><table borde"
+          },
+          {
+            "chunkId": "943ad78729066937",
+            "page": 63,
+            "preview": "lp you? B:Yes,please. How much is/ are …? 70 UNIT7 ## GrammarFocus ### 3 a Read the sentences.Circle the question words <div style=\"text-align: ce"
+          },
+          {
+            "chunkId": "41c04bada18c7bcf",
+            "page": 64,
+            "preview": "o do something different.Any good lideas? 72 UNIT7 ## 1 c Read again and complete the table <div style=\"text-align: center;\"><html><body><table bo"
+          },
+          {
+            "chunkId": "85dd4e6be1267452",
+            "page": 67,
+            "preview": "Every birthday is a gift of life. 74 UNIT7 ## Unit ## Family Ties in Names Hello!My name is Alan, and I'mfrom theUK.Here most people have "
+          },
+          {
+            "chunkId": "3e962858e3c1f596",
+            "page": 72,
+            "preview": "s have special routines? 80 *Reading Plus ## Unit7 My dear sow, It's so wonderful to watch you grow up. I like to see your smile every day!Thank y"
+          },
+          {
+            "chunkId": "ab238a7e1c9112cb",
+            "page": 77,
+            "preview": " bed,early to rise!\" Listening Scripts 89 ## Unit7Happy Birthday! ## Section A,1b and1c ## Conversation FuXing:Today is 3rd December. Happy birthday, Helen! He"
+          },
+          {
+            "chunkId": "3ea9b4259f8ac8d7",
+            "page": 86,
+            "preview": "make a wish许愿p.72 village/'vlid3/n.村庄；村镇p.72 Unit7grow/grə/v.成长；长大；增长p.72 celebrate/selibreit/v.庆祝；庆贺p.67blow/bləu/v.吹；刮p.72 surprise/sə'praiz/n."
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "58dd3cce7b8c11f1b1eacb449d41f0c3",
+      "documentName": "人教版七年级英语上册核心知识归纳98页.docx",
+      "sourceChunkCount": 183,
+      "returnedChunkCount": 183,
+      "occurrences": {
+        "starter_unit_1": [
+          {
+            "chunkId": "15583cc4eb306b52",
+            "page": 1,
+            "preview": "人教版七年级英语上册知识点总结Starter Unit1-3Starter Unit1【重点单词】1.unit n. 单元2.starter unit 过渡单元3.section n. 部分；地区4.greet v. 招呼；问候5.spell v"
+          },
+          {
+            "chunkId": "80e0083dae287570",
+            "page": 7,
+            "preview": "丽的。13.Do you like my uncle's farm?你喜欢我叔叔的农场吗？Starter Unit1语法点1表达“向他人问好”的句式一、见面打招呼句式1-Hello./Hi.-Hello./Hi.——你好。/嗨。——你好。/嗨。2-Good morning/afternoon/evenin"
+          },
+          {
+            "chunkId": "77ba4b81406fc1ca",
+            "page": 19,
+            "preview": ".这些花儿很漂亮。Section A How do you greet people?1．Starter Unit 1过渡第一单元（教材第1页）unit［可数名词］单元 ★☆☆表示名称时首字母大写，其后接基数词，常用来表示课本里每个单元，Unit1表示“第一单元”。starter unit表示“过渡单元”。"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "chunkId": "15583cc4eb306b52",
+            "page": 1,
+            "preview": "r.....是....的时候了 例句：It's time for dinner.该吃饭了。Starter Unit2【重点单词】1.bottle n. 瓶子2.eraser n. 橡皮3.key n. 钥匙；关键"
+          },
+          {
+            "chunkId": "b74ef75aef9f2f62",
+            "page": 3,
+            "preview": "西；事情5.need v. & n. 需要6.you're welcome 别客气；不用谢Starter Unit2【重点短语】1.keep(...) tidy保持(……)整洁 Please keep your bedroom tidy.请保持你的卧室整洁。2.in your schoolbag在你的书包"
+          },
+          {
+            "chunkId": "e6a9a5a6818bb9fa",
+            "page": 9,
+            "preview": "你的名字怎么拼写？-E-M-M-A, Emma. M-I-L-L-E-R, Miller.Starter Unit2语法点1 颜色的表达1.问句“What color + be +主语（被询问的物品）？”。（1）句子的主语是单数时，be动词用is，其答语为“It's + 表示颜色的形容词.”。—What "
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "chunkId": "b74ef75aef9f2f62",
+            "page": 3,
+            "preview": ".wait a minute等一下 Wait a minute, Lucy.等一下，露西。Starter Unit3【重点单词】1.fun n. 乐趣；快乐 adj. 有趣的；使人快乐的2.yard n. 院子；园圃3.carrot n. 胡萝卜4.goose n. (pl. geese) 鹅"
+          },
+          {
+            "chunkId": "13c6808dbf1490ef",
+            "page": 4,
+            "preview": "n. 另一；又一(人或事物)7.else adv. 其他的；别的8.look at 看；瞧Starter Unit3【重点短语】1.apple tree苹果树 I planted those apple trees.我种了那些苹果树。2.in the yard在院子里 I saw him standing"
+          },
+          {
+            "chunkId": "ff65ca1717ce18bb",
+            "page": 13,
+            "preview": "用a,如:a university,a useful book。2.定冠词the的基本用法Starter Unit3语法点 询问物品的句式一．What's this ? 这个是什么？1.句子结构分析 该句型用于提问某物是什么，是由特殊疑问词what加一般疑问句构成的特殊疑问句。what's是what is"
+          }
+        ],
+        "unit_1": [
+          {
+            "chunkId": "15583cc4eb306b52",
+            "page": 1,
+            "preview": "人教版七年级英语上册知识点总结Starter Unit1-3Starter Unit1【重点单词】1.unit n. 单元2.starter unit 过渡单元3.section n. 部分；地区4.greet v. 招呼；问候5.spell v"
+          },
+          {
+            "chunkId": "13c6808dbf1490ef",
+            "page": 4,
+            "preview": "pulled carrots on the farm.我在农场里拔胡萝卜。Starter Unit11. Good morning.早上好。2. May I have your name?我可以知道你的名字吗？3. Good morning. My name is Emma Miller."
+          },
+          {
+            "chunkId": "80e0083dae287570",
+            "page": 7,
+            "preview": " you like my uncle's farm?你喜欢我叔叔的农场吗？Starter Unit1语法点1表达“向他人问好”的句式一、见面打招呼句式1-Hello./Hi.-Hello./Hi.——你好。/嗨。——你好。/嗨。2-Good morning/afternoon/evenin"
+          },
+          {
+            "chunkId": "77ba4b81406fc1ca",
+            "page": 19,
+            "preview": "。Section A How do you greet people?1．Starter Unit 1过渡第一单元（教材第1页）unit［可数名词］单元 ★☆☆表示名称时首字母大写，其后接基数词，常用来表示课本里每个单元，Unit1表示“第一单元”。starter unit表示“过渡单元”。"
+          },
+          {
+            "chunkId": "bcf9c6aa72270851",
+            "page": 47,
+            "preview": "lease?Bob: Yes. O-R-A-N-G-E.Cindy: Thank you.Unit1 You and Me【重点单词】1.make friends 交朋友2.get to know 认识；了解3.each adj. & pron. 每个；各自4.other pron. 另外的人(或物) adj."
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "15583cc4eb306b52",
+            "page": 1,
+            "preview": "...的时候了 例句：It's time for dinner.该吃饭了。Starter Unit2【重点单词】1.bottle n. 瓶子2.eraser n. 橡皮3.key n. 钥匙；关键"
+          },
+          {
+            "chunkId": "b74ef75aef9f2f62",
+            "page": 3,
+            "preview": "ed v. & n. 需要6.you're welcome 别客气；不用谢Starter Unit2【重点短语】1.keep(...) tidy保持(……)整洁 Please keep your bedroom tidy.请保持你的卧室整洁。2.in your schoolbag在你的书包"
+          },
+          {
+            "chunkId": "8b73ebb13896aea2",
+            "page": 6,
+            "preview": "哦，上课铃响了。11. Let's go to class.我们去上课吧。Starter Unit21.Mum, I can't find my new cap.妈妈，我找不到我的新帽子了。2.What colour is it?它是什么颜色的？It's red.它是红色的。3.—Is i"
+          },
+          {
+            "chunkId": "e6a9a5a6818bb9fa",
+            "page": 9,
+            "preview": "？-E-M-M-A, Emma. M-I-L-L-E-R, Miller.Starter Unit2语法点1 颜色的表达1.问句“What color + be +主语（被询问的物品）？”。（1）句子的主语是单数时，be动词用is，其答语为“It's + 表示颜色的形容词.”。—What "
+          },
+          {
+            "chunkId": "ffd0b86f9a09ee9a",
+            "page": 74,
+            "preview": "n't play it well.That's all. Thank you![高级语块]Unit2 We're Family!【重点单词】1.mean v. 意思是；打算2.husband n. 丈夫3.bat n. 球棒；球拍4.ping-pong bat 乒乓球拍5.play ping-pong 打乒乓球6."
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "b74ef75aef9f2f62",
+            "page": 3,
+            "preview": "minute等一下 Wait a minute, Lucy.等一下，露西。Starter Unit3【重点单词】1.fun n. 乐趣；快乐 adj. 有趣的；使人快乐的2.yard n. 院子；园圃3.carrot n. 胡萝卜4.goose n. (pl. geese) 鹅"
+          },
+          {
+            "chunkId": "13c6808dbf1490ef",
+            "page": 4,
+            "preview": "(人或事物)7.else adv. 其他的；别的8.look at 看；瞧Starter Unit3【重点短语】1.apple tree苹果树 I planted those apple trees.我种了那些苹果树。2.in the yard在院子里 I saw him standing"
+          },
+          {
+            "chunkId": "8b73ebb13896aea2",
+            "page": 6,
+            "preview": " Emma!哦，谢谢你，埃玛！16.You're welcome.别客气。Starter Unit31.Look! This is my uncle's farm.看！这是我叔叔的农场。2.It's a big farm. The grass is so green.它是一个大农场。草是如"
+          },
+          {
+            "chunkId": "ff65ca1717ce18bb",
+            "page": 13,
+            "preview": "niversity,a useful book。2.定冠词the的基本用法Starter Unit3语法点 询问物品的句式一．What's this ? 这个是什么？1.句子结构分析 该句型用于提问某物是什么，是由特殊疑问词what加一般疑问句构成的特殊疑问句。what's是what is"
+          },
+          {
+            "chunkId": "059beb285e5629ea",
+            "page": 101,
+            "preview": "amily. Please write to me soon.Yours,Li QiangUnit3 My School【重点单词】1.hall n. 礼堂；大厅2.dining hall 餐厅3.in front of 在……前面4.building n. 建筑物；房子5.across prep. & ad"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "d48fb7b28cc39c62",
+            "page": 123,
+            "preview": "l nice to me. I like my new school very much.Unit4 My Favourite Subject【重点单词】1.biology n. 生物学2.IT abbr. (=information technology) 信息技术3.geography n. 地理(学)4.history n."
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "935d54099bbbeceb",
+            "page": 151,
+            "preview": "。文中介绍了自己喜欢和不喜欢的学科及原因。文章结尾询问对方的喜好，符合题目要求，内容完整。Unit5 Fun Clubs【重点单词】1.club n. 俱乐部；社团2.join v. 参加；加入3.choose v. 选择；挑选4.drama n. 戏剧；戏剧表演5.play Chinese chess 下中"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "2cc99cedccf5cd1b",
+            "page": 174,
+            "preview": "范。短语使用正确，表明作者有较强的语言运用能力。4.结尾热情洋溢，符合招聘广告的语言规范。Unit6 A Day in the Life【重点单词】1.make use of 使用……；利用……2.shower n. 淋浴；淋浴器 v. 洗淋浴3.take a shower 淋浴4.get dressed 穿衣服5.brus"
+          }
+        ],
+        "unit_7": [
+          {
+            "chunkId": "cd523037360df9e8",
+            "page": 198,
+            "preview": "率副词表达日常活动。结尾的 I think...表达了对自己日常活动习惯的看法，语言得体。Unit7 Happy Birthday【重点单词】1.celebrate v. 庆祝；庆贺2.surprise n. 惊奇；惊讶 v. 使感到意外3.something pron. 某事；某物4.sale n. 出售；销售5.k"
+          }
+        ]
+      }
+    },
+    {
+      "documentId": "ce5dac7279f711f1a93a9523fdaa939b",
+      "documentName": "新七 starter2-3.pdf",
+      "sourceChunkCount": 1,
+      "returnedChunkCount": 1,
+      "occurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [
+          {
+            "chunkId": "c0b4ff5b07d6a7f8",
+            "page": 1,
+            "preview": "Starter Unit 2 # Keep Tidy 根据《义务教育英语课程标准(2022年版)》,本词表中的重点词汇用粗体显示 an eraser 一块橡皮 复数形式：keys 一串钥匙：aset ofkeys ##"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "chunkId": "c0b4ff5b07d6a7f8",
+            "page": 1,
+            "preview": "an eraser 一块橡皮 复数形式：keys 一串钥匙：aset ofkeys ## Starter Unit 3 常放在who,what,something 等复合不定代词后，如：What else do you want?您还想要点什么? Starter Unit 2 bottle/'bptl/n."
+          }
+        ],
+        "unit_1": [],
+        "unit_2": [
+          {
+            "chunkId": "c0b4ff5b07d6a7f8",
+            "page": 1,
+            "preview": "Starter Unit 2 # Keep Tidy 根据《义务教育英语课程标准(2022年版)》,本词表中的重点词汇用粗体显示 an eraser 一块橡皮 复数形式：keys 一串钥匙：aset ofkeys ## "
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "c0b4ff5b07d6a7f8",
+            "page": 1,
+            "preview": "r 一块橡皮 复数形式：keys 一串钥匙：aset ofkeys ## Starter Unit 3 常放在who,what,something 等复合不定代词后，如：What else do you want?您还想要点什么? Starter Unit 2 bottle/'bptl/n.瓶"
+          }
+        ],
+        "unit_4": [],
+        "unit_5": [],
+        "unit_6": [],
+        "unit_7": []
+      }
+    },
+    {
+      "documentId": "cefdd4ae79f711f1a93a9523fdaa939b",
+      "documentName": "新七上 单词详解  内容复杂版.pdf",
+      "sourceChunkCount": 8,
+      "returnedChunkCount": 8,
+      "occurrences": {
+        "starter_unit_1": [],
+        "starter_unit_2": [],
+        "starter_unit_3": [],
+        "unit_1": [],
+        "unit_2": [],
+        "unit_3": [],
+        "unit_4": [
+          {
+            "chunkId": "6dc8714b3e60ef16",
+            "page": 3,
+            "preview": "的 Flora/flo:rə/弗洛 instrumentinstramant great Unit 4wonderful biologist 生物学家n.器械；工具p.48excellent biology/bar'pladzi/n.生物学p.44 singer/si(r)/n.歌手p.48"
+          }
+        ],
+        "unit_5": [],
+        "unit_6": [
+          {
+            "chunkId": "e7b8ff39dc2d0520",
+            "page": 5,
+            "preview": "keepin mind牢记keep one's mind on sth.专心于某事 ## Unit6 make use of使用……；利用……p.59have ashower固定短语，“洗淋浴”shower/au(r）/n.淋浴：淋浴器 v.洗淋浴dress动词，“穿衣服”，其宾语多是人常见"
+          }
+        ],
+        "unit_7": []
+      }
+    },
+    {
+      "documentId": "cf246d9e79f711f1a93a9523fdaa939b",
+      "documentName": "新七上 单词详解  内容清爽版.pdf",
+      "sourceChunkCount": 11,
+      "returnedChunkCount": 11,
+      "occurrences": {
+        "starter_unit_1": [
+          {
+            "chunkId": "469c4dd1e8f6c747",
+            "page": 1,
+            "preview": "Starter Unit 1 # Hello! 根据《义务教育英语课程标准(2022年版)》,本词表中的重点词汇用粗体显示 Section A A部分in...section 在..部分 ---Spell it, pl"
+          }
+        ],
+        "starter_unit_2": [
+          {
+            "chunkId": "469c4dd1e8f6c747",
+            "page": 1,
+            "preview": "h a smile. have a conversation with sb.与某人交谈 Starter Unit 2 # Keep Tidy 根据《义务教育英语课程标准(2022年版)》,本词表中的重点词汇用粗体显示"
+          },
+          {
+            "chunkId": "de92e600f8a34b5a",
+            "page": 2,
+            "preview": "ng 等复合不定代词后，如：What else do you want?您还想要点什么? Starter Unit 2 bottle/'bptl/n.瓶子 eraser /I'reizə/ n.橡皮 key /ki:/n.钥匙；关键 thing/θn/n.东西；事情 need /ni:d/ v.&n. 需要"
+          }
+        ],
+        "starter_unit_3": [
+          {
+            "chunkId": "de92e600f8a34b5a",
+            "page": 2,
+            "preview": "an eraser 一块橡皮 复数形式：keys 一串钥匙：aset ofkeys ## Starter Unit 3 常放在who,what,something 等复合不定代词后，如：What else do you want?您还想要点什么? Starter Unit 2 bottle/'bptl/n."
+          }
+        ],
+        "unit_1": [
+          {
+            "chunkId": "469c4dd1e8f6c747",
+            "page": 1,
+            "preview": "Starter Unit 1 # Hello! 根据《义务教育英语课程标准(2022年版)》,本词表中的重点词汇用粗体显示 Section A A部分in...section 在..部分 ---Spell it, ple"
+          },
+          {
+            "chunkId": "de92e600f8a34b5a",
+            "page": 2,
+            "preview": " Me 根据《义务教育英语课程标准(2022年版)》，本词表中的重点词汇用粗体显示 ## UNIt 1 other 其他的，另外的，不能单独使用。后面需跟单数名词或复数名词。the other 两者当中的另一个，剩下的一个。常用于“one…the other…”结构。others 其他的，相当"
+          },
+          {
+            "chunkId": "d726c65ae10a8c61",
+            "page": 3,
+            "preview": ".固定搭配： both....and... V. + a ot 西洋乐器前加the ## Unit 1 make friends交朋友 get to know认识；了解 each /i:tf/adj.&pron. 每个；各自 other/'∧ǒər/ pron.另外的人(或物) adj.另外的"
+          }
+        ],
+        "unit_2": [
+          {
+            "chunkId": "469c4dd1e8f6c747",
+            "page": 1,
+            "preview": "e. have a conversation with sb.与某人交谈 Starter Unit 2 # Keep Tidy 根据《义务教育英语课程标准(2022年版)》,本词表中的重点词汇用粗体显示"
+          },
+          {
+            "chunkId": "de92e600f8a34b5a",
+            "page": 2,
+            "preview": "代词后，如：What else do you want?您还想要点什么? Starter Unit 2 bottle/'bptl/n.瓶子 eraser /I'reizə/ n.橡皮 key /ki:/n.钥匙；关键 thing/θn/n.东西；事情 need /ni:d/ v.&n. 需要 "
+          },
+          {
+            "chunkId": "1145c2fa19e461c9",
+            "page": 3,
+            "preview": "(英国首都) 重点不可数名词 Australian n.澳大利亚人adj.澳大利亚的 # UNIT2We're Family! everyday adj.日常的每天的 即可修饰可数名词也可修饰不可数名词 根据《义务教育英语课程标准(2022年版)》，本词表中的重点词汇用粗体显示"
+          },
+          {
+            "chunkId": "8b8a39a246eab612",
+            "page": 5,
+            "preview": "## Unit 2 mean/mi:n/v意思是；打算 husband/'hΛz.bənd/n.丈夫 bat/bæt/n.球棒；球拍 ①meanv.意味着，打算--meaningfuladj.有意义的---me"
+          }
+        ],
+        "unit_3": [
+          {
+            "chunkId": "de92e600f8a34b5a",
+            "page": 2,
+            "preview": "r 一块橡皮 复数形式：keys 一串钥匙：aset ofkeys ## Starter Unit 3 常放在who,what,something 等复合不定代词后，如：What else do you want?您还想要点什么? Starter Unit 2 bottle/'bptl/n.瓶"
+          },
+          {
+            "chunkId": "b3b7bc139569d33c",
+            "page": 6,
+            "preview": "徒步旅行 go hiking 远足；徒步旅行 Ireland/'aələnd/爱尔兰 上 UNIT 3 # My School 根据《义务教育英语课程标准(2022年版)》，本词表中的重点词汇用粗体显示 在...前面：in the front of..（内部）in front of .（外部）"
+          }
+        ],
+        "unit_4": [
+          {
+            "chunkId": "eef4bb61ae090f25",
+            "page": 7,
+            "preview": "同： across prep./adv cross V. putup a tent搭帐篷 UNIT4 # My Favourite Subject -ed结尾形容词修饰人，意为“..的” -ing结尾的形容词修饰物，意为“令人..的” 如：boring adj.令人乏味的boredadj.无"
+          }
+        ],
+        "unit_5": [
+          {
+            "chunkId": "36ac191340845731",
+            "page": 9,
+            "preview": "o do sth.记得要去做某事remember doing sth.记得做过某事 ## UNIT 5Fun Clubs 根据《义务教育英语课程标准(2022年版)》，本词表中的重点词汇用粗体显示 ## Unit 5 join:参加团体，党派，组织。如joinclub joinin:参加小规模活动。如join"
+          }
+        ],
+        "unit_6": [
+          {
+            "chunkId": "c5b66308a68ed165",
+            "page": 12,
+            "preview": "生物 wild（野生的）+life（生命/生物）=wildlife 欢迎来到野生动物园。 UNIT6 # A Day in the Life 根据《义务教育英语课程标准(2022年版)》，本词表中的重点词汇用粗体显示 while/wal/n.一段时间；一会儿 for a while 一会儿 "
+          }
+        ],
+        "unit_7": []
+      }
+    }
+  ]
+}

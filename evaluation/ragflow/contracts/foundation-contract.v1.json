@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-13A-foundation-contract-spike-v1",
+  "runId": "cc937dce-30cd-4c4a-a3cb-b264f662c31b",
+  "generatedAt": "2026-07-10T14:37:41.481Z",
+  "mode": "isolated-write",
+  "passed": false,
+  "safeguards": {
+    "explicitBaseUrl": true,
+    "explicitApiKey": true,
+    "explicitWriteConfirmation": true,
+    "uniqueDatasetPrefix": true,
+    "productionDatasetIdsUsed": false,
+    "reportContainsEndpointOrCredential": false,
+    "reportContainsAbsolutePath": false
+  },
+  "dataset": {
+    "name": "layout3-ph3-13a-contract-20260710143741-cc937dce30cd",
+    "created": true,
+    "cleanupAttempted": true,
+    "cleanupSucceeded": true,
+    "id": "e7f517ca7c6c11f18a4e879d5b5dcdeb"
+  },
+  "checks": [
+    {
+      "id": "dataset.create-isolated",
+      "passed": true,
+      "evidence": {
+        "returnedNameMatches": true,
+        "uniquePrefixMatches": true
+      }
+    },
+    {
+      "id": "document.upload-adversarial-pair",
+      "passed": true,
+      "evidence": {
+        "uploadedCount": 2,
+        "distinctDocumentCount": 2
+      }
+    },
+    {
+      "id": "document.metadata-patch-roundtrip",
+      "passed": true,
+      "evidence": {
+        "patchedCount": 2,
+        "verifiedCount": 2
+      }
+    },
+    {
+      "id": "document.parse-trigger-poll",
+      "passed": true,
+      "evidence": {
+        "doneCount": 2,
+        "chunkCount": 3,
+        "zeroChunkCount": 0
+      }
+    },
+    {
+      "id": "retrieval.document-ids-nonempty",
+      "passed": true,
+      "evidence": {
+        "apiCode": 0,
+        "message": "",
+        "chunkCount": 3,
+        "returnedDocumentIds": [
+          "e8003d127c6c11f18a4e879d5b5dcdeb",
+          "e7fb3e707c6c11f18a4e879d5b5dcdeb"
+        ],
+        "expectedDocumentCount": 2
+      }
+    },
+    {
+      "id": "retrieval.document-ids-forged-zero-match",
+      "passed": true,
+      "evidence": {
+        "apiCode": 102,
+        "message": "The datasets don't own the document 6836594e07fe4d65b497fab09e5c35ed",
+        "chunkCount": 0,
+        "returnedDocumentIds": [],
+        "expectedChunkCount": 0,
+        "acceptedMode": "explicit-ownership-rejection"
+      }
+    },
+    {
+      "id": "retrieval.document-ids-before-ranking",
+      "passed": true,
+      "evidence": {
+        "unrestrictedTopDocumentId": "e8003d127c6c11f18a4e879d5b5dcdeb",
+        "restrictedDocumentId": "e7fb3e707c6c11f18a4e879d5b5dcdeb",
+        "restrictedChunkCount": 1,
+        "restrictedReturnedDocumentIds": [
+          "e7fb3e707c6c11f18a4e879d5b5dcdeb"
+        ]
+      }
+    },
+    {
+      "id": "retrieval.route-a-pending-exact-ids",
+      "passed": true,
+      "evidence": {
+        "apiCode": 0,
+        "message": "",
+        "chunkCount": 2,
+        "returnedDocumentIds": [
+          "e7fb3e707c6c11f18a4e879d5b5dcdeb"
+        ],
+        "documentIdFilterCount": 1,
+        "metadataConditionSent": false
+      }
+    },
+    {
+      "id": "retrieval.route-a-active-exact-ids",
+      "passed": true,
+      "evidence": {
+        "apiCode": 0,
+        "message": "",
+        "chunkCount": 1,
+        "returnedDocumentIds": [
+          "e8003d127c6c11f18a4e879d5b5dcdeb"
+        ],
+        "documentIdFilterCount": 1,
+        "metadataConditionSent": false
+      }
+    },
+    {
+      "id": "retrieval.metadata-pending-only",
+      "passed": true,
+      "evidence": {
+        "apiCode": 0,
+        "message": "",
+        "chunkCount": 2,
+        "returnedDocumentIds": [
+          "e7fb3e707c6c11f18a4e879d5b5dcdeb"
+        ],
+        "expectedStatus": "pending"
+      }
+    },
+    {
+      "id": "retrieval.metadata-active-only",
+      "passed": true,
+      "evidence": {
+        "apiCode": 0,
+        "message": "",
+        "chunkCount": 1,
+        "returnedDocumentIds": [
+          "e8003d127c6c11f18a4e879d5b5dcdeb"
+        ],
+        "expectedStatus": "active"
+      }
+    },
+    {
+      "id": "retrieval.quality-pending-conjunction",
+      "passed": false,
+      "evidence": {
+        "apiCode": 0,
+        "message": "",
+        "chunkCount": 3,
+        "returnedDocumentIds": [
+          "e8003d127c6c11f18a4e879d5b5dcdeb",
+          "e7fb3e707c6c11f18a4e879d5b5dcdeb"
+        ],
+        "expectedStatus": "pending",
+        "documentIdFilterCount": 2
+      }
+    },
+    {
+      "id": "retrieval.formal-active-conjunction",
+      "passed": false,
+      "evidence": {
+        "apiCode": 0,
+        "message": "",
+        "chunkCount": 3,
+        "returnedDocumentIds": [
+          "e8003d127c6c11f18a4e879d5b5dcdeb",
+          "e7fb3e707c6c11f18a4e879d5b5dcdeb"
+        ],
+        "expectedStatus": "active",
+        "documentIdFilterCount": 2
+      }
+    },
+    {
+      "id": "document.delete-exact-id",
+      "passed": true,
+      "evidence": {
+        "apiCode": 0,
+        "remainingDocumentCount": 1,
+        "expectedDocumentRemains": true
+      }
+    },
+    {
+      "id": "dataset.cleanup-finally",
+      "passed": true,
+      "evidence": {
+        "apiCode": 0,
+        "exactCreatedDatasetOnly": true,
+        "absentOnReadback": true
+      }
+    }
+  ],
+  "completedAt": "2026-07-10T14:38:47.170Z"
+}

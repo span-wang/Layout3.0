@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-retrieval-eval-baseline-v1",
+  "description": "第一批真实困难样例。expectedDocumentNameIncludes 只用于建立基线，后续元数据治理后应补充稳定 documentId/chunkId 标注。",
+  "cases": [
+    {
+      "id": "EN-U05-GRAMMAR-001",
+      "query": "七年级上册英语 人教版 Unit 5 Fun Clubs can 语法",
+      "subject": "英语",
+      "expectedDataset": "七年级上册英语（人教版）",
+      "expectedDocumentNameIncludes": ["Unit 5", "语法"],
+      "forbiddenDatasets": ["中级会计"],
+      "shouldReturnEvidence": true
+    },
+    {
+      "id": "EN-U02-VOCAB-001",
+      "query": "七年级上册英语 人教版 Unit 2 We're Family 词汇",
+      "subject": "英语",
+      "expectedDataset": "七年级上册英语（人教版）",
+      "expectedDocumentNameIncludes": ["Unit 2", "词汇"],
+      "forbiddenDatasets": ["中级会计"],
+      "shouldReturnEvidence": true
+    },
+    {
+      "id": "EN-U04-WRITING-001",
+      "query": "七年级上册英语 人教版 Unit 4 My Favourite Subject 单元主题写作",
+      "subject": "英语",
+      "expectedDataset": "七年级上册英语（人教版）",
+      "expectedDocumentNameIncludes": ["Unit 4", "写作"],
+      "forbiddenDatasets": ["中级会计"],
+      "shouldReturnEvidence": true
+    },
+    {
+      "id": "EN-STARTER-SENTENCE-001",
+      "query": "七年级上册英语 Starter Unit 1 词汇与句型",
+      "subject": "英语",
+      "expectedDataset": "七年级上册英语（人教版）",
+      "expectedDocumentNameIncludes": ["Starter Unit 1"],
+      "forbiddenDatasets": ["中级会计"],
+      "shouldReturnEvidence": true
+    },
+    {
+      "id": "ACC-FM-FOUNDATION-001",
+      "query": "中级会计 财务管理基础 货币时间价值",
+      "subject": "会计",
+      "expectedDataset": "中级会计",
+      "expectedDocumentNameIncludes": ["财务管理基础"],
+      "expectedEvidenceIncludes": ["财务管理基础", "货币"],
+      "forbiddenDatasets": ["七年级上册英语（人教版）"],
+      "shouldReturnEvidence": true
+    },
+    {
+      "id": "ACC-LAW-CONTRACT-001",
+      "query": "中级经济法 第五章 合同法律制度",
+      "subject": "会计",
+      "expectedDataset": "中级会计",
+      "expectedDocumentNameIncludes": ["合同法律制度"],
+      "forbiddenDatasets": ["七年级上册英语（人教版）"],
+      "shouldReturnEvidence": true
+    },
+    {
+      "id": "ACC-PRACTICE-INCOME-001",
+      "query": "中级会计实务 第十三章 收入 知识点",
+      "subject": "会计",
+      "expectedDataset": "中级会计",
+      "expectedDocumentNameIncludes": ["第十三章", "收入"],
+      "expectedEvidenceIncludes": ["第十三章", "收入"],
+      "forbiddenDatasets": ["七年级上册英语（人教版）"],
+      "shouldReturnEvidence": true
+    },
+    {
+      "id": "NO-ANSWER-PHYSICS-001",
+      "query": "八年级下册物理 浮力 阿基米德原理",
+      "subject": "物理",
+      "expectedDataset": null,
+      "expectedDocumentNameIncludes": [],
+      "forbiddenDatasets": ["七年级上册英语（人教版）", "中级会计"],
+      "shouldReturnEvidence": false
+    },
+    {
+      "id": "NO-ANSWER-HISTORY-001",
+      "query": "九年级历史 第一次世界大战 凡尔赛体系",
+      "subject": "历史",
+      "expectedDataset": null,
+      "expectedDocumentNameIncludes": [],
+      "forbiddenDatasets": ["七年级上册英语（人教版）", "中级会计"],
+      "shouldReturnEvidence": false
+    },
+    {
+      "id": "NO-ANSWER-EN-U08-001",
+      "query": "七年级上册英语 人教版 Unit 8 语法",
+      "subject": "英语",
+      "expectedDataset": null,
+      "expectedDocumentNameIncludes": [],
+      "forbiddenDatasets": ["中级会计"],
+      "shouldReturnEvidence": false
+    }
+  ]
+}

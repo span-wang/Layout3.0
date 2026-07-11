@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-10T19:30:00+08:00",
+  "taskId": "PH3-12-retrieval-eval-baseline-v1",
+  "deployment": {
+    "ragflowVersion": "0.25.0",
+    "imageDigest": "sha256:8a35e2100e8f4d98fc4944c4c6fce30780313c8ea6986666f589b64bc45c48ae",
+    "documentEngine": "elasticsearch",
+    "embeddingModel": "gemini-embedding-2-preview___OpenAI-API@OpenAI-API-Compatible",
+    "embeddingDimensions": 3072,
+    "configuredReranker": "Pro/BAAI/bge-reranker-v2-m3___OpenAI-API@OpenAI-API-Compatible"
+  },
+  "datasets": [
+    {
+      "id": "31482be079f411f1a93a9523fdaa939b",
+      "name": "七年级上册英语（人教版）",
+      "documentCount": 90,
+      "chunkCount": 1594,
+      "parserId": "book",
+      "pagerank": 20,
+      "similarityThreshold": 0.2,
+      "vectorSimilarityWeight": 0.3,
+      "metadataStatus": "库级已配置 UNIT/TYPE，但现有文档未按该配置重新解析"
+    },
+    {
+      "id": "bef7a1c07a1511f1995545875c07a720",
+      "name": "中级会计",
+      "documentCount": 169,
+      "chunkCount": 8292,
+      "parserId": "naive",
+      "pagerank": 0,
+      "similarityThreshold": 0.2,
+      "vectorSimilarityWeight": 0.3,
+      "metadataStatus": "168 份文档具有 subject/type，1 份缺失"
+    }
+  ],
+  "observedProblems": [
+    "英语库 pagerank=20 已写入索引排序特征，形成固定跨库偏置。",
+    "应用直连 retrieval 时没有显式传入 Reranker。",
+    "应用查询与 keyword=true 会双重扩写宽泛教育词。",
+    "元数据过滤生成 document_ids 后，当前 RAGFlow 版本会绕过后置相似度阈值。",
+    "现有 RAGFlow 评测集、案例、运行与结果数量均为 0。"
+  ],
+  "rollback": {
+    "englishDatasetPagerank": 20,
+    "note": "如第一阶段止血验证失败，可通过 RAGFlow 数据集更新接口恢复英语库 pagerank，并使用本文件核对原始参数。"
+  }
+}

@@ -19,10 +19,17 @@ import {
 import { exportPdf } from './pdf-handlers';
 import { registerAiHandlers } from './ai-handlers';
 import { registerAiRecordHandlers } from './ai-record-handlers';
+import { registerKnowledgeIngestionHandlers } from './knowledge-ingestion-handlers';
+import type { KnowledgeIngestionRuntime } from './knowledge-ingestion';
 
-export function registerIpcHandlers(): void {
-  registerAiHandlers();
+export function registerIpcHandlers(options: {
+  knowledgeIngestionRuntime: KnowledgeIngestionRuntime;
+}): void {
+  registerAiHandlers({
+    getProtectedRagflowDatasetIds: () => options.knowledgeIngestionRuntime.getProtectedRagflowDatasetIds(),
+  });
   registerAiRecordHandlers();
+  registerKnowledgeIngestionHandlers(options.knowledgeIngestionRuntime);
   ipcMain.handle('app:getVersion', () => app.getVersion());
   ipcMain.handle('file:getDefaultWorkspace', () => getDefaultWorkspace());
   ipcMain.handle('file:open', () => openDocument());

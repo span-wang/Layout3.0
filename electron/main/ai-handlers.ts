@@ -3,6 +3,10 @@ import {
   normalizeAiRequestTransportError,
   type AiRequestTransportErrorPayload,
 } from './ai-request-errors';
+import {
+  guardProtectedRagflowDatasetRequest,
+  isRagflowRetrievalRequestUrl,
+} from './protected-ragflow-dataset-guard';
 
 interface AiRequestPayload {
   requestId: string;
@@ -23,6 +27,10 @@ interface AiRequestResult {
 
 const activeAiRequests = new Map<string, AbortController>();
 
+interface AiHandlerOptions {
+  getProtectedRagflowDatasetIds?: () => Promise<string[]>;
+}
+
 function serializeHeaders(headers: Headers): Record<string, string> {
   const result: Record<string, string> = {};
   headers.forEach((value, key) => {
@@ -31,12 +39,39 @@ function serializeHeaders(headers: Headers): Record<string, string> {
   return result;
 }
 
-async function requestAi(payload: AiRequestPayload): Promise<AiRequestResult> {
+async function requestAi(payload: AiRequestPayload, options: AiHandlerOptions): Promise<AiRequestResult> {
   const abortController = new AbortController();
   activeAiRequests.set(payload.requestId, abortController);
 
   try {
     try {
+      if (isRagflowRetrievalRequestUrl(payload.url)) {
+        let protectedDatasetIds: string[];
+        try {
+          protectedDatasetIds = await (options.getProtectedRagflowDatasetIds?.() ?? Promise.resolve([]));
+        } catch {
+          return {
+            ok: false,
+            status: 503,
+            statusText: 'Protected Dataset Guard Unavailable',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              code: 'protected_dataset_guard_unavailable',
+              message: '无法核验资料入库暂存数据集，已阻止本次 RAGFlow 正式检索。',
+            }),
+          };
+        }
+        const decision = guardProtectedRagflowDatasetRequest(payload, protectedDatasetIds);
+        if (!decision.allow) {
+          return {
+            ok: false,
+            status: 403,
+            statusText: 'Protected Dataset',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ code: decision.code, message: decision.message }),
+          };
+        }
+      }
       // AI 请求放在主进程里执行，避开 renderer 的浏览器 CORS 限制。
       const response = await fetch(payload.url, {
         method: payload.method,
@@ -68,8 +103,8 @@ async function requestAi(payload: AiRequestPayload): Promise<AiRequestResult> {
   }
 }
 
-export function registerAiHandlers(): void {
-  ipcMain.handle('ai:request', (_event, payload: AiRequestPayload) => requestAi(payload));
+export function registerAiHandlers(options: AiHandlerOptions = {}): void {
+  ipcMain.handle('ai:request', (_event, payload: AiRequestPayload) => requestAi(payload, options));
   ipcMain.handle('ai:cancelRequest', (_event, requestId: string) => {
     const abortController = activeAiRequests.get(requestId);
     if (!abortController) {

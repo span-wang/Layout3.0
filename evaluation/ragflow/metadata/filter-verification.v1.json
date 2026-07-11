@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "taskId": "PH3-12-metadata-governance-v1",
+  "generatedAt": "2026-07-10T11:38:21.615Z",
+  "passed": true,
+  "note": "RAGFlow 0.25.0 retrieval 在 metadata_condition 无匹配时返回 0；应用侧仍继续执行阈值、去重和同文档上限过滤。",
+  "results": [
+    {
+      "id": "EN-U05-METADATA-001",
+      "unit": "unit_5",
+      "passed": true,
+      "governedDocumentCount": 9,
+      "candidateCount": 24,
+      "finalCount": 6,
+      "unexpectedDocumentIds": [],
+      "documents": [
+        "19.Unit 5 Fun Clubs(语法)(解析版).docx",
+        "18.Unit 5 Fun Clubs(词汇)(解析版).docx",
+        "Unit 5 Fun Clubs.pdf",
+        "20.Unit 5单元主题写作(解析版) .docx",
+        "Unit+5+默写手册.docx"
+      ]
+    },
+    {
+      "id": "NO-ANSWER-EN-U08-METADATA-001",
+      "unit": "unit_8",
+      "passed": true,
+      "governedDocumentCount": 0,
+      "candidateCount": 0,
+      "finalCount": 0,
+      "unexpectedDocumentIds": [],
+      "documents": []
+    }
+  ]
+}

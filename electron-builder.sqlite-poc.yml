@@ -1,0 +1,18 @@
+appId: com.layout3.sqlite-poc
+productName: LAYOUT3-SQLite-PoC
+electronVersion: 32.3.3
+electronDist: node_modules/electron/dist
+directories:
+  app: out/sqlite-poc
+  output: release/sqlite-poc
+files:
+  - '**/*'
+asar: true
+# 原生模块必须落在 app.asar.unpacked，Electron 才能按 ABI 128 直接加载。
+asarUnpack:
+  - node_modules/better-sqlite3/build/Release/*.node
+# ABI 准备命令已安装并校验官方预编译资产，目录打包阶段不再调用本机 C++ 工具链。
+npmRebuild: false
+win:
+  target:
+    - dir
