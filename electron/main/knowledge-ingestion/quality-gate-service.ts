@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import type { KnowledgeIngestionStartQualityCheckInput } from '../../../src/types/knowledgeIngestion';
 import { guardProtectedRagflowDatasetRequest } from '../protected-ragflow-dataset-guard';
 import type {
   DocumentLocatorMap,
@@ -8,7 +7,7 @@ import type {
   ProcessingArtifactSet,
 } from './processing';
 import type { QualityJobExecutor } from './processing-runner';
-import { prepareQualityQuestions } from './quality-evidence';
+import { prepareAutomaticQualityQuestions } from './quality-evidence';
 import { QualityGateRepository, type CreateQualityRunResult } from './quality-gate-repository';
 import {
   QualityRetrievalService,
@@ -101,7 +100,6 @@ export class QualityGateService implements QualityJobExecutor {
 
   async createRun(input: {
     versionId: string;
-    questions: KnowledgeIngestionStartQualityCheckInput['questions'];
   }): Promise<CreateQualityRunResult> {
     const version = this.registryStore.getMaterialVersion(input.versionId);
     if (!version.parserProfile) {
@@ -122,11 +120,13 @@ export class QualityGateService implements QualityJobExecutor {
     } catch (error) {
       throw new RegistryError('QUALITY_BLOCK', '来源定位工件不是有效 JSON。', { cause: error });
     }
-    const preparedQuestions = prepareQualityQuestions({
+    const preparedQuestions = prepareAutomaticQualityQuestions({
       bodyText,
       locatorMap,
       expectedSourceHash: version.contentHash,
-      questions: input.questions,
+      title: typeof version.metadata.stableTitle === 'string'
+        ? version.metadata.stableTitle
+        : '本资料',
     });
     const binding = this.registryStore.findUniquePendingBindingForVersion(version.versionId);
     if (!binding || !binding.isHealthy || binding.chunkCount === null || binding.chunkCount <= 0) {
@@ -186,7 +186,7 @@ export class QualityGateService implements QualityJobExecutor {
       expiresAt,
       audit: {
         actorId: 'user:local',
-        reason: '用户在资料入库中心提交了 3～5 条冒烟问题与正文证据。',
+        reason: '用户在资料入库中心启动了自动索引健康检查。',
       },
     });
   }
@@ -311,7 +311,7 @@ export class QualityGateService implements QualityJobExecutor {
       },
       evidence: {
         label: '来源定位可追溯',
-        message: locatorPassed ? '全部问题证据均可回到资料来源定位。' : '存在无法追溯的正文证据。',
+        message: locatorPassed ? '全部自动抽样证据均可回到资料来源定位。' : '存在无法追溯的自动抽样正文证据。',
         locatorLabel: started.questionsSnapshot[0]?.locatorLabel ?? null,
       },
       audit,
@@ -402,7 +402,7 @@ export class QualityGateService implements QualityJobExecutor {
           label: `${question.questionKey}：预期证据命中`,
           message: evidencePassed
             ? `预期正文证据在候选第 ${evidenceRank + 1} 位命中。`
-            : '候选 Top 10 中未找到人工绑定的预期正文证据。',
+            : '候选 Top 10 中未找到自动抽取的预期正文证据。',
           locatorLabel: question.locatorLabel,
         },
         audit,

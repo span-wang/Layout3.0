@@ -220,6 +220,42 @@ export class IntakeService {
     }
   }
 
+  async intakeFileAsNextVersion(
+    parentItemId: string,
+    filePath: string,
+  ): Promise<KnowledgeIngestionItem> {
+    const validation = await validateSourceFile(filePath);
+    const managedCopy = await copyToManagedStorage(
+      filePath,
+      validation.extension,
+      validation.sizeBytes,
+      validation.modifiedAtMs,
+      this.managedRoot,
+    );
+
+    try {
+      const item = this.store.recordManagedFileAsNextVersion(parentItemId, {
+        sourcePath: filePath,
+        managedSourcePath: managedCopy.managedPath,
+        fileName: basename(filePath),
+        extension: validation.extension,
+        sizeBytes: managedCopy.sizeBytes,
+        contentHash: managedCopy.contentHash,
+      });
+      // 完全重复仍登记来源，但不能留下没有新版本引用的第二份受管对象。
+      if (item.isDuplicate && managedCopy.created) {
+        await fs.rm(managedCopy.managedPath, { force: true });
+      }
+      return item;
+    } catch (error) {
+      // 数据库拒绝父版本或事务失败时，只清理本次新建的对象，不能删除既有共享对象。
+      if (managedCopy.created) {
+        await fs.rm(managedCopy.managedPath, { force: true });
+      }
+      throw error;
+    }
+  }
+
   listItems(): KnowledgeIngestionItem[] {
     return this.store.listItems();
   }

@@ -5,6 +5,7 @@ import type {
   KnowledgeIngestionListRagflowDatasetsInput,
   KnowledgeIngestionRagflowDatasetOption,
   KnowledgeIngestionRagflowConfigStatus,
+  KnowledgeIngestionRollbackInput,
   KnowledgeIngestionRuntimeStatus,
   KnowledgeIngestionSaveRagflowConfigInput,
   KnowledgeIngestionSelectResult,
@@ -55,6 +56,12 @@ export function selectKnowledgeIngestionFile(): Promise<KnowledgeIngestionSelect
   return invoke(() => window.layoutAPI.selectKnowledgeIngestionFile());
 }
 
+export function selectKnowledgeIngestionNextVersionFile(
+  input: KnowledgeIngestionItemActionInput,
+): Promise<KnowledgeIngestionSelectResult> {
+  return invoke(() => window.layoutAPI.selectKnowledgeIngestionNextVersionFile(input));
+}
+
 export function confirmKnowledgeIngestionMetadata(
   input: KnowledgeIngestionConfirmMetadataInput,
 ): Promise<KnowledgeIngestionItem> {
@@ -77,4 +84,22 @@ export function startKnowledgeIngestionQualityCheck(
   input: KnowledgeIngestionStartQualityCheckInput,
 ): Promise<KnowledgeIngestionItem> {
   return invoke(() => window.layoutAPI.startKnowledgeIngestionQualityCheck(input));
+}
+
+export function startKnowledgeIngestionPublication(
+  input: KnowledgeIngestionItemActionInput,
+): Promise<KnowledgeIngestionItem> {
+  return invoke(() => window.layoutAPI.startKnowledgeIngestionPublication(input));
+}
+
+export function startKnowledgeIngestionRollback(
+  input: KnowledgeIngestionRollbackInput,
+): Promise<KnowledgeIngestionItem> {
+  return invoke(() => window.layoutAPI.startKnowledgeIngestionRollback(input));
+}
+
+export function retryKnowledgeIngestionPublication(
+  input: KnowledgeIngestionItemActionInput,
+): Promise<KnowledgeIngestionItem> {
+  return invoke(() => window.layoutAPI.retryKnowledgeIngestionPublication(input));
 }

@@ -248,6 +248,28 @@ test('PH3-13C2 RAGFlow metadata PATCH 后逐字段回读且允许保留额外远
   );
 });
 
+test('PH3-13C2 RAGFlow metadata PATCH 在网络请求前拒绝 null 字段', async () => {
+  let fetchCalled = false;
+  const fetch: RagflowFetch = async () => {
+    fetchCalled = true;
+    return jsonResponse({ code: 0 });
+  };
+
+  await assert.rejects(
+    createClient(fetch).patchDocumentMetadataAndVerify({
+      datasetId: 'dataset-stage',
+      documentId: 'doc-1',
+      metadata: {
+        metadata_schema: 'layout3_ingestion_v1',
+        version_id: 'ver-1',
+        chapter: null,
+      },
+    }),
+    (error) => assertRagflowError(error, 'REMOTE_CONTRACT', 'INVALID_RESPONSE', false),
+  );
+  assert.equal(fetchCalled, false);
+});
+
 test('PH3-13C3 RAGFlow 质量检索只发送精确 ID 与稳定 Top 10 请求体', async () => {
   let requestedUrl = '';
   let requestedBody: unknown;

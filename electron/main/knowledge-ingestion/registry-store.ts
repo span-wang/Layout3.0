@@ -415,6 +415,7 @@ export class RegistryStore {
     effectiveTo?: string | null;
     replacePublicationId?: string;
     replacedVersionDisposition?: 'superseded' | 'quarantined';
+    requireCurrentQualityRun?: boolean;
     audit: AuditContext;
   }): MaterialVersionRecord {
     const timestamp = this.now().toISOString();
@@ -428,6 +429,10 @@ export class RegistryStore {
             'PUBLICATION_PRECONDITION_FAILED',
             '只有处理健康且处于待发布状态的版本可以建立正式发布关系。',
           );
+        }
+        if (input.requireCurrentQualityRun) {
+          // C4 的真实发布必须重验未过期质量结论；PH3-13B 的纯状态机夹具可继续显式跳过。
+          this.qualityGateRepository.assertPublishablePassedRun(version.versionId);
         }
 
         let replacedPublication: PublicationRow | undefined;
@@ -565,21 +570,47 @@ export class RegistryStore {
         );
       }
 
+      const currentVersion = this.getVersionOrThrow(currentPublication.version_id);
+      const targetVersion = this.getVersionOrThrow(targetPublication.version_id);
+      const hasNewerVersion = Boolean(this.database.prepare(`
+        SELECT 1
+        FROM material_versions
+        WHERE canonical_id = ?
+          AND publication_branch_key = ?
+          AND version_no > ?
+        LIMIT 1
+      `).get(
+        currentVersion.canonicalId,
+        currentVersion.publicationBranchKey,
+        currentVersion.versionNo,
+      ));
+      if (
+        currentVersion.workflowStatus !== 'published'
+        || currentVersion.processingHealth !== 'healthy'
+        || currentVersion.indexPublicationStatus !== 'active'
+        || currentVersion.previousVersionId !== targetVersion.versionId
+        || targetVersion.workflowStatus !== 'superseded'
+        || targetVersion.processingHealth !== 'healthy'
+        || targetVersion.indexPublicationStatus !== 'superseded'
+        || hasNewerVersion
+      ) {
+        throw new RegistryError(
+          'PUBLICATION_PRECONDITION_FAILED',
+          '当前版本拓扑或上一版本健康状态已变化，不能执行回滚。',
+        );
+      }
+
       this.updatePublicationStatus(currentPublication, 'superseded', input.audit, timestamp);
       this.updatePublicationStatus(targetPublication, 'active', input.audit, timestamp);
 
-      const targetVersion = this.getVersionOrThrow(targetPublication.version_id);
-      const restoredVersion = targetVersion.workflowStatus === 'published'
-        ? targetVersion
-        : this.applyVersionStateChange(
-          targetVersion,
-          { workflowStatus: 'published', indexPublicationStatus: 'active' },
-          input.audit,
-          timestamp,
-          true,
-        );
+      const restoredVersion = this.applyVersionStateChange(
+        targetVersion,
+        { workflowStatus: 'published', indexPublicationStatus: 'active', errorMessage: null },
+        input.audit,
+        timestamp,
+        true,
+      );
 
-      const currentVersion = this.getVersionOrThrow(currentPublication.version_id);
       if (!this.hasActivePublication(currentVersion.versionId)) {
         this.applyVersionStateChange(
           currentVersion,
@@ -813,6 +844,116 @@ export class RegistryStore {
     return { acceptedDocumentIds, rejectedDocumentIds };
   }
 
+  /**
+   * C4 的单资料 smoke 必须同时限定 canonical 与 branch。仅按 branch_key 查询会把所有
+   * C1 默认分支（都叫 default）混在一起，不能证明本次发布只暴露目标版本。
+   */
+  resolveActivePublicationScope(input: {
+    canonicalId: string;
+    publicationBranchKey: string;
+    effectiveAt?: string;
+  }): ActiveRetrievalScope {
+    const resolvedAt = input.effectiveAt ?? this.now().toISOString();
+    const rows = this.database
+      .prepare(`
+        SELECT publication.*, branch.branch_type
+        FROM material_publications publication
+        JOIN publication_branches branch
+          ON branch.canonical_id = publication.canonical_id
+         AND branch.branch_key = publication.publication_branch_key
+        WHERE publication.canonical_id = ?
+          AND publication.publication_branch_key = ?
+          AND publication.publication_status = 'active'
+        ORDER BY publication.created_at, publication.publication_id
+      `)
+      .all(input.canonicalId, input.publicationBranchKey) as Array<PublicationRow & {
+        branch_type: PublicationBranchType;
+      }>;
+    const eligible = rows.filter((publication) => (
+      publication.branch_type !== 'legal'
+      || Boolean(
+        publication.effective_from
+        && publication.effective_from <= resolvedAt
+        && (!publication.effective_to || resolvedAt < publication.effective_to)
+      )
+    ));
+    if (eligible.length === 0) {
+      throw new RegistryError(
+        'EMPTY_ACTIVE_DOCUMENT_SET',
+        '当前资料分支没有 SQLite 有效发布关系，发布验收已在本地失败关闭。',
+      );
+    }
+    if (eligible.length !== 1) {
+      throw new RegistryError(
+        'PUBLICATION_CONFLICT',
+        '当前资料分支存在多个同时有效的发布关系，发布验收已失败关闭。',
+      );
+    }
+
+    const publication = eligible[0];
+    const version = this.getVersionOrThrow(publication.version_id);
+    if (
+      version.workflowStatus !== 'published'
+      || version.processingHealth !== 'healthy'
+      || version.indexPublicationStatus !== 'active'
+    ) {
+      throw new RegistryError('INCOMPLETE_RAGFLOW_MAPPING', '当前发布版本的三维状态不完整。');
+    }
+    const bindings = this.database
+      .prepare(`
+        SELECT dataset_id, document_id
+        FROM ragflow_bindings
+        WHERE version_id = ? AND remote_status = 'active' AND is_healthy = 1
+        ORDER BY dataset_id, document_id
+      `)
+      .all(version.versionId) as Array<{ dataset_id: string; document_id: string }>;
+    if (bindings.length !== 1) {
+      throw new RegistryError(
+        'INCOMPLETE_RAGFLOW_MAPPING',
+        'C4 单资料发布必须且只能对应一份已核验的 active RAGFlow 映射。',
+      );
+    }
+    return {
+      datasetIds: [bindings[0].dataset_id],
+      documentIds: [bindings[0].document_id],
+      resolvedAt,
+    };
+  }
+
+  validateReturnedPublicationDocumentIds(
+    returnedDocumentIds: string[],
+    input: { canonicalId: string; publicationBranchKey: string; effectiveAt?: string },
+  ): RetrievalDocumentValidation {
+    // 返回后重新解析精确单资料 scope，避免发布或回滚切换期间接受刚失效的文档。
+    const scope = this.resolveActivePublicationScope(input);
+    const allowed = new Set(scope.documentIds);
+    const acceptedDocumentIds: string[] = [];
+    const rejectedDocumentIds: string[] = [];
+    for (const documentId of new Set(returnedDocumentIds)) {
+      (allowed.has(documentId) ? acceptedDocumentIds : rejectedDocumentIds).push(documentId);
+    }
+    if (rejectedDocumentIds.length > 0) {
+      const timestamp = this.now().toISOString();
+      this.database.transaction(() => {
+        this.appendAudit(
+          'retrieval_scope',
+          this.createId('scope'),
+          'retrieval_scope.publication_out_of_scope_result',
+          null,
+          {
+            canonicalId: input.canonicalId,
+            publicationBranchKey: input.publicationBranchKey,
+            rejectedDocumentIds,
+            resolvedAt: scope.resolvedAt,
+          },
+          { actorId: 'system:publication-smoke', reason: '发布验收返回了目标资料当前 scope 外的文档。' },
+          timestamp,
+        );
+      })();
+    }
+    return { acceptedDocumentIds, rejectedDocumentIds };
+  }
+
   enqueueJob(input: {
     jobId?: string;
     versionId: string;
@@ -913,7 +1054,12 @@ export class RegistryStore {
 
     return this.database.transaction(() => {
       const current = this.getJobOrThrow(input.jobId);
-      if (current.status !== 'running' || current.leaseOwner !== input.workerId) {
+      if (
+        current.status !== 'running'
+        || current.leaseOwner !== input.workerId
+        || !current.leaseExpiresAt
+        || current.leaseExpiresAt <= timestamp
+      ) {
         throw new RegistryError('JOB_STATE_CONFLICT', '只有持有当前租约的 worker 可以续租任务。');
       }
       this.database
@@ -1265,7 +1411,11 @@ export class RegistryStore {
           audit,
           timestamp,
         );
-        if (row.stage !== 'quality' && (nextStatus === 'failed' || nextStatus === 'cancelled')) {
+        if (
+          row.stage !== 'quality'
+          && row.stage !== 'publication_compensation'
+          && (nextStatus === 'failed' || nextStatus === 'cancelled')
+        ) {
           const version = this.getVersionOrThrow(row.version_id);
           this.applyVersionStateChange(
             version,

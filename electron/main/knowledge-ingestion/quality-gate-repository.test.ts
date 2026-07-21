@@ -6,7 +6,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { openRegistryDatabase, type RegistryDatabase } from './registry-database';
 import { RegistryStore } from './registry-store';
+import { PublicationOperationRepository } from './publication-operation-repository';
 import { QualityGateRepository } from './quality-gate-repository';
+import { REGISTRY_SCHEMA_VERSION } from './schema';
 import type { QualityQuestionSnapshot } from './types';
 import { RegistryError } from './types';
 
@@ -80,8 +82,6 @@ function question(
 function questions(): QualityQuestionSnapshot[] {
   return [
     question('question-1', '第一条资料内问题是什么？', '第一条唯一证据', 0),
-    question('question-2', '第二条资料内问题是什么？', '第二条唯一证据', 20),
-    question('question-3', '第三条资料内问题是什么？', '第三条唯一证据', 40),
   ];
 }
 
@@ -236,7 +236,10 @@ test('PH3-13C3 Schema V4 原子创建 quality job/run 并固定版本、binding�
     createEligibleVersion({ registry, store });
     const created = createRun({ quality, clock });
 
-    assert.equal(Number(registry.connection.prepare('SELECT MAX(version) FROM schema_migrations').pluck().get()), 4);
+    assert.equal(
+      Number(registry.connection.prepare('SELECT MAX(version) FROM schema_migrations').pluck().get()),
+      REGISTRY_SCHEMA_VERSION,
+    );
     assert.deepEqual(
       registry.connection
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'quality_%' ORDER BY name")
@@ -257,7 +260,7 @@ test('PH3-13C3 Schema V4 原子创建 quality job/run 并固定版本、binding�
       chunkCount: 12,
       lastVerifiedAt: '2026-07-11T00:00:00.000Z',
     });
-    assert.equal(created.run.questionsSnapshot.length, 3);
+    assert.equal(created.run.questionsSnapshot.length, 1);
     assert.deepEqual(
       created.run.inputSnapshot.artifacts.map((artifact) => artifact.artifactType),
       ['extracted_text', 'locator_map', 'manifest'],
@@ -295,7 +298,7 @@ test('PH3-13C3 质量运行、问题和逐项结果在关闭重开后仍可回�
       const reopenedQuality = new QualityGateRepository(reopened, { now: clock.now });
       const persisted = reopenedQuality.getRun(created.run.qualityRunId);
       assert.equal(persisted.status, 'running');
-      assert.equal(persisted.questionsSnapshot.length, 3);
+      assert.equal(persisted.questionsSnapshot.length, 1);
       assert.equal(reopenedQuality.listResults(created.run.qualityRunId)[0]?.resultKey, 'metadata_complete');
     } finally {
       reopened.close();
@@ -560,6 +563,10 @@ test('PH3-13C3 通过路径缺项时整体回滚，完整后原子收口 run/job
     assert.equal(finalized.version.workflowStatus, 'pending_publication');
     assert.equal(finalized.version.processingHealth, 'healthy');
     assert.equal(finalized.version.indexPublicationStatus, 'pending');
+    assert.equal(
+      quality.assertPublishablePassedRun('ver-quality').qualityRunId,
+      created.run.qualityRunId,
+    );
     assert.throws(
       () => quality.resolveValidScope(created.run.qualityRunId, 'worker-quality'),
       (error) => assertRegistryError(error, 'QUALITY_BLOCK'),
@@ -573,6 +580,88 @@ test('PH3-13C3 通过路径缺项时整体回滚，完整后原子收口 run/job
         )
       `).pluck().get()),
       3,
+    );
+    clock.advance(5 * 60_000 + 1);
+    assert.throws(
+      () => quality.assertPublishablePassedRun('ver-quality'),
+      (error) => assertRegistryError(error, 'QUALITY_BLOCK'),
+    );
+  });
+});
+
+test('PH3-13C4 待发布质量结论在失效边界可原子退回并创建全新运行', async () => {
+  await withRegistry(({ registry, store, quality, clock }) => {
+    createEligibleVersion({ registry, store });
+    const first = createRun({ quality, clock });
+    claimAndStart({ store, quality }, first.run.qualityRunId);
+    recordPassedResult(quality, first.run.qualityRunId, 'metadata_complete');
+    recordPassedResult(quality, first.run.qualityRunId, 'candidate_top10:question-1');
+    quality.finalizePassed({ qualityRunId: first.run.qualityRunId, workerId: 'worker-quality', audit });
+
+    assert.throws(
+      () => store.transitionVersionState('ver-quality', { workflowStatus: 'quality_check' }, audit),
+      (error) => assertRegistryError(error, 'INVALID_STATE_TRANSITION'),
+    );
+
+    clock.advance(5 * 60_000);
+    const second = createRun({ quality, clock });
+
+    assert.notEqual(second.run.qualityRunId, first.run.qualityRunId);
+    assert.equal(second.run.status, 'queued');
+    assert.equal(store.getMaterialVersion('ver-quality').workflowStatus, 'quality_check');
+    assert.equal(
+      Number(registry.connection.prepare(
+        "SELECT COUNT(*) FROM audit_events WHERE action = 'material_version.expired_quality_reopened'",
+      ).pluck().get()),
+      1,
+    );
+  });
+});
+
+test('PH3-13C4 已有开放发布操作时拒绝过期质量重开且不留下半成品', async () => {
+  await withRegistry(({ registry, store, quality, clock }) => {
+    createEligibleVersion({ registry, store });
+    const first = createRun({ quality, clock });
+    claimAndStart({ store, quality }, first.run.qualityRunId);
+    recordPassedResult(quality, first.run.qualityRunId, 'metadata_complete');
+    recordPassedResult(quality, first.run.qualityRunId, 'candidate_top10:question-1');
+    quality.finalizePassed({ qualityRunId: first.run.qualityRunId, workerId: 'worker-quality', audit });
+    const operations = new PublicationOperationRepository(registry, { now: clock.now });
+    operations.createOperation({
+      operationId: 'operation-quality-expired-open',
+      jobId: 'job-quality-expired-open',
+      operationType: 'publish',
+      canonicalId: 'mat-ver-quality',
+      publicationBranchKey: 'default',
+      targetVersionId: 'ver-quality',
+      qualityRunId: first.run.qualityRunId,
+      releaseId: 'release-quality-expired-open',
+      targetPublicationId: 'publication-quality-expired-open',
+      inputSnapshot: { reason: '验证开放发布操作阻止质量重开。' },
+      configSnapshot: {
+        baseUrl: 'http://127.0.0.1:9380',
+        stagingDatasetId: 'dataset-staging',
+        indexGeneration: 'generation-staging-1',
+      },
+      inputHash: 'quality-expired-open-operation',
+      audit,
+    });
+
+    clock.advance(5 * 60_000);
+    assert.throws(
+      () => createRun({ quality, clock }),
+      (error) => assertRegistryError(error, 'PUBLICATION_CONFLICT'),
+    );
+    assert.equal(store.getMaterialVersion('ver-quality').workflowStatus, 'pending_publication');
+    assert.equal(
+      Number(registry.connection.prepare('SELECT COUNT(*) FROM quality_runs WHERE version_id = ?').pluck().get('ver-quality')),
+      1,
+    );
+    assert.equal(
+      Number(registry.connection.prepare(
+        "SELECT COUNT(*) FROM audit_events WHERE action = 'material_version.expired_quality_reopened'",
+      ).pluck().get()),
+      0,
     );
   });
 });

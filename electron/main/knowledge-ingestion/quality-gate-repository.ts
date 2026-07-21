@@ -1,7 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { RegistryDatabase } from './registry-database';
-import { assertVersionStatePatch } from './state-machine';
+import {
+  assertExpiredQualityRecheckTransition,
+  assertVersionStatePatch,
+} from './state-machine';
 import type {
   JobStage,
   MaterialVersionRecord,
@@ -293,8 +296,8 @@ function normalizeUniqueKeys(values: string[], fieldName: string): string[] {
 }
 
 function normalizeQuestions(questions: QualityQuestionSnapshot[]): QualityQuestionSnapshot[] {
-  if (questions.length < 3 || questions.length > 5) {
-    throw new RegistryError('INPUT_VALIDATION', '质量运行必须固定保存 3～5 条冒烟问题。');
+  if (questions.length < 1 || questions.length > 3) {
+    throw new RegistryError('INPUT_VALIDATION', '自动索引健康检查必须固定保存 1～3 个样本。');
   }
 
   const keys = new Set<string>();
@@ -385,7 +388,10 @@ export class QualityGateRepository {
 
     try {
       return this.database.transaction(() => {
-        const version = this.getVersionOrThrow(versionId);
+        let version = this.getVersionOrThrow(versionId);
+        if (version.workflowStatus === 'pending_publication') {
+          version = this.reopenExpiredPendingPublication(version, timestamp, input.audit);
+        }
         this.assertVersionEligible(version);
         if (version.parserProfile !== profileVersion) {
           throw new RegistryError('QUALITY_BLOCK', '质量任务 profile 与当前资料处理 profile 不一致。');
@@ -1023,19 +1029,32 @@ export class QualityGateRepository {
    * 正常路径仍由 finalizePassed 在同一事务里完成状态切换；这里专门防止其他调用绕过质量证据。
    */
   assertCurrentPassedRun(versionId: string): QualityRunRecord {
-    const row = this.database
-      .prepare(`
-        SELECT * FROM quality_runs
-        WHERE version_id = ? AND status = 'passed' AND conclusion = 'passed'
-        ORDER BY completed_at DESC, quality_run_id DESC
-        LIMIT 1
-      `)
-      .get(assertNonEmpty(versionId, 'versionId')) as QualityRunRow | undefined;
-    if (!row) {
-      throw new RegistryError('QUALITY_BLOCK', '当前资料版本没有已通过的质量运行，不能进入待发布。');
-    }
-    const run = mapQualityRun(row);
+    const run = this.getLatestPassedRunOrThrow(versionId);
     this.assertRunCurrent(run);
+    this.assertBlockingResultsPassed(run);
+    return run;
+  }
+
+  /**
+   * 发布必须重新验证 C3 结论仍未过期，且资料、工件、profile 与 pending binding
+   * 仍和通过时一致；不能只相信 workflow_status 已经停在 pending_publication。
+   */
+  assertPublishablePassedRun(versionId: string): QualityRunRecord {
+    const run = this.getLatestPassedRunOrThrow(versionId);
+    this.assertRunNotExpired(run, this.now().toISOString());
+    this.assertRunCurrent(run, ['pending_publication']);
+    this.assertBlockingResultsPassed(run);
+    return run;
+  }
+
+  /** 回滚复用旧版已通过问题做精确 smoke；远端健康与当前发布关系由发布仓储另行复核。 */
+  getLatestPassedRunForVersion(versionId: string): QualityRunRecord {
+    const run = this.getLatestPassedRunOrThrow(versionId);
+    this.assertBlockingResultsPassed(run);
+    return run;
+  }
+
+  private assertBlockingResultsPassed(run: QualityRunRecord): void {
     const results = this.listResults(run.qualityRunId);
     const byResultKey = new Map(results.map((result) => [result.resultKey, result]));
     const valid = run.inputSnapshot.requiredBlockingResultKeys.every((resultKey) => {
@@ -1045,7 +1064,6 @@ export class QualityGateRepository {
     if (!valid || results.some((result) => result.blockingLevel === 'blocking' && !result.passed)) {
       throw new RegistryError('QUALITY_BLOCK', '已通过质量运行的阻断结果不完整或已经失效。');
     }
-    return run;
   }
 
   getRun(qualityRunId: string): QualityRunRecord {
@@ -1090,9 +1108,12 @@ export class QualityGateRepository {
     }
   }
 
-  private assertRunCurrent(run: QualityRunRecord): void {
+  private assertRunCurrent(
+    run: QualityRunRecord,
+    allowedWorkflowStatuses: MaterialVersionRecord['workflowStatus'][] = ['quality_check'],
+  ): void {
     const version = this.getVersionOrThrow(run.versionId);
-    this.assertVersionEligible(version);
+    this.assertVersionEligible(version, allowedWorkflowStatuses);
     const binding = this.getUniqueHealthyPendingBinding(run.versionId);
     const bindingSnapshot = this.toBindingSnapshot(binding);
     if (binding.binding_id !== run.bindingId || !sameJson(bindingSnapshot, run.bindingSnapshot)) {
@@ -1111,15 +1132,18 @@ export class QualityGateRepository {
     }
   }
 
-  private assertVersionEligible(version: MaterialVersionRecord): void {
+  private assertVersionEligible(
+    version: MaterialVersionRecord,
+    allowedWorkflowStatuses: MaterialVersionRecord['workflowStatus'][] = ['quality_check'],
+  ): void {
     if (
-      version.workflowStatus !== 'quality_check'
+      !allowedWorkflowStatuses.includes(version.workflowStatus)
       || version.processingHealth !== 'healthy'
       || version.indexPublicationStatus !== 'pending'
     ) {
       throw new RegistryError(
         'QUALITY_BLOCK',
-        '只有 quality_check / healthy / pending 的资料版本可以执行质量门禁。',
+        `只有 ${allowedWorkflowStatuses.join(' 或 ')} / healthy / pending 的资料版本可以使用当前质量结论。`,
       );
     }
     const publicationCount = Number(
@@ -1131,6 +1155,65 @@ export class QualityGateRepository {
     if (publicationCount !== 0) {
       throw new RegistryError('QUALITY_BLOCK', '已存在发布关系的资料版本不能执行 pending 质量门禁。');
     }
+  }
+
+  private reopenExpiredPendingPublication(
+    version: MaterialVersionRecord,
+    timestamp: string,
+    audit: QualityGateAuditContext,
+  ): MaterialVersionRecord {
+    const latestRun = this.getLatestRunForVersion(version.versionId);
+    if (
+      !latestRun
+      || latestRun.status !== 'passed'
+      || latestRun.conclusion !== 'passed'
+      || latestRun.expiresAt > timestamp
+    ) {
+      throw new RegistryError('QUALITY_BLOCK', '只有质量结论已过期的待发布版本可以重新发起检查。');
+    }
+    const openPublicationCount = Number(this.database.prepare(`
+      SELECT COUNT(*)
+      FROM publication_operations
+      WHERE canonical_id = ?
+        AND publication_branch_key = ?
+        AND phase NOT IN ('completed', 'failed')
+    `).pluck().get(version.canonicalId, version.publicationBranchKey));
+    if (openPublicationCount > 0) {
+      throw new RegistryError('PUBLICATION_CONFLICT', '该资料分支已有未完成的发布或回滚操作，不能重新质量检查。');
+    }
+
+    assertExpiredQualityRecheckTransition(version);
+    this.database.prepare(`
+      UPDATE material_versions
+      SET workflow_status = 'quality_check', error_message = NULL, updated_at = ?
+      WHERE version_id = ?
+    `).run(timestamp, version.versionId);
+    const reopened = this.getVersionOrThrow(version.versionId);
+    this.appendAudit(
+      'material_version',
+      version.versionId,
+      'material_version.expired_quality_reopened',
+      version,
+      reopened,
+      audit,
+      timestamp,
+    );
+    return reopened;
+  }
+
+  private getLatestPassedRunOrThrow(versionId: string): QualityRunRecord {
+    const row = this.database
+      .prepare(`
+        SELECT * FROM quality_runs
+        WHERE version_id = ? AND status = 'passed' AND conclusion = 'passed'
+        ORDER BY completed_at DESC, quality_run_id DESC
+        LIMIT 1
+      `)
+      .get(assertNonEmpty(versionId, 'versionId')) as QualityRunRow | undefined;
+    if (!row) {
+      throw new RegistryError('QUALITY_BLOCK', '当前资料版本没有已通过的质量运行。');
+    }
+    return mapQualityRun(row);
   }
 
   private getUniqueHealthyPendingBinding(versionId: string): BindingRow {

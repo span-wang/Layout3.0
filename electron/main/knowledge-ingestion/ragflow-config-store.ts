@@ -45,7 +45,7 @@ interface StoredRagflowIngestionConfig {
   updatedAt: string;
 }
 
-function normalizeBaseUrl(value: string): string {
+export function normalizeRagflowBaseUrl(value: string): string {
   let url: URL;
   try {
     url = new URL(value.trim());
@@ -121,7 +121,7 @@ export class RagflowIngestionConfigStore {
       throw new RegistryError('REMOTE_AUTH_CONFIG', '资料入库 API Key 为空，请重新配置。');
     }
     return {
-      baseUrl: normalizeBaseUrl(stored.baseUrl),
+      baseUrl: normalizeRagflowBaseUrl(stored.baseUrl),
       apiKey,
       stagingDatasetId: normalizeIdentifier(stored.stagingDatasetId, '暂存数据集 ID'),
       indexGeneration: normalizeIdentifier(stored.indexGeneration, '索引代次'),
@@ -132,7 +132,7 @@ export class RagflowIngestionConfigStore {
   async resolveDatasetReadConfig(
     input: ReadRagflowDatasetOptionsInput,
   ): Promise<Pick<RagflowIngestionPrivateConfig, 'baseUrl' | 'apiKey'>> {
-    const baseUrl = normalizeBaseUrl(input.baseUrl);
+    const baseUrl = normalizeRagflowBaseUrl(input.baseUrl);
     const submittedApiKey = input.apiKey?.trim();
     if (submittedApiKey) return { baseUrl, apiKey: submittedApiKey };
     const stored = await this.getPrivateConfig();
@@ -142,7 +142,7 @@ export class RagflowIngestionConfigStore {
   async save(input: SaveRagflowIngestionConfigInput): Promise<RagflowIngestionConfigStatus> {
     this.assertCipherAvailable();
     const existing = await this.readStored();
-    const baseUrl = normalizeBaseUrl(input.baseUrl);
+    const baseUrl = normalizeRagflowBaseUrl(input.baseUrl);
     const stagingDatasetId = normalizeIdentifier(input.stagingDatasetId, '暂存数据集 ID');
     const indexGeneration = normalizeIdentifier(input.indexGeneration, '索引代次');
     const nextApiKey = input.apiKey?.trim();

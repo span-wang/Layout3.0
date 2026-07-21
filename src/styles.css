@@ -6365,6 +6365,30 @@ button {
   margin: 8px 0 0;
 }
 
+.ai-outline-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 9px;
+  cursor: pointer;
+  background: #f8fafc;
+  border: 1px solid #e1e9ef;
+  border-radius: 6px;
+}
+
+.ai-outline-mode-option.checked {
+  background: #eef8f8;
+  border-color: #0d5663;
+}
+
+.ai-outline-mode-option input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: #0d5663;
+}
+
 .ai-semantic-role-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -7364,6 +7388,15 @@ button {
   background: #b54b4b;
 }
 
+.knowledge-ingestion-status-dot.status-published {
+  background: #176b7a;
+}
+
+.knowledge-ingestion-status-dot.status-superseded,
+.knowledge-ingestion-status-dot.status-archived {
+  background: #7b8791;
+}
+
 .knowledge-ingestion-status {
   display: inline-flex;
   align-items: center;
@@ -7405,6 +7438,17 @@ button {
 .knowledge-ingestion-status.status-quarantined {
   color: #943737;
   background: #fdecec;
+}
+
+.knowledge-ingestion-status.status-published {
+  color: #0f5d6a;
+  background: #e2f1f3;
+}
+
+.knowledge-ingestion-status.status-superseded,
+.knowledge-ingestion-status.status-archived {
+  color: #596674;
+  background: #edf1f4;
 }
 
 .knowledge-ingestion-empty,
@@ -7737,6 +7781,13 @@ button {
   font-weight: 650;
 }
 
+.knowledge-ingestion-quality-suggest-hint {
+  margin: -4px 0 0;
+  color: #667789;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .knowledge-ingestion-quality-question-toolbar strong {
   color: #176b7a;
   font-size: 11px;
@@ -7996,6 +8047,230 @@ button {
   font-size: 10px;
 }
 
+.knowledge-ingestion-publication-panel {
+  max-width: 880px;
+  margin-top: 22px;
+  padding: 17px 18px;
+  background: #f7fafb;
+  border: 1px solid #d5e1e6;
+  border-radius: 8px;
+}
+
+.knowledge-ingestion-publication-status {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  color: #52606d;
+  background: #edf1f4;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.publication-status-queued .knowledge-ingestion-publication-status,
+.publication-status-running .knowledge-ingestion-publication-status {
+  color: #245e8b;
+  background: #e8f2fa;
+}
+
+.publication-status-completed .knowledge-ingestion-publication-status {
+  color: #17614f;
+  background: #e4f4ed;
+}
+
+.publication-status-compensating .knowledge-ingestion-publication-status,
+.publication-status-retry_scheduled .knowledge-ingestion-publication-status,
+.publication-status-attention_required .knowledge-ingestion-publication-status {
+  color: #8a520a;
+  background: #fff3dc;
+}
+
+.publication-status-failed .knowledge-ingestion-publication-status {
+  color: #943737;
+  background: #fdecec;
+}
+
+.knowledge-ingestion-publication-version-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.knowledge-ingestion-publication-version-grid > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 11px;
+  background: #ffffff;
+  border: 1px solid #e0e7ec;
+  border-radius: 6px;
+}
+
+.knowledge-ingestion-publication-version-grid span {
+  color: #748290;
+  font-size: 10px;
+}
+
+.knowledge-ingestion-publication-version-grid strong {
+  color: #293744;
+  font-size: 12px;
+}
+
+.knowledge-ingestion-publication-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 11px;
+  padding: 10px 11px;
+  color: #245d65;
+  background: #eef7f7;
+  border: 1px solid #c9e0e1;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.knowledge-ingestion-publication-message > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.knowledge-ingestion-publication-message.is-warning {
+  color: #8a520a;
+  background: #fff8e9;
+  border-color: #ecd4a5;
+}
+
+.knowledge-ingestion-publication-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.knowledge-ingestion-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 31, 40, 0.48);
+}
+
+.knowledge-ingestion-publication-dialog {
+  width: min(560px, 100%);
+  max-height: min(720px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #cad7df;
+  border-radius: 10px;
+  box-shadow: 0 20px 54px rgba(23, 33, 43, 0.22);
+}
+
+.knowledge-ingestion-publication-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.knowledge-ingestion-publication-dialog-header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.knowledge-ingestion-publication-dialog-header span {
+  color: #176b7a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.knowledge-ingestion-publication-dialog-header h3 {
+  margin: 0;
+  color: #17212b;
+  font-size: 18px;
+}
+
+.knowledge-ingestion-publication-dialog-impact {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 13px 14px;
+  color: #754d13;
+  background: #fff8e9;
+  border: 1px solid #ecd4a5;
+  border-radius: 7px;
+}
+
+.knowledge-ingestion-publication-dialog-impact > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.knowledge-ingestion-publication-dialog-impact strong {
+  font-size: 12px;
+}
+
+.knowledge-ingestion-publication-dialog-impact p {
+  margin: 4px 0 0;
+  color: #80602d;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.knowledge-ingestion-publication-reason {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.knowledge-ingestion-publication-reason > span {
+  color: #536170;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.knowledge-ingestion-publication-reason textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  padding: 9px 10px;
+  color: #24313d;
+  background: #ffffff;
+  border: 1px solid #cfd9e1;
+  border-radius: 6px;
+  outline: none;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.knowledge-ingestion-publication-reason textarea:focus {
+  border-color: #4b9299;
+  box-shadow: 0 0 0 2px rgba(23, 107, 122, 0.12);
+}
+
+.knowledge-ingestion-publication-reason small {
+  justify-self: end;
+  color: #7a8792;
+  font-size: 10px;
+}
+
+.knowledge-ingestion-publication-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid #e1e7ec;
+}
+
 .is-spinning {
   animation: knowledge-ingestion-spin 0.8s linear infinite;
 }
@@ -8040,6 +8315,10 @@ button {
 
   .knowledge-ingestion-lifecycle-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .knowledge-ingestion-publication-version-grid {
+    grid-template-columns: 1fr;
   }
 
   .knowledge-ingestion-quality-question-fields {

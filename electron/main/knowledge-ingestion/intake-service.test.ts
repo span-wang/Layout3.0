@@ -18,7 +18,10 @@ import {
   ProcessingArtifactService,
 } from './processing';
 import { RegistryDatabase } from './registry-database';
+import { QualityGateRepository } from './quality-gate-repository';
+import { RegistryStore } from './registry-store';
 import { KnowledgeIngestionRuntime } from './runtime';
+import { REGISTRY_SCHEMA_VERSION } from './schema';
 import { RegistryError } from './types';
 import { guardProtectedRagflowDatasetRequest } from '../protected-ragflow-dataset-guard';
 
@@ -209,6 +212,7 @@ test('PH3-13C1 DOCX 接收、重复幂等、人工确认和重启恢复形成完
         conclusion: null,
         startedAt: null,
         completedAt: null,
+        expiresAt: null,
         questionCount: 0,
         results: [],
       },
@@ -218,6 +222,10 @@ test('PH3-13C1 DOCX 接收、重复幂等、人工确认和重启恢复形成完
     assert.equal(duplicate.status, 'duplicate');
     assert.equal(duplicate.versionId, first.versionId);
     assert.notEqual(duplicate.itemId, first.itemId);
+    await assert.rejects(
+      runtime.retryPublication(duplicate.itemId),
+      (error) => assertRegistryError(error, 'INTAKE_STATE_CONFLICT'),
+    );
 
     const confirmed = service.confirmMetadata({ itemId: first.itemId, metadata: confirmedMetadata });
     assert.equal(confirmed.status, 'processing');
@@ -260,6 +268,132 @@ test('PH3-13C1 DOCX 接收、重复幂等、人工确认和重启恢复形成完
     } finally {
       await restartedRuntime.close();
     }
+  } finally {
+    await runtime.close();
+    cleanup();
+  }
+});
+
+test('PH3-13C4 用户显式接收同分支新版，禁止分叉且完全重复只登记来源', async () => {
+  const { root, cleanup } = withTemporaryRoot();
+  const parentPath = join(root, '已发布讲义.docx');
+  const nextPath = join(root, '已发布讲义-修订版.docx');
+  const forkPath = join(root, '已发布讲义-分叉版.docx');
+  const runtime = new KnowledgeIngestionRuntime(root, { allowTestProcess: true });
+
+  try {
+    await createDocx(parentPath, '旧版正文内容');
+    const service = await runtime.getService();
+    const parent = await service.intakeFile(parentPath);
+    service.confirmMetadata({ itemId: parent.itemId, metadata: confirmedMetadata });
+
+    const databasePath = join(root, 'knowledge-ingestion', 'registry.sqlite');
+    const timestamp = new Date().toISOString();
+    const database = new Database(databasePath);
+    try {
+      database.prepare(`
+        UPDATE processing_jobs
+        SET status = 'succeeded', updated_at = ?
+        WHERE version_id = ? AND stage = 'extraction'
+      `).run(timestamp, parent.versionId);
+      database.prepare(`
+        UPDATE material_versions
+        SET workflow_status = 'published', processing_health = 'healthy',
+            index_publication_status = 'active', published_at = ?, updated_at = ?
+        WHERE version_id = ?
+      `).run(timestamp, timestamp, parent.versionId);
+      const identity = database.prepare(`
+        SELECT canonical_id, publication_branch_key
+        FROM material_versions WHERE version_id = ?
+      `).get(parent.versionId) as { canonical_id: string; publication_branch_key: string };
+      database.prepare(`
+        INSERT INTO ragflow_bindings (
+          binding_id, version_id, index_generation, dataset_id, document_id,
+          remote_status, is_healthy, last_verified_at, created_at, updated_at,
+          remote_run_status, chunk_count
+        ) VALUES (
+          'binding-c4-parent', ?, 'generation-c4', 'dataset-c4', 'document-c4-parent',
+          'active', 1, ?, ?, ?, 'DONE', 5
+        )
+      `).run(parent.versionId, timestamp, timestamp, timestamp);
+      database.prepare(`
+        INSERT INTO material_publications (
+          publication_id, release_id, canonical_id, publication_branch_key, version_id,
+          publication_status, created_at, updated_at
+        ) VALUES ('publication-c4-parent', 'release-c4-parent', ?, ?, ?, 'active', ?, ?)
+      `).run(
+        identity.canonical_id,
+        identity.publication_branch_key,
+        parent.versionId,
+        timestamp,
+        timestamp,
+      );
+    } finally {
+      database.close();
+    }
+
+    const parentBeforeNextVersion = service.listItems().find((candidate) => candidate.itemId === parent.itemId);
+    assert.ok(parentBeforeNextVersion);
+    assert.equal(parentBeforeNextVersion.publication.versionLabel, '第 1 版');
+    assert.equal(parentBeforeNextVersion.publication.isCurrentVersion, true);
+    assert.equal(parentBeforeNextVersion.publication.canReceiveNextVersion, true);
+    assert.equal(parentBeforeNextVersion.publication.canRollback, false);
+
+    await createDocx(nextPath, '新版正文内容');
+    const next = await service.intakeFileAsNextVersion(parent.itemId, nextPath);
+    assert.equal(next.isDuplicate, false);
+    assert.equal(next.status, 'pending_confirmation');
+    assert.deepEqual(next.metadata, confirmedMetadata);
+    assert.equal(next.publication.versionLabel, '第 2 版');
+    assert.equal(next.publication.previousVersionLabel, '第 1 版');
+    assert.equal(
+      service.listItems().find((candidate) => candidate.itemId === parent.itemId)?.publication.canReceiveNextVersion,
+      false,
+    );
+
+    const verification = new Database(databasePath, { readonly: true });
+    try {
+      const parentVersion = verification.prepare(`
+        SELECT canonical_id, publication_branch_key, version_no
+        FROM material_versions WHERE version_id = ?
+      `).get(parent.versionId) as {
+        canonical_id: string;
+        publication_branch_key: string;
+        version_no: number;
+      };
+      const nextVersion = verification.prepare(`
+        SELECT canonical_id, publication_branch_key, version_no, previous_version_id,
+               workflow_status, processing_health, index_publication_status
+        FROM material_versions WHERE version_id = ?
+      `).get(next.versionId) as {
+        canonical_id: string;
+        publication_branch_key: string;
+        version_no: number;
+        previous_version_id: string;
+        workflow_status: string;
+        processing_health: string;
+        index_publication_status: string;
+      };
+      assert.equal(nextVersion.canonical_id, parentVersion.canonical_id);
+      assert.equal(nextVersion.publication_branch_key, parentVersion.publication_branch_key);
+      assert.equal(nextVersion.version_no, parentVersion.version_no + 1);
+      assert.equal(nextVersion.previous_version_id, parent.versionId);
+      assert.equal(nextVersion.workflow_status, 'pending_confirmation');
+      assert.equal(nextVersion.processing_health, 'pending');
+      assert.equal(nextVersion.index_publication_status, 'pending');
+    } finally {
+      verification.close();
+    }
+
+    const duplicate = await service.intakeFileAsNextVersion(parent.itemId, nextPath);
+    assert.equal(duplicate.isDuplicate, true);
+    assert.equal(duplicate.versionId, next.versionId);
+
+    await createDocx(forkPath, '不允许的并行分叉内容');
+    await assert.rejects(
+      service.intakeFileAsNextVersion(parent.itemId, forkPath),
+      (error) => assertRegistryError(error, 'INTAKE_STATE_CONFLICT'),
+    );
   } finally {
     await runtime.close();
     cleanup();
@@ -438,6 +572,7 @@ test('PH3-13C2 健康 pending 绑定只向 Renderer DTO 提供切片数和质量
         conclusion: null,
         startedAt: null,
         completedAt: null,
+        expiresAt: null,
         questionCount: 0,
         results: [],
       },
@@ -565,12 +700,11 @@ test('PH3-13C3 Runtime 创建质量运行、锁定配置身份并只返回安全
     const prepared = await prepareRuntimeQualityItem(root, runtime);
     const started = await runtime.startQualityCheck({
       itemId: prepared.item.itemId,
-      questions: runtimeQualityQuestions,
     });
     assert.equal(started.lifecycle.currentStage, 'quality_check');
     assert.equal(started.lifecycle.currentJobStatus, 'queued');
     assert.equal(started.lifecycle.qualitySummary.status, 'queued');
-    assert.equal(started.lifecycle.qualitySummary.questionCount, 3);
+    assert.equal(started.lifecycle.qualitySummary.questionCount, 1);
     assert.equal(started.lifecycle.canCancel, true);
 
     const database = new Database(prepared.databasePath, { readonly: true });
@@ -705,16 +839,110 @@ test('PH3-13C3 Runtime 创建质量运行、锁定配置身份并只返回安全
 
     const restarted = await runtime.startQualityCheck({
       itemId: prepared.item.itemId,
-      questions: runtimeQualityQuestions.map((item) => ({
-        ...item,
-        question: `再次检查：${item.question}`,
-      })),
     });
     assert.equal(restarted.lifecycle.currentJobStatus, 'queued');
     const cancelledAgain = prepared.service.cancelProcessing(prepared.item.itemId);
     assert.equal(cancelledAgain.lifecycle.currentJobStatus, 'cancelled');
     assert.equal(cancelledAgain.lifecycle.qualitySummary.status, 'cancelled');
     assert.equal(cancelledAgain.lifecycle.errorMessage, null);
+  } finally {
+    await runtime.close();
+    cleanup();
+  }
+});
+
+test('PH3-13C4 待发布质量结论到期后安全映射为过期并可重新排队', async () => {
+  const { root, cleanup } = withTemporaryRoot();
+  let nowMs = Date.parse('2026-07-11T08:00:00.000Z');
+  const now = () => new Date(nowMs);
+  const runtime = new KnowledgeIngestionRuntime(root, {
+    allowTestProcess: true,
+    credentialCipher: testCredentialCipher,
+    now,
+  });
+
+  try {
+    const prepared = await prepareRuntimeQualityItem(root, runtime);
+    await runtime.startQualityCheck({
+      itemId: prepared.item.itemId,
+    });
+    let firstExpiresAt = '';
+    const database = new Database(prepared.databasePath);
+    const registry = new RegistryDatabase(database, prepared.databasePath, null);
+    try {
+      const registryStore = new RegistryStore(registry, { now });
+      const qualityRepository = new QualityGateRepository(registry, { now });
+      const run = qualityRepository.getLatestRunForVersion(prepared.item.versionId);
+      assert.ok(run);
+      firstExpiresAt = run.expiresAt;
+      const workerId = 'worker-quality-expiry-runtime';
+      const claimed = registryStore.claimNextJob({
+        workerId,
+        leaseDurationMs: 60_000,
+        stages: ['quality'],
+        audit: { actorId: 'test:quality-expiry', reason: '领取待过期质量任务。' },
+      });
+      assert.equal(claimed?.jobId, run.jobId);
+      qualityRepository.startRun({
+        qualityRunId: run.qualityRunId,
+        workerId,
+        audit: { actorId: 'test:quality-expiry', reason: '开始待过期质量任务。' },
+      });
+      for (const [index, resultKey] of run.inputSnapshot.requiredBlockingResultKeys.entries()) {
+        qualityRepository.recordResult({
+          qualityRunId: run.qualityRunId,
+          workerId,
+          checkKey: `quality-expiry-${index + 1}`,
+          resultKey,
+          blockingLevel: 'blocking',
+          passed: true,
+          threshold: { required: true },
+          actual: { passed: true },
+          evidence: { message: '到期重检测试结论已通过。' },
+          audit: { actorId: 'test:quality-expiry', reason: '记录待过期质量结论。' },
+        });
+      }
+      qualityRepository.finalizePassed({
+        qualityRunId: run.qualityRunId,
+        workerId,
+        audit: { actorId: 'test:quality-expiry', reason: '完成待过期质量结论。' },
+      });
+    } finally {
+      registry.close();
+    }
+
+    nowMs = Date.parse(firstExpiresAt);
+    const expired = prepared.service.listItems()
+      .find((candidate) => candidate.itemId === prepared.item.itemId);
+    assert.ok(expired);
+    assert.equal(expired.lifecycle.workflowStatus, 'pending_publication');
+    assert.equal(expired.lifecycle.qualitySummary.status, 'expired');
+    assert.equal(expired.lifecycle.qualitySummary.expiresAt, firstExpiresAt);
+    assert.equal(expired.publication.canPublish, false);
+
+    const restarted = await runtime.startQualityCheck({
+      itemId: prepared.item.itemId,
+    });
+    assert.equal(restarted.lifecycle.workflowStatus, 'quality_check');
+    assert.equal(restarted.lifecycle.qualitySummary.status, 'queued');
+    assert.ok(restarted.lifecycle.qualitySummary.expiresAt);
+    assert.ok(restarted.lifecycle.qualitySummary.expiresAt > firstExpiresAt);
+
+    const verification = new Database(prepared.databasePath, { readonly: true });
+    try {
+      assert.equal(
+        Number(verification.prepare('SELECT COUNT(*) FROM quality_runs WHERE version_id = ?').pluck().get(prepared.item.versionId)),
+        2,
+      );
+      assert.equal(
+        Number(verification.prepare(
+          "SELECT COUNT(*) FROM audit_events WHERE action = 'material_version.expired_quality_reopened'",
+        ).pluck().get()),
+        1,
+      );
+    } finally {
+      verification.close();
+    }
   } finally {
     await runtime.close();
     cleanup();
@@ -760,7 +988,6 @@ test('PH3-13C3 配置保存与质量启动串行，运行快照不会落在旧�
     let startSettled = false;
     const starting = runtime.startQualityCheck({
       itemId: prepared.item.itemId,
-      questions: runtimeQualityQuestions,
     });
     void starting.then(
       () => { startSettled = true; },
@@ -798,7 +1025,7 @@ test('PH3-13C3 配置保存与质量启动串行，运行快照不会落在旧�
   }
 });
 
-test('PH3-13C3 切换配置并重启后仍保护历史 healthy pending 数据集', async () => {
+test('PH3-13C4 配置切换并重启后仍保护历史 active 与 superseded 数据集', async () => {
   const { root, cleanup } = withTemporaryRoot();
   const runtime = new KnowledgeIngestionRuntime(root, {
     allowTestProcess: true,
@@ -807,7 +1034,7 @@ test('PH3-13C3 切换配置并重启后仍保护历史 healthy pending 数据集
   let restartedRuntime: KnowledgeIngestionRuntime | null = null;
 
   try {
-    await prepareRuntimeQualityItem(root, runtime);
+    const prepared = await prepareRuntimeQualityItem(root, runtime);
     const switched = await runtime.saveRagflowConfig({
       baseUrl: 'http://127.0.0.1:9380',
       apiKey: 'runtime-quality-key-v2',
@@ -815,6 +1042,29 @@ test('PH3-13C3 切换配置并重启后仍保护历史 healthy pending 数据集
       indexGeneration: 'runtime-quality-v2',
     });
     assert.equal(switched.stagingDatasetId, 'dataset-runtime-quality-v2');
+
+    const timestamp = new Date().toISOString();
+    const database = new Database(prepared.databasePath);
+    try {
+      database.prepare(`
+        UPDATE ragflow_bindings
+        SET remote_status = 'active', updated_at = ?
+        WHERE binding_id = 'binding-runtime-quality'
+      `).run(timestamp);
+      database.prepare(`
+        INSERT INTO ragflow_bindings (
+          binding_id, version_id, index_generation, dataset_id, document_id,
+          remote_status, is_healthy, last_verified_at, created_at, updated_at,
+          remote_run_status, chunk_count
+        ) VALUES (
+          'binding-runtime-superseded', ?, 'runtime-quality-v0',
+          'dataset-runtime-superseded', 'document-runtime-superseded',
+          'superseded', 1, ?, ?, ?, 'DONE', 3
+        )
+      `).run(prepared.item.versionId, timestamp, timestamp, timestamp);
+    } finally {
+      database.close();
+    }
     await runtime.close();
 
     restartedRuntime = new KnowledgeIngestionRuntime(root, {
@@ -824,16 +1074,22 @@ test('PH3-13C3 切换配置并重启后仍保护历史 healthy pending 数据集
     const protectedDatasetIds = await restartedRuntime.getProtectedRagflowDatasetIds();
     assert.deepEqual(
       new Set(protectedDatasetIds),
-      new Set(['dataset-runtime-quality', 'dataset-runtime-quality-v2']),
+      new Set([
+        'dataset-runtime-quality',
+        'dataset-runtime-superseded',
+        'dataset-runtime-quality-v2',
+      ]),
     );
-    const decision = guardProtectedRagflowDatasetRequest(
-      {
-        url: 'http://127.0.0.1:9380/api/v1/retrieval',
-        body: { dataset_ids: ['dataset-runtime-quality'], question: '正式检索' },
-      },
-      protectedDatasetIds,
-    );
-    assert.equal(decision.allow, false);
+    for (const datasetId of ['dataset-runtime-quality', 'dataset-runtime-superseded']) {
+      const decision = guardProtectedRagflowDatasetRequest(
+        {
+          url: 'http://127.0.0.1:9380/api/v1/retrieval',
+          body: { dataset_ids: [datasetId], question: '正式检索' },
+        },
+        protectedDatasetIds,
+      );
+      assert.equal(decision.allow, false);
+    }
   } finally {
     await restartedRuntime?.close();
     await runtime.close();
@@ -964,7 +1220,10 @@ test('PH3-13C2 Runtime 关闭会等待并发初始化，且重复关闭保持幂
     // close 返回后 SQLite 已释放，可由独立只读连接重新打开。
     const database = new Database(join(root, 'knowledge-ingestion', 'registry.sqlite'), { readonly: true });
     try {
-      assert.equal(Number(database.prepare('SELECT MAX(version) FROM schema_migrations').pluck().get()), 4);
+      assert.equal(
+        Number(database.prepare('SELECT MAX(version) FROM schema_migrations').pluck().get()),
+        REGISTRY_SCHEMA_VERSION,
+      );
     } finally {
       database.close();
     }
@@ -1033,6 +1292,399 @@ test('PH3-13C2 未完成远端工作会锁定配置身份，但允许同身份�
     });
     assert.equal(updated.configured, true);
     assert.equal(updated.stagingDatasetId, 'dataset-stage-a');
+  } finally {
+    await runtime.close();
+    cleanup();
+  }
+});
+
+test('PH3-13C4 active 或 superseded 发布历史锁定远端身份但允许轮换密钥', async () => {
+  const { root, cleanup } = withTemporaryRoot();
+  const runtime = new KnowledgeIngestionRuntime(root, {
+    allowTestProcess: true,
+    credentialCipher: testCredentialCipher,
+  });
+
+  try {
+    const prepared = await prepareRuntimeQualityItem(root, runtime);
+    await runtime.startQualityCheck({
+      itemId: prepared.item.itemId,
+    });
+    const database = new Database(prepared.databasePath);
+    try {
+      const timestamp = new Date().toISOString();
+      // 质量运行由 Runtime 正常创建，以下只模拟远端已完成后的持久结果，保留不可变配置快照。
+      database.prepare(`
+        UPDATE processing_jobs
+        SET status = 'succeeded', updated_at = ?
+        WHERE version_id = ? AND stage = 'quality'
+      `).run(timestamp, prepared.item.versionId);
+      database.prepare(`
+        UPDATE quality_runs
+        SET status = 'passed', conclusion = 'passed', started_at = ?, completed_at = ?, updated_at = ?
+        WHERE version_id = ?
+      `).run(timestamp, timestamp, timestamp, prepared.item.versionId);
+      database.prepare(`
+        UPDATE ragflow_bindings
+        SET remote_status = 'active', updated_at = ?
+        WHERE binding_id = 'binding-runtime-quality'
+      `).run(timestamp);
+      database.prepare(`
+        UPDATE material_versions
+        SET workflow_status = 'published', processing_health = 'healthy',
+            index_publication_status = 'active', published_at = ?, updated_at = ?
+        WHERE version_id = ?
+      `).run(timestamp, timestamp, prepared.item.versionId);
+      database.prepare(`
+        INSERT INTO material_publications (
+          publication_id, release_id, canonical_id, publication_branch_key, version_id,
+          publication_status, created_at, updated_at
+        )
+        SELECT 'publication-runtime-quality', 'release-runtime-quality',
+               canonical_id, publication_branch_key, version_id, 'active', ?, ?
+        FROM material_versions WHERE version_id = ?
+      `).run(timestamp, timestamp, prepared.item.versionId);
+    } finally {
+      database.close();
+    }
+
+    const identityChanges = [
+      {
+        baseUrl: 'http://127.0.0.1:9381',
+        stagingDatasetId: 'dataset-runtime-quality',
+        indexGeneration: 'runtime-quality-v1',
+      },
+      {
+        baseUrl: 'http://127.0.0.1:9380',
+        stagingDatasetId: 'dataset-runtime-other',
+        indexGeneration: 'runtime-quality-v1',
+      },
+      {
+        baseUrl: 'http://127.0.0.1:9380',
+        stagingDatasetId: 'dataset-runtime-quality',
+        indexGeneration: 'runtime-quality-v2',
+      },
+    ];
+    for (const identity of identityChanges) {
+      await assert.rejects(
+        runtime.saveRagflowConfig({
+          ...identity,
+          apiKey: 'rotated-key',
+        }),
+        (error) => error instanceof RegistryError
+          && error.code === 'REMOTE_AUTH_CONFIG'
+          && /发布历史/.test(error.message),
+      );
+    }
+
+    const supersededDatabase = new Database(prepared.databasePath);
+    try {
+      supersededDatabase.prepare(`
+        UPDATE ragflow_bindings
+        SET remote_status = 'superseded', updated_at = ?
+        WHERE binding_id = 'binding-runtime-quality'
+      `).run(new Date().toISOString());
+    } finally {
+      supersededDatabase.close();
+    }
+    await assert.rejects(
+      runtime.saveRagflowConfig({
+        baseUrl: 'http://127.0.0.1:9380',
+        apiKey: 'rotated-key',
+        stagingDatasetId: 'dataset-runtime-other',
+        indexGeneration: 'runtime-quality-v1',
+      }),
+      (error) => error instanceof RegistryError
+        && error.code === 'REMOTE_AUTH_CONFIG'
+        && /发布历史/.test(error.message),
+    );
+
+    const rotated = await runtime.saveRagflowConfig({
+      baseUrl: 'HTTP://127.0.0.1:9380/',
+      apiKey: 'rotated-key',
+      stagingDatasetId: 'dataset-runtime-quality',
+      indexGeneration: 'runtime-quality-v1',
+    });
+    assert.equal(rotated.configured, true);
+    assert.equal(rotated.stagingDatasetId, 'dataset-runtime-quality');
+    assert.equal(rotated.indexGeneration, 'runtime-quality-v1');
+
+    const internals = runtime as unknown as {
+      ragflowConfigStore: {
+        save: (input: {
+          baseUrl: string;
+          apiKey: string;
+          stagingDatasetId: string;
+          indexGeneration: string;
+        }) => Promise<unknown>;
+      };
+    };
+    // 模拟配置文件被外部错误覆盖，Runtime 必须先以历史快照拒绝该不一致状态。
+    await internals.ragflowConfigStore.save({
+      baseUrl: 'http://127.0.0.1:9380',
+      apiKey: 'incorrect-key',
+      stagingDatasetId: 'dataset-runtime-other',
+      indexGeneration: 'runtime-quality-v1',
+    });
+    await assert.rejects(
+      runtime.saveRagflowConfig({
+        baseUrl: 'http://127.0.0.1:9380',
+        apiKey: 'rotated-key',
+        stagingDatasetId: 'dataset-runtime-quality',
+        indexGeneration: 'runtime-quality-v1',
+      }),
+      (error) => assertRegistryError(error, 'REMOTE_AUTH_CONFIG'),
+    );
+
+    rmSync(join(root, 'knowledge-ingestion', 'ragflow-ingestion.json'), { force: true });
+    assert.equal((await runtime.getRagflowConfigStatus()).configured, false);
+    await assert.rejects(
+      runtime.saveRagflowConfig({
+        baseUrl: 'http://127.0.0.1:9480',
+        apiKey: 'replacement-key',
+        stagingDatasetId: 'dataset-after-config-loss',
+        indexGeneration: 'runtime-quality-after-loss',
+      }),
+      (error) => error instanceof RegistryError
+        && error.code === 'REMOTE_AUTH_CONFIG'
+        && /发布历史/.test(error.message),
+    );
+    const recovered = await runtime.saveRagflowConfig({
+      baseUrl: 'HTTP://127.0.0.1:9380/',
+      apiKey: 'replacement-key',
+      stagingDatasetId: 'dataset-runtime-quality',
+      indexGeneration: 'runtime-quality-v1',
+    });
+    assert.equal(recovered.baseUrl, 'http://127.0.0.1:9380');
+    assert.equal(recovered.stagingDatasetId, 'dataset-runtime-quality');
+
+    const corruptSnapshotDatabase = new Database(prepared.databasePath);
+    try {
+      // 一条相关快照缺字段时，不能借助其他历史记录猜测远端身份。
+      corruptSnapshotDatabase.prepare(`
+        UPDATE quality_runs SET config_snapshot_json = '{}' WHERE version_id = ?
+      `).run(prepared.item.versionId);
+    } finally {
+      corruptSnapshotDatabase.close();
+    }
+    await assert.rejects(
+      runtime.saveRagflowConfig({
+        baseUrl: 'http://127.0.0.1:9380',
+        apiKey: 'replacement-key',
+        stagingDatasetId: 'dataset-runtime-quality',
+        indexGeneration: 'runtime-quality-v1',
+      }),
+      (error) => assertRegistryError(error, 'REMOTE_AUTH_CONFIG'),
+    );
+  } finally {
+    await runtime.close();
+    cleanup();
+  }
+});
+
+test('PH3-13C4 抽取、上传或解析任务未完成时锁定身份，显式取消后才允许切换', async () => {
+  for (const stage of ['extraction', 'upload', 'parse_wait'] as const) {
+    for (const status of ['queued', 'failed'] as const) {
+      const { root, cleanup } = withTemporaryRoot();
+      const runtime = new KnowledgeIngestionRuntime(root, {
+        allowTestProcess: true,
+        credentialCipher: testCredentialCipher,
+      });
+      try {
+        await runtime.saveRagflowConfig({
+          baseUrl: 'http://127.0.0.1:9380',
+          apiKey: 'first-key',
+          stagingDatasetId: 'dataset-stage-a',
+          indexGeneration: 'staging-v1',
+        });
+        const sourcePath = join(root, `${stage}-${status}-配置锁.docx`);
+        await createDocx(sourcePath, '用于验证抽取、上传和解析任务的配置身份锁。');
+        const service = await runtime.getService();
+        const item = await service.intakeFile(sourcePath);
+        service.confirmMetadata({ itemId: item.itemId, metadata: confirmedMetadata });
+
+        const database = new Database(join(root, 'knowledge-ingestion', 'registry.sqlite'));
+        try {
+          database.prepare(`
+            UPDATE processing_jobs
+            SET stage = ?, status = ?, updated_at = ?
+            WHERE version_id = ? AND stage = 'extraction'
+          `).run(stage, status, new Date().toISOString(), item.versionId);
+        } finally {
+          database.close();
+        }
+
+        await assert.rejects(
+          runtime.saveRagflowConfig({
+            baseUrl: 'http://127.0.0.1:9381',
+            apiKey: 'second-key',
+            stagingDatasetId: 'dataset-stage-b',
+            indexGeneration: 'staging-v2',
+          }),
+          (error) => assertRegistryError(error, 'REMOTE_AUTH_CONFIG'),
+          `${stage}/${status} 必须锁定远端身份`,
+        );
+        const cancelled = service.cancelProcessing(item.itemId);
+        assert.equal(cancelled.lifecycle.currentJobStatus, 'cancelled');
+        const switched = await runtime.saveRagflowConfig({
+          baseUrl: 'http://127.0.0.1:9381',
+          apiKey: 'second-key',
+          stagingDatasetId: 'dataset-stage-b',
+          indexGeneration: 'staging-v2',
+        });
+        assert.equal(switched.stagingDatasetId, 'dataset-stage-b');
+      } finally {
+        await runtime.close();
+        cleanup();
+      }
+    }
+  }
+});
+
+test('PH3-13C4 发布摘要与 publication job 独立于处理 DTO，且不泄漏内部身份', async () => {
+  const { root, cleanup } = withTemporaryRoot();
+  const runtime = new KnowledgeIngestionRuntime(root, {
+    allowTestProcess: true,
+    credentialCipher: testCredentialCipher,
+  });
+
+  try {
+    const prepared = await prepareRuntimeQualityItem(root, runtime);
+    await runtime.startQualityCheck({
+      itemId: prepared.item.itemId,
+    });
+
+    const database = new Database(prepared.databasePath);
+    const registry = new RegistryDatabase(database, prepared.databasePath, null);
+    try {
+      const registryStore = new RegistryStore(registry);
+      const qualityRepository = new QualityGateRepository(registry);
+      const run = qualityRepository.getLatestRunForVersion(prepared.item.versionId);
+      assert.ok(run);
+      const workerId = 'worker-publication-dto';
+      const claimed = registryStore.claimNextJob({
+        workerId,
+        leaseDurationMs: 60_000,
+        stages: ['quality'],
+        audit: { actorId: 'test:publication-dto', reason: '准备发布摘要测试质量结论。' },
+      });
+      assert.equal(claimed?.jobId, run.jobId);
+      qualityRepository.startRun({
+        qualityRunId: run.qualityRunId,
+        workerId,
+        audit: { actorId: 'test:publication-dto', reason: '开始发布摘要测试质量结论。' },
+      });
+      for (const [index, resultKey] of run.inputSnapshot.requiredBlockingResultKeys.entries()) {
+        qualityRepository.recordResult({
+          qualityRunId: run.qualityRunId,
+          workerId,
+          checkKey: `publication-dto-${index + 1}`,
+          resultKey,
+          blockingLevel: 'blocking',
+          passed: true,
+          threshold: { required: true },
+          actual: { passed: true },
+          evidence: { message: '发布摘要测试结论已通过。' },
+          audit: { actorId: 'test:publication-dto', reason: '记录发布摘要测试质量结论。' },
+        });
+      }
+      qualityRepository.finalizePassed({
+        qualityRunId: run.qualityRunId,
+        workerId,
+        audit: { actorId: 'test:publication-dto', reason: '完成发布摘要测试质量结论。' },
+      });
+    } finally {
+      registry.close();
+    }
+
+    const publishable = (await runtime.getService()).listItems()
+      .find((candidate) => candidate.itemId === prepared.item.itemId);
+    assert.ok(publishable);
+    assert.equal(publishable.publication.operationStatus, 'not_started');
+    assert.equal(publishable.publication.canPublish, true);
+
+    const queued = await runtime.startPublication(prepared.item.itemId);
+    assert.equal(queued.publication.operationStatus, 'queued');
+    assert.equal(queued.publication.canPublish, false);
+    const operationDatabase = new Database(prepared.databasePath);
+    let internals: {
+      operation_id: string;
+      job_id: string;
+      quality_run_id: string;
+      target_publication_id: string;
+      target_binding_id: string;
+      canonical_id: string;
+      publication_branch_key: string;
+      dataset_id: string;
+      document_id: string;
+      managed_source_path: string;
+    };
+    try {
+      internals = operationDatabase.prepare(`
+        SELECT operation.operation_id, operation.job_id, operation.quality_run_id,
+               operation.target_publication_id, operation.target_binding_id,
+               version.canonical_id, version.publication_branch_key,
+               binding.dataset_id, binding.document_id, version.managed_source_path
+        FROM publication_operations operation
+        JOIN material_versions version ON version.version_id = operation.target_version_id
+        JOIN ragflow_bindings binding ON binding.binding_id = operation.target_binding_id
+        WHERE operation.target_version_id = ?
+      `).get(prepared.item.versionId) as typeof internals;
+      const internalText = 'document-secret C:\\secret\\managed http://private.example/ragflow';
+      operationDatabase.prepare(`
+        UPDATE processing_jobs
+        SET status = 'failed', next_retry_at = NULL, error_code = 'REMOTE_CONTRACT',
+            error_message = ?, updated_at = ?
+        WHERE job_id = ?
+      `).run(internalText, new Date().toISOString(), internals.job_id);
+      operationDatabase.prepare(`
+        UPDATE publication_operations
+        SET error_code = 'REMOTE_CONTRACT', error_message = ?, updated_at = ?
+        WHERE operation_id = ?
+      `).run(internalText, new Date().toISOString(), internals.operation_id);
+    } finally {
+      operationDatabase.close();
+    }
+
+    const item = (await runtime.getService()).listItems().find((candidate) => candidate.itemId === prepared.item.itemId);
+    assert.ok(item);
+    assert.equal(item.lifecycle.processingHealth, 'healthy');
+    assert.equal(item.lifecycle.currentStage, null);
+    assert.equal(item.lifecycle.currentJobStatus, null);
+    assert.equal(item.publication.operationStatus, 'attention_required');
+    assert.equal(item.publication.canRetry, true);
+    assert.equal(item.publication.canPublish, false);
+    assert.deepEqual(Object.keys(item.publication).sort(), [
+      'canPublish',
+      'canReceiveNextVersion',
+      'canRetry',
+      'canRollback',
+      'isCurrentVersion',
+      'operationMessage',
+      'operationStatus',
+      'operationType',
+      'operationUpdatedAt',
+      'previousVersionLabel',
+      'versionLabel',
+    ].sort());
+    const rendererPayload = JSON.stringify(item);
+    for (const secret of [
+      internals.operation_id,
+      internals.job_id,
+      internals.quality_run_id,
+      internals.target_publication_id,
+      internals.target_binding_id,
+      internals.canonical_id,
+      internals.publication_branch_key,
+      internals.dataset_id,
+      internals.document_id,
+      internals.managed_source_path,
+      'http://127.0.0.1:9380',
+      'document-secret',
+      'private.example',
+    ]) {
+      assert.equal(rendererPayload.includes(secret), false, `Renderer DTO 不应包含内部值：${secret}`);
+    }
   } finally {
     await runtime.close();
     cleanup();

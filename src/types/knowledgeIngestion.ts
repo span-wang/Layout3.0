@@ -55,6 +55,18 @@ export type KnowledgeIngestionQualityStatus =
 
 export type KnowledgeIngestionQualitySeverity = 'blocking' | 'warning';
 
+export type KnowledgeIngestionPublicationOperationType = 'publish' | 'rollback';
+
+export type KnowledgeIngestionPublicationOperationStatus =
+  | 'not_started'
+  | 'queued'
+  | 'running'
+  | 'compensating'
+  | 'retry_scheduled'
+  | 'attention_required'
+  | 'completed'
+  | 'failed';
+
 export interface KnowledgeIngestionQualityResult {
   checkKey: string;
   label: string;
@@ -71,6 +83,8 @@ export interface KnowledgeIngestionQualitySummary {
   conclusion: string | null;
   startedAt: string | null;
   completedAt: string | null;
+  /** Main 生成的短期质量结论失效时间；Renderer 只用它安排状态刷新。 */
+  expiresAt: string | null;
   questionCount: number;
   results: KnowledgeIngestionQualityResult[];
 }
@@ -111,6 +125,21 @@ export interface KnowledgeIngestionLifecycle {
   qualitySummary: KnowledgeIngestionQualitySummary;
 }
 
+/** Renderer 只获得发布业务摘要；operation、publication、binding 与远端身份始终留在 Main。 */
+export interface KnowledgeIngestionPublicationSummary {
+  versionLabel: string;
+  previousVersionLabel: string | null;
+  isCurrentVersion: boolean;
+  canReceiveNextVersion: boolean;
+  canPublish: boolean;
+  canRollback: boolean;
+  canRetry: boolean;
+  operationType: KnowledgeIngestionPublicationOperationType | null;
+  operationStatus: KnowledgeIngestionPublicationOperationStatus;
+  operationMessage: string;
+  operationUpdatedAt: string | null;
+}
+
 export interface KnowledgeIngestionItem {
   itemId: string;
   versionId: string;
@@ -122,6 +151,7 @@ export interface KnowledgeIngestionItem {
   isDuplicate: boolean;
   metadata: KnowledgeIngestionMetadata;
   lifecycle: KnowledgeIngestionLifecycle;
+  publication: KnowledgeIngestionPublicationSummary;
   createdAt: string;
   updatedAt: string;
 }
@@ -140,14 +170,13 @@ export interface KnowledgeIngestionItemActionInput {
   itemId: string;
 }
 
-export interface KnowledgeIngestionQualityQuestionInput {
-  question: string;
-  evidence: string;
+export interface KnowledgeIngestionRollbackInput {
+  itemId: string;
+  reason: string;
 }
 
 export interface KnowledgeIngestionStartQualityCheckInput {
   itemId: string;
-  questions: KnowledgeIngestionQualityQuestionInput[];
 }
 
 export interface KnowledgeIngestionRagflowConfigStatus {

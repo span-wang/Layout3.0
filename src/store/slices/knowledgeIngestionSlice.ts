@@ -4,16 +4,21 @@ import {
   getKnowledgeIngestionRagflowConfigStatus,
   getKnowledgeIngestionStatus,
   listKnowledgeIngestionItems,
+  retryKnowledgeIngestionPublication,
   retryKnowledgeIngestionProcessing,
   saveKnowledgeIngestionRagflowConfig,
   selectKnowledgeIngestionFile,
+  selectKnowledgeIngestionNextVersionFile,
+  startKnowledgeIngestionPublication,
   startKnowledgeIngestionQualityCheck,
+  startKnowledgeIngestionRollback,
 } from '@/services/KnowledgeIngestionService';
 import type {
   KnowledgeIngestionConfirmMetadataInput,
   KnowledgeIngestionItem,
   KnowledgeIngestionItemActionInput,
   KnowledgeIngestionRagflowConfigStatus,
+  KnowledgeIngestionRollbackInput,
   KnowledgeIngestionRuntimeStatus,
   KnowledgeIngestionSaveRagflowConfigInput,
   KnowledgeIngestionStartQualityCheckInput,
@@ -32,6 +37,9 @@ export interface KnowledgeIngestionSlice {
   refreshKnowledgeIngestionItems: () => Promise<void>;
   selectKnowledgeIngestionItem: (itemId: string | null) => void;
   receiveKnowledgeIngestionFile: () => Promise<void>;
+  receiveKnowledgeIngestionNextVersion: (
+    input: KnowledgeIngestionItemActionInput,
+  ) => Promise<void>;
   confirmKnowledgeIngestionItemMetadata: (
     input: KnowledgeIngestionConfirmMetadataInput,
   ) => Promise<void>;
@@ -47,10 +55,37 @@ export interface KnowledgeIngestionSlice {
   startKnowledgeIngestionItemQualityCheck: (
     input: KnowledgeIngestionStartQualityCheckInput,
   ) => Promise<void>;
+  startKnowledgeIngestionItemPublication: (
+    input: KnowledgeIngestionItemActionInput,
+  ) => Promise<void>;
+  startKnowledgeIngestionItemRollback: (
+    input: KnowledgeIngestionRollbackInput,
+  ) => Promise<void>;
+  retryKnowledgeIngestionItemPublication: (
+    input: KnowledgeIngestionItemActionInput,
+  ) => Promise<void>;
 }
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : '资料入库操作失败，请稍后重试。';
+}
+
+function upsertKnowledgeIngestionItem(
+  items: readonly KnowledgeIngestionItem[],
+  updated: KnowledgeIngestionItem,
+): KnowledgeIngestionItem[] {
+  return items.some((item) => item.itemId === updated.itemId)
+    ? items.map((item) => (item.itemId === updated.itemId ? updated : item))
+    : [updated, ...items];
+}
+
+async function listKnowledgeIngestionItemsBestEffort(): Promise<KnowledgeIngestionItem[] | null> {
+  try {
+    return await listKnowledgeIngestionItems();
+  } catch {
+    // Main 动作已经成功时，全量刷新仅用于补齐关联状态，不能反向误报动作失败。
+    return null;
+  }
 }
 
 export const createKnowledgeIngestionSlice: StoreSlice<KnowledgeIngestionSlice> = (set) => ({
@@ -154,6 +189,53 @@ export const createKnowledgeIngestionSlice: StoreSlice<KnowledgeIngestionSlice> 
     }
   },
 
+  receiveKnowledgeIngestionNextVersion: async (input) => {
+    set((state) => {
+      state.knowledgeIngestionActionItemId = input.itemId;
+      state.knowledgeIngestionError = null;
+    });
+    try {
+      const result = await selectKnowledgeIngestionNextVersionFile(input);
+      if (result.canceled || !result.item) {
+        set((state) => {
+          state.knowledgeIngestionActionItemId = null;
+        });
+        return;
+      }
+      const updated = result.item;
+      set((state) => {
+        const nextItems = upsertKnowledgeIngestionItem(state.knowledgeIngestionItems, updated);
+        state.knowledgeIngestionItems = updated.isDuplicate
+          ? nextItems
+          : nextItems.map((item) =>
+            item.itemId === input.itemId
+              ? {
+                ...item,
+                publication: {
+                  ...item.publication,
+                  canReceiveNextVersion: false,
+                },
+              }
+              : item,
+          );
+        state.selectedKnowledgeIngestionItemId = updated.itemId;
+        state.knowledgeIngestionActionItemId = null;
+      });
+      const items = await listKnowledgeIngestionItemsBestEffort();
+      if (items) {
+        set((state) => {
+          state.knowledgeIngestionItems = items;
+          state.selectedKnowledgeIngestionItemId = updated.itemId;
+        });
+      }
+    } catch (error) {
+      set((state) => {
+        state.knowledgeIngestionError = getErrorMessage(error);
+        state.knowledgeIngestionActionItemId = null;
+      });
+    }
+  },
+
   confirmKnowledgeIngestionItemMetadata: async (input) => {
     set((state) => {
       state.isKnowledgeIngestionLoading = true;
@@ -253,6 +335,96 @@ export const createKnowledgeIngestionSlice: StoreSlice<KnowledgeIngestionSlice> 
         state.selectedKnowledgeIngestionItemId = updated.itemId;
         state.knowledgeIngestionActionItemId = null;
       });
+    } catch (error) {
+      set((state) => {
+        state.knowledgeIngestionError = getErrorMessage(error);
+        state.knowledgeIngestionActionItemId = null;
+      });
+    }
+  },
+
+  startKnowledgeIngestionItemPublication: async (input) => {
+    set((state) => {
+      state.knowledgeIngestionActionItemId = input.itemId;
+      state.knowledgeIngestionError = null;
+    });
+    try {
+      const updated = await startKnowledgeIngestionPublication(input);
+      set((state) => {
+        state.knowledgeIngestionItems = upsertKnowledgeIngestionItem(
+          state.knowledgeIngestionItems,
+          updated,
+        );
+        state.selectedKnowledgeIngestionItemId = updated.itemId;
+        state.knowledgeIngestionActionItemId = null;
+      });
+      const items = await listKnowledgeIngestionItemsBestEffort();
+      if (items) {
+        set((state) => {
+          state.knowledgeIngestionItems = items;
+          state.selectedKnowledgeIngestionItemId = updated.itemId;
+        });
+      }
+    } catch (error) {
+      set((state) => {
+        state.knowledgeIngestionError = getErrorMessage(error);
+        state.knowledgeIngestionActionItemId = null;
+      });
+    }
+  },
+
+  startKnowledgeIngestionItemRollback: async (input) => {
+    set((state) => {
+      state.knowledgeIngestionActionItemId = input.itemId;
+      state.knowledgeIngestionError = null;
+    });
+    try {
+      const updated = await startKnowledgeIngestionRollback(input);
+      set((state) => {
+        state.knowledgeIngestionItems = upsertKnowledgeIngestionItem(
+          state.knowledgeIngestionItems,
+          updated,
+        );
+        state.selectedKnowledgeIngestionItemId = updated.itemId;
+        state.knowledgeIngestionActionItemId = null;
+      });
+      const items = await listKnowledgeIngestionItemsBestEffort();
+      if (items) {
+        set((state) => {
+          state.knowledgeIngestionItems = items;
+          state.selectedKnowledgeIngestionItemId = updated.itemId;
+        });
+      }
+    } catch (error) {
+      set((state) => {
+        state.knowledgeIngestionError = getErrorMessage(error);
+        state.knowledgeIngestionActionItemId = null;
+      });
+    }
+  },
+
+  retryKnowledgeIngestionItemPublication: async (input) => {
+    set((state) => {
+      state.knowledgeIngestionActionItemId = input.itemId;
+      state.knowledgeIngestionError = null;
+    });
+    try {
+      const updated = await retryKnowledgeIngestionPublication(input);
+      set((state) => {
+        state.knowledgeIngestionItems = upsertKnowledgeIngestionItem(
+          state.knowledgeIngestionItems,
+          updated,
+        );
+        state.selectedKnowledgeIngestionItemId = updated.itemId;
+        state.knowledgeIngestionActionItemId = null;
+      });
+      const items = await listKnowledgeIngestionItemsBestEffort();
+      if (items) {
+        set((state) => {
+          state.knowledgeIngestionItems = items;
+          state.selectedKnowledgeIngestionItemId = updated.itemId;
+        });
+      }
     } catch (error) {
       set((state) => {
         state.knowledgeIngestionError = getErrorMessage(error);

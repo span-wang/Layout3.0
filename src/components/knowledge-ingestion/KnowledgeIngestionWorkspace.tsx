@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -8,14 +8,15 @@ import {
   Database,
   FileText,
   FileUp,
+  GitBranch,
   LoaderCircle,
   Play,
-  Plus,
   Save,
   RefreshCw,
+  RotateCcw,
   Settings2,
   ShieldCheck,
-  Trash2,
+  Send,
   X,
 } from 'lucide-react';
 import { listKnowledgeIngestionRagflowDatasetOptions } from '@/services/KnowledgeIngestionService';
@@ -29,7 +30,7 @@ import type {
   KnowledgeIngestionMetadata,
   KnowledgeIngestionRagflowDatasetOption,
   KnowledgeIngestionProcessingHealth,
-  KnowledgeIngestionQualityQuestionInput,
+  KnowledgeIngestionPublicationOperationStatus,
   KnowledgeIngestionQualityStatus,
   KnowledgeIngestionWorkflowStatus,
 } from '@/types/knowledgeIngestion';
@@ -98,6 +99,23 @@ const qualityStatusLabels: Record<KnowledgeIngestionQualityStatus, string> = {
   expired: '已过期',
 };
 
+const publicationStatusLabels: Record<KnowledgeIngestionPublicationOperationStatus, string> = {
+  not_started: '尚未发起',
+  queued: '已排队',
+  running: '核验中',
+  compensating: '补偿中',
+  retry_scheduled: '等待重试',
+  attention_required: '需要处理',
+  completed: '已完成',
+  failed: '操作失败并已安全终止',
+};
+
+interface PublicationConfirmationDialog {
+  kind: 'publish' | 'rollback';
+  itemId: string;
+  reason: string;
+}
+
 const emptyMetadata: KnowledgeIngestionMetadata = {
   stableTitle: '',
   domain: '教育',
@@ -128,41 +146,19 @@ function formatDate(value: string): string {
   }).format(new Date(value));
 }
 
-function createDefaultQualityQuestions(
-  item: KnowledgeIngestionItem,
-): KnowledgeIngestionQualityQuestionInput[] {
-  const title = item.metadata.stableTitle.trim() || item.fileName;
-  const scope = item.metadata.unit.trim()
-    || item.metadata.subject.trim()
-    || item.metadata.materialType.trim()
-    || '主要内容';
-  return [
-    { question: `《${title}》的核心主题是什么？`, evidence: '' },
-    { question: `《${title}》中关于“${scope}”的关键知识点有哪些？`, evidence: '' },
-    { question: `根据《${title}》，理解“${scope}”时需要注意什么？`, evidence: '' },
-  ];
-}
-
-function getQualityQuestionsValidation(
-  questions: KnowledgeIngestionQualityQuestionInput[],
-): string | null {
-  if (questions.length < 3 || questions.length > 5) {
-    return '冒烟问题必须保持 3 至 5 条。';
-  }
-  const emptyQuestionIndex = questions.findIndex((item) => !item.question.trim());
-  if (emptyQuestionIndex >= 0) {
-    return `第 ${emptyQuestionIndex + 1} 条问题不能为空。`;
-  }
-  const emptyEvidenceIndex = questions.findIndex((item) => !item.evidence.trim());
-  if (emptyEvidenceIndex >= 0) {
-    return `第 ${emptyEvidenceIndex + 1} 条来源证据不能为空。`;
-  }
-  return null;
-}
-
 function canPrepareQualityCheck(item: KnowledgeIngestionItem): boolean {
   return !item.isDuplicate
-    && item.lifecycle.workflowStatus === 'quality_check'
+    && (
+      item.lifecycle.workflowStatus === 'quality_check'
+      || (
+        item.lifecycle.workflowStatus === 'pending_publication'
+        && item.lifecycle.qualitySummary.status === 'expired'
+        && (
+          item.publication.operationStatus === 'not_started'
+          || item.publication.operationStatus === 'failed'
+        )
+      )
+    )
     && item.lifecycle.processingHealth === 'healthy'
     && item.lifecycle.indexPublicationStatus === 'pending';
 }
@@ -188,6 +184,14 @@ function getQualityOutcomeMessage(item: KnowledgeIngestionItem): string {
   }
 }
 
+function getQualityConclusionText(item: KnowledgeIngestionItem): string {
+  const summary = item.lifecycle.qualitySummary;
+  if (summary.status === 'passed' && item.lifecycle.workflowStatus !== 'pending_publication') {
+    return `历史质量结论：已通过。当前状态：${workflowStatusLabels[item.lifecycle.workflowStatus]}。`;
+  }
+  return summary.conclusion ?? getQualityOutcomeMessage(item);
+}
+
 function getPrimaryStatus(item: KnowledgeIngestionItem): string {
   return item.isDuplicate
     ? statusLabels.duplicate
@@ -196,7 +200,26 @@ function getPrimaryStatus(item: KnowledgeIngestionItem): string {
 
 function getCurrentStageText(item: KnowledgeIngestionItem): string {
   if (item.isDuplicate) return '完全重复，已跳过处理';
+  const publicationStatus = item.publication.operationStatus;
+  if (
+    publicationStatus !== 'not_started'
+    && publicationStatus !== 'completed'
+  ) {
+    return `发布与回滚 · ${publicationStatusLabels[publicationStatus]}`;
+  }
+  if (
+    item.lifecycle.workflowStatus === 'published'
+    || item.lifecycle.workflowStatus === 'superseded'
+    || item.lifecycle.workflowStatus === 'archived'
+  ) {
+    return workflowStatusLabels[item.lifecycle.workflowStatus];
+  }
   const { qualitySummary } = item.lifecycle;
+  if (
+    item.lifecycle.workflowStatus === 'quarantined'
+    && item.publication.operationType === 'rollback'
+    && item.publication.operationStatus === 'completed'
+  ) return workflowStatusLabels.quarantined;
   if (qualitySummary.status !== 'not_started') {
     return `质量门禁 · ${qualityStatusLabels[qualitySummary.status]}`;
   }
@@ -215,6 +238,122 @@ function getCurrentStageText(item: KnowledgeIngestionItem): string {
 
 function getPrimaryStatusClass(item: KnowledgeIngestionItem): string {
   return item.isDuplicate ? 'duplicate' : item.lifecycle.workflowStatus;
+}
+
+interface KnowledgeIngestionPublicationPanelProps {
+  item: KnowledgeIngestionItem;
+  actionItemId: string | null;
+  onReceiveNextVersion: (itemId: string) => void;
+  onOpenPublish: (itemId: string) => void;
+  onOpenRollback: (itemId: string) => void;
+  onRetry: (itemId: string) => void;
+}
+
+export function KnowledgeIngestionPublicationPanel({
+  item,
+  actionItemId,
+  onReceiveNextVersion,
+  onOpenPublish,
+  onOpenRollback,
+  onRetry,
+}: KnowledgeIngestionPublicationPanelProps): JSX.Element {
+  const needsAttention = item.publication.operationStatus === 'attention_required'
+    || item.publication.operationStatus === 'failed';
+  const isRecoveryPending = item.publication.operationStatus === 'compensating'
+    || item.publication.operationStatus === 'retry_scheduled';
+  const isActionRunning = actionItemId === item.itemId;
+  return (
+    <section
+      className={`knowledge-ingestion-publication-panel publication-status-${item.publication.operationStatus}`}
+      aria-label="发布与版本"
+    >
+      <div className="knowledge-ingestion-section-title">
+        <div>
+          <h3>发布与版本</h3>
+          <span>正式可见性由 SQLite 当前发布关系控制</span>
+        </div>
+        <span className="knowledge-ingestion-publication-status" aria-live="polite">
+          {publicationStatusLabels[item.publication.operationStatus]}
+        </span>
+      </div>
+      <div className="knowledge-ingestion-publication-version-grid">
+        <div>
+          <span>当前版本</span>
+          <strong>{item.publication.versionLabel}</strong>
+        </div>
+        <div>
+          <span>上一版本</span>
+          <strong>{item.publication.previousVersionLabel ?? '无'}</strong>
+        </div>
+        <div>
+          <span>正式状态</span>
+          <strong>{item.publication.isCurrentVersion ? '当前正式版本' : '非当前正式版本'}</strong>
+        </div>
+      </div>
+      <div
+        className={needsAttention || isRecoveryPending
+          ? 'knowledge-ingestion-publication-message is-warning'
+          : 'knowledge-ingestion-publication-message'}
+        role={needsAttention ? 'alert' : undefined}
+        aria-live="polite"
+      >
+        {needsAttention
+          ? <AlertCircle size={17} />
+          : isRecoveryPending
+            ? <RefreshCw size={17} className={item.publication.operationStatus === 'compensating' ? 'is-spinning' : ''} />
+            : <ShieldCheck size={17} />}
+        <span>{item.publication.operationMessage}</span>
+      </div>
+      <div className="knowledge-ingestion-publication-actions">
+        {item.publication.canReceiveNextVersion ? (
+          <button
+            type="button"
+            className="knowledge-ingestion-secondary-button"
+            disabled={isActionRunning}
+            onClick={() => onReceiveNextVersion(item.itemId)}
+          >
+            {isActionRunning
+              ? <LoaderCircle size={16} className="is-spinning" />
+              : <GitBranch size={16} />}
+            <span>接收新版本</span>
+          </button>
+        ) : null}
+        {item.publication.canPublish ? (
+          <button
+            type="button"
+            className="knowledge-ingestion-primary-button"
+            disabled={isActionRunning}
+            onClick={() => onOpenPublish(item.itemId)}
+          >
+            <Send size={16} />
+            <span>发布</span>
+          </button>
+        ) : null}
+        {item.publication.canRollback ? (
+          <button
+            type="button"
+            className="knowledge-ingestion-danger-button"
+            disabled={isActionRunning}
+            onClick={() => onOpenRollback(item.itemId)}
+          >
+            <RotateCcw size={16} />
+            <span>回滚</span>
+          </button>
+        ) : null}
+        {item.publication.canRetry ? (
+          <button
+            type="button"
+            className="knowledge-ingestion-secondary-button"
+            disabled={isActionRunning}
+            onClick={() => onRetry(item.itemId)}
+          >
+            <RefreshCw size={16} className={isActionRunning ? 'is-spinning' : ''} />
+            <span>重试发布操作</span>
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
 }
 
 export function KnowledgeIngestionWorkspace({
@@ -236,8 +375,11 @@ export function KnowledgeIngestionWorkspace({
   const cancelProcessing = useAppStore((state) => state.cancelKnowledgeIngestionItemProcessing);
   const retryProcessing = useAppStore((state) => state.retryKnowledgeIngestionItemProcessing);
   const startQualityCheck = useAppStore((state) => state.startKnowledgeIngestionItemQualityCheck);
+  const receiveNextVersion = useAppStore((state) => state.receiveKnowledgeIngestionNextVersion);
+  const startPublication = useAppStore((state) => state.startKnowledgeIngestionItemPublication);
+  const startRollback = useAppStore((state) => state.startKnowledgeIngestionItemRollback);
+  const retryPublication = useAppStore((state) => state.retryKnowledgeIngestionItemPublication);
   const [metadataDraft, setMetadataDraft] = useState<KnowledgeIngestionMetadata>(emptyMetadata);
-  const [qualityQuestions, setQualityQuestions] = useState<KnowledgeIngestionQualityQuestionInput[]>([]);
   const [showRagflowConfig, setShowRagflowConfig] = useState(false);
   const [ragflowConfigDraft, setRagflowConfigDraft] = useState({
     baseUrl: 'http://127.0.0.1:9380',
@@ -248,32 +390,57 @@ export function KnowledgeIngestionWorkspace({
   const [datasetOptions, setDatasetOptions] = useState<KnowledgeIngestionRagflowDatasetOption[]>([]);
   const [isLoadingDatasetOptions, setIsLoadingDatasetOptions] = useState(false);
   const [datasetOptionsError, setDatasetOptionsError] = useState<string | null>(null);
+  const [publicationDialog, setPublicationDialog] = useState<PublicationConfirmationDialog | null>(null);
+  const publicationDialogCancelRef = useRef<HTMLButtonElement>(null);
+  const publicationDialogRef = useRef<HTMLDivElement>(null);
+  const detailHeaderRef = useRef<HTMLDivElement>(null);
 
   const selectedItem = useMemo(
     () => items.find((item) => item.itemId === selectedItemId) ?? null,
     [items, selectedItemId],
   );
+  const publicationDialogItem = useMemo(
+    () => items.find((item) => item.itemId === publicationDialog?.itemId) ?? null,
+    [items, publicationDialog?.itemId],
+  );
   const selectedQualitySummary = selectedItem?.lifecycle.qualitySummary ?? null;
+  const selectedPublicationSummary = selectedItem?.publication ?? null;
   const canPrepareSelectedQualityCheck = selectedItem ? canPrepareQualityCheck(selectedItem) : false;
   const isSelectedQualityCheckActive = selectedQualitySummary?.status === 'queued'
     || selectedQualitySummary?.status === 'running';
   const selectedQualityHasProblem = selectedQualitySummary?.status === 'blocked'
     || selectedQualitySummary?.status === 'failed'
     || selectedQualitySummary?.status === 'expired';
+  const selectedPublicationHasProblem = selectedPublicationSummary?.operationStatus === 'attention_required'
+    || selectedPublicationSummary?.operationStatus === 'failed';
+  const selectedWorkflowIsQuarantined = selectedItem?.lifecycle.workflowStatus === 'quarantined';
+  const isSelectedPublicationBusy = selectedPublicationSummary?.operationStatus === 'queued'
+    || selectedPublicationSummary?.operationStatus === 'running'
+    || selectedPublicationSummary?.operationStatus === 'compensating'
+    || selectedPublicationSummary?.operationStatus === 'retry_scheduled';
   const selectedHasActiveJob = Boolean(selectedItem && (
     isSelectedQualityCheckActive
+    || isSelectedPublicationBusy
     || (selectedItem.lifecycle.currentJobStatus
       && ['queued', 'running', 'cancel_requested'].includes(selectedItem.lifecycle.currentJobStatus))
   ));
-  const qualityQuestionsValidation = getQualityQuestionsValidation(qualityQuestions);
   const canStartSelectedQualityCheck = canPrepareSelectedQualityCheck
     && !isSelectedQualityCheckActive
-    && qualityQuestionsValidation === null
     && actionItemId !== selectedItem?.itemId;
   const shouldShowQualityPanel = Boolean(selectedItem && !selectedItem.isDuplicate && (
     canPrepareSelectedQualityCheck
     || selectedQualitySummary?.status !== 'not_started'
     || selectedItem.lifecycle.workflowStatus === 'pending_publication'
+  ));
+  const shouldShowPublicationPanel = Boolean(selectedItem && !selectedItem.isDuplicate && (
+    selectedItem.lifecycle.workflowStatus === 'pending_publication'
+    || selectedItem.lifecycle.workflowStatus === 'published'
+    || selectedItem.lifecycle.workflowStatus === 'superseded'
+    || (
+      selectedItem.lifecycle.workflowStatus === 'quarantined'
+      && selectedPublicationSummary?.operationStatus !== 'not_started'
+    )
+    || selectedPublicationSummary?.operationStatus !== 'not_started'
   ));
   const pendingCount = items.filter((item) => (
     !item.isDuplicate && item.lifecycle.workflowStatus === 'pending_confirmation'
@@ -298,29 +465,118 @@ export function KnowledgeIngestionWorkspace({
     item.lifecycle.qualitySummary.status === 'queued'
     || item.lifecycle.qualitySummary.status === 'running'
   ));
+  const hasActivePublicationOperation = items.some((item) => (
+    item.publication.operationStatus === 'queued'
+    || item.publication.operationStatus === 'running'
+    || item.publication.operationStatus === 'compensating'
+    || item.publication.operationStatus === 'retry_scheduled'
+  ));
 
   useEffect(() => {
     void load();
   }, [load]);
 
   useEffect(() => {
-    if (!hasActiveC2Job && !hasActiveQualityCheck) return undefined;
-    // 只在后台处理仍活跃时静默刷新，避免全局 loading 导致按钮和表单每两秒闪烁。
-    const timer = window.setInterval(() => {
-      void refreshItems();
-    }, 2_000);
-    return () => window.clearInterval(timer);
-  }, [hasActiveC2Job, hasActiveQualityCheck, refreshItems]);
+    if (!hasActiveC2Job && !hasActiveQualityCheck && !hasActivePublicationOperation) return undefined;
+    let cancelled = false;
+    let timer: number | undefined;
+    // 前一次静默刷新结束后再安排下一次，避免慢磁盘下叠加并发列表请求。
+    const poll = async () => {
+      await refreshItems();
+      if (!cancelled) timer = window.setTimeout(poll, 2_000);
+    };
+    timer = window.setTimeout(poll, 2_000);
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [hasActiveC2Job, hasActivePublicationOperation, hasActiveQualityCheck, refreshItems]);
+
+  useEffect(() => {
+    const expiresAt = selectedQualitySummary?.expiresAt;
+    if (
+      !selectedItem
+      || selectedItem.lifecycle.workflowStatus !== 'pending_publication'
+      || selectedQualitySummary?.status !== 'passed'
+      || !expiresAt
+    ) return undefined;
+    const expiresAtMs = Date.parse(expiresAt);
+    if (!Number.isFinite(expiresAtMs)) return undefined;
+    // 到达失效点后持续单飞刷新，直到 Main 返回 expired，短暂 IPC 失败不能留下旧发布按钮。
+    let cancelled = false;
+    let timer: number | undefined;
+    const refreshUntilExpiredSnapshotArrives = async () => {
+      await refreshItems();
+      if (!cancelled) timer = window.setTimeout(refreshUntilExpiredSnapshotArrives, 2_000);
+    };
+    timer = window.setTimeout(
+      refreshUntilExpiredSnapshotArrives,
+      Math.max(0, expiresAtMs - Date.now() + 25),
+    );
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [refreshItems, selectedItem, selectedQualitySummary]);
+
+  useEffect(() => {
+    if (publicationDialog?.itemId && !publicationDialogItem) {
+      setPublicationDialog(null);
+    }
+  }, [publicationDialog?.itemId, publicationDialogItem]);
+
+  useEffect(() => {
+    if (!publicationDialog) return undefined;
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    publicationDialogCancelRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPublicationDialog(null);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const dialog = publicationDialogRef.current;
+      if (!dialog) return;
+      const focusable = [...dialog.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )].filter((element) => !element.hasAttribute('hidden'));
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) return;
+      if (!dialog.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      } else if (!focusable.includes(document.activeElement as HTMLElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.requestAnimationFrame(() => {
+        if (document.querySelector('.knowledge-ingestion-publication-dialog')) return;
+        if (previouslyFocused?.isConnected) {
+          previouslyFocused.focus();
+        } else {
+          detailHeaderRef.current?.focus();
+        }
+      });
+    };
+  }, [publicationDialog?.itemId, publicationDialog?.kind]);
 
   useEffect(() => {
     // 静默轮询会替换列表对象，但不能覆盖用户正在填写的待确认元数据。
     setMetadataDraft(selectedItem ? { ...selectedItem.metadata } : { ...emptyMetadata });
   }, [selectedItem?.itemId]);
-
-  useEffect(() => {
-    // 进入质量检查阶段时按已确认元数据生成三条可编辑问题，轮询不会覆盖正在填写的证据。
-    setQualityQuestions(selectedItem ? createDefaultQualityQuestions(selectedItem) : []);
-  }, [selectedItem?.itemId, selectedItem?.lifecycle.workflowStatus]);
 
   useEffect(() => {
     if (!ragflowConfig) return;
@@ -337,16 +593,6 @@ export function KnowledgeIngestionWorkspace({
 
   const updateMetadata = (field: keyof KnowledgeIngestionMetadata, value: string) => {
     setMetadataDraft((current) => ({ ...current, [field]: value }));
-  };
-
-  const updateQualityQuestion = (
-    index: number,
-    field: keyof KnowledgeIngestionQualityQuestionInput,
-    value: string,
-  ) => {
-    setQualityQuestions((current) => current.map((item, itemIndex) => (
-      itemIndex === index ? { ...item, [field]: value } : item
-    )));
   };
 
   const canConfirm = selectedItem?.status === 'pending_confirmation'
@@ -381,6 +627,21 @@ export function KnowledgeIngestionWorkspace({
     } finally {
       setIsLoadingDatasetOptions(false);
     }
+  };
+
+  const confirmPublicationAction = () => {
+    if (!publicationDialog || !publicationDialogItem) return;
+    const itemId = publicationDialogItem.itemId;
+    if (publicationDialog.kind === 'rollback') {
+      const reason = publicationDialog.reason.trim();
+      if (!reason || !publicationDialogItem.publication.canRollback) return;
+      setPublicationDialog(null);
+      void startRollback({ itemId, reason });
+      return;
+    }
+    if (!publicationDialogItem.publication.canPublish) return;
+    setPublicationDialog(null);
+    void startPublication({ itemId });
   };
 
   return (
@@ -579,7 +840,7 @@ export function KnowledgeIngestionWorkspace({
             </div>
           ) : (
             <>
-              <div className="knowledge-ingestion-detail-header">
+              <div className="knowledge-ingestion-detail-header" ref={detailHeaderRef} tabIndex={-1}>
                 <div>
                   <span className={`knowledge-ingestion-status status-${getPrimaryStatusClass(selectedItem)}`}>
                     {getPrimaryStatus(selectedItem)}
@@ -590,26 +851,40 @@ export function KnowledgeIngestionWorkspace({
                     哈希 {selectedItem.contentHash.slice(0, 12)}
                   </p>
                 </div>
-                {selectedItem.lifecycle.errorMessage || selectedQualityHasProblem
+                {selectedItem.lifecycle.errorMessage
+                  || selectedQualityHasProblem
+                  || selectedPublicationHasProblem
+                  || selectedWorkflowIsQuarantined
                   ? <AlertCircle size={24} className="knowledge-ingestion-error-icon" />
                   : null}
                 {!selectedItem.isDuplicate
                   && !selectedItem.lifecycle.errorMessage
                   && !selectedQualityHasProblem
+                  && !selectedPublicationHasProblem
+                  && !selectedWorkflowIsQuarantined
                   && selectedHasActiveJob
                   ? <LoaderCircle size={24} className="is-spinning" />
                   : null}
                 {!selectedItem.isDuplicate
                   && !selectedItem.lifecycle.errorMessage
                   && !selectedQualityHasProblem
+                  && !selectedPublicationHasProblem
+                  && !selectedWorkflowIsQuarantined
                   && !selectedHasActiveJob
-                  && (selectedQualitySummary?.status === 'passed'
-                    || selectedItem.lifecycle.workflowStatus === 'pending_publication')
+                  && (
+                    selectedItem.lifecycle.workflowStatus === 'pending_publication'
+                    || (
+                      selectedItem.lifecycle.workflowStatus === 'published'
+                      && selectedPublicationSummary?.isCurrentVersion
+                    )
+                  )
                   ? <CheckCircle2 size={24} />
                   : null}
                 {!selectedItem.isDuplicate
                   && !selectedItem.lifecycle.errorMessage
                   && !selectedQualityHasProblem
+                  && !selectedPublicationHasProblem
+                  && !selectedWorkflowIsQuarantined
                   && !selectedHasActiveJob
                   && selectedItem.lifecycle.workflowStatus === 'quality_check'
                   ? <ShieldCheck size={24} />
@@ -717,111 +992,39 @@ export function KnowledgeIngestionWorkspace({
                       <div className="knowledge-ingestion-quality-guidance">
                         <ShieldCheck size={18} />
                         <div>
-                          <strong>问题与证据由你确认后再提交</strong>
-                          <span>请保留 3 至 5 条资料内问题，并为每条问题填写可核对的标题、段落或表格证据。</span>
+                          <strong>
+                            {selectedQualitySummary.status === 'expired'
+                              ? '质量结论已过期，请重新执行索引健康检查'
+                              : '系统将自动检查索引健康'}
+                          </strong>
+                          <span>系统会按资料结构抽取 1 至 3 段原文，验证索引可检回且不会串入其他资料。</span>
                         </div>
-                      </div>
-                      <form
-                        className="knowledge-ingestion-quality-form"
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          if (!canStartSelectedQualityCheck || !selectedItem) return;
-                          void startQualityCheck({
-                            itemId: selectedItem.itemId,
-                            questions: qualityQuestions.map((item) => ({
-                              question: item.question.trim(),
-                              evidence: item.evidence.trim(),
-                            })),
-                          });
-                        }}
-                      >
-                      <div className="knowledge-ingestion-quality-question-toolbar">
-                        <span>冒烟问题</span>
-                        <strong>{qualityQuestions.length} / 5</strong>
-                      </div>
-                      <div className="knowledge-ingestion-quality-question-list">
-                        {qualityQuestions.map((item, index) => (
-                          <article className="knowledge-ingestion-quality-question" key={`quality-question-${index + 1}`}>
-                            <div className="knowledge-ingestion-quality-question-header">
-                              <strong>问题 {index + 1}</strong>
-                              <button
-                                type="button"
-                                className="knowledge-ingestion-quality-remove-button"
-                                title="删除这条问题"
-                                aria-label={`删除第 ${index + 1} 条问题`}
-                                disabled={qualityQuestions.length <= 3
-                                  || isSelectedQualityCheckActive
-                                  || actionItemId === selectedItem.itemId}
-                                onClick={() => setQualityQuestions((current) => (
-                                  current.filter((_, itemIndex) => itemIndex !== index)
-                                ))}
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                            <div className="knowledge-ingestion-quality-question-fields">
-                              <label>
-                                <span>资料内问题 *</span>
-                                <textarea
-                                  value={item.question}
-                                  maxLength={500}
-                                  disabled={isSelectedQualityCheckActive
-                                    || actionItemId === selectedItem.itemId}
-                                  onChange={(event) => updateQualityQuestion(index, 'question', event.target.value)}
-                                />
-                              </label>
-                              <label>
-                                <span>来源证据 *</span>
-                                <textarea
-                                  value={item.evidence}
-                                  maxLength={1_000}
-                                  placeholder="例如：第三章第二节标题下的第 2 段，说明了……"
-                                  disabled={isSelectedQualityCheckActive
-                                    || actionItemId === selectedItem.itemId}
-                                  onChange={(event) => updateQualityQuestion(index, 'evidence', event.target.value)}
-                                />
-                              </label>
-                            </div>
-                          </article>
-                        ))}
                       </div>
                       <div className="knowledge-ingestion-quality-form-footer">
-                        <div>
-                          <button
-                            type="button"
-                            className="knowledge-ingestion-secondary-button"
-                            disabled={qualityQuestions.length >= 5
-                              || isSelectedQualityCheckActive
-                              || actionItemId === selectedItem.itemId}
-                            onClick={() => setQualityQuestions((current) => [
-                              ...current,
-                              { question: '', evidence: '' },
-                            ])}
-                          >
-                            <Plus size={15} />
-                            <span>增加问题</span>
-                          </button>
-                          <span
-                            className={qualityQuestionsValidation
-                              ? 'knowledge-ingestion-quality-validation'
-                              : 'knowledge-ingestion-quality-validation is-valid'}
-                            aria-live="polite"
-                          >
-                            {qualityQuestionsValidation ?? '问题和来源证据已填写完整。'}
-                          </span>
-                        </div>
+                        <p className="knowledge-ingestion-quality-suggest-hint">
+                          此检查证明当前索引的抽样可检索性和范围安全；资料是否符合用途以接收时确认的元数据和内容为准。
+                        </p>
                         <button
-                          type="submit"
+                          type="button"
                           className="knowledge-ingestion-primary-button"
                           disabled={!canStartSelectedQualityCheck}
+                          onClick={() => {
+                            if (!canStartSelectedQualityCheck || !selectedItem) return;
+                            void startQualityCheck({ itemId: selectedItem.itemId });
+                          }}
                         >
                           {isSelectedQualityCheckActive || actionItemId === selectedItem.itemId
                             ? <LoaderCircle size={16} className="is-spinning" />
                             : <Play size={16} />}
-                          <span>{isSelectedQualityCheckActive ? '质量检查进行中' : '开始质量检查'}</span>
+                          <span>
+                            {isSelectedQualityCheckActive
+                              ? '质量检查进行中'
+                              : selectedQualitySummary.status === 'expired'
+                                ? '重新质量检查'
+                                : '开始质量检查'}
+                          </span>
                         </button>
                       </div>
-                      </form>
                     </>
                   ) : null}
 
@@ -840,13 +1043,14 @@ export function KnowledgeIngestionWorkspace({
                               : ''}
                           </span>
                         </div>
-                        <p>{selectedQualitySummary.conclusion ?? getQualityOutcomeMessage(selectedItem)}</p>
+                        <p>{getQualityConclusionText(selectedItem)}</p>
                       </div>
 
-                      {selectedQualitySummary.status === 'passed' ? (
+                      {selectedQualitySummary.status === 'passed'
+                        && selectedItem.lifecycle.workflowStatus === 'pending_publication' ? (
                         <div className="knowledge-ingestion-quality-outcome outcome-passed">
                           <CheckCircle2 size={17} />
-                          <span>当前状态：待发布。本步骤不提供发布按钮。</span>
+                          <span>当前状态：待发布。请在下方“发布与版本”区域确认影响后发布。</span>
                         </div>
                       ) : null}
                       {selectedQualitySummary.status === 'blocked'
@@ -891,6 +1095,17 @@ export function KnowledgeIngestionWorkspace({
                     </div>
                   ) : null}
                 </section>
+              ) : null}
+
+              {shouldShowPublicationPanel ? (
+                <KnowledgeIngestionPublicationPanel
+                  item={selectedItem}
+                  actionItemId={actionItemId}
+                  onReceiveNextVersion={(itemId) => void receiveNextVersion({ itemId })}
+                  onOpenPublish={(itemId) => setPublicationDialog({ kind: 'publish', itemId, reason: '' })}
+                  onOpenRollback={(itemId) => setPublicationDialog({ kind: 'rollback', itemId, reason: '' })}
+                  onRetry={(itemId) => void retryPublication({ itemId })}
+                />
               ) : null}
 
               {selectedItem.isDuplicate ? (
@@ -1050,6 +1265,93 @@ export function KnowledgeIngestionWorkspace({
           )}
         </section>
       </main>
+      {publicationDialog && publicationDialogItem ? (
+        <div
+          className="knowledge-ingestion-dialog-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPublicationDialog(null);
+          }}
+        >
+          <div
+            ref={publicationDialogRef}
+            className="knowledge-ingestion-publication-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="knowledge-ingestion-publication-dialog-title"
+          >
+            <div className="knowledge-ingestion-publication-dialog-header">
+              <div>
+                <span>二次确认</span>
+                <h3 id="knowledge-ingestion-publication-dialog-title">
+                  {publicationDialog.kind === 'publish'
+                    ? `确认发布${publicationDialogItem.publication.versionLabel}`
+                    : `确认回滚${publicationDialogItem.publication.previousVersionLabel ?? '上一版本'}`}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="knowledge-ingestion-icon-button"
+                title="关闭确认窗口"
+                aria-label="关闭确认窗口"
+                onClick={() => setPublicationDialog(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="knowledge-ingestion-publication-dialog-impact">
+              <AlertCircle size={20} />
+              <div>
+                <strong>影响说明</strong>
+                <p>
+                  {publicationDialog.kind === 'publish'
+                    ? publicationDialogItem.publication.previousVersionLabel
+                      ? `发布“${publicationDialogItem.fileName}”后，${publicationDialogItem.publication.versionLabel}将替代${publicationDialogItem.publication.previousVersionLabel}成为正式版本。系统会先完成远端核验，再切换正式可见性。`
+                      : `发布“${publicationDialogItem.fileName}”后，${publicationDialogItem.publication.versionLabel}将成为该资料分支的首个正式版本。系统会先完成远端核验，再切换正式可见性。`
+                    : `回滚“${publicationDialogItem.fileName}”会恢复${publicationDialogItem.publication.previousVersionLabel ?? '上一版本'}为正式版本，并隔离当前问题版本。回滚不重新上传，但会重新核验受管索引。`}
+                </p>
+              </div>
+            </div>
+            {publicationDialog.kind === 'rollback' ? (
+              <label className="knowledge-ingestion-publication-reason">
+                <span>回滚原因 *</span>
+                <textarea
+                  value={publicationDialog.reason}
+                  maxLength={500}
+                  placeholder="请说明问题表现、影响范围或恢复依据。"
+                  onChange={(event) => setPublicationDialog((current) => (
+                    current ? { ...current, reason: event.target.value } : current
+                  ))}
+                />
+                <small>{publicationDialog.reason.trim().length} / 500</small>
+              </label>
+            ) : null}
+            <div className="knowledge-ingestion-publication-dialog-footer">
+              <button
+                ref={publicationDialogCancelRef}
+                type="button"
+                className="knowledge-ingestion-secondary-button"
+                onClick={() => setPublicationDialog(null)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className={publicationDialog.kind === 'rollback'
+                  ? 'knowledge-ingestion-danger-button'
+                  : 'knowledge-ingestion-primary-button'}
+                disabled={actionItemId === publicationDialogItem.itemId
+                  || (publicationDialog.kind === 'publish'
+                    ? !publicationDialogItem.publication.canPublish
+                    : !publicationDialogItem.publication.canRollback || !publicationDialog.reason.trim())}
+                onClick={confirmPublicationAction}
+              >
+                {publicationDialog.kind === 'rollback' ? <RotateCcw size={16} /> : <Send size={16} />}
+                <span>{publicationDialog.kind === 'publish' ? '确认发布' : '确认回滚'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

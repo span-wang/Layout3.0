@@ -10,7 +10,10 @@ import { buildLayout3PendingMetadata } from './ingestion-metadata';
 
 const C2_JOB_STAGES = ['extraction', 'upload', 'parse_wait'] as const;
 const QUALITY_JOB_STAGE = 'quality' as const;
-type RunnerJobStage = (typeof C2_JOB_STAGES)[number] | typeof QUALITY_JOB_STAGE;
+const PUBLICATION_JOB_STAGE = 'publication_compensation' as const;
+type RunnerJobStage = (typeof C2_JOB_STAGES)[number]
+  | typeof QUALITY_JOB_STAGE
+  | typeof PUBLICATION_JOB_STAGE;
 
 interface RunnerAuditContext {
   actorId: string;
@@ -142,6 +145,22 @@ export interface QualityJobExecutor {
   }): void;
 }
 
+/** 发布操作自行管理 operation、job 与版本收口，不能沿用 C2 的版本失败写法。 */
+export interface PublicationJobExecutor {
+  execute(input: {
+    job: ProcessingJobRecord;
+    workerId: string;
+    signal: AbortSignal;
+  }): Promise<void>;
+  fail(input: {
+    job: ProcessingJobRecord;
+    workerId: string;
+    errorCode: string;
+    errorMessage: string;
+    retryAt: string | null;
+  }): void;
+}
+
 export interface ProcessingRunnerOptions {
   workerId?: string;
   leaseDurationMs?: number;
@@ -154,6 +173,7 @@ export interface ProcessingRunnerOptions {
   now?: () => Date;
   remoteFactory?: RagflowRemoteFactory;
   qualityExecutor?: QualityJobExecutor;
+  publicationExecutor?: PublicationJobExecutor;
 }
 
 interface CapturedHealthyBinding {
@@ -206,6 +226,7 @@ export class ProcessingRunner {
   private readonly now: () => Date;
   private readonly remoteFactory: RagflowRemoteFactory;
   private readonly qualityExecutor: QualityJobExecutor | null;
+  private readonly publicationExecutor: PublicationJobExecutor | null;
   private stopping = false;
   private loopPromise: Promise<void> | null = null;
   private activeJobPromise: Promise<void> | null = null;
@@ -236,6 +257,7 @@ export class ProcessingRunner {
       apiKey: config.apiKey,
     }));
     this.qualityExecutor = options.qualityExecutor ?? null;
+    this.publicationExecutor = options.publicationExecutor ?? null;
   }
 
   start(): void {
@@ -276,9 +298,11 @@ export class ProcessingRunner {
     const job = this.store.claimNextJob({
       workerId: this.workerId,
       leaseDurationMs: this.leaseDurationMs,
-      stages: this.qualityExecutor
-        ? [...C2_JOB_STAGES, QUALITY_JOB_STAGE]
-        : [...C2_JOB_STAGES],
+      stages: [
+        ...C2_JOB_STAGES,
+        ...(this.qualityExecutor ? [QUALITY_JOB_STAGE] : []),
+        ...(this.publicationExecutor ? [PUBLICATION_JOB_STAGE] : []),
+      ],
       audit: {
         actorId: 'system:processing-runner',
         reason: 'C2 runner 领取允许阶段的下一项持久任务。',
@@ -355,6 +379,12 @@ export class ProcessingRunner {
         await this.runParseWait(job, controller.signal);
       } else if (job.stage === QUALITY_JOB_STAGE && this.qualityExecutor) {
         await this.qualityExecutor.execute({
+          job,
+          workerId: this.workerId,
+          signal: controller.signal,
+        });
+      } else if (job.stage === PUBLICATION_JOB_STAGE && this.publicationExecutor) {
+        await this.publicationExecutor.execute({
           job,
           workerId: this.workerId,
           signal: controller.signal,
@@ -598,6 +628,21 @@ export class ProcessingRunner {
     if (job.stage === QUALITY_JOB_STAGE && this.qualityExecutor) {
       try {
         this.qualityExecutor.fail({
+          job,
+          workerId: this.workerId,
+          errorCode: getStableErrorCode(error),
+          errorMessage: getErrorMessage(error),
+          retryAt,
+        });
+      } catch (failureError) {
+        if (!isJobStateConflict(failureError)) throw failureError;
+        this.wake();
+      }
+      return;
+    }
+    if (job.stage === PUBLICATION_JOB_STAGE && this.publicationExecutor) {
+      try {
+        this.publicationExecutor.fail({
           job,
           workerId: this.workerId,
           errorCode: getStableErrorCode(error),

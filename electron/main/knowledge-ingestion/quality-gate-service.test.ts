@@ -268,14 +268,6 @@ async function createContext(): Promise<{
   };
 }
 
-function qualityQuestions() {
-  return [
-    { question: '第一条资料的要求是什么？', evidence: '第一条唯一正文证据。' },
-    { question: '第二条资料的要求是什么？', evidence: '第二条唯一正文证据。' },
-    { question: '第三条资料的要求是什么？', evidence: '第三条唯一正文证据。' },
-  ];
-}
-
 function createArtifactService(
   context: Awaited<ReturnType<typeof createContext>>,
   listArtifacts = () => [context.artifacts.body, context.artifacts.locatorMap, context.artifacts.manifest],
@@ -299,10 +291,7 @@ test('PH3-13C3 QualityGateService 通过 runner 完成 Top 10、证据、零泄�
       config,
       { now: context.clock.now, remoteFactory: () => remote },
     );
-    const created = await service.createRun({
-      versionId: 'ver-quality-service',
-      questions: qualityQuestions(),
-    });
+    const created = await service.createRun({ versionId: 'ver-quality-service' });
     const runner = new ProcessingRunner(context.store, artifactService, config, {
       workerId: 'worker-quality-service-pass',
       now: context.clock.now,
@@ -320,7 +309,7 @@ test('PH3-13C3 QualityGateService 通过 runner 完成 Top 10、证据、零泄�
     const results = context.repository.listResults(created.run.qualityRunId);
     assert.equal(results.filter((result) => result.blockingLevel === 'blocking').every((result) => result.passed), true);
     assert.equal(results.some((result) => result.resultKey === 'formal_zero_leak'), true);
-    assert.equal(remote.calls.length, 3);
+    assert.equal(remote.calls.length, 1);
     await runner.stop();
   } finally {
     context.cleanup();
@@ -378,10 +367,7 @@ test('PH3-13C3 execute 会重新读取三工件，删除、篡改或快照元数
           config,
           { now: context.clock.now, remoteFactory: () => remote },
         );
-        const created = await service.createRun({
-          versionId: 'ver-quality-service',
-          questions: qualityQuestions(),
-        });
+        const created = await service.createRun({ versionId: 'ver-quality-service' });
         entry.mutate(context);
         const runner = new ProcessingRunner(context.store, artifactService, config, {
           workerId: `worker-artifact-${entry.name}`,
@@ -406,11 +392,11 @@ test('PH3-13C3 execute 会重新读取三工件，删除、篡改或快照元数
   }
 });
 
-test('PH3-13C3 同一 run 远端退避重试时以当前 attempt 覆盖旧结果', async () => {
+test('PH3-13C3 单个自动样本遇到可重试远端错误后使用下一 attempt 的结果', async () => {
   const context = await createContext();
   const config = new FakeConfigStore();
   const artifactService = createArtifactService(context);
-  let retryStarted = false;
+  let firstAttempt = true;
   const calls: string[] = [];
   const remote = {
     async retrieveCandidates(input: {
@@ -419,8 +405,8 @@ test('PH3-13C3 同一 run 远端退避重试时以当前 attempt 覆盖旧结果
       documentIds: string[];
     }): Promise<QualityRetrievalRemoteCandidate[]> {
       calls.push(input.question);
-      if (!retryStarted && input.question.includes('第二')) {
-        retryStarted = true;
+      if (firstAttempt) {
+        firstAttempt = false;
         throw new RagflowError({
           code: 'REMOTE_TRANSIENT',
           reason: 'RATE_LIMITED',
@@ -428,20 +414,7 @@ test('PH3-13C3 同一 run 远端退避重试时以当前 attempt 覆盖旧结果
           retryable: true,
         });
       }
-      if (retryStarted && input.question.includes('第一')) {
-        return [];
-      }
-      const evidence = input.question.includes('第一')
-        ? '第一条唯一正文证据。'
-        : input.question.includes('第二')
-          ? '第二条唯一正文证据。'
-          : '第三条唯一正文证据。';
-      return [{
-        chunkId: `chunk-stateful-${calls.length}`,
-        content: evidence,
-        datasetId: input.datasetIds[0]!,
-        documentId: input.documentIds[0]!,
-      }];
+      return [];
     },
   };
   try {
@@ -452,10 +425,7 @@ test('PH3-13C3 同一 run 远端退避重试时以当前 attempt 覆盖旧结果
       config,
       { now: context.clock.now, remoteFactory: () => remote },
     );
-    const created = await service.createRun({
-      versionId: 'ver-quality-service',
-      questions: qualityQuestions(),
-    });
+    const created = await service.createRun({ versionId: 'ver-quality-service' });
     const runner = new ProcessingRunner(context.store, artifactService, config, {
       workerId: 'worker-quality-retry-results',
       now: context.clock.now,
@@ -467,11 +437,7 @@ test('PH3-13C3 同一 run 远端退避重试时以当前 attempt 覆盖旧结果
 
     assert.equal(await runner.runNextJob(), true);
     assert.equal(context.repository.getRun(created.run.qualityRunId).status, 'queued');
-    assert.equal(
-      context.repository.listResults(created.run.qualityRunId)
-        .find((result) => result.resultKey.endsWith(':candidate_top10'))?.passed,
-      true,
-    );
+    assert.equal(calls.length, 1);
 
     context.clock.advance(1_000);
     assert.equal(await runner.runNextJob(), true);
@@ -482,6 +448,7 @@ test('PH3-13C3 同一 run 远端退避重试时以当前 attempt 覆盖旧结果
       .filter((result) => result.resultKey === `${firstQuestionKey}:candidate_top10`);
     assert.equal(currentResults.length, 1);
     assert.equal(currentResults[0]?.passed, false);
+    assert.equal(calls.length, 2);
     await runner.stop();
   } finally {
     context.cleanup();
@@ -512,10 +479,7 @@ test('PH3-13C3 时钟跨过租约且 heartbeat 尚未恢复时 runner 会先恢�
       config,
       { now: context.clock.now, remoteFactory: () => remote },
     );
-    const created = await service.createRun({
-      versionId: 'ver-quality-service',
-      questions: qualityQuestions(),
-    });
+    const created = await service.createRun({ versionId: 'ver-quality-service' });
     const runner = new ProcessingRunner(context.store, artifactService, config, {
       workerId: 'worker-quality-lease-resume',
       now: context.clock.now,
@@ -552,10 +516,7 @@ test('PH3-13C3 候选零结果会成功执行检查但将版本隔离，不误�
       config,
       { now: context.clock.now, remoteFactory: () => remote },
     );
-    const created = await service.createRun({
-      versionId: 'ver-quality-service',
-      questions: qualityQuestions(),
-    });
+    const created = await service.createRun({ versionId: 'ver-quality-service' });
     const runner = new ProcessingRunner(context.store, artifactService, config, {
       workerId: 'worker-quality-service-zero',
       now: context.clock.now,
@@ -587,10 +548,7 @@ test('PH3-13C3 scope 外候选先记录阻断结果，再由执行服务原子�
       config,
       { now: context.clock.now, remoteFactory: () => remote },
     );
-    const created = await service.createRun({
-      versionId: 'ver-quality-service',
-      questions: qualityQuestions(),
-    });
+    const created = await service.createRun({ versionId: 'ver-quality-service' });
     const runner = new ProcessingRunner(context.store, artifactService, config, {
       workerId: 'worker-quality-service-outside',
       now: context.clock.now,

@@ -75,6 +75,19 @@ export const QUALITY_RUN_CONCLUSIONS = [
 
 export const QUALITY_BLOCKING_LEVELS = ['blocking', 'warning', 'info'] as const;
 
+export const PUBLICATION_OPERATION_TYPES = ['publish', 'rollback'] as const;
+
+export const PUBLICATION_OPERATION_PHASES = [
+  'prepared',
+  'target_active_verified',
+  'sqlite_switched',
+  'cleanup_verified',
+  'restore_target_pending',
+  'restore_target_superseded',
+  'completed',
+  'failed',
+] as const;
+
 export type WorkflowStatus = (typeof WORKFLOW_STATUSES)[number];
 export type ProcessingHealth = (typeof PROCESSING_HEALTH_STATUSES)[number];
 export type IndexPublicationStatus = (typeof INDEX_PUBLICATION_STATUSES)[number];
@@ -85,6 +98,8 @@ export type ProcessingArtifactType = (typeof PROCESSING_ARTIFACT_TYPES)[number];
 export type QualityRunStatus = (typeof QUALITY_RUN_STATUSES)[number];
 export type QualityRunConclusion = (typeof QUALITY_RUN_CONCLUSIONS)[number];
 export type QualityBlockingLevel = (typeof QUALITY_BLOCKING_LEVELS)[number];
+export type PublicationOperationType = (typeof PUBLICATION_OPERATION_TYPES)[number];
+export type PublicationOperationPhase = (typeof PUBLICATION_OPERATION_PHASES)[number];
 
 export interface MaterialRecord {
   canonicalId: string;
@@ -271,6 +286,33 @@ export interface ActiveRetrievalScope {
 export interface RetrievalDocumentValidation {
   acceptedDocumentIds: string[];
   rejectedDocumentIds: string[];
+}
+
+/**
+ * 发布操作只保存业务恢复检查点；任务尝试次数、租约与 worker 身份统一由 processing_jobs 管理。
+ */
+export interface PublicationOperationRecord {
+  operationId: string;
+  jobId: string;
+  operationType: PublicationOperationType;
+  canonicalId: string;
+  publicationBranchKey: string;
+  targetVersionId: string;
+  currentVersionId: string | null;
+  qualityRunId: string;
+  releaseId: string;
+  targetPublicationId: string;
+  currentPublicationId: string | null;
+  targetBindingId: string;
+  currentBindingId: string | null;
+  phase: PublicationOperationPhase;
+  inputSnapshot: Record<string, unknown>;
+  configSnapshot: Record<string, unknown>;
+  errorCode: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
 }
 
 export type RegistryErrorCode =

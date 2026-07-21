@@ -6,7 +6,7 @@ export interface RegistryMigration {
   sql: string;
 }
 
-export const REGISTRY_SCHEMA_VERSION = 4;
+export const REGISTRY_SCHEMA_VERSION = 5;
 
 export const REGISTRY_MIGRATIONS: readonly RegistryMigration[] = [
   {
@@ -405,6 +405,79 @@ export const REGISTRY_MIGRATIONS: readonly RegistryMigration[] = [
 
       CREATE INDEX quality_results_run_order
       ON quality_results(quality_run_id, created_at, quality_result_id);
+    `,
+  },
+  {
+    version: 5,
+    name: 'publication-operation-recovery-journal',
+    sql: `
+      CREATE TABLE publication_operations (
+        operation_id TEXT PRIMARY KEY,
+        job_id TEXT NOT NULL UNIQUE REFERENCES processing_jobs(job_id) ON DELETE RESTRICT,
+        operation_type TEXT NOT NULL CHECK (operation_type IN ('publish', 'rollback')),
+        canonical_id TEXT NOT NULL,
+        publication_branch_key TEXT NOT NULL,
+        target_version_id TEXT NOT NULL,
+        current_version_id TEXT REFERENCES material_versions(version_id) ON DELETE RESTRICT,
+        quality_run_id TEXT NOT NULL REFERENCES quality_runs(quality_run_id) ON DELETE RESTRICT,
+        release_id TEXT NOT NULL UNIQUE,
+        target_publication_id TEXT NOT NULL,
+        current_publication_id TEXT,
+        target_binding_id TEXT NOT NULL REFERENCES ragflow_bindings(binding_id) ON DELETE RESTRICT,
+        current_binding_id TEXT REFERENCES ragflow_bindings(binding_id) ON DELETE RESTRICT,
+        phase TEXT NOT NULL CHECK (phase IN (
+          'prepared', 'target_active_verified', 'sqlite_switched', 'cleanup_verified',
+          'restore_target_pending', 'restore_target_superseded', 'completed', 'failed'
+        )),
+        input_snapshot_json TEXT NOT NULL CHECK (json_valid(input_snapshot_json)),
+        config_snapshot_json TEXT NOT NULL CHECK (json_valid(config_snapshot_json)),
+        error_code TEXT,
+        error_message TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        CHECK ((error_code IS NULL) = (error_message IS NULL)),
+        CHECK (
+          (phase IN ('completed', 'failed') AND completed_at IS NOT NULL)
+          OR (phase NOT IN ('completed', 'failed') AND completed_at IS NULL)
+        ),
+        CHECK (phase <> 'failed' OR error_code IS NOT NULL),
+        CHECK (phase <> 'completed' OR error_code IS NULL),
+        FOREIGN KEY (canonical_id, publication_branch_key)
+          REFERENCES publication_branches(canonical_id, branch_key) ON DELETE RESTRICT,
+        FOREIGN KEY (canonical_id, publication_branch_key, target_version_id)
+          REFERENCES material_versions(canonical_id, publication_branch_key, version_id) ON DELETE RESTRICT
+      ) STRICT;
+
+      CREATE UNIQUE INDEX publication_operations_one_open_per_branch
+      ON publication_operations(canonical_id, publication_branch_key)
+      WHERE phase NOT IN ('completed', 'failed');
+
+      CREATE INDEX publication_operations_recovery_lookup
+      ON publication_operations(phase, updated_at, operation_id);
+
+      CREATE TRIGGER publication_operations_validate_job_insert
+      BEFORE INSERT ON publication_operations
+      BEGIN
+        SELECT CASE WHEN NOT EXISTS (
+          SELECT 1
+          FROM processing_jobs job
+          WHERE job.job_id = NEW.job_id
+            AND job.version_id = NEW.target_version_id
+            AND job.stage = 'publication_compensation'
+        ) THEN RAISE(ABORT, 'PUBLICATION_OPERATION_JOB_INVALID') END;
+      END;
+
+      CREATE TRIGGER publication_operations_identity_immutable
+      BEFORE UPDATE OF
+        job_id, operation_type, canonical_id, publication_branch_key, target_version_id,
+        current_version_id, quality_run_id, release_id, target_publication_id,
+        current_publication_id, target_binding_id, current_binding_id,
+        input_snapshot_json, config_snapshot_json
+      ON publication_operations
+      BEGIN
+        SELECT RAISE(ABORT, 'PUBLICATION_OPERATION_IDENTITY_IMMUTABLE');
+      END;
     `,
   },
 ];

@@ -87,3 +87,21 @@ export function assertVersionStatePatch(
     );
   }
 }
+
+/** 仅供质量仓储在同一事务核验“结论过期且无开放发布操作”后执行受控退回。 */
+export function assertExpiredQualityRecheckTransition(current: {
+  workflowStatus: WorkflowStatus;
+  processingHealth: ProcessingHealth;
+  indexPublicationStatus: IndexPublicationStatus;
+}): void {
+  if (
+    current.workflowStatus !== 'pending_publication'
+    || current.processingHealth !== 'healthy'
+    || current.indexPublicationStatus !== 'pending'
+  ) {
+    throw new RegistryError(
+      'INVALID_STATE_TRANSITION',
+      '只有 pending_publication / healthy / pending 的资料可以受控退回质量检查。',
+    );
+  }
+}

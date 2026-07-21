@@ -120,6 +120,31 @@ function parseMetadata(value: unknown, fieldName = 'meta_fields'): RagflowMetada
   );
 }
 
+/** RAGFlow 0.25.0 不接受 metadata 中的 None，出站前必须在本地失败关闭。 */
+function assertMetadataHasNoNull(value: RagflowMetadataValue, fieldPath: string): void {
+  if (value === null) {
+    throw createRagflowContractError(
+      'INVALID_RESPONSE',
+      `待写入 RAGFlow 的 metadata 字段 ${fieldPath} 不能为 null。`,
+    );
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertMetadataHasNoNull(item, `${fieldPath}[${index}]`));
+    return;
+  }
+  if (isRecord(value)) {
+    Object.entries(value).forEach(([key, child]) => assertMetadataHasNoNull(child, `${fieldPath}.${key}`));
+  }
+}
+
+function parseOutboundMetadata(value: unknown): RagflowMetadata {
+  const metadata = parseMetadata(value, '待写入 metadata');
+  Object.entries(metadata).forEach(([field, fieldValue]) => {
+    assertMetadataHasNoNull(fieldValue, `meta_fields.${field}`);
+  });
+  return metadata;
+}
+
 function parseDocument(value: unknown): RagflowDocument {
   if (!isRecord(value) || typeof value.id !== 'string' || typeof value.name !== 'string') {
     throw createRagflowContractError('INVALID_RESPONSE', 'RAGFlow 文档缺少有效的 id 或 name。');
@@ -450,7 +475,7 @@ export class RagflowClient {
   }): Promise<RagflowDocument> {
     const safeDatasetId = requireRemoteIdentifier(input.datasetId, 'datasetId');
     const safeDocumentId = requireRemoteIdentifier(input.documentId, 'documentId');
-    const metadata = parseMetadata(input.metadata, '待写入 metadata');
+    const metadata = parseOutboundMetadata(input.metadata);
     await this.requestMutation(
       `/api/v1/datasets/${encodeURIComponent(safeDatasetId)}/documents/${encodeURIComponent(safeDocumentId)}`,
       `写入 RAGFlow 文档 ${safeDocumentId} 的 metadata`,

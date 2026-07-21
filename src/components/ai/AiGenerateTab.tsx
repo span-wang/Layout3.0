@@ -118,6 +118,7 @@ export function AiGenerateTab(): JSX.Element {
   const [subject, setSubject] = useState('');
   const [requirementDescription, setRequirementDescription] = useState('');
   const [length, setLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const [shouldGenerateOutline, setShouldGenerateOutline] = useState(false);
   const [selectedXiaohongshuTitle, setSelectedXiaohongshuTitle] = useState('');
   const [selectedXiaohongshuCopy, setSelectedXiaohongshuCopy] = useState('');
   const [outlineDraft, setOutlineDraft] = useState('');
@@ -476,6 +477,29 @@ export function AiGenerateTab(): JSX.Element {
     }
   };
 
+  const runEducationDirectGenerate = async (context: GenerateContext, config: AiConfigProfile) => {
+    setGenerationDialogView('content');
+    const abortController = beginGenerateRequest('content');
+    try {
+      aiService.configure(config);
+      resetOutlineReview();
+
+      // 跳过大纲时仍只检索一次知识库，并把同一批来源交给结果区和生成记录。
+      const { knowledgeContext, knowledgeSources } = await loadKnowledgeContext(context, abortController.signal);
+      setGeneratedKnowledgeSources(knowledgeSources);
+
+      const options = buildGenerateOptions(context, { knowledgeContext });
+      const finalContent = await aiService.generate(options, (content) => {
+        updateGeneratedContent(content);
+      }, abortController.signal);
+      await saveGenerationRecord(finalContent, options, knowledgeSources, config);
+    } catch (error) {
+      handleGenerateError(error);
+    } finally {
+      endGenerateRequest();
+    }
+  };
+
   const handleGenerateContentFromOutline = async () => {
     const config = useAppStore.getState().getAiConfigForTask('generate');
     if (!config) {
@@ -533,6 +557,11 @@ export function AiGenerateTab(): JSX.Element {
 
     if (context.isXiaohongshuMode) {
       await runXiaohongshuGenerate(context, config);
+      return;
+    }
+
+    if (!shouldGenerateOutline) {
+      await runEducationDirectGenerate(context, config);
       return;
     }
 
@@ -606,7 +635,7 @@ export function AiGenerateTab(): JSX.Element {
       : activeGenerateStep === 'content'
         ? '停止生成正文'
         : '停止生成';
-  const startGenerateLabel = isXiaohongshuMode
+  const startGenerateLabel = isXiaohongshuMode || !shouldGenerateOutline
     ? '开始生成'
     : outlineDraft.trim()
       ? '重新生成大纲'
@@ -768,6 +797,22 @@ export function AiGenerateTab(): JSX.Element {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="ai-form-group">
+                <label
+                  htmlFor="ai-generate-outline"
+                  className={shouldGenerateOutline ? 'ai-outline-mode-option checked' : 'ai-outline-mode-option'}
+                >
+                  <input
+                    id="ai-generate-outline"
+                    type="checkbox"
+                    checked={shouldGenerateOutline}
+                    onChange={(event) => setShouldGenerateOutline(event.target.checked)}
+                    disabled={isGenerating}
+                  />
+                  <span>生成大纲</span>
+                </label>
               </div>
 
               <div className="ai-form-group">
@@ -948,7 +993,7 @@ export function AiGenerateTab(): JSX.Element {
         )}
       </div>
 
-      {!isXiaohongshuMode && outlineDraft && (
+      {!isXiaohongshuMode && shouldGenerateOutline && outlineDraft && (
         <div className="ai-section ai-result-section">
           <div className="ai-result-entry-header">
             <div>

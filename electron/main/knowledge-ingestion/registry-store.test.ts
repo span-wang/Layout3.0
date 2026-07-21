@@ -255,6 +255,49 @@ function createRunningQualityRecoveryFixture(
     );
 }
 
+function createRunningPublicationRecoveryFixture(
+  registry: RegistryDatabase,
+  store: RegistryStore,
+  input: {
+    versionId: string;
+    jobId: string;
+    workerId: string;
+    maxAttempts: number;
+  },
+): void {
+  const canonicalId = `mat-${input.versionId}`;
+  createMaterialAndBranch(store, { canonicalId, branchKey: 'default' });
+  store.createMaterialVersion({
+    versionId: input.versionId,
+    canonicalId,
+    publicationBranchKey: 'default',
+    contentHash: `sha256:${input.versionId}`,
+    audit,
+  });
+  registry.connection.prepare(`
+    UPDATE material_versions
+    SET workflow_status = 'pending_publication', processing_health = 'healthy',
+        index_publication_status = 'pending', error_message = NULL
+    WHERE version_id = ?
+  `).run(input.versionId);
+  store.enqueueJob({
+    jobId: input.jobId,
+    versionId: input.versionId,
+    stage: 'publication_compensation',
+    inputHash: `input-${input.jobId}`,
+    profileVersion: 'publication-operation-v1',
+    maxAttempts: input.maxAttempts,
+    audit,
+  });
+  const claimed = store.claimNextJob({
+    workerId: input.workerId,
+    leaseDurationMs: 60_000,
+    stages: ['publication_compensation'],
+    audit,
+  });
+  assert.equal(claimed?.jobId, input.jobId);
+}
+
 function bindActiveDocument(
   store: RegistryStore,
   versionId: string,
@@ -532,6 +575,43 @@ test('PH3-13B 教材分支可并存，同分支替代与回滚会原子切换路
     assert.deepEqual(
       store.resolveActiveRetrievalScope({ branchKeys: ['edition-a'] }).documentIds,
       ['doc-a1'],
+    );
+  });
+});
+
+test('PH3-13C4 单资料发布 scope 同时限定 canonical 与同名分支', async () => {
+  await withRegistry(({ registry, store }) => {
+    for (const [canonicalId, versionId, documentId] of [
+      ['mat-default-a', 'ver-default-a', 'doc-default-a'],
+      ['mat-default-b', 'ver-default-b', 'doc-default-b'],
+    ]) {
+      createMaterialAndBranch(store, { canonicalId, branchKey: 'default', branchType: 'default' });
+      createReadyVersion(registry, store, {
+        versionId,
+        canonicalId,
+        branchKey: 'default',
+        contentHash: `sha256:${versionId}`,
+      });
+      bindActiveDocument(store, versionId, documentId, `dataset-${canonicalId}`);
+      store.publishVersion({ versionId, audit });
+    }
+
+    assert.deepEqual(
+      store.resolveActivePublicationScope({
+        canonicalId: 'mat-default-a',
+        publicationBranchKey: 'default',
+      }).documentIds,
+      ['doc-default-a'],
+    );
+    assert.deepEqual(
+      store.validateReturnedPublicationDocumentIds(
+        ['doc-default-a', 'doc-default-b'],
+        { canonicalId: 'mat-default-a', publicationBranchKey: 'default' },
+      ),
+      {
+        acceptedDocumentIds: ['doc-default-a'],
+        rejectedDocumentIds: ['doc-default-b'],
+      },
     );
   });
 });
@@ -881,5 +961,63 @@ test('PH3-13C3 quality 可重排队租约在重启后保留同一 run 并恢复�
       context.store.getMaterialVersion('ver-quality-requeue-recovery').processingHealth,
       'healthy',
     );
+  });
+});
+
+test('PH3-13C4 publication 租约过期或满尝试恢复均不污染版本健康', async () => {
+  await withReopenableRegistry(async (context) => {
+    createRunningPublicationRecoveryFixture(context.registry, context.store, {
+      versionId: 'ver-publication-requeue-recovery',
+      jobId: 'job-publication-requeue-recovery',
+      workerId: 'worker-publication-requeue-old',
+      maxAttempts: 2,
+    });
+    createRunningPublicationRecoveryFixture(context.registry, context.store, {
+      versionId: 'ver-publication-exhausted-recovery',
+      jobId: 'job-publication-exhausted-recovery',
+      workerId: 'worker-publication-exhausted-old',
+      maxAttempts: 1,
+    });
+
+    context.clock.advance(61_000);
+    await context.reopen();
+    // 旧 worker 不能在应用尚未执行恢复前把已过期租约重新续活。
+    assert.throws(
+      () => context.store.heartbeatJob({
+        jobId: 'job-publication-requeue-recovery',
+        workerId: 'worker-publication-requeue-old',
+        leaseDurationMs: 60_000,
+      }),
+      (error) => assertRegistryError(error, 'JOB_STATE_CONFLICT'),
+    );
+    const recovered = context.store.recoverExpiredJobs({
+      actorId: 'system:startup',
+      reason: '应用启动恢复 publication_compensation 过期租约',
+    });
+    assert.equal(recovered.length, 2);
+    assert.equal(context.store.getProcessingJob('job-publication-requeue-recovery').status, 'queued');
+    const exhausted = context.store.getProcessingJob('job-publication-exhausted-recovery');
+    assert.equal(exhausted.status, 'failed');
+    assert.equal(exhausted.errorCode, 'PROCESSING_RETRY_EXHAUSTED');
+    assert.equal(exhausted.nextRetryAt, null);
+
+    for (const versionId of [
+      'ver-publication-requeue-recovery',
+      'ver-publication-exhausted-recovery',
+    ]) {
+      const version = context.store.getMaterialVersion(versionId);
+      assert.equal(version.workflowStatus, 'pending_publication');
+      assert.equal(version.processingHealth, 'healthy');
+      assert.equal(version.indexPublicationStatus, 'pending');
+      assert.equal(version.errorMessage, null);
+    }
+    const resumed = context.store.claimNextJob({
+      workerId: 'worker-publication-requeue-new',
+      leaseDurationMs: 60_000,
+      stages: ['publication_compensation'],
+      audit,
+    });
+    assert.equal(resumed?.jobId, 'job-publication-requeue-recovery');
+    assert.equal(resumed?.attemptCount, 2);
   });
 });

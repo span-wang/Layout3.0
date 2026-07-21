@@ -830,7 +830,47 @@
       "type": "返工",
       "description": "PH3-13C3 主链路首次串联后，最终审查发现若直接按已有绿测收口，仍存在 quality 租约恢复导致 run/job 分裂、执行时只信任工件快照、技术重试沿用旧结果、相同问题无法重跑、配置保存与质量启动竞态、历史 pending 数据集失去正式保护、Renderer 自由文本泄漏，以及旧 worker 在租约接管后覆盖当前 attempt 结果等风险。其中任一问题都可能造成永久锁死、错误隔离或错误进入 pending_publication。",
       "impactScope": "PH3-13C3-quality-gate-v1、RegistryStore 租约恢复、QualityGateService/Repository、ProcessingRunner、KnowledgeIngestionRuntime、正式 RAGFlow 暂存数据集保护、Renderer 质量报告",
-      "currentHandling": "已完成审查返工闭环：quality 租约恢复由质量仓储同步收口 run/job 且不污染版本健康；execute 重新读取三工件并逐文件核验；同 resultKey 以当前 attempt 更新并留 before/after 审计；重复问题使用唯一 job 输入键且 run 快照保留 semanticInputHash；配置保存与质量启动串行；保护集合覆盖全部历史 pending 数据集；Renderer 使用受控中文副本；结果写入、scope 解析和终态收口绑定 workerId 与有效租约，旧 worker 接管后不可迟到覆盖，休眠跨 lease 时 runner 会先恢复再继续。综合 registry:test 及双 worker/跨租约定向回归通过，未执行真实 RAGFlow 请求。"
+      "currentHandling": "已完成审查返工闭环：quality 租约恢复由质量仓储同步收口 run/job 且不污染版本健康；execute 重新读取三工件并逐文件核验；同 resultKey 以当前 attempt 更新并留 before/after 审计；重复问题使用唯一 job 输入键且 run 快照保留 semanticInputHash；配置保存与质量启动串行；保护集合覆盖全部历史 pending 数据集；Renderer 使用受控中文副本；结果写入、scope 解析和终态收口绑定 workerId 与有效租约，旧 worker 接管后不可迟到覆盖，休眠跨 lease 时 runner 会先恢复再继续。最终 registry 124/124、src/scripts 128/128、RAGFlow 合同 18/18、元数据 4/4、构建/差异/依赖审计和 1360×900 中文工作台验收均通过，最终审查未发现阻断项；未执行真实 RAGFlow 请求。"
+    },
+    {
+      "id": "RISK-105",
+      "date": "2026-07-11",
+      "type": "风险",
+      "description": "PH3-13C4 发布与回滚跨越 RAGFlow 和 SQLite，二者没有跨系统事务；如果只做同步 best-effort，目标远端已 active 后崩溃、SQLite 已切换但旧远端未 superseded、配置身份切换或旧 worker 迟到写入，都可能形成不可恢复的远端漂移或错误回滚窗口。",
+      "impactScope": "PH3-13C4-publication-rollback-v1、publication operation/compensation、RAGFlow binding、Runtime 配置身份、同分支发布与回滚、PH3-13H 后续通用 outbox",
+      "currentHandling": "C4 已完成本地补强：operation/job 同事务创建、同分支单开、阶段合法转换、失败补偿、人工重试和旧 worker 拒写均绑定有效租约；发布或回滚在建档与任意远端 PATCH 前双重复核版本拓扑、质量、binding、配置身份和远端回读，切换前失败恢复原 metadata，切换后 superseded 失败由持久任务退避收口。质量通过 TTL 到期后只能在无开放发布操作时受控重检；历史发布身份只能由不可变快照唯一恢复，快照损坏/冲突、抽取/上传/解析未终态和配置漂移均失败关闭。Renderer 仅接收安全 DTO，并具备中文告警、人工重试、回滚必填理由、过期重检及焦点恢复。fake RAGFlow/临时 SQLite 130 个顶层/152 个总回归、src/scripts 135、合同 18、元数据 4、构建、审计和 1360×900 本地复验通过；尚未执行真实远端请求。真实 smoke 仍待用户展示并确认具体专用暂存数据集；生产级通用 outbox、跨代次凭据与完整漂移治理继续归属 PH3-13H/J。"
+    },
+    {
+      "id": "RISK-106",
+      "date": "2026-07-11",
+      "type": "兼容性",
+      "description": "真实 RAGFlow 0.25.0 已在 metadata PATCH 中拒绝 `meta_fields` 内的 None/null，而当前 Main 受控 metadata 构造器会将缺失的可选业务字段序列化为 null。该问题发生在 upload 阶段；人工重试会稳定重复同一无效 payload，导致资料无法建立健康 pending binding、进入 parse_wait 或质量门。",
+      "impactScope": "PH3-13C2-basic-processing-pending-index-v1、RAGFlow metadata PATCH、ProcessingRunner upload、现有待处理资料、后续 active/superseded metadata 更新",
+      "currentHandling": "已完成 `PH3-13C2-ragflow-null-metadata-remediation-v1`：受控构造器会省略缺失可选 metadata，客户端在网络请求前拒绝显式 null；必填身份/状态/哈希字段、确定性远端文档对账和不健康 pending binding 均保持不变。153/153 登记库回归、类型检查和生产构建通过，自动验收未写真实 RAGFlow。需重启桌面应用后由用户人工重试既有资料，复用同名远端文档验证真实恢复；若远端仍拒绝，则记录新返回类型后另行拆分兼容性修复。"
+    },
+    {
+      "id": "RISK-107",
+      "date": "2026-07-11",
+      "type": "体验与质量",
+      "description": "如果为免除手填而直接自动提交质量运行、使用外部 AI 自由编造问题/证据，或从正文中挑选非唯一片段，会让质量门在无人工确认或无可审计来源的情况下误通过；反过来，若只给空模板，用户仍需逐项复制原文，体验问题没有解决。",
+      "impactScope": "PH3-13C3-quality-question-autofill-v1、QualityGateService、受管正文/定位工件、质量门中文工作台与后续质量评测",
+      "currentHandling": "该风险中的历史“一键建议回填”方案已由 RISK-108 和 `PH3-13C3-automatic-index-health-gate-v1` 替代：系统不再显示或接收人工问题/证据，而是从已核验工件自动抽取 1～3 个唯一、可定位样本。用户仍需主动点击开始，系统不调用外部 AI；抽样只验证索引健康与范围安全，不替代资料用途判断。"
+    },
+    {
+      "id": "RISK-108",
+      "date": "2026-07-11",
+      "type": "产品逻辑调整",
+      "description": "当前质量门把“资料用途是否符合预期”和“索引是否可安全检索”混为一层，并要求用户手填 3～5 条问题/证据且全部命中。短资料、词汇表或单主题讲义会被迫凑题，少量人工问题也无法证明全文质量，容易造成无意义阻断或错误的通过承诺。",
+      "impactScope": "PH3-13C3-quality-gate-v1、QualityGateService、质量门中文工作台、上传元数据确认、后续 PH3-13G/H 质量运营",
+      "currentHandling": "已完成 `PH3-13C3-automatic-index-health-gate-v1`：资料用途继续由上传时的人工元数据/内容确认承担；质量门只自动抽取 1～3 个定位覆盖样本，核验其 Top 10 检回和零泄漏。1～3 个结构单元抽 1 个、4～6 个抽 2 个、7 个及以上抽 3 个；抽样全部通过只表述为索引健康，不表述为全文语义质量保证。开始检查只提交 itemId，旧的 3～5 条持久化与发布复核限制已同步移除。156/156 登记库回归、类型检查和生产构建通过；全文评估、语义评分和批量运营后续归属 PH3-13G/H。"
+    },
+    {
+      "id": "RISK-109",
+      "date": "2026-07-19",
+      "type": "范围调整",
+      "description": "教育内容生成从强制大纲审核改为可选模式后，如果未勾选时简单复用旧的一次生成入口，用户已选择的文章结构模板可能不会进入正文提示词；知识库来源也可能因绕开大纲阶段而丢失。若同时扩展到偏好持久化、小红书链路或大纲版本管理，又会把当前最小交互调整扩大成 AI 工作流重构。",
+      "impactScope": "PH3-01-ai-optional-outline-generation-v1、AiGenerateTab、AiService 教育正文提示词、文章结构模板、知识库上下文与 AI 生成记录来源标注",
+      "currentHandling": "已完成 `PH3-01-ai-optional-outline-generation-v1`：四类教育内容新增默认不勾选的“生成大纲”复选框；勾选时保留现有两步流程，未勾选时直接生成正文。直接正文链路已显式继承文章结构模板，并在启用知识库时执行一次检索、复用来源到结果与生成记录；小红书、偏好持久化、大纲版本和分页导出均未纳入。"
     }
   ]
 }

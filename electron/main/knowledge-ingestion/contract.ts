@@ -2,6 +2,7 @@ import type {
   KnowledgeIngestionConfirmMetadataInput,
   KnowledgeIngestionItemActionInput,
   KnowledgeIngestionMetadata,
+  KnowledgeIngestionRollbackInput,
   KnowledgeIngestionListRagflowDatasetsInput,
   KnowledgeIngestionSaveRagflowConfigInput,
   KnowledgeIngestionStartQualityCheckInput,
@@ -65,6 +66,26 @@ export function parseKnowledgeIngestionItemActionPayload(
   return { itemId: parseItemId(record) };
 }
 
+export function parseKnowledgeIngestionRollbackPayload(
+  payload: unknown,
+): KnowledgeIngestionRollbackInput {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw new RegistryError('INPUT_VALIDATION', '资料回滚请求格式不正确。');
+  }
+  const record = payload as Record<string, unknown>;
+  if (Object.keys(record).some((field) => field !== 'itemId' && field !== 'reason')) {
+    throw new RegistryError('INPUT_VALIDATION', '资料回滚只能提交接收项编号和回滚原因。');
+  }
+  if (typeof record.reason !== 'string') {
+    throw new RegistryError('INPUT_VALIDATION', '回滚原因必须为 1～500 个字符。');
+  }
+  const reason = record.reason.trim();
+  if (!reason || reason.length > 500) {
+    throw new RegistryError('INPUT_VALIDATION', '回滚原因必须为 1～500 个字符。');
+  }
+  return { itemId: parseItemId(record), reason };
+}
+
 export function parseKnowledgeIngestionStartQualityPayload(
   payload: unknown,
 ): KnowledgeIngestionStartQualityCheckInput {
@@ -72,29 +93,10 @@ export function parseKnowledgeIngestionStartQualityPayload(
     throw new RegistryError('INPUT_VALIDATION', '质量检查请求格式不正确。');
   }
   const record = payload as Record<string, unknown>;
-  if (Object.keys(record).some((field) => field !== 'itemId' && field !== 'questions')) {
+  if (Object.keys(record).some((field) => field !== 'itemId')) {
     throw new RegistryError('INPUT_VALIDATION', '质量检查请求包含不允许的字段。');
   }
-  if (!Array.isArray(record.questions) || record.questions.length < 3 || record.questions.length > 5) {
-    throw new RegistryError('INPUT_VALIDATION', '质量检查必须提交 3～5 条问题与正文证据。');
-  }
-  const questions = record.questions.map((value, index) => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      throw new RegistryError('INPUT_VALIDATION', `第 ${index + 1} 条质量问题格式不正确。`);
-    }
-    const question = value as Record<string, unknown>;
-    if (Object.keys(question).some((field) => field !== 'question' && field !== 'evidence')) {
-      throw new RegistryError('INPUT_VALIDATION', `第 ${index + 1} 条质量问题包含不允许的字段。`);
-    }
-    if (typeof question.question !== 'string' || question.question.length > 500) {
-      throw new RegistryError('INPUT_VALIDATION', `第 ${index + 1} 条冒烟问题格式不正确。`);
-    }
-    if (typeof question.evidence !== 'string' || question.evidence.length > 2_000) {
-      throw new RegistryError('INPUT_VALIDATION', `第 ${index + 1} 条正文证据格式不正确。`);
-    }
-    return { question: question.question, evidence: question.evidence };
-  });
-  return { itemId: parseItemId(record), questions };
+  return { itemId: parseItemId(record) };
 }
 
 export function parseKnowledgeIngestionRagflowConfigPayload(

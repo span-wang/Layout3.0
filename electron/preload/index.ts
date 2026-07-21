@@ -6,6 +6,7 @@ import type {
   KnowledgeIngestionListRagflowDatasetsInput,
   KnowledgeIngestionRagflowDatasetOption,
   KnowledgeIngestionRagflowConfigStatus,
+  KnowledgeIngestionRollbackInput,
   KnowledgeIngestionRuntimeStatus,
   KnowledgeIngestionSaveRagflowConfigInput,
   KnowledgeIngestionSelectResult,
@@ -179,6 +180,10 @@ const layoutAPI = {
     ipcRenderer.invoke('knowledgeIngestion:listItems'),
   selectKnowledgeIngestionFile: (): Promise<KnowledgeIngestionSelectResult> =>
     ipcRenderer.invoke('knowledgeIngestion:selectFile'),
+  selectKnowledgeIngestionNextVersionFile: (
+    payload: KnowledgeIngestionItemActionInput,
+  ): Promise<KnowledgeIngestionSelectResult> =>
+    ipcRenderer.invoke('knowledgeIngestion:selectNextVersionFile', payload),
   confirmKnowledgeIngestionMetadata: (
     payload: KnowledgeIngestionConfirmMetadataInput,
   ): Promise<KnowledgeIngestionItem> =>
@@ -195,6 +200,18 @@ const layoutAPI = {
     payload: KnowledgeIngestionStartQualityCheckInput,
   ): Promise<KnowledgeIngestionItem> =>
     ipcRenderer.invoke('knowledgeIngestion:startQualityCheck', payload),
+  startKnowledgeIngestionPublication: (
+    payload: KnowledgeIngestionItemActionInput,
+  ): Promise<KnowledgeIngestionItem> =>
+    ipcRenderer.invoke('knowledgeIngestion:startPublication', payload),
+  startKnowledgeIngestionRollback: (
+    payload: KnowledgeIngestionRollbackInput,
+  ): Promise<KnowledgeIngestionItem> =>
+    ipcRenderer.invoke('knowledgeIngestion:startRollback', payload),
+  retryKnowledgeIngestionPublication: (
+    payload: KnowledgeIngestionItemActionInput,
+  ): Promise<KnowledgeIngestionItem> =>
+    ipcRenderer.invoke('knowledgeIngestion:retryPublication', payload),
 };
 
 contextBridge.exposeInMainWorld('layoutAPI', layoutAPI);

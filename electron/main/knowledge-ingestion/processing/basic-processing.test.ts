@@ -198,10 +198,10 @@ function assertRegistryError(error: unknown, code: RegistryError['code']): boole
 test('PH3-13C2 schema V3 建立处理工件表并持久化远端解析证据列', async () => {
   const context = await createContext();
   try {
-    assert.equal(REGISTRY_SCHEMA_VERSION, 4);
+    assert.equal(REGISTRY_SCHEMA_VERSION, 5);
     assert.equal(
       Number(context.registry.connection.prepare('SELECT MAX(version) FROM schema_migrations').pluck().get()),
-      4,
+      REGISTRY_SCHEMA_VERSION,
     );
     const artifactTable = context.registry.connection
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'processing_artifacts'")

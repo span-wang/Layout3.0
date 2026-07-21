@@ -75,6 +75,46 @@
       },
       "knownIssues": [
         {
+          "id": "PH3-01-ai-optional-outline-generation-v1",
+          "date": "2026-07-19",
+          "status": "已修复",
+          "summary": "用户要求把 AI 教育内容的生成大纲改为可选模式：只有勾选时才进入大纲生成与审核流程，未勾选时直接生成最终正文。",
+          "confirmedOn": "2026-07-19",
+          "completedOn": "2026-07-19",
+          "resolution": "已完成 `PH3-01-ai-optional-outline-generation-v1`：1) 四类教育内容新增默认不勾选的“生成大纲”复选框；2) 勾选时保持大纲生成、编辑审核、再生成正文的两步链路；3) 未勾选时跳过大纲并直接生成最终正文；4) 直接正文继续继承文章结构模板、语义块和个人知识库上下文；5) 知识库启用时只检索一次，结果区和 AI 生成记录继续保留同一批来源；6) 小红书、生成记录格式、文档插入、分页与导出均未调整。",
+          "inScope": [
+            "在讲义、知识点总结、练习题和试卷初稿的生成设置中新增“生成大纲”复选框，默认不勾选。",
+            "勾选“生成大纲”时保持现有两步链路：先生成可编辑大纲，再按审核后的大纲生成正文。",
+            "未勾选“生成大纲”时跳过大纲请求和审核弹窗，直接生成最终正文并打开现有结果弹窗。",
+            "直接生成正文时继续继承主题、年级、科目、要求描述、内容长度、语义块、文章结构模板和个人知识库上下文。",
+            "知识库启用且跳过大纲时只检索一次，正文结果与 AI 生成记录继续保留该次检索的来源标注。",
+            "补充直接生成正文的结构模板提示词回归，并执行定向测试、类型检查、生产构建和进度一致性校验。"
+          ],
+          "outOfScope": [
+            "不调整小红书标题、小红书文案和小红书主图方案链路。",
+            "不持久化“生成大纲”勾选状态到 localStorage、`.layout` 文档或 AI 生成记录，当前只作为本次 AI 面板会话设置。",
+            "不新增大纲树形编辑、节点拖拽、章节折叠、局部重生成、版本历史或大纲审核痕迹保存。",
+            "不修改 AI Provider、请求 IPC、流式响应协议、生成记录文件格式、文档插入、分页算法或导出链路。"
+          ],
+          "deferredTo": [
+            "生成流程偏好持久化、按生成类型保存默认模式：后续归属 AI 体验增强任务。",
+            "大纲结构化编辑、章节拖拽、局部重生成与审核版本保存：后续归属 AI 体验增强任务。",
+            "小红书生成若需要可选大纲模式：后续归属 `PH3-10` 小红书内容生成增强。"
+          ],
+          "verification": [
+            "用户已回复“确定”，确认复选框默认不勾选，未勾选时直接生成正文的实施方案。",
+            "本步明确要求直接正文链路继续遵守文章结构模板和知识库来源口径，避免跳过大纲时丢失现有生成约束。",
+            "`src/components/ai/AiGenerateTab.tsx` 已新增默认关闭的“生成大纲”复选框，并按勾选状态分流到大纲审核或直接正文链路。",
+            "`src/services/AiService.ts` 已新增直接正文提示词构造，跳过大纲时仍显式注入用户自定义文章结构模板。",
+            "`src/services/AiService.test.ts` 已补充跳过大纲且保留文章结构模板的提示词回归。",
+            "`node .\\node_modules\\tsx\\dist\\cli.mjs --test src\\services\\AiService.test.ts` 通过，12 个测试全部 pass。",
+            "`npm run typecheck` 成功。",
+            "`npm run build` 成功，Electron main、preload 与 renderer 生产包均完成构建。",
+            "`git diff --check` 成功。",
+            "真实 Electron 窗口交互检查未执行：验证时检测到用户正在操作并反复最小化该窗口，自动化已停止以避免抢占输入；默认值、分支与按钮文案已通过代码差异审查，仍建议用户在当前桌面应用重载后人工点选确认。"
+          ]
+        },
+        {
           "id": "PH3-01-ai-generation-dialog-v1",
           "date": "2026-07-10",
           "status": "已修复",
@@ -1151,14 +1191,14 @@
           "真实远端 smoke 只有在用户再次确认明确的专用暂存数据集后执行；生产数据集、既有影子数据集和 127 份冻结英语资料必须保持不变。"
         ],
         "currentStepNote": "`PH3-13C2-basic-processing-pending-index-v1` 已达到完成标准。顶层 `PH3-13` 仍为进行中，下一最小验收点 `PH3-13C3-quality-gate-v1` 必须先形成方案并取得用户确认后才能开始；第一次真实 RAGFlow 写入仍需针对明确暂存数据集再次确认。"
-        }
-      ],
-      "executionBoundary": {
+        },
+        {
         "id": "PH3-13C3-quality-gate-v1",
         "confirmed": true,
-        "statusLabel": "进行中：快速质量门禁 V1",
+        "statusLabel": "已完成：快速质量门禁 V1",
         "confirmedOn": "2026-07-11",
         "startedOn": "2026-07-11",
+        "completedOn": "2026-07-11",
         "summary": "用户已确认 PH3-13C 的第三个最小验收点：接续 C2 的 quality_check/healthy/pending 单文件版本，持久化快速质量运行与逐项证据，使用 Main 根据短期有效 quality_run_id 解析出的精确 pending document IDs 执行候选检索，并以 SQLite active scope 排除和正式请求对暂存数据集的请求前阻断形成诚实的本地零泄漏证明。V1 使用人工填写的 3～5 条冒烟问题和正文证据，不接入 LLM；全部阻断项通过后只进入 pending_publication，不执行发布。",
         "inScope": [
           "新增 schema V4 `quality_runs` 与 `quality_results`，持久保存运行状态、版本与健康 pending binding 快照、3～5 条问题、正文证据摘要与哈希、检查阈值、实际结果、来源定位、过期时间和总体结论。",
@@ -1210,9 +1250,173 @@
           "本地正式门禁证明必须同时确认目标 pending ID 不在 active scope、空 active scope 不发网络请求，以及正式请求访问暂存数据集在 fetch 前被阻断；报告不得宣称 PH3-13H 已完成。",
           "通过路径必须原子完成 quality job、quality run、审计和 pending_publication 状态；确定性阻断不得放行，运行性失败或取消也不得进入待发布。",
           "fake RAGFlow 覆盖成功、零结果、集合外返回、401/403、429/5xx、超时、过期运行和状态漂移；完成 `npm run registry:test`、仓库全量测试、`npm run ragflow:contract:test`、`npm run ragflow:metadata:test`、`npm run typecheck`、`npm run build`、`git diff --check`、生产依赖高危审计及进度一致性校验。",
+          "C3 最终全量门禁通过：`npm run registry:test` 105 个顶层测试、124 个总测试，`src/` 与 `scripts/` 128/128，RAGFlow 合同 18/18、元数据 4/4，`npm run build`、`git diff --check` 与生产依赖高危审计通过，漏洞 0；最终 fail-open 审查未发现阻断项。",
+          "1360×900 中文工作台复验通过：资料入库中心标题、统计、接收入口与空状态完整可见，document scrollWidth/clientWidth 均为 1360，无页面级横向溢出；普通浏览器无 Electron preload 时只显示稳定中文连接失败提示。",
           "本步开工与自动验收不执行真实 RAGFlow 上传、解析、候选检索或生产 smoke；生产、影子和 127 份冻结英语资料保持不变。"
         ],
-        "currentStepNote": "`PH3-13C3-quality-gate-v1` 已完成主链路、取消审计与 Runtime 集成，并补齐 quality 租约重启恢复、执行时三工件磁盘复核、当前 attempt 结果更新、相同问题重跑、配置保存与质量启动串行、历史 pending 数据集跨配置/重启保护、Renderer 质量结果自由文本零泄漏，以及 workerId + 有效租约 fencing 与跨租约 runner 自恢复。综合 registry:test 122/122、intake 定向测试 12/12、双 worker/跨租约定向测试与 typecheck 已通过。下一步执行 src/scripts 全量测试、RAGFlow 合同/元数据测试、构建、差异检查、生产依赖审计和中文工作台验收；第一次真实 RAGFlow 请求仍未获单独确认，不执行远端 smoke。"
+        "currentStepNote": "`PH3-13C3-quality-gate-v1` 已达到完成标准：持久质量运行、人工问题/证据、精确 pending Top 10、执行时三工件复核、本地正式零泄漏证明、原子待发布门禁、取消/失败/过期/恢复、当前 attempt 结果、相同问题重跑、worker 租约 fencing、Runtime 身份串行、历史 pending 保护、安全 DTO 与中文工作台均已通过全量门禁。顶层 `PH3-13` 仍为进行中；下一最小验收点 `PH3-13C4-publication-rollback-v1` 必须先形成方案并取得用户确认后才能开始。第一次真实 RAGFlow 请求仍需展示明确暂存数据集身份并再次确认。"
+        }
+      ],
+      "executionBoundary": {
+        "id": "PH3-13C4-publication-rollback-v1",
+        "confirmed": true,
+        "statusLabel": "进行中：发布、同分支替代与回滚 V1",
+        "confirmedOn": "2026-07-11",
+        "startedOn": "2026-07-11",
+        "summary": "用户已确认 PH3-13C 的第四个最小验收点：在 C3 已通过且进入 pending_publication 的单文件版本上，增加受控同分支新版接收、持久发布操作日志、Main 发布/回滚编排、远端 active/superseded 回读、SQLite 唯一正式可见切换点和可恢复补偿。C4 只完成单文件当前分支的最小闭环，不切换现有生产 AI/知识库检索链路；真实 RAGFlow 发布与回滚 smoke 仍需针对明确暂存数据集另行确认。",
+        "inScope": [
+          "新增受控“接收为该资料新版本”入口：用户从既有非重复资料发起，Renderer 只提交 itemId，Main 打开文件并解析现有 canonical_id 与 publication_branch_key；新内容创建同分支 version_no+1 和 previous_version_id，继续经过人工元数据、C2 基础处理和 C3 质量门禁。",
+          "自动版本候选、近似重复和批量合并不在 C4；同分支关系只允许用户显式指定，且 Renderer 不能提交 canonical、version、publication、dataset、document、URL 或远端状态。",
+          "新增 schema V5 窄用途 publication_operations 持久日志，并复用 processing_jobs 的 publication_compensation 阶段；一条 canonical+branch 同时只能存在一个未完成发布操作，操作与补偿支持租约、重试、应用重启恢复和旧 worker fencing。",
+          "发布前重新核验 pending_publication/healthy/pending、当前且未过期的 passed quality run、唯一健康 DONE 且 chunk_count>0 的 pending binding、三工件/profile/config/source/binding 快照无漂移；任一不符必须在远端请求前失败关闭。",
+          "发布先把目标文档完整 metadata PATCH 为 active 并逐字段回读，再使用该 canonical+branch 的精确目标 document ID 执行受控预发布 smoke；远端 status 只作为审计和漂移证据，不产生正式可见性。",
+          "SQLite 单事务创建发布关系、关闭同一 canonical+branch 的冲突发布、成对更新新旧版本与 binding 状态、追加不可覆盖审计并推进 publication operation；其他资料、其他分支和不冲突有效区间不得受影响。",
+          "SQLite 切换后把被替代版本远端 metadata 补偿为 superseded 并回读；失败时不回退 SQLite 当前有效版本，而由持久 publication_compensation 任务继续重试，工作台显示安全中文告警。",
+          "回滚无需重新上传：先核验上一已替代版本的受管索引仍存在且健康，PATCH 目标旧版为 active 并回读，再在 SQLite 同事务恢复旧发布关系、关闭问题版本关系并执行成对状态转换；问题版本按 C4 安全默认进入 quarantined/superseded，随后持久补偿远端 superseded。",
+          "扩展历史受管数据集保护集合为当前安全配置与 SQLite 全部 ragflow_bindings 数据集的并集；active/superseded 后即使配置切换或重启，现有通用宽检索仍必须在 fetch 前阻断这些数据集。",
+          "中文资料入库工作台增加接收新版本、发布、回滚、当前/上一版本、操作阶段和补偿告警；发布与回滚必须二次确认，回滚原因必填，DTO 不暴露内部 ID、受管路径、远端地址或底层技术错误。",
+          "补齐 publication schema/仓储/服务/runner/恢复、fake RAGFlow、精确 scope、IPC/DTO/UI 与故障注入测试；所有关键事务、跨系统顺序、补偿和失败关闭分支使用中文注释。"
+        ],
+        "outOfScope": [
+          "不接入 PH3-13H 的生产级 active 检索网关，不修改现有 KnowledgeBaseService、AI 生成或用户正式检索的默认链路，不宣称生产发布生命周期完成。",
+          "不实现通用 outbox 事件总线、跨服务/跨索引代次凭据治理、完整 release 管理、归档、硬删除、漂移扫描、管理员诊断或批量发布；这些继续归属 PH3-13H/J。",
+          "不实现文件夹、CSV/Excel、批量导入、自动版本识别、近似重复、自动 canonical 合并或多分支/法规有效期选择界面。",
+          "不接入 LLM 冒烟问题、完整质量回归、生产基线对比、MRR、OCR/ASR、复杂格式或完整 processing profile。",
+          "不处理 RAGFlow 生产数据集、既有 PH3-12 影子数据集、127 份冻结英语影子文档或英语/会计历史迁移。",
+          "未再次展示并确认明确暂存数据集身份前，不执行真实上传、解析、候选检索、发布、回滚或远端 smoke；自动验收只使用 fake RAGFlow 与临时 SQLite/工件。",
+          "不修改 `.layout`、LayoutDocument、Markdown 导入、语义块、分页算法、画布、导出和模板；入库发布状态不得写入创作文档或触发分页重算。"
+        ],
+        "deferredTo": [
+          "文件夹/清单批量、自动版本候选、近似重复和身份冲突复核归属 `PH3-13D-batch-intake-dedup-v1` 与 `PH3-13E-metadata-review-v1`。",
+          "OCR/ASR、复杂格式与完整处理 profile 归属 `PH3-13F-processing-profiles-v1`，完整质量评测归属 `PH3-13G-quality-evaluation-v1`。",
+          "生产 Main active 精确 ID 网关、全局分支/有效期路由、通用 outbox、完整补偿、归档、硬删除和漂移治理归属 `PH3-13H-publication-lifecycle-v1`。",
+          "历史英语/会计与冻结影子接管归属 `PH3-13I-legacy-migration-v1`，跨索引代次蓝绿与长期回滚归属 `PH3-13J-observability-bluegreen-v1`。",
+          "安装升级、备份恢复和完整 Electron E2E 硬化归属 `PH3-13K-release-hardening-v1`。"
+        ],
+        "verification": [
+          "用户已于 2026-07-11 回复“确定”，确认按已展示的 C4 本步纳入、本步明确不纳入和后续归属边界推进，并确认采用用户显式同分支新版入口与窄用途持久 publication_compensation 方案。",
+          "开始代码前先执行 `npm run progress:build` 与 `npm run progress:check`，确认 C3 既有收口改动与 C4 新边界均已进入结构化真相源。",
+          "C4 第一个本地数据步骤已通过：Schema V5 建立 publication_operations 与同分支单开操作约束，operation 与 publication_compensation job 同事务创建，业务阶段更新、失败补偿收口、人工重试均绑定当前有效任务租约；配置快照递归拒绝 API Key、token、secret 等凭据字段。",
+          "受控同分支新版接收已通过：只能从当前 published/healthy/active 且具有 active publication 的非重复资料发起，新内容继承 canonical/branch/人工元数据并创建 version_no+1、previous_version_id；完全重复只登记来源，已有未完成新版时拒绝继续分叉。",
+          "受控 metadata 已扩展 pending/active/superseded 三种 Main 构造入口，人工 metadata 不能伪造 status、index_generation、canonical 或 version 身份。",
+          "Runtime 已把保护集合扩大为当前配置与 SQLite 全部历史 ragflow_bindings 数据集的并集，并在 active/superseded 发布历史存在时禁止 baseUrl/dataset/generation 漂移、允许同身份 API Key 轮换；配置切换和重启回归通过。",
+          "当前 `npm run registry:test` 111 个顶层测试、130 个总测试全部通过；新增新版接收、Schema V5、operation/job 原子性、租约 fencing、凭据拒绝、active/superseded 历史保护与身份锁测试。",
+          "C4 第二个本地执行步骤已通过：Main PublicationService 已覆盖首次发布、同分支替代与回滚，发布前重新核验质量结论、binding 与配置身份，远端 active/readback 和精确 smoke 成功后才允许 SQLite 原子切换；切换前失败恢复目标原状态，切换后旧版 superseded 失败进入持久退避补偿。",
+          "ProcessingRunner 已接入 publication_compensation 执行器，publication operation 与 job 全程受租约 fencing；canonical+branch 精确 active scope 已避免不同资料共用 default 分支时发生混检。当前 `npm run registry:test` 114 个顶层测试、133 个总测试全部通过，`npm run typecheck` 通过。",
+          "同分支新版必须继承正确 canonical/branch，version_no 递增且 previous_version_id 指向上一版；完全重复不得创建新版本，自动相似识别不得发生。",
+          "远端 active PATCH、metadata 回读或预发布 smoke 失败时 SQLite 发布关系保持不变，旧版继续作为唯一 active scope；目标远端已 active 后失败时必须持久恢复到原 pending/superseded 状态。",
+          "发布 SQLite 事务必须同时切换 publication、版本和 binding；发布前精确 scope 不包含 pending，新版发布后仅目标新 document ID 可见，被替代版本与其他分支不被误选。",
+          "后置 superseded 补偿失败时当前 SQLite active scope 保持正确，任务可退避、重启恢复并由有效租约 worker 收口；旧 worker 不能迟到覆盖。",
+          "回滚目标缺失、不健康、状态漂移或配置身份不匹配时在 SQLite 切换前失败关闭；正常回滚不重新上传，并恢复上一版本为唯一 active scope。",
+          "现有 active/superseded 发布历史存在时阻止远端服务身份或索引身份漂移，只允许同身份 API Key 轮换；跨服务或跨代次回滚留到 H/J。",
+          "配置切换与应用重启后，SQLite 中 pending/active/superseded/archived binding 所在数据集仍进入正式检索保护集合。",
+          "IPC 额外字段、任意内部 ID 和远端身份注入必须被拒绝；Renderer DTO 与中文错误不得泄漏数据库路径、受管路径、URL、dataset/document/publication ID 或技术堆栈。",
+          "完成 `npm run registry:test`、仓库 src/scripts 全量测试、RAGFlow 合同与元数据测试、`npm run typecheck`、`npm run build`、`git diff --check`、生产依赖高危审计、1360×900 中文工作台验收及进度一致性校验。",
+          "真实 RAGFlow 发布/回滚 smoke 不随本次开工自动执行；生产、影子和 127 份冻结英语资料保持不变。"
+        ],
+        "currentStepNote": "`PH3-13C4-publication-rollback-v1` 的本地闭环与最终验收已完成：Main 发布/替代/回滚与持久补偿、受控 IPC/preload/安全 DTO、中文工作台、质量结论 TTL 重检、发布与回滚拓扑复核、配置身份快照 fail-closed 和抽取/上传/解析身份锁均已落地。registry 130 个顶层/152 个总测试、src/scripts 135、RAGFlow 合同 18、元数据 4、typecheck、构建、依赖审计和 1360×900 本地工作台复验均通过。任务保持进行中，仅等待用户明确展示并再次确认专用暂存数据集后执行真实 RAGFlow 发布/回滚 smoke；此前不执行任何真实 RAGFlow 请求。",
+        "remediation": {
+          "id": "PH3-13C2-ragflow-null-metadata-remediation-v1",
+          "confirmed": true,
+          "statusLabel": "已完成：RAGFlow 空 metadata 兼容性修复",
+          "confirmedOn": "2026-07-11",
+          "startedOn": "2026-07-11",
+          "completedOn": "2026-07-11",
+          "summary": "已完成真实资料入库在 upload 阶段无法进入暂存数据集的兼容性修复。两个独立资料此前均已上传并建立不健康 pending binding，但 RAGFlow 0.25.0 拒绝 metadata PATCH 内的 None/null。Main 现只发送有值的可选 metadata，RAGFlow 客户端也会在网络前拒绝显式 null；现有人工重试会继续复用同名远端文档，不会重复上传。",
+          "inScope": [
+            "仅在 Main 的受控 metadata 构造与 RAGFlow 客户端出站校验中排除 null/缺失可选字段，继续保留必填身份、版本、状态、哈希与用户已填写的元数据。",
+            "补充 metadata 构造和 PATCH 请求回归：缺失可选字段不得出现在请求体，已有字符串、数字和布尔值仍须原样发送；客户端遇到显式 null 时在发起网络请求前失败关闭。",
+            "执行资料入库定向测试、类型检查、构建、差异检查、进度生成与一致性校验；修复后由用户在现有中文工作台使用“人工重试”复用同名远端文档继续处理。"
+          ],
+          "outOfScope": [
+            "不修改已确认的暂存数据集、RAGFlow 地址、API Key、远端文档、质量门规则、发布回滚、正式检索网关或 SQLite 状态机。",
+            "不删除或重新上传已存在的远端文档；确定性对账与不健康 pending binding 必须保持，避免产生重复文档。",
+            "不执行任何真实 RAGFlow 写入、解析、检索、发布、回滚或 smoke；真实重试由用户在界面中自行发起，且不作为本步自动验收条件。",
+            "不修改 LayoutDocument、分页、画布、导出、模板、AI 生成和现有 PH3-13C4 的发布回滚边界。"
+          ],
+          "deferredTo": [
+            "RAGFlow 服务升级后的完整 metadata 类型兼容性探针、数据集 schema 治理和管理员诊断归属 PH3-13H/J 后续生命周期治理。",
+            "真实暂存数据集处理结果、质量门和发布回滚的端到端验收继续由用户在工作台确认，真实发布/回滚 smoke 仍归属 PH3-13C4 的单独确认。"
+          ],
+          "verification": [
+            "用户于 2026-07-11 回复“确定”，确认按“省略空可选 metadata + 客户端阻止 null 出站 + 回归验证”的最小方案修复。",
+            "实际登记库中两份资料的 upload job 均记录 `REMOTE_CONTRACT:API_ERROR`，远端返回 `Field: <meta_fields> - Message: <The type is not supported: None>`；Docker 中 RAGFlow 0.25.0 服务正常运行，资料上传已成功，故不是连通性、凭据或质量门阻断。",
+            "开始改代码前已明确本步只修复空 metadata 兼容性，保留不健康 binding 和确定性重试恢复路径，不扩大为远端数据清理或质量门绕过。",
+            "metadata 构造回归确认缺失的 version、chapter、effective_from/effective_to 不再出现在 payload，已填写的 curriculum_year、parser_profile 与 embedding_profile 仍保留。",
+            "RAGFlow 客户端回归确认显式 null 会在 fetch 前以 REMOTE_CONTRACT/INVALID_RESPONSE 失败关闭，fetch 调用次数为 0。",
+            "`npm run registry:test` 131 个顶层、153 个总测试全部通过；`npm run typecheck`、`npm run build` 均通过。",
+            "本步自动验收没有对真实 RAGFlow 发起请求或改变远端数据；需重启运行中的桌面应用后，由用户点击现有资料的“人工重试”执行真实恢复验证。"
+          ],
+          "currentStepNote": "本地修复已完成并通过全量登记库回归、类型检查和生产构建。下一步由用户重启运行中的桌面应用，再对现有失败资料点击“人工重试”；该操作会复用已上传文档并继续进入 parse_wait/质量门，不会自动重传文件。"
+        },
+        "qualityQuestionAutofill": {
+          "id": "PH3-13C3-quality-question-autofill-v1",
+          "confirmed": true,
+          "statusLabel": "已替代：人工问题与来源证据一键生成",
+          "confirmedOn": "2026-07-11",
+          "startedOn": "2026-07-11",
+          "completedOn": "2026-07-11",
+          "summary": "该历史体验方案已被用户确认替代：不再由用户审阅、编辑或提交问题与证据，质量门改为自动索引健康检查。保留本条仅用于追溯此前的最小实现与范围变化。",
+          "inScope": [
+            "在 Electron Main 读取已核验正文/定位工件，为当前资料选择 3 条唯一、长度受控且带稳定定位的原文证据，并按资料标题生成对应中文问题。",
+            "新增受控 IPC、preload、Renderer 服务/store 与中文“一键生成核验项”入口；生成结果只回填当前表单，用户可继续编辑、删除、增减至 3～5 条。",
+            "当无法安全选出 3 条唯一证据时返回稳定中文提示，不伪造证据、不调用 RAGFlow 或外部 AI。",
+            "补齐工件选择、唯一证据、IPC 边界、UI 回填与既有质量检查回归；执行类型检查、构建和进度一致性校验。"
+          ],
+          "outOfScope": [
+            "不调用任何外部 AI、RAGFlow 检索、上传、解析、发布或回滚，不新增密钥、模型配置或远端数据写入。",
+            "不自动创建 quality run、不自动点击开始检查、不绕过 3～5 条问题和唯一正文证据的既有质量门验证。",
+            "不保存、共享、批量导入或跨资料复用建议问题；不改质量评分、检索范围、发布回滚、SQLite 状态机或正式检索网关。",
+            "不修改 LayoutDocument、分页、画布、导出、模板和 AI 生成。"
+          ],
+          "deferredTo": [
+            "基于外部模型生成开放式质量题、自动审核题目质量、批量资料建议、建议历史和团队模板归属 PH3-13G/H 后续质量与生命周期治理。",
+            "真实资料的质量门执行仍由用户在确认建议后主动发起；发布/回滚真实 smoke 继续遵循 PH3-13C4 的单独确认。"
+          ],
+          "verification": [
+            "用户于 2026-07-11 回复“确定”，确认采用本地确定性一键生成、可编辑回填、人工主动启动质量检查的方案。",
+            "开始改代码前已明确不使用外部 AI、不发起远端请求、不绕过质量门，避免把体验优化扩展为自动发布或不可信问答。",
+            "建议结果必须满足现有 3～5 条、问题/证据长度和正文唯一命中的合同；未满足时不返回部分伪造结果。",
+            "quality-evidence 回归确认本地建议会回填 3 条唯一原文证据；QualityGateService 回归确认建议只读取已核验工件、不创建 quality run、也不访问 fake RAGFlow。",
+            "store 回归确认一键生成只接收 Main 建议并清理动作状态；`npm run registry:test` 134 个顶层、156 个总测试全部通过。",
+            "`npm run typecheck` 与 `npm run build` 通过；自动验收没有执行真实 RAGFlow 请求、解析、检索、发布或回滚。"
+          ],
+          "currentStepNote": "本方案不再是当前交付：一键生成、可编辑问题表单和建议 IPC 已由 `PH3-13C3-automatic-index-health-gate-v1` 移除。",
+          "automaticHealthGateRedesign": {
+            "id": "PH3-13C3-automatic-index-health-gate-v1",
+            "confirmed": true,
+            "statusLabel": "已完成：自动索引健康检查",
+            "confirmedOn": "2026-07-11",
+            "startedOn": "2026-07-11",
+            "completedOn": "2026-07-11",
+            "summary": "用户确认当前“3～5 条人工问题全部命中”的质量门逻辑不符合产品目标。质量门改为自动索引健康检查：上传时的人工元数据/内容确认负责“资料是否符合用途”；质量门仅从已核验正文自动抽取 1～3 个覆盖样本，验证样本文字能被当前 pending 精确 scope 检回且不发生跨资料/正式通道泄漏。",
+            "inScope": [
+              "删除 Renderer 的问题/证据填表、一键建议入口及其建议 IPC；开始质量检查只接受 itemId，用户仍主动点击按钮才创建运行。",
+              "按正文定位结构确定抽样数量：1～3 个非标题 DOCX 块或 PDF 页抽 1 个样本，4～6 个抽 2 个，7 个及以上抽 3 个；样本从正文不同位置选取唯一原文片段并复用现有定位、哈希和检索命中合同。",
+              "将质量报告文案改为“自动抽样索引健康检查”，明确它证明索引可检索与无串库，不替代资料用途/内容确认。",
+              "更新 Main、IPC/preload、Renderer/store、质量服务和回归测试；执行类型检查、构建、进度一致性校验。"
+            ],
+            "outOfScope": [
+              "不使用外部 AI 生成问题或判断资料用途，不新增人工审核队列、评分模型、批量质量运行或建议历史。",
+              "不自动发起质量运行；用户点击开始后仍按既有受保护 pending 精确 scope 请求 RAGFlow，测试自动化不发起真实远端请求。",
+              "不把 1～3 个抽样结果表述为全文语义正确性保证；不改变 pending 绑定健康、正式零泄漏、发布回滚、SQLite 状态机或正式检索网关。",
+              "不修改 LayoutDocument、分页、画布、导出、模板和 AI 生成。"
+            ],
+            "deferredTo": [
+              "全文召回率评估、跨版本检索基准、语义相关性评分、人工审核队列和批量质量运营归属 PH3-13G/H。",
+              "资料是否满足教学用途的自动分类/审核归属元数据治理与后续人工审核工作台，不由索引健康门禁承担。"
+            ],
+            "verification": [
+              "用户于 2026-07-11 回复“确定”，确认质量门改为自动 1～3 个样本的索引健康检查，不再要求手填问题和证据。",
+              "开始改代码前已明确抽样通过只代表索引可检索与范围安全，资料用途继续由上传元数据/内容确认承担，避免对少量样本作全文质量承诺。",
+              "短资料只能抽取 1 个样本，4～6 个结构单元抽取 2 个，7 个及以上最多 3 个；任一样本的定位、唯一性、候选 Top 10 命中或正式零泄漏不通过仍按既有失败关闭。",
+              "开始质量检查 IPC、preload、Renderer 和 store 均只提交 itemId；人工问题表单、一键建议入口与建议 IPC 已移除，质量运行由 Main 从已核验工件确定性建档。",
+              "质量运行持久化与发布前复核的样本合同已同步为 1～3 个，避免自动短资料样本在后续阶段被旧的 3～5 条限制阻断。",
+              "`npm run registry:test` 134 个顶层、156 个总测试通过；`npm run typecheck`、`npm run build` 和 `git diff --check` 通过；自动验收未发起真实 RAGFlow 请求。"
+            ],
+            "currentStepNote": "本步已完成。重启桌面应用后，资料到达质量检查阶段时直接点击“开始质量检查”；系统会自动抽取 1～3 段正文验证索引健康与范围安全。"
+          }
+        }
       }
     },
     {

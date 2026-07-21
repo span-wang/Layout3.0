@@ -523,6 +523,18 @@ function createStructureTemplatePromptSection(options: GenerateOptions): string 
   ].join('\n');
 }
 
+export function createEducationDirectGenerateUserMessage(options: GenerateOptions): string {
+  const templateSection = createStructureTemplatePromptSection(options);
+
+  return `${createEducationGenerateUserMessage(options)}
+${templateSection ? `\n\n${templateSection}` : ''}
+
+正文生成要求：
+1. 当前跳过大纲审核，请直接输出最终 Markdown 正文。
+2. 如果提供了用户自定义文章结构模板，必须保持模板主结构，不要擅自新增、删除或改名模板主结构。
+3. 不要输出“大纲草稿”、审核说明或生成过程说明。`;
+}
+
 export function createEducationOutlineUserMessage(options: GenerateOptions): string {
   const typeLabels: Record<string, string> = {
     lecture: '讲义',
@@ -1136,7 +1148,7 @@ ${content}`;
       return this.getXiaohongshuCoverUserMessage(options);
     }
 
-    return createEducationGenerateUserMessage(options);
+    return createEducationDirectGenerateUserMessage(options);
   }
 
   private getXiaohongshuTitleUserMessage(options: GenerateOptions): string {

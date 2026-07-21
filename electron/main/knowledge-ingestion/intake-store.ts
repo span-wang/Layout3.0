@@ -7,6 +7,8 @@ import type {
   KnowledgeIngestionJobStatus,
   KnowledgeIngestionMetadata,
   KnowledgeIngestionProcessingHealth,
+  KnowledgeIngestionPublicationOperationStatus,
+  KnowledgeIngestionPublicationSummary,
   KnowledgeIngestionQualityResult,
   KnowledgeIngestionQualityStatus,
   KnowledgeIngestionQualitySummary,
@@ -15,7 +17,12 @@ import type {
 import type { RegistryDatabase } from './registry-database';
 import { QualityGateRepository } from './quality-gate-repository';
 import { RegistryStore } from './registry-store';
-import { RegistryError, type ProcessingJobRecord } from './types';
+import {
+  RegistryError,
+  type ProcessingJobRecord,
+  type PublicationOperationPhase,
+  type PublicationOperationType,
+} from './types';
 
 interface IntakeStoreOptions {
   now?: () => Date;
@@ -34,6 +41,8 @@ interface RecordManagedFileInput {
 interface IntakeItemRow {
   item_id: string;
   version_id: string;
+  version_no: number;
+  previous_version_id: string | null;
   original_file_name: string;
   file_extension: '.docx' | '.pdf';
   file_size_bytes: number;
@@ -53,8 +62,23 @@ interface IntakeItemRow {
   quality_status: Exclude<KnowledgeIngestionQualityStatus, 'not_started'> | null;
   quality_started_at: string | null;
   quality_completed_at: string | null;
+  quality_expires_at: string | null;
   quality_questions_json: string | null;
   quality_results_json: string;
+  publication_operation_type: PublicationOperationType | null;
+  publication_operation_phase: PublicationOperationPhase | null;
+  publication_job_status: KnowledgeIngestionJobStatus | null;
+  publication_job_next_retry_at: string | null;
+  publication_operation_updated_at: string | null;
+  is_current_publication: number;
+  has_newer_version: number;
+  open_publication_operation_count: number;
+  publishable_binding_count: number;
+  active_binding_count: number;
+  rollback_binding_count: number;
+  rollback_publication_pair_count: number;
+  rollback_quality_count: number;
+  rollback_target_healthy: number;
   created_at: string;
   updated_at: string;
 }
@@ -83,6 +107,8 @@ const jobStagePriority: Record<IngestionJobStage, number> = {
 const INTAKE_ITEM_SELECT_SQL = `
   SELECT
     item.*,
+    version.version_no,
+    version.previous_version_id,
     version.metadata_json,
     version.workflow_status,
     version.processing_health,
@@ -96,7 +122,97 @@ const INTAKE_ITEM_SELECT_SQL = `
     current_quality.status AS quality_status,
     current_quality.started_at AS quality_started_at,
     current_quality.completed_at AS quality_completed_at,
+    current_quality.expires_at AS quality_expires_at,
     current_quality.questions_snapshot_json AS quality_questions_json,
+    latest_publication_operation.operation_type AS publication_operation_type,
+    latest_publication_operation.phase AS publication_operation_phase,
+    publication_job.status AS publication_job_status,
+    publication_job.next_retry_at AS publication_job_next_retry_at,
+    latest_publication_operation.updated_at AS publication_operation_updated_at,
+    EXISTS (
+      SELECT 1
+      FROM material_publications active_publication
+      WHERE active_publication.version_id = item.version_id
+        AND active_publication.canonical_id = version.canonical_id
+        AND active_publication.publication_branch_key = version.publication_branch_key
+        AND active_publication.publication_status = 'active'
+    ) AS is_current_publication,
+    EXISTS (
+      SELECT 1
+      FROM material_versions newer_version
+      WHERE newer_version.canonical_id = version.canonical_id
+        AND newer_version.publication_branch_key = version.publication_branch_key
+        AND newer_version.version_no > version.version_no
+    ) AS has_newer_version,
+    (
+      SELECT COUNT(*)
+      FROM publication_operations open_operation
+      WHERE open_operation.canonical_id = version.canonical_id
+        AND open_operation.publication_branch_key = version.publication_branch_key
+        AND open_operation.phase NOT IN ('completed', 'failed')
+    ) AS open_publication_operation_count,
+    (
+      SELECT COUNT(*)
+      FROM ragflow_bindings binding
+      WHERE binding.version_id = item.version_id
+        AND binding.remote_status = 'pending'
+        AND binding.is_healthy = 1
+        AND binding.remote_run_status = 'DONE'
+        AND binding.chunk_count > 0
+        AND binding.last_verified_at IS NOT NULL
+    ) AS publishable_binding_count,
+    (
+      SELECT COUNT(*)
+      FROM ragflow_bindings binding
+      WHERE binding.version_id = item.version_id
+        AND binding.remote_status = 'active'
+        AND binding.is_healthy = 1
+        AND binding.remote_run_status = 'DONE'
+        AND binding.chunk_count > 0
+        AND binding.last_verified_at IS NOT NULL
+    ) AS active_binding_count,
+    (
+      SELECT COUNT(*)
+      FROM ragflow_bindings binding
+      WHERE binding.version_id = version.previous_version_id
+        AND binding.remote_status = 'superseded'
+        AND binding.is_healthy = 1
+        AND binding.remote_run_status = 'DONE'
+        AND binding.chunk_count > 0
+        AND binding.last_verified_at IS NOT NULL
+    ) AS rollback_binding_count,
+    (
+      SELECT COUNT(*)
+      FROM material_publications active_publication
+      JOIN material_publications previous_publication
+        ON previous_publication.canonical_id = active_publication.canonical_id
+        AND previous_publication.publication_branch_key = active_publication.publication_branch_key
+        AND previous_publication.version_id = version.previous_version_id
+        AND previous_publication.publication_status = 'superseded'
+        AND previous_publication.effective_from IS active_publication.effective_from
+        AND previous_publication.effective_to IS active_publication.effective_to
+      WHERE active_publication.version_id = item.version_id
+        AND active_publication.canonical_id = version.canonical_id
+        AND active_publication.publication_branch_key = version.publication_branch_key
+        AND active_publication.publication_status = 'active'
+    ) AS rollback_publication_pair_count,
+    (
+      SELECT COUNT(*)
+      FROM quality_runs rollback_quality
+      WHERE rollback_quality.version_id = version.previous_version_id
+        AND rollback_quality.status = 'passed'
+        AND rollback_quality.conclusion = 'passed'
+    ) AS rollback_quality_count,
+    EXISTS (
+      SELECT 1
+      FROM material_versions rollback_version
+      WHERE rollback_version.version_id = version.previous_version_id
+        AND rollback_version.canonical_id = version.canonical_id
+        AND rollback_version.publication_branch_key = version.publication_branch_key
+        AND rollback_version.workflow_status = 'superseded'
+        AND rollback_version.processing_health = 'healthy'
+        AND rollback_version.index_publication_status = 'superseded'
+    ) AS rollback_target_healthy,
     COALESCE((
       SELECT json_group_array(json_object(
         'checkKind', result.check_key,
@@ -151,6 +267,22 @@ const INTAKE_ITEM_SELECT_SQL = `
       ORDER BY quality.created_at DESC, quality.quality_run_id DESC
       LIMIT 1
     )
+  LEFT JOIN publication_operations latest_publication_operation
+    ON latest_publication_operation.operation_id = (
+      SELECT operation.operation_id
+      FROM publication_operations operation
+      WHERE (
+        operation.operation_type = 'publish'
+        AND operation.target_version_id = item.version_id
+      ) OR (
+        operation.operation_type = 'rollback'
+        AND operation.current_version_id = item.version_id
+      )
+      ORDER BY operation.created_at DESC, operation.operation_id DESC
+      LIMIT 1
+    )
+  LEFT JOIN processing_jobs publication_job
+    ON publication_job.job_id = latest_publication_operation.job_id
 `;
 
 const metadataFields: Array<keyof KnowledgeIngestionMetadata> = [
@@ -259,7 +391,7 @@ function buildSafeQualityResultCopy(input: {
     case 'locator':
       return {
         label: '来源定位可追溯',
-        message: input.passed ? '全部问题证据均可回到资料来源定位。' : '存在无法追溯的正文证据。',
+        message: input.passed ? '全部自动抽样证据均可回到资料来源定位。' : '存在无法追溯的自动抽样正文证据。',
         locatorLabel: input.questionLocators.values().next().value ?? null,
       };
     case 'candidate_top10':
@@ -271,7 +403,7 @@ function buildSafeQualityResultCopy(input: {
     case 'expected_evidence_hit':
       return {
         label: `${questionLabel}：预期证据命中`,
-        message: input.passed ? '候选 Top 10 已命中人工绑定的正文证据。' : '候选 Top 10 未命中人工绑定的正文证据。',
+        message: input.passed ? '候选 Top 10 已命中自动抽取的正文证据。' : '候选 Top 10 未命中自动抽取的正文证据。',
         locatorLabel: questionLocator,
       };
     case 'candidate_scope_contract':
@@ -289,13 +421,14 @@ function buildSafeQualityResultCopy(input: {
   }
 }
 
-function parseQualitySummary(row: IntakeItemRow): KnowledgeIngestionQualitySummary {
+function parseQualitySummary(row: IntakeItemRow, timestamp: string): KnowledgeIngestionQualitySummary {
   if (!row.quality_status) {
     return {
       status: 'not_started',
       conclusion: null,
       startedAt: null,
       completedAt: null,
+      expiresAt: null,
       questionCount: 0,
       results: [],
     };
@@ -362,12 +495,21 @@ function parseQualitySummary(row: IntakeItemRow): KnowledgeIngestionQualitySumma
     cancelled: '质量检查已取消，未进入待发布。',
     expired: '质量检查运行已过期，请重新开始。',
   };
-  // 质量运行的底层错误详情只留在 Main/SQLite；Renderer 始终接收稳定中文结论。
+  const status = row.workflow_status === 'pending_publication'
+    && row.quality_status === 'passed'
+    && row.quality_expires_at !== null
+    && row.quality_expires_at <= timestamp
+      ? 'expired'
+      : row.quality_status;
+  // 历史 passed 结论保持不可变；只有当前待发布快照在失效后映射为 expired，提示用户重新取证。
   return {
-    status: row.quality_status,
-    conclusion: defaultConclusion[row.quality_status],
+    status,
+    conclusion: status === 'passed' && row.workflow_status !== 'pending_publication'
+      ? '最近一次快速质量门禁已通过。'
+      : defaultConclusion[status],
     startedAt: row.quality_started_at,
     completedAt: row.quality_completed_at,
+    expiresAt: row.quality_expires_at,
     questionCount,
     results,
   };
@@ -394,14 +536,151 @@ function normalizeProcessingError(errorCode: string | null): string {
   }
 }
 
-function mapIntakeItem(row: IntakeItemRow): KnowledgeIngestionItem {
+function resolvePublicationOperationStatus(
+  row: IntakeItemRow,
+): KnowledgeIngestionPublicationOperationStatus {
+  if (!row.publication_operation_type || !row.publication_operation_phase) return 'not_started';
+  if (row.publication_operation_phase === 'completed') return 'completed';
+  if (row.publication_operation_phase === 'failed') return 'failed';
+  if (row.publication_job_status === 'failed') {
+    return row.publication_job_next_retry_at ? 'retry_scheduled' : 'attention_required';
+  }
+  if (
+    row.publication_operation_phase === 'sqlite_switched'
+    || row.publication_operation_phase === 'restore_target_pending'
+    || row.publication_operation_phase === 'restore_target_superseded'
+  ) {
+    return 'compensating';
+  }
+  if (row.publication_job_status === 'queued') return 'queued';
+  return 'running';
+}
+
+function buildPublicationOperationMessage(
+  row: IntakeItemRow,
+  status: KnowledgeIngestionPublicationOperationStatus,
+  summary: Pick<KnowledgeIngestionPublicationSummary, 'canPublish' | 'canRollback' | 'isCurrentVersion'>,
+): string {
+  const operationLabel = row.publication_operation_type === 'rollback' ? '回滚' : '发布';
+  switch (status) {
+    case 'queued':
+      return `${operationLabel}操作已排队，系统将按安全顺序执行远端核验与本地切换。`;
+    case 'running':
+      return `正在执行${operationLabel}核验，SQLite 正式可见关系尚未被提前放行。`;
+    case 'compensating':
+      return row.publication_operation_phase === 'sqlite_switched'
+        ? 'SQLite 正式版本已安全切换，正在同步旧版远端状态。当前正式版本不会因补偿重试而回退。'
+        : '正在恢复目标文档的原远端状态，SQLite 正式版本没有被错误切换。';
+    case 'retry_scheduled':
+      if (row.publication_operation_phase === 'sqlite_switched') {
+        return '正式版本已经切换，但旧版远端状态尚未收口；系统已安排持久退避重试，当前正式版本不会回退。';
+      }
+      if (
+        row.publication_operation_phase === 'restore_target_pending'
+        || row.publication_operation_phase === 'restore_target_superseded'
+      ) {
+        return '正式版本尚未切换，系统正在按持久任务恢复目标远端状态。';
+      }
+      return `${operationLabel}遇到临时问题，系统已安排持久退避重试。`;
+    case 'attention_required':
+      if (row.publication_operation_phase === 'sqlite_switched') {
+        return '正式版本已经切换，但旧版远端状态仍需人工收口；确认连接恢复后可重试，当前正式版本不会回退。';
+      }
+      if (
+        row.publication_operation_phase === 'restore_target_pending'
+        || row.publication_operation_phase === 'restore_target_superseded'
+      ) {
+        return '正式版本尚未切换，目标远端状态恢复需要人工处理；确认连接后可重试。';
+      }
+      return `${operationLabel}需要人工处理，请确认连接与资料状态后重试。`;
+    case 'completed':
+      if (row.publication_operation_type === 'rollback') {
+        return '回滚已完成，上一版本已恢复为当前正式版本；此问题版本已隔离。';
+      }
+      if (summary.isCurrentVersion) {
+        return '发布已完成，当前版本已成为该资料分支的正式版本。';
+      }
+      return row.workflow_status === 'superseded'
+        ? '最近一次发布操作已完成；此版本随后被同分支新版本替代。'
+        : '最近一次发布或回滚操作已完成；此版本当前不是正式版本。';
+    case 'failed':
+      return `${operationLabel}已安全终止，系统没有留下半完成的正式可见关系。`;
+    default:
+      if (summary.canPublish) return '质量门禁已通过，当前版本可以进入发布确认。';
+      if (summary.canRollback) return '当前正式版本具备可恢复的上一版本，可发起受控回滚。';
+      if (summary.isCurrentVersion) return '当前版本是该资料分支的正式版本。';
+      if (row.workflow_status === 'superseded') return '当前版本已被同分支新版本替代。';
+      return '尚未创建发布或回滚操作。';
+  }
+}
+
+function buildPublicationSummary(
+  row: IntakeItemRow,
+  isDuplicate: boolean,
+  timestamp: string,
+): KnowledgeIngestionPublicationSummary {
+  const hasOpenOperation = row.open_publication_operation_count > 0;
+  const canPublish = !isDuplicate
+    && !hasOpenOperation
+    && row.workflow_status === 'pending_publication'
+    && row.processing_health === 'healthy'
+    && row.index_publication_status === 'pending'
+    && row.quality_status === 'passed'
+    && row.quality_expires_at !== null
+    && row.quality_expires_at > timestamp
+    && row.publishable_binding_count === 1;
+  const canRollback = !isDuplicate
+    && !hasOpenOperation
+    && row.workflow_status === 'published'
+    && row.processing_health === 'healthy'
+    && row.index_publication_status === 'active'
+    && row.previous_version_id !== null
+    && row.is_current_publication === 1
+    && row.has_newer_version === 0
+    && row.active_binding_count === 1
+    && row.rollback_binding_count === 1
+    && row.rollback_publication_pair_count === 1
+    && row.rollback_quality_count > 0
+    && row.rollback_target_healthy === 1;
+  const canRetry = !isDuplicate
+    && row.publication_operation_phase !== null
+    && row.publication_operation_phase !== 'completed'
+    && row.publication_operation_phase !== 'failed'
+    && row.publication_job_status === 'failed'
+    && row.publication_job_next_retry_at === null;
+  const summaryBase = {
+    canPublish,
+    canRollback,
+    isCurrentVersion: row.is_current_publication === 1,
+  };
+  const operationStatus = resolvePublicationOperationStatus(row);
+  return {
+    versionLabel: `第 ${row.version_no} 版`,
+    previousVersionLabel: row.previous_version_id ? `第 ${Math.max(1, row.version_no - 1)} 版` : null,
+    isCurrentVersion: summaryBase.isCurrentVersion,
+    canReceiveNextVersion: !isDuplicate
+      && !hasOpenOperation
+      && row.workflow_status === 'published'
+      && row.processing_health === 'healthy'
+      && row.index_publication_status === 'active'
+      && row.is_current_publication === 1
+      && row.has_newer_version === 0,
+    canPublish,
+    canRollback,
+    canRetry,
+    operationType: row.publication_operation_type,
+    operationStatus,
+    operationMessage: buildPublicationOperationMessage(row, operationStatus, summaryBase),
+    operationUpdatedAt: row.publication_operation_updated_at,
+  };
+}
+
+function mapIntakeItem(row: IntakeItemRow, timestamp: string): KnowledgeIngestionItem {
   const isDuplicate = row.duplicate_of_version_id !== null;
   const mappedJobStage: KnowledgeIngestionCurrentStage | null = row.current_job_stage === 'quality'
     ? 'quality_check'
     : row.current_job_stage;
-  const currentStage = !isDuplicate && row.current_job_stage === 'quality'
-    ? 'quality_check'
-    : !isDuplicate && row.workflow_status === 'quality_check'
+  const currentStage = !isDuplicate && row.workflow_status === 'quality_check'
       ? 'quality_check'
       : !isDuplicate && (row.workflow_status === 'processing' || row.workflow_status === 'quarantined')
         ? mappedJobStage
@@ -453,8 +732,9 @@ function mapIntakeItem(row: IntakeItemRow): KnowledgeIngestionItem {
         row.current_job_stage !== 'quality'
         && (currentJobStatus === 'failed' || currentJobStatus === 'cancelled')
       ),
-      qualitySummary: parseQualitySummary(row),
+      qualitySummary: parseQualitySummary(row, timestamp),
     },
+    publication: buildPublicationSummary(row, isDuplicate, timestamp),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -556,6 +836,165 @@ export class IntakeStore {
           versionId,
           { workflowStatus: 'pending_confirmation' },
           { actorId: 'system:intake', reason: '文件身份和完全重复检查已完成，等待人工确认元数据。' },
+        );
+      }
+
+      this.database
+        .prepare(`
+          INSERT INTO source_occurrences (
+            occurrence_id, version_id, source_path, file_name, content_hash, observed_at
+          ) VALUES (?, ?, ?, ?, ?, ?)
+        `)
+        .run(
+          occurrenceId,
+          versionId,
+          input.sourcePath,
+          input.fileName,
+          input.contentHash,
+          timestamp,
+        );
+      this.database
+        .prepare(`
+          INSERT INTO intake_items (
+            item_id, batch_id, version_id, occurrence_id, original_file_name,
+            file_extension, file_size_bytes, content_hash, intake_status,
+            duplicate_of_version_id, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        .run(
+          itemId,
+          batchId,
+          versionId,
+          occurrenceId,
+          input.fileName,
+          input.extension,
+          input.sizeBytes,
+          input.contentHash,
+          status,
+          existing?.version_id ?? null,
+          timestamp,
+          timestamp,
+        );
+      this.database
+        .prepare("UPDATE intake_batches SET status = 'completed', updated_at = ? WHERE batch_id = ?")
+        .run(timestamp, batchId);
+
+      return this.getItem(itemId);
+    })();
+  }
+
+  recordManagedFileAsNextVersion(
+    parentItemId: string,
+    input: RecordManagedFileInput,
+  ): KnowledgeIngestionItem {
+    const timestamp = this.now().toISOString();
+    const batchId = this.createId('batch');
+    const itemId = this.createId('intake');
+    const occurrenceId = this.createId('source');
+    const audit = { actorId: 'user:local', reason: '用户从当前已发布资料接收同分支新版本。' };
+
+    return this.database.transaction(() => {
+      const parentItem = this.getItem(parentItemId);
+      if (parentItem.isDuplicate) {
+        throw new RegistryError('INTAKE_STATE_CONFLICT', '完全重复的接收记录不能作为新版本来源。');
+      }
+      const parentVersion = this.registryStore.getMaterialVersion(parentItem.versionId);
+      const activePublication = this.database
+        .prepare(`
+          SELECT publication_id
+          FROM material_publications
+          WHERE version_id = ?
+            AND canonical_id = ?
+            AND publication_branch_key = ?
+            AND publication_status = 'active'
+          LIMIT 1
+        `)
+        .get(
+          parentVersion.versionId,
+          parentVersion.canonicalId,
+          parentVersion.publicationBranchKey,
+        ) as { publication_id: string } | undefined;
+      if (
+        parentVersion.workflowStatus !== 'published'
+        || parentVersion.processingHealth !== 'healthy'
+        || parentVersion.indexPublicationStatus !== 'active'
+        || !activePublication
+      ) {
+        throw new RegistryError('INTAKE_STATE_CONFLICT', '只有当前已发布且索引健康的资料可以接收同分支新版本。');
+      }
+      const openPublicationOperation = this.database
+        .prepare(`
+          SELECT 1
+          FROM publication_operations
+          WHERE canonical_id = ?
+            AND publication_branch_key = ?
+            AND phase NOT IN ('completed', 'failed')
+          LIMIT 1
+        `)
+        .get(parentVersion.canonicalId, parentVersion.publicationBranchKey);
+      // 新版接收和发布/回滚共享同一分支串行边界，避免回滚执行中再长出新分叉。
+      if (openPublicationOperation) {
+        throw new RegistryError('INTAKE_STATE_CONFLICT', '当前资料分支正在执行发布或回滚，请完成后再接收新版本。');
+      }
+
+      this.database
+        .prepare(`
+          INSERT INTO intake_batches (
+            batch_id, source_type, status, item_count, created_at, updated_at
+          ) VALUES (?, 'single_file', 'processing', 1, ?, ?)
+        `)
+        .run(batchId, timestamp, timestamp);
+
+      const existing = this.database
+        .prepare('SELECT version_id FROM material_versions WHERE content_hash = ?')
+        .get(input.contentHash) as { version_id: string } | undefined;
+
+      let versionId: string;
+      let status: KnowledgeIngestionItem['status'];
+      if (existing) {
+        versionId = existing.version_id;
+        status = 'duplicate';
+      } else {
+        const latestVersion = this.database
+          .prepare(`
+            SELECT version_id, version_no
+            FROM material_versions
+            WHERE canonical_id = ? AND publication_branch_key = ?
+            ORDER BY version_no DESC
+            LIMIT 1
+          `)
+          .get(parentVersion.canonicalId, parentVersion.publicationBranchKey) as
+          | { version_id: string; version_no: number }
+          | undefined;
+        // V1 不建立分叉版本；完全重复仍可登记来源，但新内容必须接在当前发布版之后。
+        if (!latestVersion || latestVersion.version_id !== parentVersion.versionId) {
+          throw new RegistryError('INTAKE_STATE_CONFLICT', '当前发布版之后已有新版本，不能再次创建同分支分叉版本。');
+        }
+        const version = this.registryStore.createMaterialVersion({
+          canonicalId: parentVersion.canonicalId,
+          publicationBranchKey: parentVersion.publicationBranchKey,
+          contentHash: input.contentHash,
+          metadata: { ...parentVersion.metadata },
+          metadataSchemaVersion: parentVersion.metadataSchemaVersion,
+          sourcePath: input.sourcePath,
+          managedSourcePath: input.managedSourcePath,
+          parserProfile: parentVersion.parserProfile,
+          embeddingProfile: parentVersion.embeddingProfile,
+          profileBundleHash: parentVersion.profileBundleHash,
+          audit,
+        });
+        if (
+          version.versionNo !== parentVersion.versionNo + 1
+          || version.previousVersionId !== parentVersion.versionId
+        ) {
+          throw new RegistryError('INTAKE_STATE_CONFLICT', '新版本序号或上一版本关系不符合当前发布分支。');
+        }
+        versionId = version.versionId;
+        status = 'pending_confirmation';
+        this.registryStore.transitionVersionState(
+          versionId,
+          { workflowStatus: 'pending_confirmation' },
+          { actorId: 'system:intake', reason: '同分支新版本已登记，等待用户重新确认元数据。' },
         );
       }
 
@@ -754,7 +1193,7 @@ export class IntakeStore {
       }
       const version = this.registryStore.getMaterialVersion(item.versionId);
       if (currentJob.stage === 'quality') {
-        throw new RegistryError('JOB_STATE_CONFLICT', '质量检查失败或取消后请重新提交 3～5 条问题与证据。');
+        throw new RegistryError('JOB_STATE_CONFLICT', '质量检查失败或取消后，请在资料详情中重新启动自动索引健康检查。');
       }
       if (version.workflowStatus !== 'processing' && version.workflowStatus !== 'quarantined') {
         throw new RegistryError('JOB_STATE_CONFLICT', '当前资料生命周期不允许重新排入基础处理。');
@@ -783,7 +1222,8 @@ export class IntakeStore {
         LIMIT ?
       `)
       .all(safeLimit) as IntakeItemRow[];
-    return rows.map(mapIntakeItem);
+    const timestamp = this.now().toISOString();
+    return rows.map((row) => mapIntakeItem(row, timestamp));
   }
 
   getItem(itemId: string): KnowledgeIngestionItem {
@@ -795,6 +1235,6 @@ export class IntakeStore {
     if (!row) {
       throw new RegistryError('RECORD_NOT_FOUND', `未找到接收项 ${itemId}。`);
     }
-    return mapIntakeItem(row);
+    return mapIntakeItem(row, this.now().toISOString());
   }
 }
